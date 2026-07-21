@@ -34,6 +34,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 - [项目核心（宗旨）](#项目核心宗旨)
 - [功能现状](#功能现状)
 - [快速开始](#快速开始)
+- [怎么看演示效果](#怎么看演示效果)
 - [使用说明](#使用说明)
 - [项目结构](#项目结构)
 - [API 摘要](#api-摘要)
@@ -118,11 +119,13 @@ npm run dev:web
 
 浏览器打开：**http://127.0.0.1:5173**（勿只用 `localhost` 若本机优先解析到 IPv6 而服务只绑 IPv4）
 
+更细的点选路径与排障见 **[怎么看演示效果](./docs/demo.md)**。
+
 健康检查：
 
 ```bash
-# PowerShell
-Invoke-RestMethod http://127.0.0.1:3780/api/health
+curl http://127.0.0.1:3780/api/health
+# 或 PowerShell: Invoke-RestMethod http://127.0.0.1:3780/api/health
 ```
 
 ### 常用脚本
@@ -142,9 +145,22 @@ Invoke-RestMethod http://127.0.0.1:3780/api/health
 
 ```bash
 # 请先停掉 server
-Remove-Item -Recurse -Force .\data
+rm -rf ./data                 # Linux / macOS
+# Windows: Remove-Item -Recurse -Force .\data
 npm run dev:server
 ```
+
+---
+
+## 怎么看演示效果
+
+1. 按上文启动 **server + web**，浏览器打开 **http://127.0.0.1:5173**  
+2. 顶栏 **工作台** → 开聊下拉选 **「演示流」** → **开聊**  
+3. 若看不到「演示流」：进 **设置 → 设置（偏好）**，打开 **显示演示示例**  
+4. 按闸门点：**通过**（开始）→ **提交**（项目参数，如 `demo 需求一`）→ **同意**（回声）→ **同意**（命令）→ **同意归档**  
+5. 右栏看流程轨与群报告；归档后再发消息 = 新任务  
+
+逐步说明与排障：**[docs/demo.md](./docs/demo.md)**。
 
 ---
 
@@ -154,8 +170,8 @@ npm run dev:server
 
 1. 打开 **工作台**  
 2. 上方选择群模板 **「演示流」**（或某个**成员**）→ **开聊**  
-3. 中栏按闸门提示：**提交**任务说明 → **同意**回声 → **同意**命令  
-4. 右栏观察节点状态变化；全部完成后 **自动归档**  
+3. 中栏按闸门提示：**通过**启动 → **提交**项目参数 → **同意**回声 → **同意**命令  
+4. 右栏观察节点状态；全部完成后进入 **确认归档**（默认 3 小时超时也会自动归档）  
 5. 归档后再发一条消息 → 进入 **空白新任务**  
 
 ### 设置
@@ -261,6 +277,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | 文档 | 说明 |
 |------|------|
 | [docs/mvp.md](./docs/mvp.md) | 宗旨、MVP 范围与验收、配置交互约定 |
+| [docs/demo.md](./docs/demo.md) | **怎么看演示效果**（启动与点选路径） |
 | [docs/technical-design.md](./docs/technical-design.md) | 完整架构、Session/归档/克隆/文件夹/快捷键等 |
 | [docs/data-storage.md](./docs/data-storage.md) | **当前实现**：SQLite/MD、参数、**脚本约定**、**群报告**、弹窗优先级 |
 | [docs/data-and-ops.md](./docs/data-and-ops.md) | 数据分层、P0–P4、**§9 待改进 backlog** |
