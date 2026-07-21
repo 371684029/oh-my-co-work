@@ -2,13 +2,25 @@
 
 | 属性 | 内容 |
 |------|------|
-| 关联 | 根目录 [README.md](../README.md)「快速开始」 |
+| 关联 | 根目录 [README.md](../README.md)；压缩包说明 [RELEASE-USER.md](./RELEASE-USER.md) |
 | 版本 | `1.0.0-dev` |
 | 更新日期 | 2026-07-21 |
 
 ---
 
-## 1. 启动（两个终端）
+## 0. 压缩包一键启动（给最终用户）
+
+```text
+解压 → 双击 start.bat（或 ./start.sh）→ 自动开浏览器
+关闭浏览器 → 后台默认退出
+```
+
+本地打同样的包：`npm run pack`，产物在 `release/`。  
+每次 push 也会由 GitHub Actions 上传同名 artifact。
+
+---
+
+## 1. 启动（开发：两个终端）
 
 ```bash
 cd apple-co-work

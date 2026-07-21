@@ -8,6 +8,7 @@ import 'vue-element-plus-x/styles/index.css'
 import App from './App.vue'
 import router from './router'
 import './styles.css'
+import { setupBrowserLifecycle } from './lifecycle.js'
 
 const app = createApp(App)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
@@ -18,3 +19,5 @@ app.use(ElementPlus, { locale: zhCn })
 app.use(ElementPlusX)
 app.use(router)
 app.mount('#app')
+
+setupBrowserLifecycle().catch(() => {})

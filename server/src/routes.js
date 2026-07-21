@@ -33,6 +33,13 @@ import { ROOT, DATA_ROOT } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
 import { listPathHolders } from './pathLock.js'
 import {
+  touchHeartbeat,
+  notifyClientGone,
+  requestShutdown,
+  getLifecycleStatus,
+  isAutoExitEnabled,
+} from './lifecycle.js'
+import {
   listSlashCommands,
   saveSlashCommands,
   runSlashCommand,
@@ -82,7 +89,32 @@ router.get('/health', (_req, res) => {
     version,
     dataRoot: DATA_ROOT,
     integrity,
+    autoExit: isAutoExitEnabled(),
+    lifecycle: getLifecycleStatus(),
     time: new Date().toISOString(),
+  })
+})
+
+/** 浏览器心跳：压缩包/一键启动模式下保持进程存活 */
+router.post('/heartbeat', (_req, res) => {
+  res.json(touchHeartbeat())
+})
+
+/** 浏览器关闭/离开：短宽限后退出（刷新可续命） */
+router.post('/client-gone', (_req, res) => {
+  res.json(notifyClientGone())
+})
+
+/** 显式请求退出服务 */
+router.post('/shutdown', (_req, res) => {
+  res.json({ ok: true, shuttingDown: true })
+  setTimeout(() => requestShutdown('api /shutdown'), 200)
+})
+
+router.get('/runtime', (_req, res) => {
+  res.json({
+    autoExit: isAutoExitEnabled(),
+    lifecycle: getLifecycleStatus(),
   })
 })
 

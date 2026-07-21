@@ -137,6 +137,8 @@ curl http://127.0.0.1:3780/api/health
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
+| `npm run pack` | **打用户压缩包** → `release/apple-co-work-*.zip`（供下载） |
+| `npm start` / `start.bat` | **一键启动**（装依赖、起服务、开浏览器；关浏览器默认停服务） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
 ### 重置数据
@@ -153,6 +155,17 @@ npm run dev:server
 ---
 
 ## 怎么看演示效果
+
+### 方式 A：下载压缩包（推荐给使用者）
+
+1. 从 GitHub Actions 产物 / Release 下载 `apple-co-work-*.zip`  
+2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
+3. 浏览器会自动打开；关掉浏览器后后台默认退出  
+4. 工作台 → 开聊 **「演示流」**  
+
+说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。本地打包：`npm run pack` → `release/*.zip`。
+
+### 方式 B：开发模式（两个终端）
 
 1. 按上文启动 **server + web**，浏览器打开 **http://127.0.0.1:5173**  
 2. 顶栏 **工作台** → 开聊下拉选 **「演示流」** → **开聊**  

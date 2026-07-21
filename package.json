@@ -13,8 +13,11 @@
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "seed": "npm run seed -w server",
-    "start": "npm run start -w server",
-    "backup": "node scripts/backup.mjs"
+    "start": "node start.mjs",
+    "start:server": "npm run start -w server",
+    "backup": "node scripts/backup.mjs",
+    "pack": "node scripts/pack-release.mjs",
+    "build": "npm run build -w web"
   },
   "engines": {
     "node": ">=18"

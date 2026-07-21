@@ -12,6 +12,12 @@ import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
 import { processDueArchives, markInterruptedOnBoot } from './engine.js'
 import { updateAppSettings } from './appSettings.js'
+import {
+  startLifecycleWatch,
+  setExitHandler,
+  getLifecycleStatus,
+} from './lifecycle.js'
+import { killSessionProcesses } from './processRegistry.js'
 
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
@@ -106,10 +112,40 @@ wss.on('connection', (ws, req) => {
   ws.send(JSON.stringify({ type: 'hello', payload: { ok: true } }))
 })
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`[acw] API  http://127.0.0.1:${PORT}/api/health`)
+  if (fs.existsSync(webDist)) {
+    console.log(`[acw] Web  http://127.0.0.1:${PORT}/`)
+  }
   console.log(`[acw] data ${DATA_ROOT}`)
   console.log(`[acw] groups ${listGroups({ includeDemo: true }).length}, members ${listMembers({ includeDemo: true }).length}`)
+  console.log(`[acw] lifecycle ${JSON.stringify(getLifecycleStatus())}`)
+  startLifecycleWatch()
+})
+
+setExitHandler((reason) => {
+  console.log('[acw] shutting down…', reason || '')
+  try {
+    // 尽力结束仍在跑的会话进程
+    const rows = getDb()
+      .prepare(`SELECT id FROM sessions WHERE status NOT IN ('archived')`)
+      .all()
+    for (const r of rows) {
+      try {
+        killSessionProcesses(r.id)
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    server.close(() => process.exit(0))
+  } catch {
+    process.exit(0)
+  }
+  setTimeout(() => process.exit(0), 1500)
 })
 
 // 超时未确认归档 → 自动归档（默认 24h，设置可改）

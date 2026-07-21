@@ -82,6 +82,10 @@ export const api = {
   },
   support: () => req('/support'),
   about: () => req('/about'),
+  runtime: () => req('/runtime'),
+  heartbeat: () => req('/heartbeat', { method: 'POST', body: '{}' }),
+  clientGone: () => req('/client-gone', { method: 'POST', body: '{}' }),
+  shutdown: () => req('/shutdown', { method: 'POST', body: '{}' }),
   appSettings: {
     get: () => req('/settings/app'),
     update: (body) =>
