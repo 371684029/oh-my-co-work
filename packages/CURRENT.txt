@@ -1,9 +1,9 @@
 version=1.0.0-dev
 major=1
-platform=linux-x64
-commit=a06513b
-file=apple-co-work-v1-linux-x64.zip
-built=2026-07-21T08:46:37.788Z
+platform=darwin-arm64
+commit=5332e29
+file=apple-co-work-v1-darwin-arm64.zip
+built=2026-07-21T08:47:21.361Z
 kind=runtime-bundle
 needsNpmInstall=false
 policy=same-major-same-platform-replace; new-major-or-platform-keep

@@ -9,11 +9,12 @@
 - **大版本**：新增 `v{N+1}-…`，旧大版本包保留
 - **多平台**：linux / win32 / darwin 各一份，互不覆盖
 
-当前构建：`1.0.0-dev` · 平台 `linux-x64` · 提交 `a06513b`
-本机产物：[`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip)（5254746 bytes）
+当前构建：`1.0.0-dev` · 平台 `darwin-arm64` · 提交 `5332e29`
+本机产物：[`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip)（5123153 bytes）
 
 ## 仓库内文件
 
+- [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip)
 - [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip)
 
 ## 启动
