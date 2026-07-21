@@ -1,8 +1,8 @@
 {
-  "showDemo": false,
+  "showDemo": true,
   "admin": {
     "memberKey": "unified_admin",
-    "memberId": "mem_mroiojue_9h5v6u4",
+    "memberId": null,
     "defaultFlow": {
       "admin": true,
       "auto": true,

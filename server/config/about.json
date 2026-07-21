@@ -1,7 +1,7 @@
 {
   "productName": "apple-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
-  "version": "0.4.0",
+  "version": "1.0.0-dev",
   "updateUrl": "",
   "updateHint": "更新包发布后，将在此填写下载 / 仓库地址。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -10,6 +10,19 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "1.0.0-dev",
+      "date": "2026-07-21",
+      "title": "1.0.0 开发中（主路径加固）",
+      "items": [
+        "FIX：/api/health 版本与 about 对齐；空库 seed 默认显示演示",
+        "CI01：缺 #1 拦截成员步；补参后从本步继续",
+        "CI03：docs/script-guide.md 写脚本契约",
+        "CI04：script.env 值同样做占位替换；文件夹别名 env",
+        "X07：闸门同意/拒绝绑定输入框全文 → lastHumanInput + #a",
+        "R03：闸门 idempotencyKey + 前端防连点"
+      ]
+    },
     {
       "version": "0.4.0",
       "date": "2026-07-20",

@@ -391,7 +391,14 @@ export async function runMember(
 
     const env = consoleChildEnv({
       ...process.env,
-      ...(script.env && typeof script.env === 'object' ? script.env : {}),
+      ...(script.env && typeof script.env === 'object'
+        ? Object.fromEntries(
+            Object.entries(script.env).map(([k, v]) => [
+              k,
+              applyParamPlaceholders(String(v ?? ''), paramsMap, phExtra),
+            ]),
+          )
+        : {}),
       ACW_SESSION_ID: sessionId || '',
       ACW_MEMBER_ID: member.id || '',
       ACW_HUMAN_INPUT: humanInput != null ? String(humanInput) : '',
@@ -406,15 +413,25 @@ export async function runMember(
       ECW_SCRIPT_PATH: filePath || '',
       ECW_CWD: cwd || '',
     })
+    // CI04：系统参数也写入 ACW_PARAM_群聊 / ACW_PARAM_文件夹 等（含无 # 前缀别名）
     Object.keys(paramsMap || {}).forEach((k) => {
-      if (!k.startsWith('#')) return
-      const n = k.slice(1)
       const v = String(paramsMap[k] ?? '')
-      env[`ACW_PARAM_${n}`] = v
-      env[`ACW_PARAM_${k}`] = v
-      env[`ECW_PARAM_${n}`] = v
-      env[`ECW_PARAM_${k}`] = v
+      if (k.startsWith('#')) {
+        const n = k.slice(1)
+        env[`ACW_PARAM_${n}`] = v
+        env[`ACW_PARAM_${k}`] = v
+        env[`ECW_PARAM_${n}`] = v
+        env[`ECW_PARAM_${k}`] = v
+      } else if (k === '群聊' || k === '文件夹') {
+        env[`ACW_PARAM_${k}`] = v
+        env[`ECW_PARAM_${k}`] = v
+      }
     })
+    // 明确文件夹别名
+    if (cwd) {
+      env.ACW_FOLDER = String(cwd)
+      env.ECW_FOLDER = String(cwd)
+    }
 
     const launch = resolveLaunchSpec({
       filePath,

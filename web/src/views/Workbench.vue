@@ -298,11 +298,13 @@
                         ? '确认开始'
                         : pendingGate.content?.mode === 'human_input'
                           ? '需要你输入'
-                          : pendingGate.content?.mode === 'archive_confirm'
-                            ? '确认归档'
-                            : pendingGate.content?.requireHuman
-                              ? '须人工同意'
-                              : '需要你确认'
+                          : pendingGate.content?.mode === 'need_params'
+                            ? '需要项目参数'
+                            : pendingGate.content?.mode === 'archive_confirm'
+                              ? '确认归档'
+                              : pendingGate.content?.requireHuman
+                                ? '须人工同意'
+                                : '需要你确认'
                     }}
                   </div>
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
@@ -518,6 +520,11 @@
                           </el-button>
                         </template>
                         <template v-else-if="pendingGate.content?.mode === 'human_input'">
+                          <el-button type="danger" @click="submitHuman(pendingGate)">
+                            提交
+                          </el-button>
+                        </template>
+                        <template v-else-if="pendingGate.content?.mode === 'need_params'">
                           <el-button type="danger" @click="submitHuman(pendingGate)">
                             提交
                           </el-button>
@@ -920,6 +927,7 @@ const senderRef = ref(null)
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
 const sending = ref(false)
+const gating = ref(false)
 /** 快捷指令 / */
 const slashCommands = ref([])
 const slashOpen = ref(false)
@@ -1463,6 +1471,7 @@ const footerCollapsedHint = computed(() => {
   if (pendingGate.value) {
     if (pendingGate.value.content?.mode === 'session_start') return '确认开始 · 展开'
     if (pendingGate.value.content?.mode === 'human_input') return '需要你输入 · 展开'
+    if (pendingGate.value.content?.mode === 'need_params') return '需要项目参数 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
     return '需要你确认 · 展开'
   }
@@ -1645,6 +1654,9 @@ const composerPlaceholder = computed(() => {
       ? '在此输入参数（空格或换行 → #1 #2…；新开聊另起一套），Enter 或点「提交」'
       : '在此输入内容，Enter 或点「提交」'
   }
+  if (mode === 'need_params') {
+    return '缺少 #1：在此输入项目参数（空格/换行分段），Enter 或点「提交」后继续本步'
+  }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
 })
@@ -1652,7 +1664,7 @@ const composerPlaceholder = computed(() => {
 const composerToolbarHint = computed(() => {
   if (pendingGate.value) {
     const mode = pendingGate.value.content?.mode
-    if (mode === 'human_input') return '下方输入 · Enter 提交闸门'
+    if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
@@ -1709,6 +1721,7 @@ function roleLabel(m) {
   if (m.type === 'gate') {
     if (m.content?.mode === 'session_start') return '确认开始'
     if (m.content?.mode === 'human_input') return '人工输入'
+    if (m.content?.mode === 'need_params') return '补齐参数'
     return '闸门'
   }
   if (m.role === 'system') return '系统'
@@ -2473,9 +2486,9 @@ async function onSenderSubmit() {
     return
   }
 
-  // 人工输入闸门：Enter = 提交闸门（共用底部输入）
+  // 人工输入 / 缺参补齐闸门：Enter = 提交闸门（共用底部输入）
   const g = pendingGate.value
-  if (g?.content?.mode === 'human_input') {
+  if (g?.content?.mode === 'human_input' || g?.content?.mode === 'need_params') {
     await submitHuman(g)
     return
   }
@@ -2510,30 +2523,44 @@ async function onSenderSubmit() {
   }
 }
 
+function nextIdempotencyKey(action, nodeInstanceId) {
+  return `gate_${action || 'x'}_${nodeInstanceId || 'none'}_${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2, 8)}`
+}
+
 async function submitHuman(m) {
+  if (gating.value) return
+  gating.value = true
   try {
     const text = readSenderText()
     await api.sessions.gate(activeId.value, {
       action: 'submit',
       text,
       nodeInstanceId: m.node_instance_id,
+      idempotencyKey: nextIdempotencyKey('submit', m.node_instance_id),
     })
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
   } catch (e) {
     ElMessage.error(e.message)
+  } finally {
+    gating.value = false
   }
 }
 
 /** 开聊启动闸门：通过（可带说明/参数）后才开始跑流程 */
 async function approveSessionStart(m) {
+  if (gating.value) return
+  gating.value = true
   try {
     const text = readSenderText()
     await api.sessions.gate(activeId.value, {
       action: 'approve_start',
       text,
       nodeInstanceId: m?.node_instance_id || undefined,
+      idempotencyKey: nextIdempotencyKey('approve_start', m?.node_instance_id),
     })
     clearSender()
     await loadDetail(activeId.value)
@@ -2541,17 +2568,22 @@ async function approveSessionStart(m) {
     ElMessage.success('已通过，开始执行')
   } catch (e) {
     ElMessage.error(e.message)
+  } finally {
+    gating.value = false
   }
 }
 
 async function gate(m, action) {
+  if (gating.value) return
+  gating.value = true
   try {
-    // 同意/拒绝/归档等：附言取自底部唯一输入框
+    // 同意/拒绝/归档等：附言取自底部唯一输入框（X07）
     const text = readSenderText()
     await api.sessions.gate(activeId.value, {
       action,
       text: text || undefined,
       nodeInstanceId: m?.node_instance_id || undefined,
+      idempotencyKey: nextIdempotencyKey(action, m?.node_instance_id),
     })
     clearSender()
     await loadDetail(activeId.value)
@@ -2566,6 +2598,8 @@ async function gate(m, action) {
       ElMessage.info(text?.trim() ? '已拒绝并记录附言' : '已拒绝')
   } catch (e) {
     ElMessage.error(e.message)
+  } finally {
+    gating.value = false
   }
 }
 

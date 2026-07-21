@@ -56,9 +56,22 @@ import { listRoots, listDir, pathExists, openLocalPath } from './fsBrowser.js'
 const router = Router()
 
 router.get('/health', (_req, res) => {
+  let version = '0.4.0'
+  try {
+    const aboutPath = path.join(ROOT, 'server/config/about.json')
+    const about = JSON.parse(fs.readFileSync(aboutPath, 'utf8'))
+    if (about?.version) version = String(about.version)
+  } catch {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+      if (pkg?.version) version = String(pkg.version)
+    } catch {
+      /* keep default */
+    }
+  }
   res.json({
     ok: true,
-    version: '0.2.0',
+    version,
     dataRoot: DATA_ROOT,
     time: new Date().toISOString(),
   })
@@ -419,8 +432,9 @@ router.get('/files/:sessionId/:name', (req, res) => {
 })
 router.post('/sessions/:id/gate', async (req, res) => {
   try {
-    await handleGateAction(req.params.id, req.body || {})
-    res.json(getSessionDetail(req.params.id))
+    const gateResult = await handleGateAction(req.params.id, req.body || {})
+    const detail = getSessionDetail(req.params.id)
+    res.json({ ...(detail || {}), gateResult: gateResult || { ok: true } })
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

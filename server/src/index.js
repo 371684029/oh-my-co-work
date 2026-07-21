@@ -11,6 +11,7 @@ import { listMembers, listGroups, createMember, createGroup } from './services.j
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
 import { processDueArchives } from './engine.js'
+import { updateAppSettings } from './appSettings.js'
 
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
@@ -23,6 +24,12 @@ ensureAdminMember()
 const nonAdmin = listMembers({ includeDemo: true }).filter((m) => m.name !== 'unified_admin')
 if (nonAdmin.length === 0) {
   console.log('[acw] empty DB, seeding demo…')
+  // 首次空库：默认打开演示，避免开箱看不到「演示流」
+  try {
+    updateAppSettings({ showDemo: true })
+  } catch (e) {
+    console.warn('[acw] enable showDemo on seed failed', e?.message || e)
+  }
   const echo = createMember({
     name: 'echo',
     displayName: '示例回声',

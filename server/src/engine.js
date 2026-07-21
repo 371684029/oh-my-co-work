@@ -43,6 +43,136 @@ function getSession(id) {
   return getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id)
 }
 
+/** 解析成员 config（兼容 config_json 字符串） */
+function parseMemberConfig(member) {
+  if (!member) return {}
+  if (member.config && typeof member.config === 'object') return member.config
+  return parseJson(member.config_json, {})
+}
+
+/**
+ * CI01：成员是否依赖会话级项目参数 #1
+ * - requiresParams: false → 不拦截
+ * - requiresParams: ['#1'] / minParams ≥ 1 → 拦截
+ * - 否则扫描 defaultText / command / path / args / env 是否引用 #1
+ */
+function memberNeedsProjectParams(member) {
+  const config = parseMemberConfig(member)
+  if (config.requiresParams === false || config.skipParamsCheck === true) return false
+  if (Array.isArray(config.requiresParams) && config.requiresParams.length > 0) {
+    return config.requiresParams.some((k) => String(k) === '#1' || String(k) === '1')
+  }
+  if (Number(config.minParams) > 0) return true
+  const script = config.script && typeof config.script === 'object' ? config.script : {}
+  const envVals =
+    script.env && typeof script.env === 'object' ? Object.values(script.env) : []
+  const blobs = [
+    config.defaultText,
+    script.command,
+    script.filePath,
+    script.path,
+    ...(Array.isArray(script.args) ? script.args : []),
+    ...envVals,
+  ]
+    .filter((x) => x != null && String(x).length)
+    .map(String)
+    .join('\n')
+  return /\{#1\}|#1\b|\{1\}/.test(blobs)
+}
+
+/** 会话是否已有非空 #1 / paramsList[0] */
+function hasProjectParam1(ctx) {
+  const c = ctx || {}
+  if (Array.isArray(c.paramsList) && c.paramsList[0] != null && String(c.paramsList[0]).trim()) {
+    return true
+  }
+  const p = c.params && typeof c.params === 'object' ? c.params : {}
+  if (p['#1'] != null && String(p['#1']).trim()) return true
+  if (p['1'] != null && String(p['1']).trim()) return true
+  return false
+}
+
+/** R03：读取闸门幂等缓存 */
+function readGateIdempotency(sessionId, key) {
+  if (!key) return null
+  const session = getSession(sessionId)
+  if (!session) return null
+  const ctx = parseJson(session.context_json, {})
+  const cache = ctx.gateIdempotency && typeof ctx.gateIdempotency === 'object' ? ctx.gateIdempotency : {}
+  return cache[key] || null
+}
+
+/** R03：写入闸门幂等缓存（最多保留 40 条；只存精简结果） */
+function rememberGateIdempotency(sessionId, key, result) {
+  if (!key) return
+  const session = getSession(sessionId)
+  if (!session) return
+  const ctx = parseJson(session.context_json, {})
+  const prev =
+    ctx.gateIdempotency && typeof ctx.gateIdempotency === 'object' ? ctx.gateIdempotency : {}
+  const slim =
+    result && typeof result === 'object'
+      ? {
+          ok: result.ok !== false,
+          action: result.action,
+          passed: result.passed,
+          rejected: result.rejected,
+          cancelled: result.cancelled,
+          archived: result.archived,
+          deferred: result.deferred,
+          started: result.started,
+          submitted: result.submitted,
+          needParamsFilled: result.needParamsFilled,
+          idempotent: result.idempotent,
+        }
+      : { ok: true }
+  const next = { ...prev, [key]: { at: nowIso(), result: slim } }
+  const keys = Object.keys(next)
+  if (keys.length > 40) {
+    keys
+      .sort((a, b) => String(next[a]?.at || '').localeCompare(String(next[b]?.at || '')))
+      .slice(0, keys.length - 40)
+      .forEach((k) => {
+        delete next[k]
+      })
+  }
+  ctx.gateIdempotency = next
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+}
+
+/** X07：闸门附言写入 lastHumanInput + #a */
+function bindGateHumanInput(sessionId, {
+  text,
+  action,
+  actionLabel,
+  nodeTitle,
+  nodeInstanceId,
+}) {
+  const full = text != null ? String(text) : ''
+  const note = full.trim()
+  const session = getSession(sessionId)
+  if (!session) return { full, note }
+  const ctx = parseJson(session.context_json, {})
+  ctx.lastHumanInput = full
+  ctx.params = {
+    ...(ctx.params && typeof ctx.params === 'object' ? ctx.params : {}),
+    [SYSTEM_PARAM_KEYS.CALL_ARGS]: note,
+  }
+  if (note) {
+    ctx.userNotes = Array.isArray(ctx.userNotes) ? ctx.userNotes : []
+    ctx.userNotes.push({
+      at: nowIso(),
+      action,
+      actionLabel,
+      text: note,
+      nodeTitle,
+      nodeInstanceId,
+    })
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+  return { full, note }
+}
+
 /** 用户参数 + #群聊 名片 + #文件夹 */
 function resolveParamsMap(sessionContext, group) {
   const user = getParamsMap(sessionContext)
@@ -599,6 +729,47 @@ export async function advance(sessionId) {
       return
     }
 
+    // CI01：需要 #1 的成员步，缺参则拦截，不 spawn
+    if (memberNeedsProjectParams(member) && !hasProjectParam1(ctx)) {
+      persistNodeIo(sessionId, node.id, {
+        input: {
+          memberId: member.id,
+          memberName: member.display_name,
+          kind: member.kind,
+          needParams: true,
+        },
+        output: {
+          needParams: true,
+          waiting: true,
+          humanAction: 'pending',
+          reason: 'missing_param_1',
+        },
+        status: NODE_STATUS.WAITING_HUMAN,
+      })
+      updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'gate',
+        node_instance_id: node.id,
+        content: {
+          text: `「${node.title || member.display_name}」需要项目参数 #1 才能启动。请在输入框提交（空格/换行分段为 #1 #2…），或点「提交」。`,
+          mode: 'need_params',
+          actions: ['submit'],
+          needParams: true,
+          policy: '缺 #1 时不启动脚本。闸门重试时本轮输入全文会作为 ACW_HUMAN_INPUT，不强制再切 #1。',
+        },
+      })
+      emitSession(sessionId, {
+        type: 'gate.request',
+        payload: {
+          nodeInstanceId: node.id,
+          mode: 'need_params',
+          title: node.title,
+        },
+      })
+      return
+    }
+
     const paramsMap = injectCallArgsParam(
       resolveParamsMap(ctx, group),
       ctx.lastHumanInput,
@@ -1082,7 +1253,33 @@ export function archiveSession(sessionId, reason = 'manual') {
   }
 }
 
-export async function handleGateAction(sessionId, { action, text, nodeInstanceId }) {
+export async function handleGateAction(sessionId, { action, text, nodeInstanceId, idempotencyKey }) {
+  const session = getSession(sessionId)
+  if (!session) throw new Error('会话不存在')
+  if (session.status === SESSION_STATUS.ARCHIVED) {
+    throw Object.assign(new Error('任务已归档'), { code: 'ARCHIVED' })
+  }
+
+  // R03：幂等键命中则直接回放，避免连点双跑
+  const idemKey =
+    idempotencyKey != null && String(idempotencyKey).trim()
+      ? String(idempotencyKey).trim().slice(0, 120)
+      : ''
+  if (idemKey) {
+    const cached = readGateIdempotency(sessionId, idemKey)
+    if (cached?.result) {
+      return { ...cached.result, idempotentReplay: true }
+    }
+  }
+
+  const result = await handleGateActionCore(sessionId, { action, text, nodeInstanceId })
+  if (idemKey) {
+    rememberGateIdempotency(sessionId, idemKey, result || { ok: true, action })
+  }
+  return result
+}
+
+async function handleGateActionCore(sessionId, { action, text, nodeInstanceId }) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.ARCHIVED) {
@@ -1326,15 +1523,94 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
   if (!node) throw new Error('节点不存在')
 
   if (action === 'submit' || action === 'human_submit') {
-    // human input step
+    const prevOut = parseJson(node.output_json, {})
     const ctx = parseJson(session.context_json, {})
-    ctx.lastHumanInput = text || ''
+    const fullText = text != null ? String(text) : ''
+    ctx.lastHumanInput = fullText
     ctx.workFolderReason = ctx.workFolderReason || 'user'
 
     const group = getGroup(session.group_id)
     const steps = parseJson(group?.steps_json, [])
     const step = steps[node.step_index] || {}
-    const prevIn = parseJson(node.input_json, { kind: 'human' })
+    const prevIn = parseJson(node.input_json, {})
+
+    // CI01：缺 #1 拦截后的补参提交 → 写入参数后从本步重跑（不前进 step_index）
+    if (prevOut.needParams || (node.step_type === STEP_TYPE.MEMBER && prevOut.reason === 'missing_param_1')) {
+      if (!fullText.trim()) {
+        throw Object.assign(new Error('请先输入项目参数 #1（空格/换行可分段）'), {
+          code: 'NEED_PARAMS',
+        })
+      }
+      const parsed = parseProjectParams(fullText)
+      ctx.projectInfoRaw = parsed.raw
+      ctx.paramsList = parsed.list
+      const gObj = { ...group, steps }
+      const sysCard =
+        ctx.params?.[SYSTEM_PARAM_KEYS.GROUP_CARD] ||
+        ctx.groupCard ||
+        formatGroupCard(gObj, {
+          memberNameOf: (id) => {
+            const m = getMember(id)
+            return m?.display_name || m?.name || id
+          },
+        })
+      ctx.groupCard = sysCard
+      ctx.groupFolder = resolveGroupFolder(gObj, ctx)
+      ctx.params = mergeSystemParams(
+        {
+          ...parsed.map,
+          [SYSTEM_PARAM_KEYS.CALL_ARGS]: fullText.trim(),
+        },
+        {
+          group: gObj,
+          sessionContext: ctx,
+          memberNameOf: (id) => {
+            const m = getMember(id)
+            return m?.display_name || m?.name || id
+          },
+        },
+      )
+      const autoTitleNeed = syncAutoSessionTitle(ctx, group)
+      updateSession(sessionId, {
+        context_json: JSON.stringify(ctx),
+        status: SESSION_STATUS.ACTIVE,
+        current_step_index: node.step_index,
+        ...(autoTitleNeed ? { title: autoTitleNeed } : {}),
+      })
+      persistNodeIo(sessionId, node.id, {
+        input: {
+          ...prevIn,
+          submitted: fullText,
+          needParams: true,
+        },
+        output: {
+          needParams: false,
+          params: parsed.map,
+          paramsList: parsed.list,
+          humanAction: 'pending',
+        },
+        status: NODE_STATUS.PENDING,
+      })
+      addMessage(sessionId, {
+        role: 'user',
+        type: 'text',
+        node_instance_id: node.id,
+        content: { text: fullText, params: parsed.map },
+      })
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        content: {
+          text: `已补齐项目参数：${parsed.list.map((v, i) => `#${i + 1}=${v}`).join(' · ')}，继续执行本步`,
+          paramsList: parsed.list,
+        },
+      })
+      refreshSessionAnnouncement(sessionId)
+      setImmediate(() => advance(sessionId).catch(console.error))
+      return { ok: true, needParamsFilled: true }
+    }
+
+    // human input step
     // 采集项目参数：步骤显式 captureParams，或首个人工步默认开启
     const captureParams =
       prevIn.captureParams === true ||
@@ -1343,7 +1619,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
 
     let parsed = null
     if (captureParams) {
-      parsed = parseProjectParams(text || '')
+      parsed = parseProjectParams(fullText)
       ctx.projectInfoRaw = parsed.raw
       ctx.paramsList = parsed.list
       // 保留系统 #群聊 / #文件夹，合并用户 #1 #2…
@@ -1377,7 +1653,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     })
 
     const outPayload = {
-      text: text || '(空)',
+      text: fullText || '(空)',
       ok: true,
     }
     if (parsed) {
@@ -1391,7 +1667,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     persistNodeIo(sessionId, node.id, {
       input: {
         ...prevIn,
-        submitted: text || '',
+        submitted: fullText || '',
         captureParams: !!captureParams,
       },
       output: outPayload,
@@ -1402,7 +1678,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
       role: 'user',
       type: 'text',
       node_instance_id: node.id,
-      content: { text: text || '(空)', params: parsed?.map || undefined },
+      content: { text: fullText || '(空)', params: parsed?.map || undefined },
     })
     if (parsed?.list?.length) {
       addMessage(sessionId, {
@@ -1421,13 +1697,29 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     refreshSessionAnnouncement(sessionId)
     updateSession(sessionId, { current_step_index: node.step_index + 1 })
     setImmediate(() => advance(sessionId).catch(console.error))
-    return
+    return { ok: true, submitted: true }
   }
 
   if (action === 'approve' || action === 'admin_approve') {
     const out = parseJson(node.output_json, {})
+    // R03：已通过则幂等返回
+    if (
+      out.humanAction === 'approve' &&
+      (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.FAILED)
+    ) {
+      return { ok: true, idempotent: true, action: 'approve' }
+    }
+    if (node.status !== NODE_STATUS.WAITING_HUMAN) {
+      throw Object.assign(new Error('当前节点不在等待审核状态'), { code: 'NOT_WAITING' })
+    }
     const flow = normalizeStepFlow(out.flow, node.gate)
-    const note = text != null ? String(text).trim() : ''
+    const { note } = bindGateHumanInput(sessionId, {
+      text,
+      action: 'approve',
+      actionLabel: '同意',
+      nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+      nodeInstanceId: node.id,
+    })
     const votes = {
       auto: !!out.votes?.auto,
       human: !!out.votes?.human,
@@ -1473,22 +1765,6 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
         : {}),
     }
 
-    // 参与感：附言写入 context，供群报告维护
-    if (note) {
-      const ctxNote = parseJson(session.context_json, {})
-      ctxNote.lastHumanInput = note
-      ctxNote.userNotes = Array.isArray(ctxNote.userNotes) ? ctxNote.userNotes : []
-      ctxNote.userNotes.push({
-        at: nowIso(),
-        action: 'approve',
-        actionLabel: '同意',
-        text: note,
-        nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
-        nodeInstanceId: node.id,
-      })
-      updateSession(sessionId, { context_json: JSON.stringify(ctxNote) })
-    }
-
     if (!passed) {
       updateNode(node.id, {
         status: NODE_STATUS.WAITING_HUMAN,
@@ -1504,7 +1780,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
         },
       })
       refreshSessionAnnouncement(sessionId)
-      return
+      return { ok: true, passed: false }
     }
 
     updateNode(node.id, {
@@ -1519,12 +1795,24 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
       current_step_index: node.step_index + 1,
     })
     setImmediate(() => advance(sessionId).catch(console.error))
-    return
+    return { ok: true, passed: true }
   }
 
   if (action === 'reject' || action === 'admin_reject') {
-    const note = text != null ? String(text).trim() : ''
     const prevOut = parseJson(node.output_json, {})
+    if (prevOut.humanAction === 'reject' && node.status === NODE_STATUS.FAILED) {
+      return { ok: true, idempotent: true, action: 'reject' }
+    }
+    if (node.status !== NODE_STATUS.WAITING_HUMAN) {
+      throw Object.assign(new Error('当前节点不在等待审核状态'), { code: 'NOT_WAITING' })
+    }
+    const { note } = bindGateHumanInput(sessionId, {
+      text,
+      action: 'reject',
+      actionLabel: '拒绝',
+      nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+      nodeInstanceId: node.id,
+    })
     addMessage(sessionId, {
       role: 'user',
       type: 'gate',
@@ -1535,20 +1823,6 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
         note: note || undefined,
       },
     })
-    if (note) {
-      const ctxNote = parseJson(session.context_json, {})
-      ctxNote.lastHumanInput = note
-      ctxNote.userNotes = Array.isArray(ctxNote.userNotes) ? ctxNote.userNotes : []
-      ctxNote.userNotes.push({
-        at: nowIso(),
-        action: 'reject',
-        actionLabel: '拒绝',
-        text: note,
-        nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
-        nodeInstanceId: node.id,
-      })
-      updateSession(sessionId, { context_json: JSON.stringify(ctxNote) })
-    }
     // 明确拒绝 = 不通过（保留产出 + 附言）
     updateNode(node.id, {
       status: NODE_STATUS.FAILED,
@@ -1568,7 +1842,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     })
     refreshSessionAnnouncement(sessionId)
     requestArchiveConsent(sessionId, 'rejected')
-    return
+    return { ok: true, rejected: true }
   }
 
   throw new Error(`未知动作: ${action}`)
@@ -1793,6 +2067,18 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         })
       }
       return { session: getSession(sessionId), newSession: false }
+    }
+    // CI01：缺参拦截后，Enter 发送即补齐 #1 并重跑本步
+    if (node && node.step_type === STEP_TYPE.MEMBER) {
+      const out = parseJson(node.output_json, {})
+      if (out.needParams || out.reason === 'missing_param_1') {
+        await handleGateAction(sessionId, {
+          action: 'submit',
+          text: content.text,
+          nodeInstanceId: node.id,
+        })
+        return { session: getSession(sessionId), newSession: false, needParamsFilled: true }
+      }
     }
     // waiting gate but user typed — 记 pending 附言，不推进、不通过/拒绝（可 @ 成员协助）
     addMessage(sessionId, {

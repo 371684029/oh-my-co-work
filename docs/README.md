@@ -8,6 +8,7 @@
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
+| [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |
 | [frontend-components.md](./frontend-components.md) | **优先 Element-Plus-X** + UI 布局/氛围约定 |
 | [brand-logo.md](./brand-logo.md) | **Logo 含义与资产** |
 | [directory-structure.md](./directory-structure.md) | 目录与模块边界（对齐代码） |

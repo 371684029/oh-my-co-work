@@ -22,7 +22,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 
 | 项 | 内容 |
 |----|------|
-| 版本 | `0.4.0`（**已封板** · [mvp.md §2.10](./docs/mvp.md)；新需求进 `1.0.0`） |
+| 版本 | `1.0.0-dev`（在 `0.4.0` 封板上推进；见 [mvp.md §2.11](./docs/mvp.md)） |
 | 形态 | 三栏工作台 + 设置 · **完全本机** |
 | UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
 | 仓库名 | `apple-co-work`（原 `element-co-work`） |
@@ -263,6 +263,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | [docs/technical-design.md](./docs/technical-design.md) | 完整架构、Session/归档/克隆/文件夹/快捷键等 |
 | [docs/data-storage.md](./docs/data-storage.md) | **当前实现**：SQLite/MD、参数、**脚本约定**、**群报告**、弹窗优先级 |
 | [docs/data-and-ops.md](./docs/data-and-ops.md) | 数据分层、P0–P4、**§9 待改进 backlog** |
+| [docs/script-guide.md](./docs/script-guide.md) | **写脚本指南**（占位符 / env / 缺参） |
 | [docs/frontend-components.md](./docs/frontend-components.md) | **优先 Element-Plus-X** 组件映射 |
 | [docs/directory-structure.md](./docs/directory-structure.md) | 目录与模块边界 |
 | [docs/author-contact.example.json](./docs/author-contact.example.json) | 支持与交流配置示例 |
@@ -274,9 +275,9 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 ## 路线图
 
 ```
-✅ MVP 0.1～0.4 已封板（当前 = apple-co-work 0.4.0）
-   → 1.0.0：CI01 / X07 / CI03 等（见 data-and-ops §9）
-   → 崩溃恢复 / 路径锁 / 幂等（P2）
+✅ MVP 0.1～0.4 已封板
+   → 1.0.0-dev：CI01 / CI03 / CI04 / X07 / R03（进行中）
+   → 崩溃恢复 / 路径锁（P2 · R02/R04）
    → LLM 工作目录推断 + 终检越界暴露
    → GUI 桌面壳（复用 web）
 ```
