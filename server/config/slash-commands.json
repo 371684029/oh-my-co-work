@@ -1,0 +1,72 @@
+{
+  "commands": [
+    {
+      "id": "cmd_admin_agent",
+      "name": "统一管理员",
+      "slash": "admin",
+      "description": "管理员 Agent：调度协同、本机事项与流程协助（首位默认）",
+      "enabled": true,
+      "kind": "agent",
+      "command": "",
+      "url": "",
+      "promptForUrl": false,
+      "openTarget": "sessionWorkFolder",
+      "customPath": "",
+      "memberId": "",
+      "memberName": "统一管理员",
+      "memberKey": "unified_admin",
+      "prompt": "请【统一管理员】协助处理："
+    },
+    {
+      "id": "cmd_open_editor",
+      "name": "打开编辑器",
+      "slash": "editor",
+      "description": "用本机编辑器打开当前工作文件夹（可改命令）",
+      "enabled": true,
+      "kind": "shell",
+      "command": "code \"{folder}\"",
+      "url": "",
+      "promptForUrl": false,
+      "openTarget": "sessionWorkFolder",
+      "customPath": "",
+      "memberId": "",
+      "memberName": "",
+      "memberKey": "",
+      "prompt": ""
+    },
+    {
+      "id": "cmd_open_folder",
+      "name": "打开工作文件夹",
+      "slash": "folder",
+      "description": "用系统资源管理器打开当前工作文件夹",
+      "enabled": true,
+      "kind": "shell",
+      "command": "explorer \"{folder}\"",
+      "url": "",
+      "promptForUrl": false,
+      "openTarget": "sessionWorkFolder",
+      "customPath": "",
+      "memberId": "",
+      "memberName": "",
+      "memberKey": "",
+      "prompt": ""
+    },
+    {
+      "id": "cmd_open_browser",
+      "name": "打开浏览器",
+      "slash": "browser",
+      "description": "在系统默认浏览器打开网址（运行时会询问 URL）",
+      "enabled": true,
+      "kind": "url",
+      "command": "",
+      "url": "https://",
+      "promptForUrl": true,
+      "openTarget": "sessionWorkFolder",
+      "customPath": "",
+      "memberId": "",
+      "memberName": "",
+      "memberKey": "",
+      "prompt": ""
+    }
+  ]
+}

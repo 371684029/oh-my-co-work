@@ -1,0 +1,18 @@
+{
+  "name": "@acw/server",
+  "version": "0.4.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "@acw/shared": "*",
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "showDemo": false,
+  "admin": {
+    "memberKey": "unified_admin",
+    "memberId": "mem_mroiojue_9h5v6u4",
+    "defaultFlow": {
+      "admin": true,
+      "auto": true,
+      "human": true
+    }
+  },
+  "autoArchiveHours": 3,
+  "showScriptPopup": true
+}
