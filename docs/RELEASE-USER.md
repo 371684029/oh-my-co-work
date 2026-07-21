@@ -22,8 +22,10 @@
 
 ## 需要什么
 
-- 本机已安装 **Node.js ≥ 18**（https://nodejs.org ）
-- **不需要**再执行 `npm install`（运行依赖已打进压缩包）
+- 本机已安装 **Node.js ≥ 18**（https://nodejs.org ；推荐任意现行 LTS/Current 均可）
+- **不需要**先手动 `npm install`
+- 若本机 Node 主版本与打包时不同（例如包按 Node 20 打、本机是 Node 22），启动脚本会**自动按当前 Node 适配** `better-sqlite3`（需能访问 npm；首次可能多等几十秒）
+- 自动适配失败时，可在解压目录执行：`npm install better-sqlite3 --omit=dev` 后再双击启动
 - 不解压进需要管理员权限的系统目录即可
 
 ## 怎么启动

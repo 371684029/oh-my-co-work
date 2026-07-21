@@ -160,7 +160,7 @@ npm run dev:server
 
 1. 打开仓库 **[`packages/`](./packages/)**，下载与本机系统匹配的 zip（如 Windows 用 `*-win32-x64.zip`）  
 2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
-3. **不需要**再 `npm install`；浏览器会自动打开；关掉浏览器后后台默认退出  
+3. **通常不需要**再 `npm install`（若本机 Node 版本与打包不一致，启动会自动适配原生模块）；浏览器会自动打开；关掉浏览器后后台默认退出  
 4. 工作台 → 开聊 **「演示流」**  
 
 > 包内是打包产物（前端 dist + 后端 bundle + 内置依赖），**不是源码**。  

@@ -121,23 +121,27 @@ function writeStartSh(dest) {
   }
 }
 
-/** 发布包专用启动器：不装依赖，直接跑打包后的 server/dist */
+/** 发布包专用启动器：优先直跑；Node ABI 不匹配时自动适配 better-sqlite3 */
 function writeStartMjs(dest) {
   fs.writeFileSync(
     dest,
     `/**
- * 运行包一键启动（已含打包产物与 node_modules，无需再 npm install）
+ * 运行包一键启动（已含打包产物与 node_modules）
+ * 通用适配：本机 Node 与打包 ABI 不一致时，自动按当前 Node 拉取/重建 better-sqlite3
  */
-import { spawn, exec } from 'node:child_process'
+import { spawn, exec, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import http from 'node:http'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.ACW_PORT || 3780)
 const AUTO_EXIT = process.env.ACW_AUTO_EXIT !== '0' && process.env.ACW_AUTO_EXIT !== 'false'
 const ENTRY = path.join(ROOT, 'server', 'dist', 'index.cjs')
+const require = createRequire(path.join(ROOT, 'package.json'))
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 function log(...a) {
   console.log('[acw-start]', ...a)
@@ -176,46 +180,147 @@ function openBrowser(url) {
   else exec(\`xdg-open "\${url}"\`)
 }
 
-if (!fs.existsSync(ENTRY)) {
-  console.error('[acw-start] 缺少打包入口 server/dist/index.cjs，请使用官方运行包')
-  process.exit(1)
-}
-if (!fs.existsSync(path.join(ROOT, 'node_modules', 'better-sqlite3'))) {
-  console.error('[acw-start] 缺少内置依赖 node_modules/better-sqlite3（运行包应已自带，勿删）')
-  process.exit(1)
+function clearSqliteCache() {
+  for (const k of Object.keys(require.cache || {})) {
+    if (/better-sqlite3|[/\\\\]bindings[/\\\\]/i.test(k)) delete require.cache[k]
+  }
 }
 
-const env = {
-  ...process.env,
-  ACW_PORT: String(PORT),
-  ACW_AUTO_EXIT: AUTO_EXIT ? '1' : '0',
-}
-log('运行包启动', ROOT)
-log(\`端口 :\${PORT}  auto-exit=\${AUTO_EXIT ? 'on' : 'off'}\`)
-const child = spawn(process.execPath, [ENTRY], { cwd: ROOT, env, stdio: 'inherit' })
-const shutdown = () => {
+function probeSqlite() {
+  clearSqliteCache()
   try {
-    child.kill('SIGTERM')
+    const Database = require(path.join(ROOT, 'node_modules', 'better-sqlite3'))
+    // require 本身不一定加载 .node；打开内存库才会触发原生模块与 ABI 校验
+    const db = new Database(':memory:')
+    db.close()
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e }
+  }
+}
+
+function runNpm(args, cwd = ROOT) {
+  return spawnSync(NPM, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    env: process.env,
+  })
+}
+
+function sqliteDepRange() {
+  try {
+    return (
+      require(path.join(ROOT, 'package.json')).dependencies?.['better-sqlite3'] ||
+      '^11.7.0'
+    )
+  } catch {
+    return '^11.7.0'
+  }
+}
+
+function wipeSqliteModule() {
+  const dir = path.join(ROOT, 'node_modules', 'better-sqlite3')
+  try {
+    if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true })
   } catch {
     /* ignore */
   }
 }
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
-child.on('exit', (code) => process.exit(code || 0))
 
-waitHealth()
-  .then(() => {
-    const url = \`http://127.0.0.1:\${PORT}/\`
-    log('打开浏览器', url)
-    if (AUTO_EXIT) log('提示：关闭浏览器窗口后，后台将在数秒内自动退出')
-    openBrowser(url)
-  })
-  .catch((e) => {
+/** 通用：按当前 Node ABI 适配原生模块（优先下预编译，避免 Windows 缺 VS 编不过） */
+function adaptSqliteForCurrentNode() {
+  log('检测到 better-sqlite3 与当前 Node 不匹配，开始自动适配…')
+  log('本机 Node', process.version, 'ABI', process.versions.modules)
+
+  // 1) 删掉旧模块后重装：按当前 Node 拉预编译包（通用，多数情况无需 VS）
+  log('步骤 1/2：清除并按当前 Node 重装 better-sqlite3（预编译优先）…')
+  wipeSqliteModule()
+  let r = runNpm([
+    'install',
+    'better-sqlite3@' + sqliteDepRange(),
+    '--omit=dev',
+    '--no-audit',
+    '--no-fund',
+    '--force',
+  ])
+  if (probeSqlite().ok) return true
+
+  // 2) 最后 rebuild（需要本机编译工具；预编译不可用时兜底）
+  log('步骤 2/2：npm rebuild better-sqlite3 …')
+  r = runNpm(['rebuild', 'better-sqlite3'])
+  if (r.status === 0 && probeSqlite().ok) return true
+
+  return false
+}
+
+async function main() {
+  if (!fs.existsSync(ENTRY)) {
+    console.error('[acw-start] 缺少打包入口 server/dist/index.cjs，请使用官方运行包')
+    process.exit(1)
+  }
+  if (!fs.existsSync(path.join(ROOT, 'node_modules', 'better-sqlite3'))) {
+    console.error('[acw-start] 缺少内置依赖 node_modules/better-sqlite3（运行包应已自带，勿删）')
+    process.exit(1)
+  }
+
+  let probe = probeSqlite()
+  if (!probe.ok) {
+    // 通用：原生模块加载失败（ABI 不符 / 损坏 / 架构不对）一律自动适配
+    log('better-sqlite3 加载失败，尝试按当前 Node 自动适配…')
+    log(String(probe.error?.message || probe.error || ''))
+    const ok = adaptSqliteForCurrentNode()
+    probe = probeSqlite()
+    if (!ok || !probe.ok) {
+      console.error('[acw-start] 自动适配失败：')
+      console.error(probe.error)
+      console.error(
+        '[acw-start] 请确保本机可访问 npm，或改用 Node 20 LTS 后再启动：https://nodejs.org',
+      )
+      console.error(
+        '[acw-start] 也可在本解压目录手动执行：npm install better-sqlite3 --omit=dev',
+      )
+      process.exit(1)
+    }
+    log('better-sqlite3 已适配当前 Node', process.version)
+  }
+
+  const env = {
+    ...process.env,
+    ACW_PORT: String(PORT),
+    ACW_AUTO_EXIT: AUTO_EXIT ? '1' : '0',
+  }
+  log('运行包启动', ROOT)
+  log(\`Node \${process.version}  端口 :\${PORT}  auto-exit=\${AUTO_EXIT ? 'on' : 'off'}\`)
+  const child = spawn(process.execPath, [ENTRY], { cwd: ROOT, env, stdio: 'inherit' })
+  const shutdown = () => {
+    try {
+      child.kill('SIGTERM')
+    } catch {
+      /* ignore */
+    }
+  }
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
+  child.on('exit', (code) => process.exit(code || 0))
+
+  try {
+    await waitHealth()
+  } catch (e) {
     log(e.message)
     shutdown()
     process.exit(1)
-  })
+  }
+  const url = \`http://127.0.0.1:\${PORT}/\`
+  log('打开浏览器', url)
+  if (AUTO_EXIT) log('提示：关闭浏览器窗口后，后台将在数秒内自动退出')
+  openBrowser(url)
+}
+
+main().catch((e) => {
+  console.error('[acw-start] FAIL', e.message || e)
+  process.exit(1)
+})
 `,
     'utf8',
   )
@@ -429,7 +534,8 @@ async function mainAsync() {
     '## 需要',
     '',
     '- 本机已安装 Node.js ≥ 18（https://nodejs.org）',
-    '- **不需要**再执行 npm install（依赖已打进包内）',
+    '- **通常不需要**再执行 npm install（依赖已打进包内）',
+    '- 若本机 Node 版本与打包不一致，启动时会自动适配 better-sqlite3（需能访问 npm）',
     '',
     '## 启动',
     '',
