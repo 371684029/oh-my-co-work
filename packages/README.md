@@ -4,8 +4,8 @@
 - **大版本**：新增 `apple-co-work-v{N+1}.zip`，旧大版本包保留（增量）
 
 当前版本：`1.0.0-dev`（大版本 v1）
-当前提交：`10a6750`
-当前包：[`apple-co-work-v1.zip`](./apple-co-work-v1.zip)（1145028 bytes）
+当前提交：`f22786a`
+当前包：[`apple-co-work-v1.zip`](./apple-co-work-v1.zip)（1145071 bytes）
 
 下载（GitHub）：
 
