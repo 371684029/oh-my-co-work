@@ -221,10 +221,63 @@ waitHealth()
   )
 }
 
-function writePackagesManifest({ ver, major, sha, plat, gitZipName, size, files }) {
-  const list = files
-    .map((f) => `- [\`${f}\`](./${f})`)
-    .join('\n')
+function parseCurrentTxt(raw) {
+  const map = {}
+  for (const line of String(raw || '').split(/\r?\n/)) {
+    const t = line.trim()
+    if (!t || t.startsWith('#') || t.startsWith('<<<<<<<') || t.startsWith('=======') || t.startsWith('>>>>>>>')) {
+      continue
+    }
+    const i = t.indexOf('=')
+    if (i <= 0) continue
+    map[t.slice(0, i)] = t.slice(i + 1)
+  }
+  return map
+}
+
+function platformFromZipName(name) {
+  // apple-co-work-v1-linux-x64.zip → linux-x64
+  const m = String(name).match(/^apple-co-work-v\d+-(.+)\.zip$/i)
+  return m ? m[1] : null
+}
+
+function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
+  const curPath = path.join(PACKAGES_DIR, 'CURRENT.txt')
+  const prev = fs.existsSync(curPath)
+    ? parseCurrentTxt(fs.readFileSync(curPath, 'utf8'))
+    : {}
+
+  // 以目录内实际 zip 为准，合并各平台元数据（避免并行 CI 互相冲掉）
+  const files = fs
+    .readdirSync(PACKAGES_DIR)
+    .filter((n) => n.endsWith('.zip'))
+    .sort()
+
+  const byPlat = {}
+  for (const f of files) {
+    const p = platformFromZipName(f)
+    if (!p) continue
+    const full = path.join(PACKAGES_DIR, f)
+    byPlat[p] = {
+      file: f,
+      size: fs.statSync(full).size,
+      commit: prev[`commit.${p}`] || prev.commit || '',
+      built: prev[`built.${p}`] || '',
+    }
+  }
+  byPlat[plat] = {
+    file: gitZipName,
+    size,
+    commit: sha,
+    built: new Date().toISOString(),
+  }
+
+  const platOrder = Object.keys(byPlat).sort()
+  const tableRows = platOrder.map((p) => {
+    const b = byPlat[p]
+    return `| ${p} | [\`${b.file}\`](./${b.file}) | ${b.size} |`
+  })
+
   const lines = [
     '# apple-co-work 运行包（提交在 git）',
     '',
@@ -237,34 +290,37 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size, files 
     '- **大版本**：新增 `v{N+1}-…`，旧大版本包保留',
     '- **多平台**：linux / win32 / darwin 各一份，互不覆盖',
     '',
-    `当前构建：\`${ver}\` · 平台 \`${plat}\` · 提交 \`${sha}\``,
-    `本机产物：[\`${gitZipName}\`](./${gitZipName})（${size} bytes）`,
-    '',
     '## 仓库内文件',
     '',
-    list || '_（尚无）_',
+    '| 平台 | 文件 | 大小 |',
+    '|------|------|------|',
+    ...tableRows,
+    '',
+    `版本：\`${ver}\`（大版本 v${major}）`,
     '',
     '## 启动',
     '',
-    '解压 → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。',
+    '解压对应平台的 zip → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。',
     '',
   ]
   fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
-  fs.writeFileSync(
-    path.join(PACKAGES_DIR, 'CURRENT.txt'),
-    [
-      `version=${ver}`,
-      `major=${major}`,
-      `platform=${plat}`,
-      `commit=${sha}`,
-      `file=${gitZipName}`,
-      `built=${new Date().toISOString()}`,
-      `kind=runtime-bundle`,
-      `needsNpmInstall=false`,
-      `policy=same-major-same-platform-replace; new-major-or-platform-keep`,
-    ].join('\n') + '\n',
-    'utf8',
-  )
+
+  const curLines = [
+    `version=${ver}`,
+    `major=${major}`,
+    `kind=runtime-bundle`,
+    `needsNpmInstall=false`,
+    `policy=same-major-same-platform-replace; new-major-or-platform-keep`,
+    '# 各平台产物（按平台键合并，避免并行 CI 冲突）',
+  ]
+  for (const p of platOrder) {
+    const b = byPlat[p]
+    curLines.push(`file.${p}=${b.file}`)
+    curLines.push(`size.${p}=${b.size}`)
+    if (b.commit) curLines.push(`commit.${p}=${b.commit}`)
+    if (b.built) curLines.push(`built.${p}=${b.built}`)
+  }
+  fs.writeFileSync(curPath, curLines.join('\n') + '\n', 'utf8')
 }
 
 function runEsbuild(args) {
@@ -445,11 +501,7 @@ async function mainAsync() {
   fs.copyFileSync(zipPath, gitZipPath)
 
   const size = fs.statSync(gitZipPath).size
-  const files = fs
-    .readdirSync(PACKAGES_DIR)
-    .filter((n) => n.endsWith('.zip'))
-    .sort()
-  writePackagesManifest({ ver, major, sha, plat, gitZipName, size, files })
+  writePackagesManifest({ ver, major, sha, plat, gitZipName, size })
 
   console.log('[pack] ok', gitZipPath, `(${size} bytes)`)
   console.log('[pack] user: unzip → start.bat / ./start.sh （无需 npm install）')
@@ -470,4 +522,46 @@ async function mainAsync() {
   return gitZipPath
 }
 
-main()
+/** 仅根据 packages/*.zip 重写 README/CURRENT（解决并行 CI 冲突后调用） */
+function regenerateManifestOnly() {
+  const aboutPath = path.join(ROOT, 'server/config/about.json')
+  let ver = '0.0.0'
+  try {
+    ver = readJson(aboutPath).version || ver
+  } catch {
+    try {
+      ver = readJson(path.join(ROOT, 'package.json')).version || ver
+    } catch {
+      /* ignore */
+    }
+  }
+  const major = majorOf(ver)
+  const sha = gitShort()
+  const plat = platformTag()
+  const files = fs.existsSync(PACKAGES_DIR)
+    ? fs.readdirSync(PACKAGES_DIR).filter((n) => n.endsWith('.zip')).sort()
+    : []
+  if (!files.length) {
+    console.log('[pack] no zips in packages/, skip manifest')
+    return
+  }
+  // 用本机平台对应文件作“锚点”，其余从目录扫描合并
+  const mine =
+    files.find((f) => f.includes(`-${plat}.`)) || files[files.length - 1]
+  const size = fs.statSync(path.join(PACKAGES_DIR, mine)).size
+  writePackagesManifest({
+    ver,
+    major,
+    sha,
+    plat: platformFromZipName(mine) || plat,
+    gitZipName: mine,
+    size,
+  })
+  console.log('[pack] regenerated packages/README.md + CURRENT.txt from', files.join(', '))
+}
+
+if (process.argv.includes('--manifest-only')) {
+  regenerateManifestOnly()
+} else {
+  main()
+}

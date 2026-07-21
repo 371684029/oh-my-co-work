@@ -1,23 +1,16 @@
 version=1.0.0-dev
 major=1
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-platform=darwin-arm64
-commit=5332e29
-file=apple-co-work-v1-darwin-arm64.zip
-built=2026-07-21T08:47:21.361Z
-=======
-platform=linux-x64
-commit=5332e29
-file=apple-co-work-v1-linux-x64.zip
-built=2026-07-21T08:47:34.282Z
->>>>>>> Stashed changes
-=======
-platform=win32-x64
-commit=5332e29
-file=apple-co-work-v1-win32-x64.zip
-built=2026-07-21T08:48:06.033Z
->>>>>>> Stashed changes
 kind=runtime-bundle
 needsNpmInstall=false
 policy=same-major-same-platform-replace; new-major-or-platform-keep
+# 各平台产物（按平台键合并，避免并行 CI 冲突）
+file.darwin-arm64=apple-co-work-v1-darwin-arm64.zip
+size.darwin-arm64=5123153
+commit.darwin-arm64=5332e29
+file.linux-x64=apple-co-work-v1-linux-x64.zip
+size.linux-x64=5254835
+commit.linux-x64=0bbd762
+built.linux-x64=2026-07-21T10:41:43.620Z
+file.win32-x64=apple-co-work-v1-win32-x64.zip
+size.win32-x64=5056877
+commit.win32-x64=5332e29

@@ -9,25 +9,16 @@
 - **大版本**：新增 `v{N+1}-…`，旧大版本包保留
 - **多平台**：linux / win32 / darwin 各一份，互不覆盖
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-当前构建：`1.0.0-dev` · 平台 `darwin-arm64` · 提交 `5332e29`
-本机产物：[`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip)（5123153 bytes）
-=======
-当前构建：`1.0.0-dev` · 平台 `linux-x64` · 提交 `5332e29`
-本机产物：[`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip)（5254835 bytes）
->>>>>>> Stashed changes
-=======
-当前构建：`1.0.0-dev` · 平台 `win32-x64` · 提交 `5332e29`
-本机产物：[`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip)（5056877 bytes）
->>>>>>> Stashed changes
-
 ## 仓库内文件
 
-- [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip)
-- [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip)
-- [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip)
+| 平台 | 文件 | 大小 |
+|------|------|------|
+| darwin-arm64 | [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip) | 5123153 |
+| linux-x64 | [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip) | 5254835 |
+| win32-x64 | [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip) | 5056877 |
+
+版本：`1.0.0-dev`（大版本 v1）
 
 ## 启动
 
-解压 → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。
+解压对应平台的 zip → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。

@@ -53,22 +53,41 @@ jobs:
           set -euo pipefail
           git config user.name "wll"
           git config user.email "371684029@qq.com"
-          # 多平台并行：拉取后只提交本平台 zip，避免互相覆盖
-          for i in 1 2 3 4 5; do
-            git pull --rebase origin main || git pull --rebase --autostash origin main || true
+          PLAT="$(node -p "process.platform+'-'+process.arch")"
+          FILE="apple-co-work-v1-${PLAT}.zip"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          # 多平台并行：rebase 后若 README/CURRENT 冲突，按目录内 zip 重写清单再继续
+          for i in 1 2 3 4 5 6; do
+            if ! git pull --rebase origin main; then
+              if [ -f packages/README.md ] && grep -q '<<<<<<' packages/README.md packages/CURRENT.txt 2>/dev/null; then
+                git checkout --ours packages/README.md packages/CURRENT.txt || true
+                git checkout --theirs packages/README.md packages/CURRENT.txt || true
+                # 保留所有已跟踪 zip，按磁盘内容重写清单
+                git checkout --ours -- 'packages/*.zip' 2>/dev/null || true
+                git checkout HEAD -- 'packages/*.zip' 2>/dev/null || true
+                node scripts/pack-release.mjs --manifest-only
+                git add packages/README.md packages/CURRENT.txt packages/*.zip || true
+                GIT_EDITOR=true git rebase --continue || true
+              else
+                git rebase --abort || true
+                git pull --rebase --autostash origin main || true
+              fi
+            fi
+            # 清掉残留冲突标记后再提交
+            if grep -R -l '<<<<<<' packages/README.md packages/CURRENT.txt 2>/dev/null; then
+              node scripts/pack-release.mjs --manifest-only
+            fi
             git add packages/
             if git diff --staged --quiet; then
               echo "[pack] packages/ unchanged"
               break
             fi
-            FILE=$(sed -n 's/^file=//p' packages/CURRENT.txt | head -n1)
-            VER=$(sed -n 's/^version=//p' packages/CURRENT.txt | head -n1)
             if git commit -m "chore(packages): 更新 ${FILE} (${VER})"; then
               if git push origin HEAD:main; then
                 break
               fi
             fi
-            sleep $((i * 3))
+            sleep $((i * 4))
           done
 
   release:
