@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 /**
  * 打用户可下载压缩包（不含 node_modules；用户机 npm install / 一键启动会装）
- * 产物：release/apple-co-work-<version>-<shortsha>.zip|.tar.gz
+ *
+ * 产物：
+ * - release/…（本机临时，gitignore）
+ * - packages/apple-co-work-v{MAJOR}.zip  ← **提交进 git**
+ *   · 同大版本（小版本）：覆盖替换
+ *   · 新大版本：新增文件，旧大版本包保留（增量）
  *
  * 用法：npm run pack
  */
@@ -13,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const OUT_ROOT = path.join(ROOT, 'release')
+const PACKAGES_DIR = path.join(ROOT, 'packages')
 
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'))
@@ -36,6 +42,12 @@ function gitShort() {
   } catch {
     return 'nogit'
   }
+}
+
+/** 从 1.0.0-dev / 2.1.3 取主版本号 */
+function majorOf(ver) {
+  const m = String(ver || '0').match(/^(\d+)/)
+  return m ? Number(m[1]) : 0
 }
 
 function copyFile(src, dest) {
@@ -63,6 +75,39 @@ function copyDir(src, dest, { ignore = [] } = {}) {
   }
 }
 
+function writePackagesManifest({ ver, major, sha, gitZipName, size }) {
+  const lines = [
+    '# apple-co-work 压缩包（提交在 git 内）',
+    '',
+    '- **小版本（同大版本）**：覆盖替换 `apple-co-work-v{N}.zip`',
+    '- **大版本**：新增 `apple-co-work-v{N+1}.zip`，旧大版本包保留（增量）',
+    '',
+    `当前版本：\`${ver}\`（大版本 v${major}）`,
+    `当前提交：\`${sha}\``,
+    `当前包：[\`${gitZipName}\`](./${gitZipName})（${size} bytes）`,
+    '',
+    '下载（GitHub）：',
+    '',
+    '```text',
+    `https://github.com/371684029/apple-co-work/raw/main/packages/${gitZipName}`,
+    '```',
+    '',
+  ]
+  fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
+  fs.writeFileSync(
+    path.join(PACKAGES_DIR, 'CURRENT.txt'),
+    [
+      `version=${ver}`,
+      `major=${major}`,
+      `commit=${sha}`,
+      `file=${gitZipName}`,
+      `built=${new Date().toISOString()}`,
+      `policy=same-major-replace; new-major-keep-old`,
+    ].join('\n') + '\n',
+    'utf8',
+  )
+}
+
 function main() {
   const pkg = readJson(path.join(ROOT, 'package.json'))
   const aboutPath = path.join(ROOT, 'server/config/about.json')
@@ -72,10 +117,12 @@ function main() {
   } catch {
     /* ignore */
   }
+  const major = majorOf(ver)
   const sha = gitShort()
-  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const folderName = `apple-co-work-${ver}-${sha}`
   const stage = path.join(OUT_ROOT, folderName)
+  const gitZipName = `apple-co-work-v${major}.zip`
+  const gitZipPath = path.join(PACKAGES_DIR, gitZipName)
 
   console.log('[pack] build web…')
   sh('npm', ['run', 'build', '-w', 'web'])
@@ -84,7 +131,6 @@ function main() {
   fs.mkdirSync(stage, { recursive: true })
 
   console.log('[pack] assemble', stage)
-  // 根文件
   for (const f of [
     'package.json',
     'package-lock.json',
@@ -105,6 +151,7 @@ function main() {
     ignore: ['node_modules', 'data'],
   })
   // web：只需 package.json + dist（运行靠 server 静态托管）
+  // 注意：不要把 packages/ 打进 zip，避免嵌套膨胀
   fs.mkdirSync(path.join(stage, 'web'), { recursive: true })
   copyFile(path.join(ROOT, 'web/package.json'), path.join(stage, 'web/package.json'))
   copyDir(path.join(ROOT, 'web/dist'), path.join(stage, 'web/dist'))
@@ -115,18 +162,17 @@ function main() {
   copyDir(path.join(ROOT, 'docs'), path.join(stage, 'docs'), {
     ignore: [],
   })
-  // 用户向说明置顶
   copyFile(
     path.join(ROOT, 'docs/RELEASE-USER.md'),
     path.join(stage, '使用说明.txt'),
   )
 
-  // 可执行权限提示文件
   fs.writeFileSync(
     path.join(stage, 'VERSION.txt'),
     [
       `name=apple-co-work`,
       `version=${ver}`,
+      `major=${major}`,
       `commit=${sha}`,
       `built=${new Date().toISOString()}`,
       `autoExit=default-on via start.mjs`,
@@ -138,7 +184,6 @@ function main() {
   const zipPath = path.join(OUT_ROOT, `${folderName}.zip`)
   const tarPath = path.join(OUT_ROOT, `${folderName}.tar.gz`)
 
-  // 优先 zip，其次 tar.gz
   let artifact = null
   try {
     if (process.platform === 'win32') {
@@ -166,14 +211,41 @@ function main() {
     artifact = tarPath
   }
 
+  // 写入 git 跟踪目录：同大版本覆盖；不同大版本并存
+  fs.mkdirSync(PACKAGES_DIR, { recursive: true })
+  if (artifact.endsWith('.zip')) {
+    fs.copyFileSync(artifact, gitZipPath)
+  } else {
+    // tar.gz 时仍尽量提供 zip 名的副本说明
+    const fallback = path.join(PACKAGES_DIR, `apple-co-work-v${major}.tar.gz`)
+    fs.copyFileSync(artifact, fallback)
+    console.warn('[pack] no zip; wrote', fallback)
+  }
+
   const size = fs.statSync(artifact).size
+  const gitSize = fs.existsSync(gitZipPath) ? fs.statSync(gitZipPath).size : size
+  writePackagesManifest({
+    ver,
+    major,
+    sha,
+    gitZipName,
+    size: gitSize,
+  })
+
   console.log('[pack] ok', artifact, `(${size} bytes)`)
+  console.log('[pack] git package', gitZipPath, `(replace major v${major})`)
   console.log('[pack] staged dir', stage)
-  // CI 友好输出
+
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(
       process.env.GITHUB_OUTPUT,
-      `artifact=${artifact}\nartifact_name=${path.basename(artifact)}\nversion=${ver}\n`,
+      [
+        `artifact=${artifact}`,
+        `artifact_name=${path.basename(artifact)}`,
+        `version=${ver}`,
+        `major=${major}`,
+        `git_zip=packages/${gitZipName}`,
+      ].join('\n') + '\n',
     )
   }
   return artifact

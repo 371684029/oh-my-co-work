@@ -137,7 +137,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
-| `npm run pack` | **打用户压缩包** → `release/apple-co-work-*.zip`（供下载） |
+| `npm run pack` | **打用户压缩包** → `packages/apple-co-work-v{大版本}.zip`（**进 git**；同大版本覆盖，新大版本增量） |
 | `npm start` / `start.bat` | **一键启动**（装依赖、起服务、开浏览器；关浏览器默认停服务） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
@@ -158,13 +158,14 @@ npm run dev:server
 
 ### 方式 A：下载压缩包（推荐给使用者）
 
-1. 打开 **[Releases · 最新压缩包](https://github.com/371684029/apple-co-work/releases/tag/latest)**，下载 `apple-co-work-*.zip`  
+1. 仓库内下载：**[`packages/apple-co-work-v1.zip`](./packages/apple-co-work-v1.zip)**  
+   （直链：[raw](https://github.com/371684029/apple-co-work/raw/main/packages/apple-co-work-v1.zip)；亦可看 [Releases](https://github.com/371684029/apple-co-work/releases/tag/latest)）  
 2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
 3. 浏览器会自动打开；关掉浏览器后后台默认退出  
 4. 工作台 → 开聊 **「演示流」**  
 
-> 推送到 `main` 会自动打包并更新上述 Release。本地：`npm run pack`（产物在本机 `release/`，不进 git）。  
-> 说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
+> **版本策略**：同大版本（小改）→ 覆盖 `apple-co-work-v{N}.zip`；升大版本 → 新增 `v{N+1}.zip`，旧包保留。  
+> 本地：`npm run pack` 后把 `packages/` 一并提交。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
 
 ### 方式 B：开发模式（两个终端）
 

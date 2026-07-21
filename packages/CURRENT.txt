@@ -1,0 +1,6 @@
+version=1.0.0-dev
+major=1
+commit=10a6750
+file=apple-co-work-v1.zip
+built=2026-07-21T08:32:21.042Z
+policy=same-major-replace; new-major-keep-old

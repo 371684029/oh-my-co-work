@@ -3,6 +3,9 @@ name: Pack release zip
 on:
   push:
     branches: [main, 'cursor/**']
+    # 避免「CI 回写 packages/」再次触发打包死循环
+    paths-ignore:
+      - 'packages/**'
   pull_request:
   workflow_dispatch:
 
@@ -15,6 +18,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # 回写 packages 需要可推送
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,33 +42,54 @@ jobs:
           path: |
             release/*.zip
             release/*.tar.gz
+            packages/apple-co-work-v*.zip
           if-no-files-found: error
           retention-days: 14
 
-      # 推 main 时挂到 Releases，仓库页 → Releases 可直接下载
+      # 推 main：把 packages/ 大版本 zip 提交进仓库（小版本覆盖、大版本增量）
+      - name: Commit packages zip to git (main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "wll"
+          git config user.email "371684029@qq.com"
+          git add packages/
+          if git diff --staged --quiet; then
+            echo "[pack] packages/ unchanged, skip commit"
+          else
+            MAJOR=$(sed -n 's/^major=//p' packages/CURRENT.txt | head -n1)
+            VER=$(sed -n 's/^version=//p' packages/CURRENT.txt | head -n1)
+            git commit -m "chore(packages): 更新 apple-co-work-v${MAJOR}.zip (${VER})"
+            git push origin HEAD:main
+          fi
+
       - name: Publish GitHub Release (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          ZIP=$(ls -1 release/*.zip | head -n1)
+          ZIP=$(ls -1 packages/apple-co-work-v*.zip | sort -V | tail -n1)
           NAME=$(basename "$ZIP")
           SHORT=$(git rev-parse --short HEAD)
+          VER=$(sed -n 's/^version=//p' packages/CURRENT.txt | head -n1 || true)
           NOTES=$(cat <<EOF
-          ## 本机压缩包
+          ## 本机压缩包（亦提交在仓库 packages/）
+
+          仓库内路径：\`packages/${NAME}\`
+          直链：https://github.com/${{ github.repository }}/raw/main/packages/${NAME}
 
           解压后双击 \`start.bat\`（Windows）或运行 \`./start.sh\` / \`node start.mjs\`。
 
           - 需要本机 Node.js ≥ 18
           - 关闭浏览器后，后台默认自动退出
-          - 说明见包内 \`使用说明.txt\` / \`docs/RELEASE-USER.md\`
+          - **小版本**：覆盖同大版本 zip；**大版本**：新增 vN.zip，旧包保留
 
-          提交：\`${SHORT}\`（${{ github.sha }}）
-          文件：\`${NAME}\`
+          版本：\`${VER:-?}\` · 提交：\`${SHORT}\`
           EOF
           )
-          # 滚动更新固定标签 latest，方便永远从这个地址下
           if gh release view latest >/dev/null 2>&1; then
             gh release delete latest --yes --cleanup-tag
           fi
@@ -70,12 +97,5 @@ jobs:
             --title "下载压缩包（最新 · ${SHORT}）" \
             --notes "$NOTES" \
             --latest
-          # 再留一份按 commit 的不可变发布，便于回溯
-          TAG="pack-${SHORT}"
-          if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" "$ZIP" \
-              --title "压缩包 ${SHORT}" \
-              --notes "$NOTES"
-          fi
-          echo "Release: https://github.com/${{ github.repository }}/releases/tag/latest"
-          echo "Asset: $NAME"
+          echo "Repo file: packages/${NAME}"
+          echo "Raw: https://github.com/${{ github.repository }}/raw/main/packages/${NAME}"

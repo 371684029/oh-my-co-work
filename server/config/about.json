@@ -2,8 +2,8 @@
   "productName": "apple-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "version": "1.0.0-dev",
-  "updateUrl": "",
-  "updateHint": "更新包发布后，将在此填写下载 / 仓库地址。",
+  "updateUrl": "https://github.com/371684029/apple-co-work/raw/main/packages/apple-co-work-v1.zip",
+  "updateHint": "大版本包在仓库 packages/：同大版本覆盖替换，新大版本增量保留旧包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
   "extraNotes": [
     "引擎与界面均在本机进程内完成；可选的「更新地址」仅作人工跳转，不会自动联网检查。",

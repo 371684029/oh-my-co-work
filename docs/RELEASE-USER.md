@@ -4,11 +4,18 @@
 
 ## 从哪下载
 
-- **固定入口（推荐）**：[Releases · latest](https://github.com/371684029/apple-co-work/releases/tag/latest)  
-  每次推 `main` 会自动打 zip 并更新此页。
-- 也可在仓库 **Releases** 页选带 `pack-` 前缀的历史包。
+压缩包**提交在 git 仓库**的 `packages/` 目录：
 
-（zip **不会**进 git 仓库目录；不要在源码树里找 `release/`。）
+| 策略 | 行为 |
+|------|------|
+| **小版本**（同大版本，如 1.0 → 1.1） | **覆盖替换** `packages/apple-co-work-v1.zip` |
+| **大版本**（如 1.x → 2.0） | **增量**：新增 `apple-co-work-v2.zip`，保留旧的 `v1.zip` |
+
+- 当前大版本包：[`packages/apple-co-work-v1.zip`](../packages/apple-co-work-v1.zip)  
+- 直链：https://github.com/371684029/apple-co-work/raw/main/packages/apple-co-work-v1.zip  
+- 备选：[Releases · latest](https://github.com/371684029/apple-co-work/releases/tag/latest)
+
+（临时构建目录 `release/` 仍 gitignore，勿与 `packages/` 混淆。）
 
 ## 需要什么
 
