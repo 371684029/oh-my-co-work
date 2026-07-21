@@ -8,13 +8,13 @@
 
 ---
 
-## 0. 压缩包一键启动（给最终用户）
+## 0. 运行包一键启动（给最终用户）
 
-1. 下载仓库内 [`packages/apple-co-work-v1.zip`](../packages/apple-co-work-v1.zip)（[直链](https://github.com/371684029/apple-co-work/raw/main/packages/apple-co-work-v1.zip)）  
+1. 下载 [`packages/`](../packages/) 中与系统匹配的 zip（打包产物，**无需 npm install**）  
 2. 解压 → 双击 `start.bat`（或 `./start.sh`）→ 自动开浏览器  
 3. 关闭浏览器 → 后台默认退出  
 
-本地：`npm run pack` → 更新 `packages/apple-co-work-v{大版本}.zip`（同大版本覆盖、新大版本增量）并提交。
+开发者本地打运行包：`npm run pack`（写入 `packages/apple-co-work-v{N}-{平台}-{架构}.zip`）。
 
 ---
 

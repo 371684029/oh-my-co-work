@@ -23,6 +23,7 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "esbuild": "^0.25.12",
     "playwright": "^1.61.1"
   }
 }

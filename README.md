@@ -137,7 +137,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
-| `npm run pack` | **打用户压缩包** → `packages/apple-co-work-v{大版本}.zip`（**进 git**；同大版本覆盖，新大版本增量） |
+| `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（进 git；含 bundle+依赖，用户无需 npm install） |
 | `npm start` / `start.bat` | **一键启动**（装依赖、起服务、开浏览器；关浏览器默认停服务） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
@@ -156,16 +156,15 @@ npm run dev:server
 
 ## 怎么看演示效果
 
-### 方式 A：下载压缩包（推荐给使用者）
+### 方式 A：下载运行包（推荐给使用者）
 
-1. 仓库内下载：**[`packages/apple-co-work-v1.zip`](./packages/apple-co-work-v1.zip)**  
-   （直链：[raw](https://github.com/371684029/apple-co-work/raw/main/packages/apple-co-work-v1.zip)；亦可看 [Releases](https://github.com/371684029/apple-co-work/releases/tag/latest)）  
+1. 打开仓库 **[`packages/`](./packages/)**，下载与本机系统匹配的 zip（如 Windows 用 `*-win32-x64.zip`）  
 2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
-3. 浏览器会自动打开；关掉浏览器后后台默认退出  
+3. **不需要**再 `npm install`；浏览器会自动打开；关掉浏览器后后台默认退出  
 4. 工作台 → 开聊 **「演示流」**  
 
-> **版本策略**：同大版本（小改）→ 覆盖 `apple-co-work-v{N}.zip`；升大版本 → 新增 `v{N+1}.zip`，旧包保留。  
-> 本地：`npm run pack` 后把 `packages/` 一并提交。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
+> 包内是打包产物（前端 dist + 后端 bundle + 内置依赖），**不是源码**。  
+> 同大版本同平台覆盖；大版本/其它平台增量保留。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
 
 ### 方式 B：开发模式（两个终端）
 
@@ -223,8 +222,8 @@ npm run dev:server
 apple-co-work/
 ├── README.md                 # 本文件
 ├── package.json              # npm workspaces 根
-├── packages/                 # 用户下载 zip（进 git；v{大版本} 覆盖/增量）
-├── start.bat / start.sh / start.mjs  # 一键启动
+├── packages/                 # 运行包 zip（打包产物+内置依赖，非源码；按平台）
+├── start.bat / start.sh / start.mjs  # 源码树一键启动（开发用）
 ├── docs/                     # 设计与约定（以文档为准演进）
 │   ├── mvp.md / technical-design.md
 │   ├── data-storage.md       # SQLite / MD / 脚本约定 / 群报告（实现说明）

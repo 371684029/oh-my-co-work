@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * 打用户可下载压缩包（不含 node_modules；用户机 npm install / 一键启动会装）
+ * 打【运行包】压缩包（不是源码树）：
+ * - 前端 vite build → web/dist
+ * - 后端 esbuild 打成 server/dist/index.js（不含 server/src）
+ * - 在包内预装 better-sqlite3 等运行依赖（用户不必再 npm install）
  *
- * 产物：
- * - release/…（本机临时，gitignore）
- * - packages/apple-co-work-v{MAJOR}.zip  ← **提交进 git**
- *   · 同大版本（小版本）：覆盖替换
- *   · 新大版本：新增文件，旧大版本包保留（增量）
+ * 产物（提交进 git）：
+ *   packages/apple-co-work-v{MAJOR}-{platform}-{arch}.zip
+ *   · 同大版本 + 同平台：覆盖替换（小版本替代）
+ *   · 新大版本 / 其它平台：增量保留
  *
  * 用法：npm run pack
  */
@@ -14,11 +16,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const OUT_ROOT = path.join(ROOT, 'release')
 const PACKAGES_DIR = path.join(ROOT, 'packages')
+const require = createRequire(import.meta.url)
 
 function readJson(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'))
@@ -26,12 +30,12 @@ function readJson(p) {
 
 function sh(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, {
-    cwd: ROOT,
+    cwd: opts.cwd || ROOT,
     stdio: 'inherit',
     shell: process.platform === 'win32',
-    ...opts,
+    env: { ...process.env, ...(opts.env || {}) },
   })
-  if (r.status !== 0) throw new Error(`${cmd} failed: ${r.status}`)
+  if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed: ${r.status}`)
 }
 
 function gitShort() {
@@ -44,53 +48,205 @@ function gitShort() {
   }
 }
 
-/** 从 1.0.0-dev / 2.1.3 取主版本号 */
 function majorOf(ver) {
   const m = String(ver || '0').match(/^(\d+)/)
   return m ? Number(m[1]) : 0
 }
 
+function platformTag() {
+  const p = process.platform // win32 | linux | darwin
+  const a = process.arch // x64 | arm64 | …
+  return `${p}-${a}`
+}
+
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.copyFileSync(src, dest)
-  if (path.basename(dest) === 'start.sh') {
-    try {
-      fs.chmodSync(dest, 0o755)
-    } catch {
-      /* Windows 上可能无效，忽略 */
-    }
-  }
 }
 
-function copyDir(src, dest, { ignore = [] } = {}) {
+function copyDir(src, dest) {
   if (!fs.existsSync(src)) return
   fs.mkdirSync(dest, { recursive: true })
   for (const name of fs.readdirSync(src)) {
-    if (ignore.includes(name)) continue
     const from = path.join(src, name)
     const to = path.join(dest, name)
-    const st = fs.statSync(from)
-    if (st.isDirectory()) copyDir(from, to, { ignore })
+    if (fs.statSync(from).isDirectory()) copyDir(from, to)
     else copyFile(from, to)
   }
 }
 
-function writePackagesManifest({ ver, major, sha, gitZipName, size }) {
+function writeStartBat(dest) {
+  fs.writeFileSync(
+    dest,
+    [
+      '@echo off',
+      'chcp 65001 >nul',
+      'cd /d "%~dp0"',
+      'where node >nul 2>nul',
+      'if errorlevel 1 (',
+      '  echo [acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org',
+      '  pause',
+      '  exit /b 1',
+      ')',
+      'echo [acw] 正在启动 apple-co-work（运行包，无需 npm install）…',
+      'node start.mjs',
+      'if errorlevel 1 pause',
+      '',
+    ].join('\r\n'),
+    'utf8',
+  )
+}
+
+function writeStartSh(dest) {
+  fs.writeFileSync(
+    dest,
+    [
+      '#!/usr/bin/env bash',
+      'set -euo pipefail',
+      'cd "$(dirname "$0")"',
+      'if ! command -v node >/dev/null 2>&1; then',
+      '  echo "[acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org"',
+      '  exit 1',
+      'fi',
+      'echo "[acw] 正在启动 apple-co-work（运行包，无需 npm install）…"',
+      'exec node start.mjs',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+  try {
+    fs.chmodSync(dest, 0o755)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 发布包专用启动器：不装依赖，直接跑打包后的 server/dist */
+function writeStartMjs(dest) {
+  fs.writeFileSync(
+    dest,
+    `/**
+ * 运行包一键启动（已含打包产物与 node_modules，无需再 npm install）
+ */
+import { spawn, exec } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
+import http from 'node:http'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = path.dirname(fileURLToPath(import.meta.url))
+const PORT = Number(process.env.ACW_PORT || 3780)
+const AUTO_EXIT = process.env.ACW_AUTO_EXIT !== '0' && process.env.ACW_AUTO_EXIT !== 'false'
+const ENTRY = path.join(ROOT, 'server', 'dist', 'index.cjs')
+
+function log(...a) {
+  console.log('[acw-start]', ...a)
+}
+
+function waitHealth(timeoutMs = 60_000) {
+  const started = Date.now()
+  return new Promise((resolve, reject) => {
+    const tick = () => {
+      const req = http.get(\`http://127.0.0.1:\${PORT}/api/health\`, (res) => {
+        res.resume()
+        if (res.statusCode === 200) return resolve()
+        retry()
+      })
+      req.on('error', retry)
+      req.setTimeout(2000, () => {
+        req.destroy()
+        retry()
+      })
+    }
+    const retry = () => {
+      if (Date.now() - started > timeoutMs) {
+        reject(new Error('等待服务启动超时'))
+        return
+      }
+      setTimeout(tick, 400)
+    }
+    tick()
+  })
+}
+
+function openBrowser(url) {
+  const plat = process.platform
+  if (plat === 'win32') exec(\`start "" "\${url}"\`)
+  else if (plat === 'darwin') exec(\`open "\${url}"\`)
+  else exec(\`xdg-open "\${url}"\`)
+}
+
+if (!fs.existsSync(ENTRY)) {
+  console.error('[acw-start] 缺少打包入口 server/dist/index.cjs，请使用官方运行包')
+  process.exit(1)
+}
+if (!fs.existsSync(path.join(ROOT, 'node_modules', 'better-sqlite3'))) {
+  console.error('[acw-start] 缺少内置依赖 node_modules/better-sqlite3（运行包应已自带，勿删）')
+  process.exit(1)
+}
+
+const env = {
+  ...process.env,
+  ACW_PORT: String(PORT),
+  ACW_AUTO_EXIT: AUTO_EXIT ? '1' : '0',
+}
+log('运行包启动', ROOT)
+log(\`端口 :\${PORT}  auto-exit=\${AUTO_EXIT ? 'on' : 'off'}\`)
+const child = spawn(process.execPath, [ENTRY], { cwd: ROOT, env, stdio: 'inherit' })
+const shutdown = () => {
+  try {
+    child.kill('SIGTERM')
+  } catch {
+    /* ignore */
+  }
+}
+process.on('SIGINT', shutdown)
+process.on('SIGTERM', shutdown)
+child.on('exit', (code) => process.exit(code || 0))
+
+waitHealth()
+  .then(() => {
+    const url = \`http://127.0.0.1:\${PORT}/\`
+    log('打开浏览器', url)
+    if (AUTO_EXIT) log('提示：关闭浏览器窗口后，后台将在数秒内自动退出')
+    openBrowser(url)
+  })
+  .catch((e) => {
+    log(e.message)
+    shutdown()
+    process.exit(1)
+  })
+`,
+    'utf8',
+  )
+}
+
+function writePackagesManifest({ ver, major, sha, plat, gitZipName, size, files }) {
+  const list = files
+    .map((f) => `- [\`${f}\`](./${f})`)
+    .join('\n')
   const lines = [
-    '# apple-co-work 压缩包（提交在 git 内）',
+    '# apple-co-work 运行包（提交在 git）',
     '',
-    '- **小版本（同大版本）**：覆盖替换 `apple-co-work-v{N}.zip`',
-    '- **大版本**：新增 `apple-co-work-v{N+1}.zip`，旧大版本包保留（增量）',
+    '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
+    '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
     '',
-    `当前版本：\`${ver}\`（大版本 v${major}）`,
-    `当前提交：\`${sha}\``,
-    `当前包：[\`${gitZipName}\`](./${gitZipName})（${size} bytes）`,
+    '## 版本策略',
     '',
-    '下载（GitHub）：',
+    '- **小版本（同大版本）**：覆盖替换同平台的 `apple-co-work-v{N}-{platform}-{arch}.zip`',
+    '- **大版本**：新增 `v{N+1}-…`，旧大版本包保留',
+    '- **多平台**：linux / win32 / darwin 各一份，互不覆盖',
     '',
-    '```text',
-    `https://github.com/371684029/apple-co-work/raw/main/packages/${gitZipName}`,
-    '```',
+    `当前构建：\`${ver}\` · 平台 \`${plat}\` · 提交 \`${sha}\``,
+    `本机产物：[\`${gitZipName}\`](./${gitZipName})（${size} bytes）`,
+    '',
+    '## 仓库内文件',
+    '',
+    list || '_（尚无）_',
+    '',
+    '## 启动',
+    '',
+    '解压 → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。',
     '',
   ]
   fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
@@ -99,16 +255,47 @@ function writePackagesManifest({ ver, major, sha, gitZipName, size }) {
     [
       `version=${ver}`,
       `major=${major}`,
+      `platform=${plat}`,
       `commit=${sha}`,
       `file=${gitZipName}`,
       `built=${new Date().toISOString()}`,
-      `policy=same-major-replace; new-major-keep-old`,
+      `kind=runtime-bundle`,
+      `needsNpmInstall=false`,
+      `policy=same-major-same-platform-replace; new-major-or-platform-keep`,
     ].join('\n') + '\n',
     'utf8',
   )
 }
 
+function runEsbuild(args) {
+  // CJS：避免 express 等 CJS 依赖在 ESM bundle 里 Dynamic require 失败
+  // 并用 define 补上 import.meta.url（db.js 用来定位 ROOT）
+  const esbuild = require('esbuild')
+  return esbuild.build({
+    entryPoints: [args.entry],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    outfile: args.outfile,
+    external: ['better-sqlite3'],
+    logLevel: 'warning',
+    banner: {
+      js: "const __import_meta_url=require('url').pathToFileURL(__filename).href;",
+    },
+    define: {
+      'import.meta.url': '__import_meta_url',
+    },
+  })
+}
+
 function main() {
+  return mainAsync().catch((e) => {
+    console.error('[pack] FAIL', e.message || e)
+    process.exit(1)
+  })
+}
+
+async function mainAsync() {
   const pkg = readJson(path.join(ROOT, 'package.json'))
   const aboutPath = path.join(ROOT, 'server/config/about.json')
   let ver = pkg.version || '0.0.0'
@@ -119,136 +306,168 @@ function main() {
   }
   const major = majorOf(ver)
   const sha = gitShort()
-  const folderName = `apple-co-work-${ver}-${sha}`
+  const plat = platformTag()
+  const folderName = `apple-co-work-v${major}-${plat}`
   const stage = path.join(OUT_ROOT, folderName)
-  const gitZipName = `apple-co-work-v${major}.zip`
+  const gitZipName = `${folderName}.zip`
   const gitZipPath = path.join(PACKAGES_DIR, gitZipName)
+
+  console.log('[pack] kind=runtime-bundle platform=', plat, 'version=', ver)
 
   console.log('[pack] build web…')
   sh('npm', ['run', 'build', '-w', 'web'])
 
   if (fs.existsSync(stage)) fs.rmSync(stage, { recursive: true, force: true })
-  fs.mkdirSync(stage, { recursive: true })
+  fs.mkdirSync(path.join(stage, 'server', 'dist'), { recursive: true })
+  fs.mkdirSync(path.join(stage, 'web'), { recursive: true })
 
-  console.log('[pack] assemble', stage)
-  for (const f of [
-    'package.json',
-    'package-lock.json',
-    'README.md',
-    'start.mjs',
-    'start.bat',
-    'start.sh',
-    '.gitignore',
-  ]) {
-    const p = path.join(ROOT, f)
-    if (fs.existsSync(p)) copyFile(p, path.join(stage, f))
+  const bundleOut = path.join(stage, 'server', 'dist', 'index.cjs')
+  console.log('[pack] bundle server →', bundleOut)
+  await runEsbuild({
+    entry: path.join(ROOT, 'server/src/index.js'),
+    outfile: bundleOut,
+  })
+
+  // 配置与前端产物（无源码）
+  copyDir(path.join(ROOT, 'server/config'), path.join(stage, 'server/config'))
+  copyDir(path.join(ROOT, 'web/dist'), path.join(stage, 'web/dist'))
+  if (fs.existsSync(path.join(ROOT, 'web/public'))) {
+    copyDir(path.join(ROOT, 'web/public'), path.join(stage, 'web/public'))
   }
 
-  copyDir(path.join(ROOT, 'shared'), path.join(stage, 'shared'), {
-    ignore: ['node_modules'],
-  })
-  copyDir(path.join(ROOT, 'server'), path.join(stage, 'server'), {
-    ignore: ['node_modules', 'data'],
-  })
-  // web：只需 package.json + dist（运行靠 server 静态托管）
-  // 注意：不要把 packages/ 打进 zip，避免嵌套膨胀
-  fs.mkdirSync(path.join(stage, 'web'), { recursive: true })
-  copyFile(path.join(ROOT, 'web/package.json'), path.join(stage, 'web/package.json'))
-  copyDir(path.join(ROOT, 'web/dist'), path.join(stage, 'web/dist'))
-  copyDir(path.join(ROOT, 'web/public'), path.join(stage, 'web/public'), {
-    ignore: [],
-  })
-
-  copyDir(path.join(ROOT, 'docs'), path.join(stage, 'docs'), {
-    ignore: [],
-  })
-  copyFile(
-    path.join(ROOT, 'docs/RELEASE-USER.md'),
-    path.join(stage, '使用说明.txt'),
+  // 最小 package.json：仅声明运行时 native 依赖（已预装，用户不用装）
+  const distPkg = {
+    name: 'apple-co-work',
+    version: ver,
+    private: true,
+    type: 'module',
+    description: 'apple-co-work 运行包（打包产物，非源码）',
+    engines: { node: '>=18' },
+    dependencies: {
+      'better-sqlite3':
+        readJson(path.join(ROOT, 'server/package.json')).dependencies[
+          'better-sqlite3'
+        ] || '^11.7.0',
+    },
+  }
+  fs.writeFileSync(
+    path.join(stage, 'package.json'),
+    JSON.stringify(distPkg, null, 2) + '\n',
+    'utf8',
   )
 
+  console.log('[pack] install runtime deps inside package (prebake node_modules)…')
+  sh('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], { cwd: stage })
+
+  writeStartMjs(path.join(stage, 'start.mjs'))
+  writeStartBat(path.join(stage, 'start.bat'))
+  writeStartSh(path.join(stage, 'start.sh'))
+
+  const userReadme = [
+    '# apple-co-work 运行包',
+    '',
+    `版本：${ver} · 平台：${plat} · 提交：${sha}`,
+    '',
+    '本压缩包是**打包后的可运行程序**（不是源码仓库）。',
+    '',
+    '## 需要',
+    '',
+    '- 本机已安装 Node.js ≥ 18（https://nodejs.org）',
+    '- **不需要**再执行 npm install（依赖已打进包内）',
+    '',
+    '## 启动',
+    '',
+    '| 系统 | 操作 |',
+    '|------|------|',
+    '| Windows | 双击 start.bat |',
+    '| macOS / Linux | ./start.sh 或 node start.mjs |',
+    '',
+    '关闭浏览器后，后台默认自动退出。',
+    '',
+    '数据目录：解压目录下的 data/',
+    '',
+  ].join('\n')
+  fs.writeFileSync(path.join(stage, '使用说明.txt'), userReadme, 'utf8')
+  fs.writeFileSync(path.join(stage, 'README.md'), userReadme, 'utf8')
   fs.writeFileSync(
     path.join(stage, 'VERSION.txt'),
     [
       `name=apple-co-work`,
+      `kind=runtime-bundle`,
       `version=${ver}`,
       `major=${major}`,
+      `platform=${plat}`,
       `commit=${sha}`,
       `built=${new Date().toISOString()}`,
-      `autoExit=default-on via start.mjs`,
+      `needsNpmInstall=false`,
+      `autoExit=default-on`,
     ].join('\n') + '\n',
     'utf8',
   )
 
-  fs.mkdirSync(OUT_ROOT, { recursive: true })
-  const zipPath = path.join(OUT_ROOT, `${folderName}.zip`)
-  const tarPath = path.join(OUT_ROOT, `${folderName}.tar.gz`)
-
-  let artifact = null
-  try {
-    if (process.platform === 'win32') {
-      execFileSync(
-        'powershell',
-        [
-          '-NoProfile',
-          '-Command',
-          `Compress-Archive -Path '${stage.replace(/'/g, "''")}\\*' -DestinationPath '${zipPath.replace(/'/g, "''")}' -Force`,
-        ],
-        { stdio: 'inherit' },
-      )
-    } else {
-      execFileSync('zip', ['-r', '-q', zipPath, folderName], {
-        cwd: OUT_ROOT,
-        stdio: 'inherit',
-      })
+  // 保险：不要把源码误拷进包
+  for (const bad of ['server/src', 'web/src', 'shared', 'docs', '.git']) {
+    const p = path.join(stage, bad)
+    if (fs.existsSync(p)) {
+      throw new Error(`[pack] refuse: source path leaked into stage: ${bad}`)
     }
-    artifact = zipPath
-  } catch (e) {
-    console.warn('[pack] zip unavailable, fallback tar.gz', e.message)
-    execFileSync('tar', ['-czf', tarPath, '-C', OUT_ROOT, folderName], {
+  }
+
+  fs.mkdirSync(OUT_ROOT, { recursive: true })
+  const zipPath = path.join(OUT_ROOT, gitZipName)
+  if (fs.existsSync(zipPath)) fs.rmSync(zipPath)
+
+  console.log('[pack] zip…', zipPath)
+  if (process.platform === 'win32') {
+    execFileSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        `Compress-Archive -Path '${stage.replace(/'/g, "''")}\\*' -DestinationPath '${zipPath.replace(/'/g, "''")}' -Force`,
+      ],
+      { stdio: 'inherit' },
+    )
+  } else {
+    execFileSync('zip', ['-r', '-q', zipPath, folderName], {
+      cwd: OUT_ROOT,
       stdio: 'inherit',
     })
-    artifact = tarPath
   }
 
-  // 写入 git 跟踪目录：同大版本覆盖；不同大版本并存
   fs.mkdirSync(PACKAGES_DIR, { recursive: true })
-  if (artifact.endsWith('.zip')) {
-    fs.copyFileSync(artifact, gitZipPath)
-  } else {
-    // tar.gz 时仍尽量提供 zip 名的副本说明
-    const fallback = path.join(PACKAGES_DIR, `apple-co-work-v${major}.tar.gz`)
-    fs.copyFileSync(artifact, fallback)
-    console.warn('[pack] no zip; wrote', fallback)
+  // 去掉旧的无平台后缀包名（历史遗留）
+  const legacy = path.join(PACKAGES_DIR, `apple-co-work-v${major}.zip`)
+  if (fs.existsSync(legacy)) {
+    fs.rmSync(legacy)
+    console.log('[pack] removed legacy', legacy)
   }
+  fs.copyFileSync(zipPath, gitZipPath)
 
-  const size = fs.statSync(artifact).size
-  const gitSize = fs.existsSync(gitZipPath) ? fs.statSync(gitZipPath).size : size
-  writePackagesManifest({
-    ver,
-    major,
-    sha,
-    gitZipName,
-    size: gitSize,
-  })
+  const size = fs.statSync(gitZipPath).size
+  const files = fs
+    .readdirSync(PACKAGES_DIR)
+    .filter((n) => n.endsWith('.zip'))
+    .sort()
+  writePackagesManifest({ ver, major, sha, plat, gitZipName, size, files })
 
-  console.log('[pack] ok', artifact, `(${size} bytes)`)
-  console.log('[pack] git package', gitZipPath, `(replace major v${major})`)
-  console.log('[pack] staged dir', stage)
+  console.log('[pack] ok', gitZipPath, `(${size} bytes)`)
+  console.log('[pack] user: unzip → start.bat / ./start.sh （无需 npm install）')
 
   if (process.env.GITHUB_OUTPUT) {
     fs.appendFileSync(
       process.env.GITHUB_OUTPUT,
       [
-        `artifact=${artifact}`,
-        `artifact_name=${path.basename(artifact)}`,
+        `artifact=${zipPath}`,
+        `artifact_name=${gitZipName}`,
         `version=${ver}`,
         `major=${major}`,
+        `platform=${plat}`,
         `git_zip=packages/${gitZipName}`,
       ].join('\n') + '\n',
     )
   }
-  return artifact
+  return gitZipPath
 }
 
 main()
