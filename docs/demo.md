@@ -10,13 +10,12 @@
 
 ## 0. 压缩包一键启动（给最终用户）
 
-```text
-解压 → 双击 start.bat（或 ./start.sh）→ 自动开浏览器
-关闭浏览器 → 后台默认退出
-```
+1. 下载：[Releases · latest](https://github.com/371684029/apple-co-work/releases/tag/latest) → `apple-co-work-*.zip`  
+2. 解压 → 双击 `start.bat`（或 `./start.sh`）→ 自动开浏览器  
+3. 关闭浏览器 → 后台默认退出  
 
-本地打同样的包：`npm run pack`，产物在 `release/`。  
-每次 push 也会由 GitHub Actions 上传同名 artifact。
+本地打同样的包：`npm run pack`（产物在本机 `release/`，不进 git）。  
+推 `main` 会自动更新上述 Release。
 
 ---
 
