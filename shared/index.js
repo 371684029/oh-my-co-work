@@ -4,6 +4,8 @@ export const SESSION_STATUS = {
   ACTIVE: 'active',
   PAUSED: 'paused',
   WAITING_HUMAN: 'waiting_human',
+  /** 进程崩溃/服务重启后待人选择：继续 / 归档 / 放弃 */
+  INTERRUPTED: 'interrupted',
   ARCHIVED: 'archived',
   FAILED: 'failed',
 }

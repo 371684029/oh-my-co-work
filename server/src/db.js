@@ -97,6 +97,22 @@ export function initDb() {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
+  // M07：启动 integrity_check（失败只告警，仍允许启动以便备份抢救）
+  try {
+    const rows = db.pragma('integrity_check')
+    const detail = Array.isArray(rows)
+      ? rows.map((r) => (r && r.integrity_check != null ? r.integrity_check : String(r))).join('; ')
+      : String(rows)
+    if (detail !== 'ok' && !/^ok$/i.test(String(detail).trim())) {
+      console.error('[acw] SQLITE integrity_check FAILED:', detail)
+      console.error('[acw] 建议立即执行: npm run backup（若仍可读）并检查 data/ 目录')
+    } else {
+      console.log('[acw] integrity_check ok')
+    }
+  } catch (e) {
+    console.warn('[acw] integrity_check error', e?.message || e)
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER NOT NULL

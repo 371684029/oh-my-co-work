@@ -133,6 +133,7 @@ Invoke-RestMethod http://127.0.0.1:3780/api/health
 | `npm run dev:web` | 启动 Vite 前端 |
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
+| `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
 ### 重置数据
@@ -276,8 +277,8 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 
 ```
 ✅ MVP 0.1～0.4 已封板
-   → 1.0.0-dev：CI01 / CI03 / CI04 / X07 / R03（进行中）
-   → 崩溃恢复 / 路径锁（P2 · R02/R04）
+   → 1.0.0-dev：CI01/03/04 · X07 · R02/R03/R04 · M01/M07（已落地）
+   → 其余 P2（R06/M03…）与 CI02
    → LLM 工作目录推断 + 终检越界暴露
    → GUI 桌面壳（复用 web）
 ```

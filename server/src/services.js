@@ -20,6 +20,8 @@ import {
   requestArchiveConsent,
   processDueArchives,
   restartFromNode,
+  markInterruptedOnBoot,
+  resolveInterruptedSession,
 } from './engine.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
@@ -469,4 +471,6 @@ export {
   processDueArchives,
   advance,
   restartFromNode,
+  markInterruptedOnBoot,
+  resolveInterruptedSession,
 }

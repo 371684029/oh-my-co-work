@@ -300,11 +300,15 @@
                           ? '需要你输入'
                           : pendingGate.content?.mode === 'need_params'
                             ? '需要项目参数'
-                            : pendingGate.content?.mode === 'archive_confirm'
-                              ? '确认归档'
-                              : pendingGate.content?.requireHuman
-                                ? '须人工同意'
-                                : '需要你确认'
+                            : pendingGate.content?.mode === 'interrupted'
+                              ? '崩溃恢复'
+                              : pendingGate.content?.mode === 'path_busy'
+                                ? '目录占用'
+                                : pendingGate.content?.mode === 'archive_confirm'
+                                  ? '确认归档'
+                                  : pendingGate.content?.requireHuman
+                                    ? '须人工同意'
+                                    : '需要你确认'
                     }}
                   </div>
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
@@ -535,6 +539,17 @@
                           </el-button>
                           <el-button plain @click="gate(pendingGate, 'defer_archive')">
                             暂不归档
+                          </el-button>
+                        </template>
+                        <template v-else-if="pendingGate.content?.mode === 'interrupted'">
+                          <el-button type="danger" @click="gate(pendingGate, 'resume_interrupted')">
+                            继续
+                          </el-button>
+                          <el-button plain @click="gate(pendingGate, 'archive_interrupted')">
+                            归档
+                          </el-button>
+                          <el-button plain @click="gate(pendingGate, 'discard_interrupted')">
+                            放弃
                           </el-button>
                         </template>
                         <template v-else>
@@ -1284,15 +1299,20 @@ const pendingGate = computed(() => {
   const msgs = [...detail.value.messages].reverse()
   // 开聊启动闸门（无节点，等人点通过后再跑流程）
   const pendingStart = detail.value.session.context?.pendingStart
-  if (pendingStart) {
+  if (pendingStart && detail.value.session.status !== 'interrupted') {
     const startGate = msgs.find(
       (m) => m.type === 'gate' && m.content?.mode === 'session_start',
     )
     if (startGate) return startGate
   }
+  // R02：中断恢复闸门
+  if (detail.value.session.status === 'interrupted') {
+    const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
+    if (ig) return ig
+  }
   // 归档确认闸门（无节点）
   const pendingArch = detail.value.session.context?.pendingArchive
-  if (pendingArch) {
+  if (pendingArch && detail.value.session.status !== 'interrupted') {
     const archGate = msgs.find(
       (m) => m.type === 'gate' && m.content?.mode === 'archive_confirm',
     )
@@ -1472,6 +1492,8 @@ const footerCollapsedHint = computed(() => {
     if (pendingGate.value.content?.mode === 'session_start') return '确认开始 · 展开'
     if (pendingGate.value.content?.mode === 'human_input') return '需要你输入 · 展开'
     if (pendingGate.value.content?.mode === 'need_params') return '需要项目参数 · 展开'
+    if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
+    if (pendingGate.value.content?.mode === 'path_busy') return '目录占用 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
     return '需要你确认 · 展开'
   }
@@ -1488,6 +1510,7 @@ const needsHuman = computed(() => {
   if (!detail.value) return false
   if (detail.value.session.status === 'archived') return false
   if (detail.value.session.status === 'waiting_human') return true
+  if (detail.value.session.status === 'interrupted') return true
   return !!pendingGate.value
 })
 
@@ -1657,6 +1680,12 @@ const composerPlaceholder = computed(() => {
   if (mode === 'need_params') {
     return '缺少 #1：在此输入项目参数（空格/换行分段），Enter 或点「提交」后继续本步'
   }
+  if (mode === 'interrupted') {
+    return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
+  }
+  if (mode === 'path_busy') {
+    return '工作目录被其它会话占用：归档对方后点「同意」重试，或「拒绝」'
+  }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
 })
@@ -1666,6 +1695,8 @@ const composerToolbarHint = computed(() => {
     const mode = pendingGate.value.content?.mode
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
+    if (mode === 'interrupted') return '点继续/归档/放弃'
+    if (mode === 'path_busy') return '点同意重试 · 或拒绝'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -1682,6 +1713,7 @@ function statusLabel(s) {
   const m = {
     active: '进行中',
     waiting_human: '等人',
+    interrupted: '待恢复',
     archived: '已归档',
     failed: '失败',
     paused: '暂停',
@@ -1703,6 +1735,7 @@ function statusType(s) {
   if (s === 'archived') return 'info'
   // 运行时等人：用危险色，强制注意
   if (s === 'waiting_human') return 'danger'
+  if (s === 'interrupted') return 'warning'
   if (s === 'failed') return 'danger'
   return 'success'
 }
@@ -1722,6 +1755,8 @@ function roleLabel(m) {
     if (m.content?.mode === 'session_start') return '确认开始'
     if (m.content?.mode === 'human_input') return '人工输入'
     if (m.content?.mode === 'need_params') return '补齐参数'
+    if (m.content?.mode === 'interrupted') return '崩溃恢复'
+    if (m.content?.mode === 'path_busy') return '目录占用'
     return '闸门'
   }
   if (m.role === 'system') return '系统'
@@ -2592,6 +2627,9 @@ async function gate(m, action) {
     else if (action === 'defer_archive') ElMessage.info('已暂不归档，超时仍将自动归档')
     else if (action === 'approve_start') ElMessage.success('已通过，开始执行')
     else if (action === 'cancel_start') ElMessage.info('已取消，任务关闭')
+    else if (action === 'resume_interrupted') ElMessage.success('已继续')
+    else if (action === 'archive_interrupted') ElMessage.success('已归档（中断恢复）')
+    else if (action === 'discard_interrupted') ElMessage.info('已放弃并归档')
     else if (action === 'approve' || action === 'admin_approve')
       ElMessage.success(text?.trim() ? '已同意并记录附言' : '已同意')
     else if (action === 'reject' || action === 'admin_reject')

@@ -30,6 +30,7 @@ import {
   extractCallArgsFromMention,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
+import { assertPathAvailable } from './pathLock.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -449,6 +450,9 @@ export function createSessionFromGroup(groupId, { title } = {}) {
   const steps = parseJson(group.steps_json, [])
   if (!steps.length) throw new Error('群模板没有步骤')
 
+  // R04：开聊前检查工作目录互斥
+  assertPathAvailable(group.work_folder, null)
+
   const sessionId = uid('ses')
   const t = nowIso()
   const groupTitle = group.title || '未命名群'
@@ -590,6 +594,8 @@ export function createSessionFromGroup(groupId, { title } = {}) {
 export function createSessionFromMember(memberId, { title } = {}) {
   const raw = getMember(memberId)
   if (!raw || !raw.enabled) throw new Error('成员不存在或未启用')
+  // R04：成员工作目录互斥
+  assertPathAvailable(raw.work_folder, null)
   const name = raw.display_name || raw.name || '成员'
   const t = nowIso()
   const groupId = uid('grp')
@@ -768,6 +774,41 @@ export async function advance(sessionId) {
         },
       })
       return
+    }
+
+    // R04：执行前再次确认工作目录未被其它会话占用
+    try {
+      const folderForLock =
+        ctx.primaryWorkFolder ||
+        ctx.groupFolder ||
+        member.work_folder ||
+        group?.work_folder ||
+        null
+      assertPathAvailable(folderForLock, sessionId)
+    } catch (e) {
+      if (e?.code === 'PATH_BUSY') {
+        persistNodeIo(sessionId, node.id, {
+          input: { memberId: member.id, pathBusy: true },
+          output: { error: e.message, code: 'PATH_BUSY', humanAction: 'pending' },
+          status: NODE_STATUS.WAITING_HUMAN,
+        })
+        updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+        addMessage(sessionId, {
+          role: 'system',
+          type: 'gate',
+          node_instance_id: node.id,
+          content: {
+            text: e.message,
+            mode: 'path_busy',
+            actions: ['approve', 'reject'],
+            policy: '可归档其它占用会话后点「同意」重试，或「拒绝」结束本步。',
+            pathBusy: true,
+            holderSessionId: e.sessionId,
+          },
+        })
+        return
+      }
+      throw e
     }
 
     const paramsMap = injectCallArgsParam(
@@ -1208,6 +1249,14 @@ export function archiveSession(sessionId, reason = 'manual') {
   const s0 = getSession(sessionId)
   const ctx0 = parseJson(s0?.context_json, {})
   delete ctx0.pendingArchive
+  if (ctx0.interrupted) {
+    ctx0.interrupted = {
+      ...ctx0.interrupted,
+      pendingResume: false,
+      resolvedAt: t,
+      resolution: reason,
+    }
+  }
   updateSession(sessionId, {
     status: SESSION_STATUS.ARCHIVED,
     archive_reason: reason,
@@ -1253,11 +1302,251 @@ export function archiveSession(sessionId, reason = 'manual') {
   }
 }
 
+/**
+ * R02：启动时标记崩溃恢复（未归档的进行中会话 → interrupted）
+ */
+export function markInterruptedOnBoot() {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM sessions WHERE status IN ('active', 'waiting_human', 'paused')`,
+    )
+    .all()
+  const ids = []
+  for (const s of rows) {
+    try {
+      killSessionProcesses(s.id)
+    } catch (e) {
+      console.warn('[acw] interrupt kill', s.id, e?.message || e)
+    }
+    const running = getDb()
+      .prepare(`SELECT * FROM node_instances WHERE session_id = ? AND status = ?`)
+      .all(s.id, NODE_STATUS.RUNNING)
+    for (const n of running) {
+      const prev = parseJson(n.output_json, {})
+      updateNode(n.id, {
+        status: NODE_STATUS.WAITING_HUMAN,
+        output_json: JSON.stringify({
+          ...prev,
+          interrupted: true,
+          interruptedAt: nowIso(),
+          wasRunning: true,
+        }),
+      })
+    }
+    const ctx = parseJson(s.context_json, {})
+    ctx.interrupted = {
+      at: nowIso(),
+      previousStatus: s.status,
+      pendingResume: true,
+      runningNodes: running.map((n) => n.id),
+    }
+    updateSession(s.id, {
+      status: SESSION_STATUS.INTERRUPTED,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(s.id, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: '检测到服务重启或异常退出，本任务已暂停。请选择：继续 / 归档 / 放弃。',
+      },
+    })
+    addMessage(s.id, {
+      role: 'system',
+      type: 'gate',
+      content: {
+        mode: 'interrupted',
+        text: `会话「${s.title || s.id}」在重启前处于「${s.status}」。继续=从中断处恢复；归档=结束并保留记录；放弃=归档（原因 interrupted_discard）。`,
+        actions: ['resume_interrupted', 'archive_interrupted', 'discard_interrupted'],
+        policy: '不会自动推进；须人工选择。继续时若有未完成 running 节点会从该步重跑。',
+      },
+    })
+    emitSession(s.id, {
+      type: 'session.interrupted',
+      payload: { sessionId: s.id, previousStatus: s.status },
+    })
+    ids.push(s.id)
+  }
+  if (ids.length) {
+    emitAll({ type: 'sessions.interrupted', payload: { ids } })
+    console.log(`[acw] interrupted ${ids.length} session(s) for recovery`)
+  }
+  return { marked: ids.length, ids }
+}
+
+/**
+ * R02：处理 interrupted 闸门
+ * @param {'resume'|'archive'|'discard'|string} action
+ */
+export async function resolveInterruptedSession(sessionId, action) {
+  const session = getSession(sessionId)
+  if (!session) throw new Error('会话不存在')
+  if (session.status !== SESSION_STATUS.INTERRUPTED) {
+    throw Object.assign(new Error('会话不在中断恢复状态'), { code: 'NOT_INTERRUPTED' })
+  }
+  const act = String(action || '')
+    .replace(/^resume_interrupted$/, 'resume')
+    .replace(/^archive_interrupted$/, 'archive')
+    .replace(/^discard_interrupted$/, 'discard')
+
+  if (act === 'archive' || act === 'discard') {
+    addMessage(sessionId, {
+      role: 'user',
+      type: 'gate',
+      content: {
+        text: act === 'discard' ? '已选择放弃（中断恢复）' : '已选择归档（中断恢复）',
+        action: act === 'discard' ? 'discard_interrupted' : 'archive_interrupted',
+        mode: 'interrupted',
+      },
+    })
+    archiveSession(
+      sessionId,
+      act === 'discard' ? 'interrupted_discard' : 'interrupted_archive',
+    )
+    return { ok: true, archived: true, action: act }
+  }
+
+  if (act !== 'resume') {
+    throw new Error(`未知恢复动作: ${action}`)
+  }
+
+  const ctx = parseJson(session.context_json, {})
+  const prevStatus = ctx.interrupted?.previousStatus || SESSION_STATUS.ACTIVE
+  ctx.interrupted = {
+    ...(ctx.interrupted || {}),
+    pendingResume: false,
+    resolvedAt: nowIso(),
+    resolution: 'resume',
+  }
+
+  addMessage(sessionId, {
+    role: 'user',
+    type: 'gate',
+    content: {
+      text: '已选择继续（中断恢复）',
+      action: 'resume_interrupted',
+      mode: 'interrupted',
+    },
+  })
+
+  // 曾 running 的节点：置 pending，从该步 advance
+  const nodes = getDb()
+    .prepare(`SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index`)
+    .all(sessionId)
+  const interruptedNode = nodes.find((n) => parseJson(n.output_json, {})?.interrupted === true)
+  if (interruptedNode) {
+    updateNode(interruptedNode.id, {
+      status: NODE_STATUS.PENDING,
+      output_json: JSON.stringify({
+        ...parseJson(interruptedNode.output_json, {}),
+        interrupted: false,
+        resumedAt: nowIso(),
+      }),
+      finished_at: null,
+    })
+    // 该步之后若曾误推进，保持其后 pending
+    updateSession(sessionId, {
+      status: SESSION_STATUS.ACTIVE,
+      current_step_index: interruptedNode.step_index,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: { text: `从中断节点「${interruptedNode.title}」继续执行…` },
+    })
+    setImmediate(() => advance(sessionId).catch(console.error))
+    return { ok: true, resumed: true, fromNode: interruptedNode.id }
+  }
+
+  if (ctx.pendingStart) {
+    updateSession(sessionId, {
+      status: SESSION_STATUS.WAITING_HUMAN,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: { text: '已恢复到开聊确认闸门，请继续操作。' },
+    })
+    return { ok: true, resumed: true, pendingStart: true }
+  }
+
+  if (ctx.pendingArchive) {
+    updateSession(sessionId, {
+      status: SESSION_STATUS.WAITING_HUMAN,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: { text: '已恢复到归档确认闸门，请继续操作。' },
+    })
+    return { ok: true, resumed: true, pendingArchive: true }
+  }
+
+  const waiting = nodes.find((n) => n.status === NODE_STATUS.WAITING_HUMAN)
+  if (waiting || prevStatus === SESSION_STATUS.WAITING_HUMAN) {
+    updateSession(sessionId, {
+      status: SESSION_STATUS.WAITING_HUMAN,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: { text: '已恢复到等人状态，请继续闸门操作。' },
+    })
+    return { ok: true, resumed: true, waitingHuman: true }
+  }
+
+  updateSession(sessionId, {
+    status: SESSION_STATUS.ACTIVE,
+    context_json: JSON.stringify(ctx),
+  })
+  addMessage(sessionId, {
+    role: 'system',
+    type: 'status',
+    content: { text: '已恢复，继续推进流程…' },
+  })
+  setImmediate(() => advance(sessionId).catch(console.error))
+  return { ok: true, resumed: true }
+}
+
 export async function handleGateAction(sessionId, { action, text, nodeInstanceId, idempotencyKey }) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.ARCHIVED) {
     throw Object.assign(new Error('任务已归档'), { code: 'ARCHIVED' })
+  }
+
+  // R02：中断恢复闸门（优先于其它动作）
+  const isInterruptAction =
+    action === 'resume_interrupted' ||
+    action === 'archive_interrupted' ||
+    action === 'discard_interrupted' ||
+    action === 'resume' ||
+    action === 'discard'
+  if (session.status === SESSION_STATUS.INTERRUPTED || isInterruptAction) {
+    if (session.status !== SESSION_STATUS.INTERRUPTED && !isInterruptAction) {
+      throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+        code: 'INTERRUPTED',
+      })
+    }
+    if (
+      session.status === SESSION_STATUS.INTERRUPTED &&
+      !(
+        action === 'resume_interrupted' ||
+        action === 'archive_interrupted' ||
+        action === 'discard_interrupted' ||
+        action === 'resume' ||
+        action === 'archive' ||
+        action === 'discard'
+      )
+    ) {
+      throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+        code: 'INTERRUPTED',
+      })
+    }
   }
 
   // R03：幂等键命中则直接回放，避免连点双跑
@@ -1272,6 +1561,18 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     }
   }
 
+  if (
+    action === 'resume_interrupted' ||
+    action === 'archive_interrupted' ||
+    action === 'discard_interrupted' ||
+    (session.status === SESSION_STATUS.INTERRUPTED &&
+      (action === 'resume' || action === 'archive' || action === 'discard'))
+  ) {
+    const result = await resolveInterruptedSession(sessionId, action)
+    if (idemKey) rememberGateIdempotency(sessionId, idemKey, result || { ok: true, action })
+    return result
+  }
+
   const result = await handleGateActionCore(sessionId, { action, text, nodeInstanceId })
   if (idemKey) {
     rememberGateIdempotency(sessionId, idemKey, result || { ok: true, action })
@@ -1284,6 +1585,11 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.ARCHIVED) {
     throw Object.assign(new Error('任务已归档'), { code: 'ARCHIVED' })
+  }
+  if (session.status === SESSION_STATUS.INTERRUPTED) {
+    throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+      code: 'INTERRUPTED',
+    })
   }
 
   // —— 开聊启动闸门（无节点，context.pendingStart）——
@@ -1702,6 +2008,37 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
 
   if (action === 'approve' || action === 'admin_approve') {
     const out = parseJson(node.output_json, {})
+    // R04：路径占用闸门 — 同意 = 再试一次执行
+    if (out.code === 'PATH_BUSY' || out.pathBusy) {
+      const { note } = bindGateHumanInput(sessionId, {
+        text,
+        action: 'approve',
+        actionLabel: '重试（路径锁）',
+        nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+        nodeInstanceId: node.id,
+      })
+      addMessage(sessionId, {
+        role: 'user',
+        type: 'gate',
+        node_instance_id: node.id,
+        content: {
+          text: note ? `重试路径锁：${note}` : '已确认重试（工作目录锁）',
+          action: 'approve',
+          mode: 'path_busy',
+        },
+      })
+      updateNode(node.id, {
+        status: NODE_STATUS.PENDING,
+        output_json: JSON.stringify({ retriedPathBusy: true }),
+        finished_at: null,
+      })
+      updateSession(sessionId, {
+        status: SESSION_STATUS.ACTIVE,
+        current_step_index: node.step_index,
+      })
+      setImmediate(() => advance(sessionId).catch(console.error))
+      return { ok: true, pathBusyRetry: true }
+    }
     // R03：已通过则幂等返回
     if (
       out.humanAction === 'approve' &&
@@ -2006,6 +2343,11 @@ function appendPendingGateNote(sessionId, node, text) {
 export async function postUserMessage(sessionId, text, attachments = []) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
+  if (session.status === SESSION_STATUS.INTERRUPTED) {
+    throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+      code: 'INTERRUPTED',
+    })
+  }
   const atts = Array.isArray(attachments) ? attachments : []
   const content = {
     text: text || (atts.length ? `（附件 ${atts.length} 个）` : ''),

@@ -13,14 +13,18 @@
     {
       "version": "1.0.0-dev",
       "date": "2026-07-21",
-      "title": "1.0.0 开发中（主路径加固）",
+      "title": "1.0.0 开发中（主路径加固 + P2 稳定）",
       "items": [
         "FIX：/api/health 版本与 about 对齐；空库 seed 默认显示演示",
         "CI01：缺 #1 拦截成员步；补参后从本步继续",
         "CI03：docs/script-guide.md 写脚本契约",
         "CI04：script.env 值同样做占位替换；文件夹别名 env",
         "X07：闸门同意/拒绝绑定输入框全文 → lastHumanInput + #a",
-        "R03：闸门 idempotencyKey + 前端防连点"
+        "R03：闸门 idempotencyKey + 前端防连点",
+        "R02：启动标记 interrupted；继续/归档/放弃",
+        "R04：工作目录互斥（开聊/执行前）",
+        "M01：npm run backup / POST /api/backup",
+        "M07：启动与 health 带 integrity_check"
       ]
     },
     {

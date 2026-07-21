@@ -30,6 +30,8 @@ import {
   restartFromNode,
 } from './services.js'
 import { ROOT, DATA_ROOT } from './db.js'
+import { createBackup, runIntegrityCheck } from './backup.js'
+import { listPathHolders } from './pathLock.js'
 import {
   listSlashCommands,
   saveSlashCommands,
@@ -69,14 +71,39 @@ router.get('/health', (_req, res) => {
       /* keep default */
     }
   }
+  let integrity = { ok: true, detail: 'skipped' }
+  try {
+    integrity = runIntegrityCheck()
+  } catch (e) {
+    integrity = { ok: false, detail: e.message }
+  }
   res.json({
     ok: true,
     version,
     dataRoot: DATA_ROOT,
+    integrity,
     time: new Date().toISOString(),
   })
 })
 
+/** M01：一键备份（也可 npm run backup） */
+router.post('/backup', (_req, res) => {
+  try {
+    const result = createBackup({ includeUploads: true })
+    res.status(201).json(result)
+  } catch (e) {
+    res.status(400).json({ error: e.message, code: e.code, detail: e.detail })
+  }
+})
+
+/** R04：查询某路径占用者 */
+router.get('/path-lock', (req, res) => {
+  try {
+    res.json({ holders: listPathHolders(String(req.query.path || '')) })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
 // 本机路径浏览（工作文件夹 / 脚本文件选择）
 router.get('/fs/roots', (_req, res) => {
   try {

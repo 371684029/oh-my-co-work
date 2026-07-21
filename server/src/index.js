@@ -10,12 +10,19 @@ import { subscribe, unsubscribe } from './bus.js'
 import { listMembers, listGroups, createMember, createGroup } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
-import { processDueArchives } from './engine.js'
+import { processDueArchives, markInterruptedOnBoot } from './engine.js'
 import { updateAppSettings } from './appSettings.js'
 
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
 initDb()
+
+// R02：未归档进行中会话 → interrupted，等人选择继续/归档/放弃
+try {
+  markInterruptedOnBoot()
+} catch (e) {
+  console.warn('[acw] markInterruptedOnBoot failed', e?.message || e)
+}
 
 // 始终确保「统一管理员」Agent 存在（快捷指令首位默认）
 ensureAdminMember()
