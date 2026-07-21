@@ -158,12 +158,13 @@ npm run dev:server
 
 ### 方式 A：下载压缩包（推荐给使用者）
 
-1. 从 GitHub Actions 产物 / Release 下载 `apple-co-work-*.zip`  
+1. 打开 **[Releases · 最新压缩包](https://github.com/371684029/apple-co-work/releases/tag/latest)**，下载 `apple-co-work-*.zip`  
 2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
 3. 浏览器会自动打开；关掉浏览器后后台默认退出  
 4. 工作台 → 开聊 **「演示流」**  
 
-说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。本地打包：`npm run pack` → `release/*.zip`。
+> 推送到 `main` 会自动打包并更新上述 Release。本地：`npm run pack`（产物在本机 `release/`，不进 git）。  
+> 说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
 
 ### 方式 B：开发模式（两个终端）
 

@@ -2,6 +2,14 @@
 
 适合「解压 → 双击启动 → 关浏览器即停」的用户。
 
+## 从哪下载
+
+- **固定入口（推荐）**：[Releases · latest](https://github.com/371684029/apple-co-work/releases/tag/latest)  
+  每次推 `main` 会自动打 zip 并更新此页。
+- 也可在仓库 **Releases** 页选带 `pack-` 前缀的历史包。
+
+（zip **不会**进 git 仓库目录；不要在源码树里找 `release/`。）
+
 ## 需要什么
 
 - 本机已安装 **Node.js ≥ 18**（https://nodejs.org ）

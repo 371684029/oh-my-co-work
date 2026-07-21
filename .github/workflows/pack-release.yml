@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   pack:
     runs-on: ubuntu-latest
@@ -23,6 +26,7 @@ jobs:
         run: npm ci
 
       - name: Pack
+        id: pack
         run: npm run pack
 
       - name: Upload artifact
@@ -34,3 +38,44 @@ jobs:
             release/*.tar.gz
           if-no-files-found: error
           retention-days: 14
+
+      # 推 main 时挂到 Releases，仓库页 → Releases 可直接下载
+      - name: Publish GitHub Release (main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ZIP=$(ls -1 release/*.zip | head -n1)
+          NAME=$(basename "$ZIP")
+          SHORT=$(git rev-parse --short HEAD)
+          NOTES=$(cat <<EOF
+          ## 本机压缩包
+
+          解压后双击 \`start.bat\`（Windows）或运行 \`./start.sh\` / \`node start.mjs\`。
+
+          - 需要本机 Node.js ≥ 18
+          - 关闭浏览器后，后台默认自动退出
+          - 说明见包内 \`使用说明.txt\` / \`docs/RELEASE-USER.md\`
+
+          提交：\`${SHORT}\`（${{ github.sha }}）
+          文件：\`${NAME}\`
+          EOF
+          )
+          # 滚动更新固定标签 latest，方便永远从这个地址下
+          if gh release view latest >/dev/null 2>&1; then
+            gh release delete latest --yes --cleanup-tag
+          fi
+          gh release create latest "$ZIP" \
+            --title "下载压缩包（最新 · ${SHORT}）" \
+            --notes "$NOTES" \
+            --latest
+          # 再留一份按 commit 的不可变发布，便于回溯
+          TAG="pack-${SHORT}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" "$ZIP" \
+              --title "压缩包 ${SHORT}" \
+              --notes "$NOTES"
+          fi
+          echo "Release: https://github.com/${{ github.repository }}/releases/tag/latest"
+          echo "Asset: $NAME"
