@@ -1,9 +1,16 @@
 version=1.0.0-dev
 major=1
+<<<<<<< Updated upstream
 platform=darwin-arm64
 commit=5332e29
 file=apple-co-work-v1-darwin-arm64.zip
 built=2026-07-21T08:47:21.361Z
+=======
+platform=linux-x64
+commit=5332e29
+file=apple-co-work-v1-linux-x64.zip
+built=2026-07-21T08:47:34.282Z
+>>>>>>> Stashed changes
 kind=runtime-bundle
 needsNpmInstall=false
 policy=same-major-same-platform-replace; new-major-or-platform-keep
