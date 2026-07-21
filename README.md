@@ -223,6 +223,8 @@ npm run dev:server
 apple-co-work/
 ├── README.md                 # 本文件
 ├── package.json              # npm workspaces 根
+├── packages/                 # 用户下载 zip（进 git；v{大版本} 覆盖/增量）
+├── start.bat / start.sh / start.mjs  # 一键启动
 ├── docs/                     # 设计与约定（以文档为准演进）
 │   ├── mvp.md / technical-design.md
 │   ├── data-storage.md       # SQLite / MD / 脚本约定 / 群报告（实现说明）
