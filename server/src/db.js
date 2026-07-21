@@ -1,18 +1,83 @@
-import Database from 'better-sqlite3'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
+const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export const ROOT = path.resolve(__dirname, '../..')
 export const DATA_ROOT =
   process.env.ACW_DATA_ROOT || process.env.ECW_DATA_ROOT || path.join(ROOT, 'data')
 
 let db
+let dbDriver = 'better-sqlite3'
 
 export function getDb() {
   if (!db) throw new Error('DB not initialized')
   return db
+}
+
+export function getDbDriver() {
+  return dbDriver
+}
+
+/** Node 22+ 内置 sqlite，API 对齐 better-sqlite3 常用子集 */
+function openNodeSqliteCompat(dbPath) {
+  const { DatabaseSync } = require('node:sqlite')
+  const raw = new DatabaseSync(dbPath)
+  return {
+    prepare(sql) {
+      return raw.prepare(sql)
+    },
+    exec(sql) {
+      return raw.exec(sql)
+    },
+    pragma(src) {
+      const body = String(src || '').trim()
+      if (!body) return undefined
+      const stmt = raw.prepare(`PRAGMA ${body}`)
+      if (/=/.test(body)) {
+        // journal_mode = WAL 等赋值
+        try {
+          return stmt.run()
+        } catch {
+          return stmt.get()
+        }
+      }
+      try {
+        return stmt.all()
+      } catch {
+        return stmt.get()
+      }
+    },
+    close() {
+      try {
+        raw.close()
+      } catch {
+        /* ignore */
+      }
+    },
+  }
+}
+
+function openDatabase(dbPath) {
+  try {
+    const Database = require('better-sqlite3')
+    const inst = new Database(dbPath)
+    dbDriver = 'better-sqlite3'
+    return inst
+  } catch (e) {
+    const major = Number(String(process.versions.node || '0').split('.')[0])
+    if (major >= 22) {
+      console.warn(
+        '[acw] better-sqlite3 不可用，回退 Node 内置 node:sqlite：',
+        e?.message || e,
+      )
+      dbDriver = 'node:sqlite'
+      return openNodeSqliteCompat(dbPath)
+    }
+    throw e
+  }
 }
 
 function dbFileSize(p) {
@@ -93,7 +158,8 @@ export function initDb() {
 
   const dbPath = resolveDbPath()
   console.log('[acw] sqlite', dbPath)
-  db = new Database(dbPath)
+  db = openDatabase(dbPath)
+  console.log('[acw] sqlite driver', dbDriver)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 

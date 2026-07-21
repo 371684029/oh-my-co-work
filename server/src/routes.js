@@ -29,7 +29,7 @@ import {
   saveSessionAnnouncement,
   restartFromNode,
 } from './services.js'
-import { ROOT, DATA_ROOT } from './db.js'
+import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
 import { listPathHolders } from './pathLock.js'
 import {
@@ -91,6 +91,7 @@ router.get('/health', (_req, res) => {
     integrity,
     autoExit: isAutoExitEnabled(),
     lifecycle: getLifecycleStatus(),
+    sqliteDriver: getDbDriver(),
     time: new Date().toISOString(),
   })
 })

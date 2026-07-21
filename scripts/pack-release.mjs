@@ -219,23 +219,21 @@ function sqliteDepRange() {
   }
 }
 
-function wipeSqliteModule() {
-  const dir = path.join(ROOT, 'node_modules', 'better-sqlite3')
-  try {
-    if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true })
-  } catch {
-    /* ignore */
-  }
+function nodeMajor() {
+  return Number(String(process.versions.node || '0').split('.')[0]) || 0
 }
 
-/** 通用：按当前 Node ABI 适配原生模块（优先下预编译，避免 Windows 缺 VS 编不过） */
+function canUseBuiltinSqlite() {
+  return nodeMajor() >= 22
+}
+
+/** 通用适配：绝不先删掉整个模块（避免 Windows 装失败后变成空目录 ENOENT） */
 function adaptSqliteForCurrentNode() {
   log('检测到 better-sqlite3 与当前 Node 不匹配，开始自动适配…')
   log('本机 Node', process.version, 'ABI', process.versions.modules)
 
-  // 1) 删掉旧模块后重装：按当前 Node 拉预编译包（通用，多数情况无需 VS）
-  log('步骤 1/2：清除并按当前 Node 重装 better-sqlite3（预编译优先）…')
-  wipeSqliteModule()
+  // 1) 不删除模块，直接按当前 Node 重装（拉预编译；Windows 通常无需 VS）
+  log('步骤 1/2：npm install better-sqlite3（预编译优先，保留原文件直到成功）…')
   let r = runNpm([
     'install',
     'better-sqlite3@' + sqliteDepRange(),
@@ -246,7 +244,7 @@ function adaptSqliteForCurrentNode() {
   ])
   if (probeSqlite().ok) return true
 
-  // 2) 最后 rebuild（需要本机编译工具；预编译不可用时兜底）
+  // 2) rebuild 兜底（需要本机编译工具）
   log('步骤 2/2：npm rebuild better-sqlite3 …')
   r = runNpm(['rebuild', 'better-sqlite3'])
   if (r.status === 0 && probeSqlite().ok) return true
@@ -259,30 +257,30 @@ async function main() {
     console.error('[acw-start] 缺少打包入口 server/dist/index.cjs，请使用官方运行包')
     process.exit(1)
   }
-  if (!fs.existsSync(path.join(ROOT, 'node_modules', 'better-sqlite3'))) {
-    console.error('[acw-start] 缺少内置依赖 node_modules/better-sqlite3（运行包应已自带，勿删）')
-    process.exit(1)
-  }
 
   let probe = probeSqlite()
   if (!probe.ok) {
-    // 通用：原生模块加载失败（ABI 不符 / 损坏 / 架构不对）一律自动适配
-    log('better-sqlite3 加载失败，尝试按当前 Node 自动适配…')
-    log(String(probe.error?.message || probe.error || ''))
-    const ok = adaptSqliteForCurrentNode()
-    probe = probeSqlite()
-    if (!ok || !probe.ok) {
-      console.error('[acw-start] 自动适配失败：')
-      console.error(probe.error)
-      console.error(
-        '[acw-start] 请确保本机可访问 npm，或改用 Node 20 LTS 后再启动：https://nodejs.org',
-      )
-      console.error(
-        '[acw-start] 也可在本解压目录手动执行：npm install better-sqlite3 --omit=dev',
-      )
-      process.exit(1)
+    log('better-sqlite3 加载失败：', String(probe.error?.message || probe.error || ''))
+    // Node 22+：服务端可回退 node:sqlite，无需原生模块也能启动
+    if (canUseBuiltinSqlite()) {
+      log('本机 Node >= 22，将使用内置 node:sqlite 启动（无需 VS / rebuild）')
+    } else {
+      log('尝试按当前 Node 自动适配 better-sqlite3…')
+      const ok = adaptSqliteForCurrentNode()
+      probe = probeSqlite()
+      if (!ok || !probe.ok) {
+        console.error('[acw-start] 自动适配失败：')
+        console.error(probe.error)
+        console.error(
+          '[acw-start] 请改用 Node 22+（可用内置 sqlite）或 Node 20 LTS：https://nodejs.org',
+        )
+        console.error(
+          '[acw-start] 也可在本解压目录手动执行：npm install better-sqlite3 --omit=dev',
+        )
+        process.exit(1)
+      }
+      log('better-sqlite3 已适配当前 Node', process.version)
     }
-    log('better-sqlite3 已适配当前 Node', process.version)
   }
 
   const env = {
@@ -533,9 +531,9 @@ async function mainAsync() {
     '',
     '## 需要',
     '',
-    '- 本机已安装 Node.js ≥ 18（https://nodejs.org）',
+    '- 本机已安装 Node.js ≥ 18（https://nodejs.org；推荐 Node 22+）',
     '- **通常不需要**再执行 npm install（依赖已打进包内）',
-    '- 若本机 Node 版本与打包不一致，启动时会自动适配 better-sqlite3（需能访问 npm）',
+    '- Node 22+：即使 better-sqlite3 与本机 Node 不匹配，也会自动用内置 sqlite 启动',
     '',
     '## 启动',
     '',
