@@ -315,13 +315,11 @@
                             ? '需要项目参数'
                             : pendingGate.content?.mode === 'interrupted'
                               ? '崩溃恢复'
-                              : pendingGate.content?.mode === 'path_busy'
-                                ? '目录占用'
-                                : pendingGate.content?.mode === 'archive_confirm'
-                                  ? '确认归档'
-                                  : pendingGate.content?.requireHuman
-                                    ? '须人工同意'
-                                    : '需要你确认'
+                              : pendingGate.content?.mode === 'archive_confirm'
+                                ? '确认归档'
+                                : pendingGate.content?.requireHuman
+                                  ? '须人工同意'
+                                  : '需要你确认'
                     }}
                   </div>
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
@@ -362,7 +360,7 @@
                     type="info"
                     :closable="false"
                     show-icon
-                    title="已归档（只释资源）。发送=解档并仍在本会话，不会新开群聊；续跑请右侧「克隆并从此开始」追加节点。本会话可无限归档。"
+                    title="已归档（只释资源）。再发=解档仍在本会话；续跑=「克隆并从此开始」。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -550,27 +548,6 @@
                             放弃
                           </el-button>
                         </template>
-                        <template v-else-if="pendingGate.content?.mode === 'path_busy'">
-                          <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                            同意重试
-                          </el-button>
-                          <el-button plain @click="gate(pendingGate, 'reject')">拒绝</el-button>
-                          <el-button
-                            v-if="pendingGate.content?.holderSessionId"
-                            plain
-                            @click="openHolderSession(pendingGate.content.holderSessionId)"
-                          >
-                            打开占用方
-                          </el-button>
-                          <el-button
-                            v-if="pendingGate.content?.holderSessionId"
-                            plain
-                            @click="archiveHolderSession(pendingGate.content.holderSessionId)"
-                          >
-                            归档占用方
-                          </el-button>
-                          <el-button plain @click="openResourcesTab">资源</el-button>
-                        </template>
                         <template v-else>
                           <el-button type="danger" @click="gate(pendingGate, 'approve')">
                             同意
@@ -671,10 +648,10 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 仍在本会话 · 可解档/追加节点重开 · 可再归档
+          · 仍在本会话 · 再发=解档 · 可再归档
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          场外段落进行中 · 回主线点正常节点「克隆并从此开始」（本段归档；可再扩展）
+          场外进行中 · 回主线点「克隆并从此开始」
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -801,7 +778,7 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >场外无「重新开始」；回主线请点正常节点「克隆并从此开始」</span
+                    >回主线请点正常节点「克隆并从此开始」</span
                   >
                 </template>
                 <template v-else-if="n.step_type === 'archive'">
@@ -1730,7 +1707,6 @@ const footerCollapsedHint = computed(() => {
     if (pendingGate.value.content?.mode === 'human_input') return '需要你输入 · 展开'
     if (pendingGate.value.content?.mode === 'need_params') return '需要项目参数 · 展开'
     if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
-    if (pendingGate.value.content?.mode === 'path_busy') return '目录占用 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
     return '需要你确认 · 展开'
   }
@@ -1920,9 +1896,6 @@ const composerPlaceholder = computed(() => {
   if (mode === 'interrupted') {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
-  if (mode === 'path_busy') {
-    return '（旧闸门）点同意即可重试；同目录已允许多会话并行'
-  }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
 })
@@ -1933,7 +1906,6 @@ const composerToolbarHint = computed(() => {
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点继续/归档/放弃'
-    if (mode === 'path_busy') return '同意重试'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -1992,7 +1964,6 @@ function roleLabel(m) {
     if (m.content?.mode === 'human_input') return '人工输入'
     if (m.content?.mode === 'need_params') return '补齐参数'
     if (m.content?.mode === 'interrupted') return '崩溃恢复'
-    if (m.content?.mode === 'path_busy') return '目录占用'
     return '闸门'
   }
   if (m.role === 'system') return '系统'

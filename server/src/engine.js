@@ -384,17 +384,6 @@ function isOffsiteArchived(sessionId, nodeId) {
   return false
 }
 
-/**
- * 已废弃 UI「继续」入口：回主线只允许 restartFromNode（右侧正常节点）。
- * 保留路由避免旧客户端 404，调用即明确报错。
- */
-export async function continuePastOffsite(_sessionId, _nodeInstanceId) {
-  throw Object.assign(
-    new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点（回退将线性追加克隆）'),
-    { code: 'USE_RESTART_FROM_NODE' },
-  )
-}
-
 function getGroup(id) {
   return getDb().prepare('SELECT * FROM groups WHERE id = ?').get(id)
 }

@@ -23,7 +23,6 @@ import {
   restartFromNode,
   markInterruptedOnBoot,
   resolveInterruptedSession,
-  continuePastOffsite,
   ensureArchiveTailNode,
   pruneIdleOffsitePlaceholders,
 } from './engine.js'
@@ -511,7 +510,6 @@ export {
   processDueArchives,
   advance,
   restartFromNode,
-  continuePastOffsite,
   markInterruptedOnBoot,
   resolveInterruptedSession,
 }

@@ -29,12 +29,10 @@ import {
   refreshSessionAnnouncement,
   saveSessionAnnouncement,
   restartFromNode,
-  continuePastOffsite,
   getSessionResources,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
-import { listPathHolders } from './pathLock.js'
 import {
   touchHeartbeat,
   notifyClientGone,
@@ -132,14 +130,6 @@ router.post('/backup', (_req, res) => {
   }
 })
 
-/** 查询某路径占用者（提示用，不互斥） */
-router.get('/path-lock', (req, res) => {
-  try {
-    res.json({ holders: listPathHolders(String(req.query.path || '')) })
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
-})
 // 本机路径浏览（工作文件夹 / 脚本文件选择）
 router.get('/fs/roots', (_req, res) => {
   try {
@@ -436,21 +426,6 @@ router.post('/sessions/:id/restart-from-node', async (req, res) => {
       nodeInstanceId: req.body?.nodeInstanceId,
       stepIndex: req.body?.stepIndex,
     })
-    res.json({
-      ...r,
-      detail: getSessionDetail(req.params.id),
-    })
-  } catch (e) {
-    res.status(400).json({ error: e.message })
-  }
-})
-/**
- * 离开场外协助，继续主流程
- * body: { nodeInstanceId: string }
- */
-router.post('/sessions/:id/continue-past-offsite', async (req, res) => {
-  try {
-    const r = await continuePastOffsite(req.params.id, req.body?.nodeInstanceId)
     res.json({
       ...r,
       detail: getSessionDetail(req.params.id),

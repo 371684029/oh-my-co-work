@@ -111,23 +111,18 @@ async function main() {
   const s1 = await req(`/groups/${g1.id}/sessions`, { method: 'POST', body: '{}' })
   const sid1 = s1.id || s1.session?.id
   assert(sid1, 's1')
-  // 通过启动闸门，使会话进入 active/waiting（占用路径）
+  // 通过启动闸门，使会话进入 active/waiting
   await req(`/sessions/${sid1}/gate`, {
     method: 'POST',
     body: JSON.stringify({ action: 'approve_start', text: 'x', idempotencyKey: `st_${sid1}` }),
   })
   await new Promise((r) => setTimeout(r, 300))
 
-  let busy = false
-  try {
-    await req(`/groups/${g2.id}/sessions`, { method: 'POST', body: '{}' })
-  } catch (e) {
-    busy = e.body?.error?.includes('占用') || e.message?.includes('占用') || e.body?.code === 'PATH_BUSY'
-    if (!busy && e.message) console.log('  path lock err:', e.message)
-    busy = busy || /占用|PATH_BUSY/.test(String(e.message) + String(e.body?.error || ''))
-  }
-  assert(busy, 'R04 expected PATH_BUSY on second session')
-  console.log('✓ R04 path lock')
+  // R04：同目录不再互斥，第二会话应可开聊（资源面板仅提示占用）
+  const s2try = await req(`/groups/${g2.id}/sessions`, { method: 'POST', body: '{}' })
+  const sid2try = s2try.id || s2try.session?.id
+  assert(sid2try, 'R04 expected parallel session on same path')
+  console.log('✓ R04 soft path hint (no lock)')
 
   // 备份
   const bak = await req('/backup', { method: 'POST', body: '{}' })
@@ -135,15 +130,14 @@ async function main() {
   console.log('✓ M01 backup', bak.path, bak.format)
 
   // R02：用 SQL 无法直接测 boot；测 interrupted 闸门动作——先造 interrupted 态
-  // 通过第二次开聊失败已证明锁；归档 s1 释放
   await req(`/sessions/${sid1}/archive`, { method: 'POST', body: '{}' })
   console.log('✓ archived holder')
 
-  // 再开应成功
+  // 再开仍应成功
   const s2 = await req(`/groups/${g2.id}/sessions`, { method: 'POST', body: '{}' })
   const sid2 = s2.id || s2.session?.id
-  assert(sid2, 's2 after unlock')
-  console.log('✓ R04 unlock after archive')
+  assert(sid2, 's2 after archive')
+  console.log('✓ R04 still ok after archive')
 
   console.log('ALL PASS')
 }

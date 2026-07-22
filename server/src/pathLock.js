@@ -31,15 +31,6 @@ export function sessionWorkPath(session, group) {
   )
 }
 
-/**
- * 规范化路径；**不再互斥拦截**（同目录允许多会话并行）。
- * 保留函数名以免旧调用崩；excludeSessionId 忽略。
- * @returns {string|null}
- */
-export function assertPathAvailable(folderPath, _excludeSessionId) {
-  return normalizeWorkPath(folderPath)
-}
-
 /** 列出占用某路径的会话（资源面板提示用，不挡操作） */
 export function listPathHolders(folderPath) {
   const norm = normalizeWorkPath(folderPath)

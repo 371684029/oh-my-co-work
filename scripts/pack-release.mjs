@@ -7,8 +7,9 @@
  *
  * 产物（提交进 git）：
  *   packages/apple-co-work-v{MAJOR}-{platform}-{arch}.zip
- *   · 同大版本 + 同平台：覆盖替换（小版本替代）
- *   · 新大版本 / 其它平台：增量保留
+ *   · 同大版本 + 同平台：覆盖替换（小版本即最新）
+ *   · 仓库只保留当前大版本：打新大版本时删除旧大版本全部 zip
+ *   · 多平台：linux / win32 / darwin 各留一份（当前大版本内）
  *
  * 用法：npm run pack
  */
@@ -390,6 +391,24 @@ function platformFromZipName(name) {
   return m ? m[1] : null
 }
 
+function majorFromZipName(name) {
+  const m = String(name).match(/^apple-co-work-v(\d+)-/i)
+  return m ? Number(m[1]) : null
+}
+
+/** 只保留当前大版本的运行包；旧大版本 zip 全部删掉 */
+function pruneOlderMajorZips(keepMajor) {
+  if (!fs.existsSync(PACKAGES_DIR)) return
+  for (const name of fs.readdirSync(PACKAGES_DIR)) {
+    if (!name.endsWith('.zip')) continue
+    const m = majorFromZipName(name)
+    if (m == null || m === keepMajor) continue
+    const full = path.join(PACKAGES_DIR, name)
+    fs.rmSync(full)
+    console.log('[pack] pruned older-major', name)
+  }
+}
+
 function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
   const curPath = path.join(PACKAGES_DIR, 'CURRENT.txt')
   const prev = fs.existsSync(curPath)
@@ -435,9 +454,9 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
     '',
     '## 版本策略',
     '',
-    '- **小版本（同大版本）**：覆盖替换同平台的 `apple-co-work-v{N}-{platform}-{arch}.zip`',
-    '- **大版本**：新增 `v{N+1}-…`，旧大版本包保留',
-    '- **多平台**：linux / win32 / darwin 各一份，互不覆盖',
+    '- **同大版本**：覆盖替换同平台 zip（小版本只留最新）',
+    '- **新大版本**：只保留当前大版本包，旧大版本 zip 全部删除',
+    '- **多平台**：linux / win32 / darwin 各一份（当前大版本内互不覆盖）',
     '',
     '## 仓库内文件',
     '',
@@ -459,7 +478,7 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
     `major=${major}`,
     `kind=runtime-bundle`,
     `needsNpmInstall=false`,
-    `policy=same-major-same-platform-replace; new-major-or-platform-keep`,
+    `policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors`,
     '# 各平台产物（按平台键合并，避免并行 CI 冲突）',
   ]
   for (const p of platOrder) {
@@ -649,6 +668,8 @@ async function mainAsync() {
     console.log('[pack] removed legacy', legacy)
   }
   fs.copyFileSync(zipPath, gitZipPath)
+  // 一个大版本只留当前最新：删掉其它大版本的全部运行包
+  pruneOlderMajorZips(major)
 
   const size = fs.statSync(gitZipPath).size
   writePackagesManifest({ ver, major, sha, plat, gitZipName, size })
@@ -688,6 +709,7 @@ function regenerateManifestOnly() {
   const major = majorOf(ver)
   const sha = gitShort()
   const plat = platformTag()
+  pruneOlderMajorZips(major)
   const files = fs.existsSync(PACKAGES_DIR)
     ? fs.readdirSync(PACKAGES_DIR).filter((n) => n.endsWith('.zip')).sort()
     : []
