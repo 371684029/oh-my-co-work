@@ -15,7 +15,7 @@
 |------|------|------|
 | darwin-arm64 | [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip) | 5139136 |
 | linux-x64 | [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip) | 5270728 |
-| win32-x64 | [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip) | 5071746 |
+| win32-x64 | [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip) | 5072661 |
 
 版本：`1.2.0`（大版本 v1）
 
