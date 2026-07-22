@@ -12,7 +12,7 @@
 
 1. 下载 [`packages/`](../packages/) 中与系统匹配的 zip（打包产物，**无需 npm install**）  
 2. 解压 → 双击 `start.bat`（或 `./start.sh`）→ 自动开浏览器  
-3. 关闭浏览器 **不会**停服务；结束请在启动窗口 Ctrl+C  
+3. 关闭浏览器 **不会**停服务；**关闭启动窗口或 Ctrl+C** 即可结束服务  
 
 开发者本地打运行包：`npm run pack`（写入 `packages/apple-co-work-v{N}-{平台}-{架构}.zip`）。
 

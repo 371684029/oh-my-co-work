@@ -8,5 +8,6 @@ if errorlevel 1 (
   exit /b 1
 )
 echo [acw] 正在启动 apple-co-work …
+echo [acw] 提示：关闭本窗口即可结束服务（关浏览器不会停）
 node start.mjs
 if errorlevel 1 pause

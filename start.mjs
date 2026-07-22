@@ -7,7 +7,7 @@
  * 用法：node start.mjs
  * 或双击 start.bat / ./start.sh
  */
-import { spawn, exec } from 'node:child_process'
+import { spawn, exec, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import http from 'node:http'
@@ -115,18 +115,56 @@ async function main() {
   const child = spawn(
     process.execPath,
     [path.join(ROOT, 'server', 'src', 'index.js')],
-    { cwd: ROOT, env, stdio: 'inherit' },
+    { cwd: ROOT, env, stdio: 'inherit', windowsHide: false },
   )
 
-  const shutdown = () => {
+  const killChild = () => {
+    if (!child || child.killed || child.exitCode != null) return
+    const pid = child.pid
     try {
-      child.kill('SIGTERM')
+      if (process.platform === 'win32' && pid) {
+        // 关闭 bat/CMD 窗口时，杀掉整棵进程树，避免服务残留
+        spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+        })
+      } else {
+        try {
+          child.kill('SIGTERM')
+        } catch {
+          /* ignore */
+        }
+        try {
+          child.kill('SIGKILL')
+        } catch {
+          /* ignore */
+        }
+      }
     } catch {
-      /* ignore */
+      try {
+        child.kill()
+      } catch {
+        /* ignore */
+      }
     }
   }
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
+
+  const shutdown = () => {
+    killChild()
+  }
+  process.on('SIGINT', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('SIGTERM', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('SIGHUP', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('exit', killChild)
 
   child.on('exit', (code) => {
     log('服务已退出', code)
@@ -146,7 +184,7 @@ async function main() {
   if (AUTO_EXIT) {
     log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
   } else {
-    log('提示：关闭浏览器不会停服务；请在本窗口 Ctrl+C 结束')
+    log('提示：关闭本窗口（或 Ctrl+C）即可结束服务；关浏览器不会停服务')
   }
   openBrowser(url)
 }
