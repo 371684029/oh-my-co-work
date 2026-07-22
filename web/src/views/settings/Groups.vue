@@ -83,16 +83,21 @@
             v-for="(s, i) in form.steps"
             :key="i"
             class="step-card"
-            :class="{ 'step-card--human': s.type === 'human', 'step-card--gate': s.gate }"
+            :class="{
+              'step-card--human': s.type === 'human',
+              'step-card--gate': s.gate,
+              'step-card--offsite': s.type === 'offsite',
+            }"
           >
             <div class="step-card-row">
               <span class="step-idx">{{ i + 1 }}.</span>
               <el-input v-model="s.title" placeholder="步骤标题" />
             </div>
             <div class="step-card-row step-card-tools">
-              <el-select v-model="s.type" style="width: 120px">
+              <el-select v-model="s.type" style="width: 150px">
                 <el-option label="成员" value="member" />
                 <el-option label="人工" value="human" />
+                <el-option label="场外协助（额外）" value="offsite" />
               </el-select>
               <el-select
                 v-if="s.type === 'member'"
@@ -110,6 +115,9 @@
               <el-tag v-if="s.type === 'human'" size="small" type="info" effect="plain" round>
                 人工步骤
               </el-tag>
+              <el-tag v-else-if="s.type === 'offsite'" size="small" type="warning" effect="plain" round>
+                额外节点 · 不线性推进
+              </el-tag>
               <el-checkbox
                 v-if="s.type === 'human'"
                 v-model="s.captureParams"
@@ -125,7 +133,7 @@
                 删
               </el-button>
             </div>
-            <div class="flow-block">
+            <div class="flow-block" v-if="s.type !== 'offsite'">
               <div class="flow-label">
                 节点流转
                 <span class="flow-hint">可多选 · 默认全开</span>
@@ -139,9 +147,12 @@
                 规则：明确拒绝=不通过；「人工流转」须人工同意；「管理员总结与流转」会汇总 # 参数与节点 I/O 到群报告；否则自动产出一票可通过。
               </p>
             </div>
+            <p v-else class="flow-policy">
+              场外协助是主流程上的<strong>额外节点</strong>：不参与线性推进；@成员等操作记入此节点；回主流程靠右侧选正常节点重开。若模板未配置，开聊仍会自动补一个。
+            </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">
-            开聊后系统会自动追加「场外协助」节点（@成员等流程外操作归入该节点；不在此配置）。
+            「场外协助」可作为模板中的额外节点配置；未配置时开聊也会自动追加一个，并在右侧流程图单独分区高亮。
           </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
@@ -163,10 +174,12 @@
                 size="small"
                 effect="plain"
                 round
-                :type="s.type === 'human' ? 'info' : ''"
+                :type="s.type === 'human' ? 'info' : s.type === 'offsite' ? 'warning' : ''"
                 class="view-step-tag"
               >
-                {{ s.type === 'human' ? '人工' : '成员' }}
+                {{
+                  s.type === 'human' ? '人工' : s.type === 'offsite' ? '场外协助' : '成员'
+                }}
               </el-tag>
               <el-tag
                 v-if="s.type === 'human' && s.captureParams"

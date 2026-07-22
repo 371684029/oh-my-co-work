@@ -598,21 +598,22 @@ export function createSessionFromGroup(groupId, { title } = {}) {
 
   steps.forEach((step, i) => {
     const flow = normalizeStepFlow(step.flow, step.gate)
-    // 模板里若误配场外协助，仍按普通步骤写入；系统会再追加标准场外节点
-    const st = step.type === STEP_TYPE.OFFSITE ? STEP_TYPE.MEMBER : step.type || STEP_TYPE.MEMBER
+    const st = step.type || STEP_TYPE.MEMBER
     insertNode.run(
       uid('node'),
       sessionId,
       i,
       step.id || `step_${i}`,
-      step.title || `步骤 ${i + 1}`,
+      st === STEP_TYPE.OFFSITE
+        ? step.title || '场外协助'
+        : step.title || `步骤 ${i + 1}`,
       st,
-      step.memberId || null,
+      st === STEP_TYPE.OFFSITE ? null : step.memberId || null,
       NODE_STATUS.PENDING,
-      flowNeedsWait(flow) || step.gate ? 1 : 0,
+      st === STEP_TYPE.OFFSITE ? 0 : flowNeedsWait(flow) || step.gate ? 1 : 0,
     )
   })
-  // 每场任务固定带「场外协助」节点（在模板步骤之后）
+  // 模板未配置时，在末尾自动补一个「场外协助」额外节点
   ensureOffsiteNode(sessionId)
 
   addMessage(sessionId, {

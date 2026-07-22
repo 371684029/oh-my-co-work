@@ -638,11 +638,11 @@
           · 未执行节点仍展示，可展开查看
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          当前在场外协助 · 回到主流程请点下方正常节点的「从此重新开始」
+          当前在场外协助（额外节点）· 回到主流程请点上方正常节点的「从此重新开始」
         </p>
         <template v-if="detail?.nodes?.length">
           <div
-            v-for="n in detail.nodes"
+            v-for="n in flowMainNodes"
             :key="n.id"
             class="flow-step"
             :class="[flowClass(n), { open: expandedNodeId === n.id }]"
@@ -654,16 +654,7 @@
                   <span class="flow-idx">{{ n.step_index + 1 }}</span>
                   {{ n.title }}
                   <el-tag
-                    v-if="n.step_type === 'offsite' && (isWaitingHuman(n) || n.status === 'running')"
-                    size="small"
-                    type="warning"
-                    effect="dark"
-                    round
-                  >
-                    场外
-                  </el-tag>
-                  <el-tag
-                    v-else-if="isWaitingHuman(n)"
+                    v-if="isWaitingHuman(n)"
                     size="small"
                     type="danger"
                     effect="dark"
@@ -693,11 +684,7 @@
                 </div>
               </button>
               <div class="flow-step-actions">
-                <template v-if="n.step_type === 'offsite'">
-                  <span class="flow-offsite-action-tip">流程外操作记于此 · 回主流程请选其它节点</span>
-                </template>
                 <el-button
-                  v-else
                   size="small"
                   text
                   type="primary"
@@ -719,15 +706,87 @@
               </div>
             </div>
           </div>
-          <div class="flow-current-bar" :class="{ 'is-human-attention': needsHuman }">
+
+          <!-- 额外节点：场外协助（与正常主流程节点分区 + 独立高亮） -->
+          <template v-if="flowExtraNodes.length">
+            <div class="flow-extra-sep">
+              <span class="flow-extra-sep-line" />
+              <span class="flow-extra-sep-label">额外节点 · 场外协助</span>
+              <span class="flow-extra-sep-line" />
+            </div>
+            <div
+              v-for="n in flowExtraNodes"
+              :key="n.id"
+              class="flow-step is-extra"
+              :class="[flowClass(n), { open: expandedNodeId === n.id }]"
+            >
+              <div class="flow-dot" />
+              <div class="flow-step-body">
+                <button type="button" class="flow-step-head" @click="toggleNodeExpand(n)">
+                  <div class="flow-step-title">
+                    <span class="flow-idx flow-idx--extra">{{ n.step_index + 1 }}</span>
+                    {{ n.title || '场外协助' }}
+                    <el-tag size="small" type="warning" effect="plain" round>额外</el-tag>
+                    <el-tag
+                      v-if="n.status === 'running' || n.status === 'waiting_human'"
+                      size="small"
+                      type="warning"
+                      effect="dark"
+                      round
+                    >
+                      {{ n.status === 'running' ? '进行中' : '挂起' }}
+                    </el-tag>
+                    <el-tag
+                      v-else-if="n.status === 'pending'"
+                      size="small"
+                      effect="plain"
+                      round
+                    >
+                      未执行
+                    </el-tag>
+                  </div>
+                  <div class="flow-step-meta">
+                    {{ stepTypeLabel(n.step_type) }} · {{ statusLabel(n.status) || n.status }}
+                    <span class="flow-expand-caret">{{
+                      expandedNodeId === n.id ? '收起' : '展开'
+                    }}</span>
+                  </div>
+                </button>
+                <div class="flow-step-actions">
+                  <span class="flow-offsite-action-tip"
+                    >@成员等记于此 · 回主流程请选上方正常节点「从此重新开始」</span
+                  >
+                </div>
+                <div v-if="expandedNodeId === n.id" class="flow-io">
+                  <div class="flow-io-block">
+                    <div class="flow-io-label">输入（用户说了啥）</div>
+                    <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
+                  </div>
+                  <div class="flow-io-block">
+                    <div class="flow-io-label">输出（做了啥）</div>
+                    <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
+                  </div>
+                  <div v-if="n.journalPath" class="flow-io-path">台账：{{ n.journalPath }}</div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div
+            class="flow-current-bar"
+            :class="{
+              'is-human-attention': needsHuman && !offsiteActive,
+              'is-offsite-attention': offsiteActive,
+            }"
+          >
             <span class="flow-current-label">{{
-              offsiteActive ? '场外协助' : needsHuman ? '等待人工' : '当前节点'
+              offsiteActive ? '额外 · 场外协助' : needsHuman ? '等待人工' : '当前节点'
             }}</span>
             <strong>
               {{
                 offsiteActive
-                  ? detail.nodes.find((n) => n.step_type === 'offsite')?.title || '场外协助'
-                  : detail.nodes.find((n) => isCurrent(n))?.title ||
+                  ? flowExtraNodes[0]?.title || '场外协助'
+                  : flowMainNodes.find((n) => isCurrent(n))?.title ||
                     (detail.session.status === 'archived' ? '已结束' : '—')
               }}
             </strong>
@@ -1885,13 +1944,23 @@ function isWaitingHuman(n) {
   return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
 }
 
+/** 主流程节点（不含场外协助） */
+const flowMainNodes = computed(() =>
+  (detail.value?.nodes || []).filter((n) => n.step_type !== 'offsite'),
+)
+
+/** 额外节点：场外协助（可配置进模板，也可系统自动追加） */
+const flowExtraNodes = computed(() =>
+  (detail.value?.nodes || []).filter((n) => n.step_type === 'offsite'),
+)
+
 /** 是否正处在场外协助（@ 等流程外操作） */
 const offsiteActive = computed(() => {
   const s = detail.value?.session
   if (!s || s.status === 'archived') return false
   const ctx = s.context && typeof s.context === 'object' ? s.context : {}
   if (ctx.offsiteAssist?.active) return true
-  const off = (detail.value?.nodes || []).find((n) => n.step_type === 'offsite')
+  const off = flowExtraNodes.value[0]
   return !!(off && (off.status === 'running' || off.status === 'waiting_human'))
 })
 
@@ -4418,21 +4487,13 @@ loadLists().then(() => {
 .flow-offsite-hint {
   margin: 0 0 12px;
   font-size: 11.5px;
-  color: var(--el-color-warning-dark-2, #b88230);
+  color: #9a6414;
   line-height: 1.45;
 }
 .flow-offsite-action-tip {
   font-size: 11px;
   color: var(--ecw-text-3, #8b8f9a);
   line-height: 1.4;
-}
-.flow-step.offsite-active .flow-idx {
-  background: rgba(230, 162, 60, 0.2);
-  color: var(--el-color-warning-dark-2, #b88230);
-}
-.flow-step.offsite-idle .flow-idx {
-  background: rgba(0, 0, 0, 0.04);
-  color: var(--ecw-text-3, #8b8f9a);
 }
 .flow-archive-outcome.is-ok {
   color: var(--el-color-success);

@@ -394,6 +394,89 @@ body,
   border-left-color: var(--el-color-danger, #f56c6c);
 }
 
+/* 额外节点 · 场外协助：与正常「当前/未执行」高亮区分（琥珀色系，非蓝非红） */
+.flow-step.is-extra {
+  border-left-style: dashed;
+  border-left-color: rgba(184, 130, 48, 0.35);
+  background: linear-gradient(90deg, rgba(230, 162, 60, 0.06), transparent 72%);
+  border-radius: 0 10px 10px 0;
+  margin-right: 2px;
+}
+
+.flow-step.offsite-idle {
+  border-left-color: rgba(184, 130, 48, 0.28);
+}
+
+.flow-step.offsite-active {
+  border-left-style: solid;
+  border-left-color: #c47d1a;
+  background: linear-gradient(90deg, rgba(230, 162, 60, 0.14), transparent 80%);
+}
+
+.flow-step.offsite-active .flow-dot {
+  background: #c47d1a;
+  box-shadow:
+    0 0 0 3px var(--ecw-surface-muted),
+    0 0 0 6px rgba(230, 162, 60, 0.28);
+  animation: ecw-pulse-amber 1.4s ease-in-out infinite;
+}
+
+.flow-step.offsite-idle .flow-dot {
+  background: #d4a35c;
+  box-shadow: 0 0 0 3px var(--ecw-surface-muted);
+}
+
+.flow-step.offsite-active .flow-idx,
+.flow-idx--extra {
+  background: rgba(230, 162, 60, 0.18) !important;
+  color: #9a6414 !important;
+}
+
+@keyframes ecw-pulse-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 6px rgba(230, 162, 60, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 8px rgba(230, 162, 60, 0.4);
+  }
+}
+
+.flow-extra-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+  padding-left: 4px;
+}
+
+.flow-extra-sep-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(184, 130, 48, 0.28);
+}
+
+.flow-extra-sep-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #9a6414;
+}
+
+.flow-current-bar.is-offsite-attention {
+  border-color: rgba(196, 125, 26, 0.45);
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+.flow-current-bar.is-offsite-attention .flow-current-label {
+  color: #9a6414;
+}
+
 .flow-step.done {
   border-left-color: var(--el-color-success, #67c23a);
 }
