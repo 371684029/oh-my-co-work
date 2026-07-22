@@ -4,7 +4,7 @@
 
 | 文档 | 用途 |
 |------|------|
-| [mvp.md](./mvp.md) | 宗旨、验收；§2.7～§2.10 已封 · §2.11 `1.0.0` |
+| [mvp.md](./mvp.md) | 宗旨、验收；§2.7～§2.10 已封 · §2.11 `1.0.0` · §2.12 `1.1.x` |
 | [demo.md](./demo.md) | **怎么看演示效果**（启动、演示流点选、排障） |
 | [RELEASE-USER.md](./RELEASE-USER.md) | **压缩包用户说明**（一键启动；默认关浏览器不停服务） |
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
@@ -26,4 +26,4 @@
 6. 改代码导致行为变化时，至少更新 README + data-storage（或 mvp 对照）；涉及架构再改 technical-design。  
 7. 改工作台布局 / 视觉氛围 / 组件用法时，同步 [frontend-components.md](./frontend-components.md)。  
 8. **及时维护**：合并功能当天补文档修订记录，避免实现与文档漂移。  
-9. **版本纪律**：`0.4.0` 已最终封板；**新需求写进 1.0.0**（先改 mvp / data-and-ops 再写代码）。  
+9. **版本纪律**：`0.4.0` 已最终封板；当前发布线 **`1.1.x`**（先改 mvp / data-and-ops 再写代码）。  
