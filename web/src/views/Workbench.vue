@@ -195,7 +195,7 @@
               type="primary"
               @click="doUnarchive"
             >
-              解档
+              恢复
             </el-button>
             <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
           </div>
@@ -310,16 +310,16 @@
                       pendingGate.content?.mode === 'session_start'
                         ? '确认开始'
                         : pendingGate.content?.mode === 'human_input'
-                          ? '需要你输入'
+                          ? '请输入'
                           : pendingGate.content?.mode === 'need_params'
-                            ? '需要项目参数'
+                            ? '请输入'
                             : pendingGate.content?.mode === 'interrupted'
                               ? '崩溃恢复'
                               : pendingGate.content?.mode === 'archive_confirm'
                                 ? '确认归档'
                                 : pendingGate.content?.requireHuman
                                   ? '须人工同意'
-                                  : '需要你确认'
+                                  : '待你处理'
                     }}
                   </div>
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
@@ -360,7 +360,7 @@
                     type="info"
                     :closable="false"
                     show-icon
-                    title="已归档（只释资源）。再发=解档仍在本会话；续跑=「克隆并从此开始」。"
+                    title="已归档（只释资源）。再发即可恢复；续跑点「从这里继续」。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -391,7 +391,7 @@
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
                         <span class="at-panel-tip"
-                          >记入场外 · 续跑请右侧「克隆并从此开始」</span
+                          >将记入临时协助</span
                         >
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
@@ -415,7 +415,7 @@
                     <div v-if="hashOpen" class="slash-panel hash-panel">
                       <div class="slash-panel-head">
                         <span># 文本快捷</span>
-                        <span class="at-panel-tip"># 仅唤起 · 选中后插入正文（不含 #）</span>
+                        <span class="at-panel-tip"># 选中后插入正文（不含 #）</span>
                       </div>
                       <div v-if="!filteredHashItems.length" class="slash-empty">
                         无匹配 · 开聊后可见群聊/文件夹；人工提交参数后有第 1 段…
@@ -591,7 +591,7 @@
           </h1>
           <p class="core-living">
             <span class="living-lead">节点是死的，人是活的</span>
-            <span class="living-rest">流动的 Workflow · 可绕行、插队、场外再回来</span>
+            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来</span>
           </p>
           <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
           <p class="welcome-journey" aria-label="上手三步">
@@ -599,9 +599,14 @@
             <i aria-hidden="true" />
             <span>对话</span>
             <i aria-hidden="true" />
-            <span>闸门</span>
+            <span>确认</span>
           </p>
-          <p class="welcome-cta">左侧选群或成员，点「开聊」</p>
+          <div class="welcome-actions">
+            <el-button type="primary" size="large" round @click="startDemoChat">
+              一键开聊：演示流
+            </el-button>
+            <p class="welcome-cta">或左侧自选群/成员后点「开聊」</p>
+          </div>
         </div>
       </div>
     </section>
@@ -639,7 +644,7 @@
       <!-- Tab：流程 -->
       <div v-show="rightTab === 'flow'" class="wb-right-pane">
         <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
-          已归档 · 已请求释放进程并放开目录
+          已归档
           <template v-if="archiveOutcomeTag">
             ·
             <span
@@ -648,10 +653,9 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 仍在本会话 · 再发=解档 · 可再归档
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          场外进行中 · 回主线点「克隆并从此开始」
+          临时协助进行中
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -689,7 +693,7 @@
                     effect="plain"
                     round
                   >
-                    额外
+                    临时
                   </el-tag>
                   <el-tag
                     v-else-if="n.step_type === 'archive'"
@@ -769,22 +773,15 @@
                   <span v-if="reviewLabel(n)" class="meta-review" :class="'is-' + reviewAction(n)">
                     · {{ reviewLabel(n) }}
                   </span>
-                  <span v-if="n.gate" class="meta-gate"> · 闸门</span>
+                  <span v-if="n.gate" class="meta-gate"> · 待确认</span>
                   <span class="flow-expand-caret">{{
                     expandedNodeId === n.id ? '收起' : '展开'
                   }}</span>
                 </div>
               </button>
               <div class="flow-step-actions">
-                <template v-if="n.step_type === 'offsite'">
-                  <span class="flow-offsite-action-tip"
-                    >回主线请点正常节点「克隆并从此开始」</span
-                  >
-                </template>
-                <template v-else-if="n.step_type === 'archive'">
-                  <span class="flow-offsite-action-tip"
-                    >可手动归档，或等待超时自动归档（设置可改，默认 3 小时）</span
-                  >
+                <template v-if="n.step_type === 'offsite' || n.step_type === 'archive'">
+                  <!-- 说明集中在输入区归档提示；此处不重复上课 -->
                 </template>
                 <el-button
                   v-else
@@ -793,7 +790,7 @@
                   type="primary"
                   @click.stop="restartFromNode(n)"
                 >
-                  克隆并从此开始
+                  从这里继续
                 </el-button>
               </div>
               <div v-if="expandedNodeId === n.id" class="flow-io">
@@ -820,8 +817,8 @@
             <span class="flow-current-label">{{
               offsiteActive
                 ? offsiteMode === 'planned'
-                  ? '计划挂起'
-                  : '临时插队'
+                  ? '临时协助'
+                  : '临时协助'
                 : needsHuman
                   ? '待确认'
                   : '当前节点'
@@ -829,7 +826,7 @@
             <strong>
               {{
                 offsiteActive
-                  ? activeOffsiteNode?.title || '场外协助'
+                  ? activeOffsiteNode?.title || '临时协助'
                   : detail.nodes.find((n) => isCurrent(n))?.title ||
                     (detail.session.status === 'archived' ? '已归档（可重开）' : '—')
               }}
@@ -1036,14 +1033,14 @@
               :loading="resourcesKilling"
               @click="rekillSessionProcesses"
             >
-              再杀一次
+              结束进程
             </el-button>
           </div>
         </div>
         <p class="resources-note">
           {{
             sessionResources?.note ||
-            '同目录允许多会话并行；进程清理为尽力保证，仅唤起 / 外部 CLI 可能仍需手动关窗。'
+            '同目录允许多会话并行；进程清理为尽力保证，外部窗口可能还需手动关窗。'
           }}
         </p>
         <div v-if="sessionResources" class="resources-body">
@@ -1095,7 +1092,7 @@
                 effect="plain"
                 round
               >
-                含仅唤起/遗留风险
+                可能还需手动关窗
               </el-tag>
             </div>
             <div v-if="sessionResources.processes?.length" class="resources-procs">
@@ -1107,7 +1104,7 @@
                 <code class="resources-pid">PID {{ p.pid }}</code>
                 <span class="resources-proc-label">{{ p.label || p.kind || 'process' }}</span>
                 <el-tag v-if="p.detach || p.orphanRisk" size="small" type="warning" effect="plain" round>
-                  仅唤起风险
+                  可能需手关
                 </el-tag>
                 <el-tag v-if="p.source === 'disk'" size="small" effect="plain" round>磁盘</el-tag>
               </div>
@@ -1704,11 +1701,11 @@ function previewHashValue(v) {
 const footerCollapsedHint = computed(() => {
   if (pendingGate.value) {
     if (pendingGate.value.content?.mode === 'session_start') return '确认开始 · 展开'
-    if (pendingGate.value.content?.mode === 'human_input') return '需要你输入 · 展开'
-    if (pendingGate.value.content?.mode === 'need_params') return '需要项目参数 · 展开'
+    if (pendingGate.value.content?.mode === 'human_input') return '请输入 · 展开'
+    if (pendingGate.value.content?.mode === 'need_params') return '请输入 · 展开'
     if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
-    return '需要你确认 · 展开'
+    return '待你处理 · 展开'
   }
   return '输入消息 · 展开'
 })
@@ -1879,43 +1876,40 @@ const composerPlaceholder = computed(() => {
   const mode = g.content?.mode
   if (mode === 'session_start') {
     if (g.content?.callArgs || g.content?.captureParams === false) {
-      return '输入参数全文将作为 #a；点「通过」启动（可空）…'
+      return '可选参数全文作 #a；点「通过」启动…'
     }
     return g.content?.captureParams
-      ? 'Enter 发送说明/参数（pending）；点「通过」才启动…'
-      : 'Enter 发送说明（pending）；点「通过」才启动…'
+      ? '可先输入说明/参数，再点「通过」启动…'
+      : '可先输入说明，再点「通过」启动…'
   }
-  if (mode === 'human_input') {
-    return g.content?.captureParams
-      ? '在此输入参数（空格或换行 → #1 #2…；同会话递增追加，不覆盖；新开聊另起一套），Enter 或点「提交」'
+  if (mode === 'human_input' || mode === 'need_params') {
+    return g.content?.captureParams || mode === 'need_params'
+      ? '在此输入参数（空格/换行分段 → #1 #2…），Enter 或点「提交」'
       : '在此输入内容，Enter 或点「提交」'
-  }
-  if (mode === 'need_params') {
-    return '缺少 #1：在此输入项目参数（空格/换行分段），Enter 或点「提交」后继续本步'
   }
   if (mode === 'interrupted') {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
-  return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
+  return '可先写意见，再点「同意」或「拒绝」…'
 })
 
 const composerToolbarHint = computed(() => {
   if (pendingGate.value) {
     const mode = pendingGate.value.content?.mode
-    if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
+    if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点继续/归档/放弃'
-    return 'Enter=pending 附言 · 点同意/拒绝定局'
+    return 'Enter=附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
 })
 
 const composerFooterHint = computed(() => {
   if (pendingGate.value) {
-    return '闸门与消息共用下方输入框 · 附言会记入群报告'
+    return '待确认与消息共用下方输入框 · 附言会记入群报告'
   }
-  return '# 唤起插正文（群聊/文件夹/参数/输出）· @成员协助'
+  return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助'
 })
 
 function statusLabel(s) {
@@ -1961,10 +1955,10 @@ function roleLabel(m) {
   if (m.role === 'user') return '我'
   if (m.type === 'gate') {
     if (m.content?.mode === 'session_start') return '确认开始'
-    if (m.content?.mode === 'human_input') return '人工输入'
-    if (m.content?.mode === 'need_params') return '补齐参数'
+    if (m.content?.mode === 'human_input') return '请输入'
+    if (m.content?.mode === 'need_params') return '请输入'
     if (m.content?.mode === 'interrupted') return '崩溃恢复'
-    return '闸门'
+    return '待你处理'
   }
   if (m.role === 'system') return '系统'
   if (m.member_id) {
@@ -1979,8 +1973,8 @@ function roleLabel(m) {
 function shortSender(m, fullName) {
   const full = fullName || roleLabel(m)
   if (!full) return '?'
-  if (full === '我' || full === '系统' || full === '闸门' || full === '成员') return full
-  if (full === '人工输入') return '人工'
+  if (full === '我' || full === '系统' || full === '待你处理' || full === '闸门' || full === '成员') return full
+  if (full === '请输入' || full === '人工输入') return '输入'
   // 中文名：最多 4 字，超过取前 2 字作简称
   if (/[\u4e00-\u9fff]/.test(full)) {
     if (full.length <= 4) return full
@@ -2521,8 +2515,27 @@ async function startChat() {
     await selectSession(s.id)
     ElMessage.success(kind === 'm:' ? '已与成员开聊' : '已开聊')
   } catch (e) {
-    ElMessage.error(e.message)
+    // 业务异常不 toast Error
   }
+}
+
+/** 欢迎页：一键开聊演示流 */
+async function startDemoChat() {
+  let demo = groups.value.find((g) => g.title === '演示流')
+  if (!demo) {
+    try {
+      await loadLists()
+    } catch {
+      /* ignore */
+    }
+    demo = groups.value.find((g) => g.title === '演示流')
+  }
+  if (!demo) {
+    ElMessage.warning('未找到「演示流」。请到设置打开「显示演示示例」。')
+    return
+  }
+  startTarget.value = `g:${demo.id}`
+  await startChat()
 }
 
 function syncSlashFromInput() {
@@ -2861,7 +2874,7 @@ watch(
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('场外节点没有「重新开始」；请点右侧正常节点')
+    ElMessage.warning('临时协助没有「重新开始」；请点右侧正常节点「从这里继续」')
     return
   }
   if (n.step_type === 'archive') {
@@ -2886,8 +2899,8 @@ async function restartFromNode(n) {
     scrollFlowToAnchor()
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
     ElMessage.success(
-      `已追加克隆并自「${title}」开始${
-        wasArchived ? ' · 已解档' : wasOffsite || r.offsiteArchived ? ' · 场外本段已归档' : ''
+      `已从「${title}」继续${
+        wasArchived ? ' · 已恢复' : wasOffsite || r.offsiteArchived ? ' · 临时协助本段已归档' : ''
       }`,
     )
   } catch (e) {
@@ -2989,10 +3002,10 @@ async function onSenderSubmit() {
     pendingFiles.value = []
     if (r.mentionPending) {
       ElMessage.success(
-        r.offsiteMode === 'planned' ? '场外协助 · 已记入计划挂起节点' : '已进入场外协助',
+        r.offsiteMode === 'planned' ? '临时协助 · 已记入挂起节点' : '已进入临时协助',
       )
       if (r.mainGateWaiting) {
-        ElMessage.info('主流程仍停在当前闸门，场外不替代提交')
+        ElMessage.info('主流程仍停在当前确认，临时协助不替代提交')
       }
     }
     if (r.newSession && r.session) {
@@ -3122,7 +3135,7 @@ async function doArchive() {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '确认归档？将尽量结束本会话进程并放开目录；外部窗口若仍在请手关。归档不是新开群聊——本会话仍在，之后可解档或「克隆并从此开始」追加节点，并可再次归档。',
+      '确认归档？将尽量结束本会话进程。本会话仍在，之后可恢复或「从这里继续」。',
       '归档',
       { type: 'warning', confirmButtonText: '同意归档', cancelButtonText: '取消' },
     )
@@ -3147,7 +3160,7 @@ async function doUnarchive() {
     await api.sessions.unarchive(id)
     await loadDetail(id)
     sessions.value = await api.sessions.list()
-    ElMessage.success('已解档')
+    ElMessage.success('已恢复')
   } catch (e) {
     // 业务异常不 toast Error
   }
@@ -4101,6 +4114,17 @@ loadLists().then(() => {
   animation: welcome-rise 0.75s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.welcome-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  animation: welcome-rise 0.75s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes welcome-rise {
   from {
     opacity: 0;
@@ -4120,7 +4144,8 @@ loadLists().then(() => {
   .core-living,
   .core-mvp,
   .welcome-journey,
-  .welcome-cta {
+  .welcome-cta,
+  .welcome-actions {
     animation: none !important;
   }
 }

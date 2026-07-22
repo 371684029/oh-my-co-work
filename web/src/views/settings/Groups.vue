@@ -97,7 +97,7 @@
               <el-select v-model="s.type" style="width: 150px">
                 <el-option label="成员" value="member" />
                 <el-option label="人工" value="human" />
-                <el-option label="场外协助" value="offsite" />
+                <el-option label="临时协助" value="offsite" />
               </el-select>
               <el-select
                 v-if="s.type === 'member'"
@@ -116,7 +116,7 @@
                 人工步骤
               </el-tag>
               <el-tag v-else-if="s.type === 'offsite'" size="small" type="warning" effect="plain" round>
-                额外
+                临时
               </el-tag>
               <el-checkbox
                 v-if="s.type === 'human'"
@@ -133,26 +133,30 @@
                 删
               </el-button>
             </div>
-            <div class="flow-block" v-if="s.type !== 'offsite'">
-              <div class="flow-label">
-                节点流转
-                <span class="flow-hint">可多选 · 默认全开</span>
-              </div>
-              <el-checkbox-group v-model="s.flowKeys" class="flow-checks">
-                <el-checkbox value="admin">管理员总结与流转</el-checkbox>
-                <el-checkbox value="auto">子节点产出自动流转</el-checkbox>
-                <el-checkbox value="human">人工流转</el-checkbox>
-              </el-checkbox-group>
-              <p class="flow-policy">
-                规则：明确拒绝=不通过；「人工流转」须人工同意；「管理员总结与流转」会汇总 # 参数与节点 I/O 到群报告；否则自动产出一票可通过。
-              </p>
-            </div>
+            <el-collapse v-if="s.type !== 'offsite'" class="flow-advanced">
+              <el-collapse-item title="高级流转" name="flow">
+                <div class="flow-block">
+                  <div class="flow-label">
+                    节点流转
+                    <span class="flow-hint">可多选 · 默认全开</span>
+                  </div>
+                  <el-checkbox-group v-model="s.flowKeys" class="flow-checks">
+                    <el-checkbox value="admin">管理员总结与流转</el-checkbox>
+                    <el-checkbox value="auto">子节点产出自动流转</el-checkbox>
+                    <el-checkbox value="human">人工流转</el-checkbox>
+                  </el-checkbox-group>
+                  <p class="flow-policy">
+                    明确拒绝=不通过；「人工流转」须人工同意；「管理员总结」写入群报告。
+                  </p>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
             <p v-else class="flow-policy">
-              额外节点仅在 @ / 插队时插入（开场则第一位），不预挂。回主线/重开=「克隆并从此开始」。末尾固定「归档」（手动或超时）。归档只释资源，再发仍在本会话。
+              临时协助仅在 @ / 插队时插入。回主线点「从这里继续」。末尾固定归档（手动或超时）。
             </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">
-            场外协助按步骤内联、琥珀色高亮。宗旨见「关于」：节点是死的，人是活的。
+            临时协助按步骤内联、琥珀色高亮。宗旨见「关于」。
           </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
@@ -178,7 +182,7 @@
                 class="view-step-tag"
               >
                 {{
-                  s.type === 'human' ? '人工' : s.type === 'offsite' ? '场外协助' : '成员'
+                  s.type === 'human' ? '人工' : s.type === 'offsite' ? '临时协助' : '成员'
                 }}
               </el-tag>
               <el-tag
@@ -629,6 +633,24 @@ onMounted(load)
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--el-border-color-lighter);
+}
+
+.flow-advanced {
+  margin-top: 8px;
+}
+.flow-advanced :deep(.el-collapse-item__header) {
+  font-size: 13px;
+  font-weight: 650;
+  height: 36px;
+  line-height: 36px;
+}
+.flow-advanced :deep(.el-collapse-item__content) {
+  padding-bottom: 4px;
+}
+.flow-advanced .flow-block {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .flow-label {

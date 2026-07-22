@@ -93,7 +93,7 @@ import AppLogo from '../../components/AppLogo.vue'
 const data = ref({
   productName: 'apple-co-work',
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',
-  livingLine: '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、场外办事再回来。',
+  livingLine: '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。',
   version: '—',
   updateUrl: '',
   updateHint: '',

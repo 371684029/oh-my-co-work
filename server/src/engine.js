@@ -67,7 +67,7 @@ function insertOffsiteAtCursor(sessionId, { title } = {}) {
   const seq = list.length + 1
   const insertIdx = resolveOffsiteInsertIndex(sessionId)
   const id = uid('node')
-  const label = title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
+  const label = title || (seq <= 1 ? '临时协助' : `临时协助 · ${seq}`)
 
   const shift = db.prepare(
     `UPDATE node_instances SET step_index = step_index + 1
@@ -781,7 +781,7 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
       role: 'system',
       type: 'status',
       content: {
-        text: '已解档。仍在本会话（不会新开群聊）。续跑请右侧「克隆并从此开始」追加节点；本会话可再次归档。',
+        text: '已恢复。仍在本会话。续跑请右侧「从这里继续」；可再次归档。',
         unarchived: true,
       },
     })
@@ -829,7 +829,7 @@ export async function restartFromNode(sessionId, opts = {}) {
   if (!target) throw new Error('目标节点不存在')
   if (target.step_type === STEP_TYPE.OFFSITE) {
     throw Object.assign(
-      new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点'),
+      new Error('临时协助没有「重新开始」；请在右侧选正常节点「从这里继续」'),
       { code: 'OFFSITE_NOT_RESTART_TARGET' },
     )
   }
@@ -1114,7 +1114,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       i,
       step.id || `step_${i}`,
       st === STEP_TYPE.OFFSITE
-        ? step.title || '场外协助'
+        ? step.title || '临时协助'
         : step.title || `步骤 ${i + 1}`,
       st,
       st === STEP_TYPE.OFFSITE ? null : step.memberId || null,
@@ -1252,7 +1252,7 @@ export async function advance(sessionId) {
 
     // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
     if (node.step_type === STEP_TYPE.OFFSITE) {
-      const title = node.title || '场外协助'
+      const title = node.title || '临时协助'
       persistNodeIo(sessionId, node.id, {
         input: {
           kind: 'offsite',
@@ -1286,7 +1286,7 @@ export async function advance(sessionId) {
         type: 'status',
         node_instance_id: node.id,
         content: {
-          text: `场外协助「${title}」· 计划挂起。可 @办事；回主线请点右侧正常节点（回退将线性追加克隆）。`,
+          text: `临时协助「${title}」已挂起。可 @办事；回主线请点右侧正常节点「从这里继续」。`,
           offsite: true,
           mode: OFFSITE_MODE.PLANNED,
         },
@@ -1942,7 +1942,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录。外部窗口若仍在请手关。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。`,
+          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录。外部窗口若仍在请手关。本会话仍在，可恢复续聊或「从这里继续」；可再次归档。`,
         },
       })
     } catch {
@@ -1954,7 +1954,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: '已归档：已请求释放进程并放开目录。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。外部窗口若仍在请手关。',
+          text: '已归档：已请求释放进程并放开目录。本会话仍在，可恢复续聊或「从这里继续」；可再次归档。外部窗口若仍在请手关。',
         },
       })
     } catch {
@@ -2165,7 +2165,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
-      content: { text: '已恢复到开聊确认闸门，请继续操作。' },
+      content: { text: '已恢复到开聊确认，请继续操作。' },
     })
     return { ok: true, resumed: true, pendingStart: true }
   }
@@ -2178,7 +2178,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
-      content: { text: '已恢复到归档确认闸门，请继续操作。' },
+      content: { text: '已恢复到归档确认，请继续操作。' },
     })
     return { ok: true, resumed: true, pendingArchive: true }
   }
@@ -2192,7 +2192,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
-      content: { text: '已恢复到等人状态，请继续闸门操作。' },
+      content: { text: '已恢复到待确认，请继续操作。' },
     })
     return { ok: true, resumed: true, waitingHuman: true }
   }
@@ -3048,8 +3048,8 @@ async function runMentionedMembers(sessionId, text) {
     content: {
       text:
         mode === OFFSITE_MODE.PLANNED
-          ? `场外「${offsite.title || '场外协助'}」· 计划挂起。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`
-          : `场外「${offsite.title || '场外协助'}」· 临时插队。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`,
+          ? `临时协助「${offsite.title || '临时协助'}」已挂起。回主线点「从这里继续」。`
+          : `临时协助「${offsite.title || '临时协助'}」进行中。回主线点「从这里继续」。`,
       offsite: true,
       mode,
     },
@@ -3176,7 +3176,7 @@ async function runMentionedMembers(sessionId, text) {
       type: 'status',
       node_instance_id: offsite.id,
       content: {
-        text: `场外流程已扩展并归档「${offsite.title || '场外协助'}」（异步收尾）。主线仍以右侧时序为准。`,
+        text: `临时协助「${offsite.title || '临时协助'}」本段已归档。主线仍以右侧时序为准。`,
         offsite: true,
         offsiteArchived: true,
         lateExpand: true,
