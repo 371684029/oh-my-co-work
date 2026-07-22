@@ -270,8 +270,10 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | PATCH | `/sessions/:id` | 重命名 `{ "title" }` |
 | DELETE | `/sessions/:id` | 删除聊天 |
 | POST | `/sessions/:id/archive` | 归档（释放资源） |
+| POST | `/sessions/:id/unarchive` | 解档（仍同一会话） |
 | GET | `/sessions/:id/resources` | 进程登记 + 工作目录软锁占用 |
 | POST | `/sessions/:id/kill-processes` | 再杀本会话进程（尽力） |
+| POST | `/sessions/:id/restart-from-node` | 从节点线性追加克隆并开跑 |
 | POST | `/sessions/:id/gate` | 闸门 `{ action, nodeInstanceId, text? }` |
 | GET | `/support` | 支持与交流配置 |
 
