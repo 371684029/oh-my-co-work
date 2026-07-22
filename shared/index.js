@@ -53,6 +53,22 @@ export const PRODUCT_MISSION = {
   oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、场外办事再回来。',
 }
 
+/**
+ * 归档 / 会话边界（已决，文档与实现冲突时以本条为准）
+ * - 归档只释放本机进程与目录占用，不是「结束并另开新群聊」
+ * - 同一会话（同一次开聊）可无限次归档 / 解档
+ * - 归档后再发消息 = 解档并仍在本会话，不新建 Session / 不新建群模板
+ * - 续跑流程 = 本会话右侧「克隆并从此开始」，线性追加克隆节点
+ * - 只有左栏主动「开聊」才新建会话
+ */
+export const SESSION_ARCHIVE_RULES = {
+  archiveMeans: 'release_resources_only',
+  sameSessionAfterArchiveSend: true,
+  infiniteArchiveUnarchive: true,
+  resumeByCloneAppend: true,
+  newSessionOnlyViaStartChat: true,
+}
+
 /** 场外协助进入方式 */
 export const OFFSITE_MODE = {
   PLANNED: 'planned',

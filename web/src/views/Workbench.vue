@@ -360,7 +360,7 @@
                     type="info"
                     :closable="false"
                     show-icon
-                    title="已归档：已请求结束进程并放开目录。发送将解档记入本会话；续跑请右侧「克隆并从此开始」。外部窗口或需手关；空白新任务请另开聊。"
+                    title="已归档（只释资源）。发送=解档并仍在本会话，不会新开群聊；续跑请右侧「克隆并从此开始」追加节点。本会话可无限归档。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -678,7 +678,7 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 外部窗口或需手关 · 可解档/重开
+          · 仍在本会话 · 可解档/追加节点重开 · 可再归档
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           场外段落进行中 · 回主线点正常节点「克隆并从此开始」（本段归档；可再扩展）
@@ -3094,7 +3094,7 @@ async function doArchive() {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '确认归档？将尽量结束本会话进程并放开目录占用；外部窗口（如 Cursor）若仍在请手动关闭。之后仍可解档或从右侧节点重开。',
+      '确认归档？将尽量结束本会话进程并放开目录；外部窗口若仍在请手关。归档不是新开群聊——本会话仍在，之后可解档或「克隆并从此开始」追加节点，并可再次归档。',
       '归档',
       { type: 'warning', confirmButtonText: '同意归档', cancelButtonText: '取消' },
     )

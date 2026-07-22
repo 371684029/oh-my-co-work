@@ -417,7 +417,7 @@ router.post('/sessions/:id/archive', (req, res) => {
   archiveSession(req.params.id, req.body?.reason || 'manual')
   res.json(getSessionDetail(req.params.id)?.session)
 })
-/** 解档：归档只释放资源，本会话可继续 */
+/** 解档：同一会话继续，不新建群聊 */
 router.post('/sessions/:id/unarchive', (req, res) => {
   try {
     unarchiveSession(req.params.id, { reason: req.body?.reason || 'manual' })

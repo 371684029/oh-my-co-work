@@ -41,7 +41,7 @@ export const api = {
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
     remove: (id) => req(`/sessions/${id}`, { method: 'DELETE' }),
     archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
-    /** 解档：归档尽量释放进程与目录 */
+    /** 解档：仍在本会话，可无限归档 */
     unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),
     /** 会话资源：进程登记 + 目录软锁 */
     resources: (id) => req(`/sessions/${id}/resources`),

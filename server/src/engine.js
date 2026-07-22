@@ -643,7 +643,7 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
 }
 
 /**
- * 解档：归档只释放资源，会话仍可续；不新建任务。
+ * 解档：归档只释放资源；同一会话可无限归档/解档，不新建群聊。
  */
 export function unarchiveSession(sessionId, { silent = false, reason = 'manual' } = {}) {
   const session = getSession(sessionId)
@@ -670,7 +670,7 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
       role: 'system',
       type: 'status',
       content: {
-        text: '已解档。归档只释放进程与目录占用；续跑请在右侧点正常节点「克隆并从此开始」。',
+        text: '已解档。仍在本会话（不会新开群聊）。续跑请右侧「克隆并从此开始」追加节点；本会话可再次归档。',
         unarchived: true,
       },
     })
@@ -1832,7 +1832,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录占用。外部窗口（如 Cursor）若仍在请手动关。本会话仍可解档或从右侧节点重开。`,
+          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录。外部窗口若仍在请手关。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。`,
         },
       })
     } catch {
@@ -1844,7 +1844,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: '已归档：已请求释放进程并放开目录。若仍有外部窗口请手动关闭。本会话仍可解档续聊，或「克隆并从此开始」。',
+          text: '已归档：已请求释放进程并放开目录。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。外部窗口若仍在请手关。',
         },
       })
     } catch {
@@ -3158,7 +3158,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
     attachments: atts,
   }
 
-  // archived → 解档后仍在本会话（归档只释放资源；空白新任务请另开聊）
+  // archived → 解档，仍在本会话（绝不因此新建 Session / 群聊）
   if (session.status === SESSION_STATUS.ARCHIVED) {
     unarchiveSession(sessionId, { reason: 'message' })
   }
