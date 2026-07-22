@@ -772,20 +772,6 @@ body,
   letter-spacing: -0.02em;
 }
 
-@keyframes ecw-pulse-red {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 6px rgba(245, 108, 108, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 9px rgba(245, 108, 108, 0.12);
-  }
-}
-
 /* ========== 设置 ========== */
 .settings-layout {
   display: flex;

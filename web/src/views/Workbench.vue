@@ -4445,6 +4445,15 @@ loadLists().then(() => {
   color: var(--ecw-accent, #409eff);
 }
 
+.flow-step.running .flow-idx {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--ecw-accent, #007aff);
+}
+
+.flow-step-name {
+  min-width: 0;
+}
+
 .flow-step-meta {
   font-size: 11.5px;
   color: var(--ecw-text-3, #8e8ea0);
