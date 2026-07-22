@@ -6,7 +6,7 @@
 |------|------|
 | [mvp.md](./mvp.md) | 宗旨、验收；§2.7～§2.10 已封 · §2.11 `1.0.0` |
 | [demo.md](./demo.md) | **怎么看演示效果**（启动、演示流点选、排障） |
-| [RELEASE-USER.md](./RELEASE-USER.md) | **压缩包用户说明**（一键启动、关浏览器退出） |
+| [RELEASE-USER.md](./RELEASE-USER.md) | **压缩包用户说明**（一键启动；默认关浏览器不停服务） |
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |

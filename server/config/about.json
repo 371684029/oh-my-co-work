@@ -1,7 +1,7 @@
 {
   "productName": "apple-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
-  "version": "1.0.0-dev",
+  "version": "1.1.0",
   "updateUrl": "https://github.com/371684029/apple-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖，大版本/其它平台增量保留。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -10,6 +10,18 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "1.1.0",
+      "date": "2026-07-22",
+      "title": "1.1.0 小版本：运行包与参数体验",
+      "items": [
+        "运行包：打包产物（非源码）+ 按平台预置依赖；packages/ 进 git",
+        "Node ABI：启动自动适配 better-sqlite3；Node 22+ 可回退内置 node:sqlite",
+        "生命周期：默认关闭「关浏览器退出服务」（切标签易误杀）；需显式 ACW_AUTO_EXIT=1",
+        "项目参数：同会话 #1/#2 递增追加，不再覆盖；新开聊另起一套",
+        "清单冲突：多平台 CI 按平台键合并 packages 元数据"
+      ]
+    },
     {
       "version": "1.0.0-dev",
       "date": "2026-07-21",

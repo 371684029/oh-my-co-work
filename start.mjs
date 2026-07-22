@@ -1,7 +1,7 @@
 /**
  * 一键启动（压缩包 / 本机推荐入口）
  * - 必要时 npm install
- * - 启动 API（默认 ACW_AUTO_EXIT=1：关浏览器后退出）
+ * - 启动 API（默认不随浏览器退出；需要时设 ACW_AUTO_EXIT=1）
  * - 自动打开浏览器
  *
  * 用法：node start.mjs
@@ -16,7 +16,11 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = __dirname
 const PORT = Number(process.env.ACW_PORT || 3780)
-const AUTO_EXIT = process.env.ACW_AUTO_EXIT !== '0' && process.env.ACW_AUTO_EXIT !== 'false'
+/** 默认关闭：切换标签/切应用易误杀；仅显式 ACW_AUTO_EXIT=1 才开 */
+const AUTO_EXIT =
+  process.env.ACW_AUTO_EXIT === '1' ||
+  process.env.ACW_AUTO_EXIT === 'true' ||
+  process.env.ACW_AUTO_EXIT === 'yes'
 
 function log(...a) {
   console.log('[acw-start]', ...a)
@@ -140,7 +144,9 @@ async function main() {
   const url = `http://127.0.0.1:${PORT}/`
   log('打开浏览器', url)
   if (AUTO_EXIT) {
-    log('提示：关闭浏览器窗口后，后台将在数秒内自动退出')
+    log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
+  } else {
+    log('提示：关闭浏览器不会停服务；请在本窗口 Ctrl+C 结束')
   }
   openBrowser(url)
 }

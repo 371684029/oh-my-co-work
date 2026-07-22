@@ -1,6 +1,6 @@
 /**
  * 桌面/压缩包模式生命周期：浏览器心跳丢失后自动退出进程。
- * 由 ACW_AUTO_EXIT=1 开启（一键启动默认开；npm run dev:server 默认关）。
+ * 仅当 ACW_AUTO_EXIT=1 开启（默认关：切换标签页会被后台节流误杀）。
  */
 let autoExit =
   process.env.ACW_AUTO_EXIT === '1' ||
@@ -9,10 +9,10 @@ let autoExit =
 
 /** 首次启动等待浏览器连上的宽限（ms） */
 const BOOT_GRACE_MS = Number(process.env.ACW_BOOT_GRACE_MS || 90_000)
-/** 曾有过心跳后，失联多久退出（ms） */
-const IDLE_EXIT_MS = Number(process.env.ACW_IDLE_EXIT_MS || 12_000)
+/** 曾有过心跳后，失联多久退出（ms）；默认拉长，避免切标签节流误杀 */
+const IDLE_EXIT_MS = Number(process.env.ACW_IDLE_EXIT_MS || 300_000)
 /** 页面卸载后的短宽限（覆盖刷新）（ms） */
-const UNLOAD_GRACE_MS = Number(process.env.ACW_UNLOAD_GRACE_MS || 3_500)
+const UNLOAD_GRACE_MS = Number(process.env.ACW_UNLOAD_GRACE_MS || 8_000)
 
 let lastBeatAt = 0
 let hadClient = false

@@ -138,7 +138,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
 | `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（进 git；含 bundle+依赖，用户无需 npm install） |
-| `npm start` / `start.bat` | **一键启动**（装依赖、起服务、开浏览器；关浏览器默认停服务） |
+| `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；默认关浏览器不停服务，终端 Ctrl+C 结束） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
 ### 重置数据

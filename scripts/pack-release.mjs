@@ -138,7 +138,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.ACW_PORT || 3780)
-const AUTO_EXIT = process.env.ACW_AUTO_EXIT !== '0' && process.env.ACW_AUTO_EXIT !== 'false'
+const AUTO_EXIT = process.env.ACW_AUTO_EXIT === '1' || process.env.ACW_AUTO_EXIT === 'true' || process.env.ACW_AUTO_EXIT === 'yes'
 const ENTRY = path.join(ROOT, 'server', 'dist', 'index.cjs')
 const require = createRequire(path.join(ROOT, 'package.json'))
 const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
@@ -311,7 +311,8 @@ async function main() {
   }
   const url = \`http://127.0.0.1:\${PORT}/\`
   log('打开浏览器', url)
-  if (AUTO_EXIT) log('提示：关闭浏览器窗口后，后台将在数秒内自动退出')
+  if (AUTO_EXIT) log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
+  else log('提示：关闭浏览器不会停服务；请在本窗口 Ctrl+C 结束')
   openBrowser(url)
 }
 
@@ -542,7 +543,7 @@ async function mainAsync() {
     '| Windows | 双击 start.bat |',
     '| macOS / Linux | ./start.sh 或 node start.mjs |',
     '',
-    '关闭浏览器后，后台默认自动退出。',
+    '关闭浏览器不会自动停服务；请在启动窗口 Ctrl+C 结束。',
     '',
     '数据目录：解压目录下的 data/',
     '',
@@ -560,7 +561,7 @@ async function mainAsync() {
       `commit=${sha}`,
       `built=${new Date().toISOString()}`,
       `needsNpmInstall=false`,
-      `autoExit=default-on`,
+      `autoExit=default-off`,
     ].join('\n') + '\n',
     'utf8',
   )

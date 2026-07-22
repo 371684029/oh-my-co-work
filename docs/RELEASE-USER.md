@@ -1,6 +1,6 @@
 # 下载运行包 · 一键使用
 
-适合「解压 → 双击启动 → 关浏览器即停」的用户。
+适合「解压 → 双击启动 → 用完在启动窗口 Ctrl+C 结束」的用户。
 
 ## 从哪下载
 
@@ -38,16 +38,16 @@
 
 1. 启动本机服务（默认 `http://127.0.0.1:3780`）
 2. 自动打开浏览器
-3. **关闭浏览器窗口后，后台服务默认在数秒内退出**
+3. **关闭浏览器不会停服务**（切换标签页也不会）；结束请在启动窗口 **Ctrl+C**
 
-开发调试若不想自动退出，可：
+如需「关浏览器后尝试退出服务」（实验性，可能误杀），可：
 
 ```bash
 # Windows CMD
-set ACW_AUTO_EXIT=0&& node start.mjs
+set ACW_AUTO_EXIT=1&& node start.mjs
 
 # macOS / Linux
-ACW_AUTO_EXIT=0 node start.mjs
+ACW_AUTO_EXIT=1 node start.mjs
 ```
 
 ## 演示流
@@ -62,5 +62,5 @@ ACW_AUTO_EXIT=0 node start.mjs
 ## 注意
 
 - 包内是 **前端 dist + 后端 bundle + 内置 node_modules**，不是完整源码树
-- 请用与系统匹配的 zip（`better-sqlite3` 为平台原生模块）
+- 请用与系统匹配的 zip（`better-sqlite3` 为平台原生模块；Node 22+ 可回退内置 sqlite）
 - 请用 `127.0.0.1`，少用 `localhost`（避免 IPv6 问题）
