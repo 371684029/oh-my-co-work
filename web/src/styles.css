@@ -360,6 +360,7 @@ body,
   color: var(--ecw-text-3);
 }
 
+/* —— 流程轨状态动效（iMac 克制风：同屏尽量一个呼吸焦点）—— */
 .flow-step {
   display: flex;
   gap: 12px;
@@ -368,14 +369,25 @@ body,
   margin-left: 7px;
   padding-left: 16px;
   position: relative;
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.28s ease,
+    background 0.28s ease,
+    opacity 0.28s ease;
 }
 
 .flow-step:last-of-type {
   border-left-color: transparent;
 }
 
+.flow-step.pending {
+  border-left-color: rgba(0, 0, 0, 0.05);
+}
+
 .flow-step.current {
+  border-left-color: var(--ecw-accent);
+}
+
+.flow-step.running {
   border-left-color: var(--ecw-accent);
 }
 
@@ -394,7 +406,7 @@ body,
   border-left-color: var(--el-color-danger, #f56c6c);
 }
 
-/* 额外节点 · 场外协助：与正常「当前/未执行」高亮区分（琥珀色系，非蓝非红） */
+/* 额外节点 · 场外协助：琥珀色系，非蓝非红 */
 .flow-step.is-extra {
   border-left-style: dashed;
   border-left-color: rgba(184, 130, 48, 0.35);
@@ -436,19 +448,23 @@ body,
   opacity: 0.78;
 }
 
+.flow-step.is-cloned:not(.is-flow-history) {
+  animation: ecw-flow-enter 0.38s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
 .flow-step.offsite-active .flow-dot {
   background: #c47d1a;
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 6px rgba(230, 162, 60, 0.28);
-  animation: ecw-pulse-amber 1.4s ease-in-out infinite;
+    0 0 0 5px rgba(230, 162, 60, 0.22);
+  animation: ecw-breathe-amber 1.6s ease-in-out infinite;
 }
 
 .flow-step.is-offsite-current .flow-dot {
   background: #b86e0f;
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 7px rgba(230, 162, 60, 0.38);
+    0 0 0 6px rgba(230, 162, 60, 0.28);
 }
 
 .flow-step.is-offsite-archived .flow-dot {
@@ -471,20 +487,6 @@ body,
 .flow-step.is-offsite-current .flow-idx {
   background: rgba(230, 162, 60, 0.32) !important;
   color: #7a4e0c !important;
-}
-
-@keyframes ecw-pulse-amber {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 6px rgba(230, 162, 60, 0.22);
-  }
-  50% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 8px rgba(230, 162, 60, 0.4);
-  }
 }
 
 .flow-extra-sep {
@@ -535,32 +537,197 @@ body,
   margin-left: -21px;
   flex-shrink: 0;
   box-shadow: 0 0 0 3px var(--ecw-surface-muted);
-  transition: all 0.2s;
+  transition:
+    background 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.28s ease;
+}
+
+.flow-step.pending .flow-dot {
+  background: #d8d8de;
 }
 
 .flow-step.current .flow-dot {
   background: var(--ecw-accent);
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 6px var(--ecw-accent-mid);
+    0 0 0 5px rgba(0, 122, 255, 0.18);
+}
+
+.flow-step.running .flow-dot {
+  background: var(--ecw-accent);
+  box-shadow:
+    0 0 0 3px var(--ecw-surface-muted),
+    0 0 0 5px rgba(0, 122, 255, 0.2);
+  animation: ecw-breathe-blue 1.5s ease-in-out infinite;
+}
+
+.flow-step.running .flow-step-name {
+  background: linear-gradient(
+    100deg,
+    var(--ecw-text-1, #1d1d1f) 0%,
+    var(--ecw-text-1, #1d1d1f) 36%,
+    rgba(0, 122, 255, 0.55) 50%,
+    var(--ecw-text-1, #1d1d1f) 64%,
+    var(--ecw-text-1, #1d1d1f) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ecw-title-shimmer 2.2s ease-in-out infinite;
 }
 
 .flow-step.human-wait .flow-dot {
   background: var(--el-color-danger, #f56c6c);
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 6px var(--el-color-danger-light-7, #fde2e2);
-  animation: ecw-pulse-red 1.4s ease-in-out infinite;
+    0 0 0 5px rgba(245, 108, 108, 0.22);
+  animation: ecw-breathe-red 1.7s ease-in-out infinite;
 }
 
 .flow-step.done .flow-dot {
   background: var(--el-color-success, #67c23a);
+  box-shadow: 0 0 0 3px var(--ecw-surface-muted);
+  animation: ecw-done-settle 0.32s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.flow-step.failed .flow-dot {
+  background: var(--el-color-danger, #f56c6c);
   box-shadow: 0 0 0 3px var(--ecw-surface-muted);
 }
 
 .flow-step.human-wait .flow-idx {
   background: var(--el-color-danger-light-9, #fef0f0);
   color: var(--el-color-danger, #f56c6c);
+}
+
+.flow-step.running .flow-idx {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--ecw-accent, #007aff);
+}
+
+@keyframes ecw-breathe-blue {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(0, 122, 255, 0.16);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(0, 122, 255, 0.28);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ecw-breathe-red {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(245, 108, 108, 0.18);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(245, 108, 108, 0.28);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ecw-breathe-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(230, 162, 60, 0.18);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(230, 162, 60, 0.3);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ecw-title-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes ecw-done-settle {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ecw-flow-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ecw-pulse-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(230, 162, 60, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(230, 162, 60, 0.3);
+  }
+}
+
+@keyframes ecw-pulse-red {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(245, 108, 108, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(245, 108, 108, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-step,
+  .flow-dot,
+  .flow-step.running .flow-step-name,
+  .flow-step.is-cloned {
+    animation: none !important;
+    transition: none !important;
+  }
+  .flow-step.running .flow-step-name {
+    color: var(--ecw-text-1, #1d1d1f);
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+  }
 }
 
 .flow-current-bar {

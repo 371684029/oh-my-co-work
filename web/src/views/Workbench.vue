@@ -708,10 +708,11 @@
                 'is-offsite-current': isCurrentOffsiteSegment(n),
                 'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
                 'is-flow-history': isFlowHistoryNode(n),
+                'is-cloned': isClonedNode(n),
               },
             ]"
           >
-            <div class="flow-dot" />
+            <div class="flow-dot" aria-hidden="true" />
             <div class="flow-step-body">
               <button type="button" class="flow-step-head" @click="toggleNodeExpand(n)">
                 <div class="flow-step-title">
@@ -720,7 +721,7 @@
                     :class="{ 'flow-idx--extra': n.step_type === 'offsite' }"
                     >{{ n.step_index + 1 }}</span
                   >
-                  {{ n.title }}
+                  <span class="flow-step-name">{{ n.title }}</span>
                   <el-tag
                     v-if="n.step_type === 'offsite'"
                     size="small"
@@ -2212,12 +2213,12 @@ function flowClass(n) {
   }
   if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
   if (n.status === 'failed') return 'failed'
-  // 未执行（原等人）/ 当前人工节点：红色强调
   if (isWaitingHuman(n) || n.status === 'waiting_human') return 'human-wait'
-  if (isCurrent(n) || n.status === 'running') return 'current'
-  // 配置上是人工/闸门但尚未轮到：不红，仅轻量标记
+  // 执行中：呼吸焦点；当前待跑：静态高亮
+  if (n.status === 'running') return 'running'
+  if (isCurrent(n)) return 'current'
   if (n.step_type === 'human' || n.gate) return 'human-config'
-  return ''
+  return 'pending'
 }
 
 function toggleNodeExpand(n) {
