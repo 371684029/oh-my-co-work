@@ -28,6 +28,7 @@
                     round
                     effect="plain"
                     type="info"
+                    :title="g.title"
                   >
                     {{ abbrGroupTag(g.title) }}
                   </el-tag>
@@ -89,8 +90,8 @@
             <el-tooltip
               :content="item.hoverTitle || item.label"
               placement="right"
-              :disabled="!item.hoverTitle"
-              :show-after="300"
+              :disabled="!(item.hoverTitle || item.label)"
+              :show-after="200"
             >
               <span class="conv-label-wrap">
                 <span v-if="item.pinned" class="conv-pin" aria-hidden="true">📌</span>
@@ -102,6 +103,7 @@
                   round
                   effect="plain"
                   type="info"
+                  :title="item.hoverTitle || item.groupAbbr"
                 >
                   {{ item.groupAbbr }}
                 </el-tag>
@@ -313,13 +315,11 @@
                             ? '需要项目参数'
                             : pendingGate.content?.mode === 'interrupted'
                               ? '崩溃恢复'
-                              : pendingGate.content?.mode === 'path_busy'
-                                ? '目录占用'
-                                : pendingGate.content?.mode === 'archive_confirm'
-                                  ? '确认归档'
-                                  : pendingGate.content?.requireHuman
-                                    ? '须人工同意'
-                                    : '需要你确认'
+                              : pendingGate.content?.mode === 'archive_confirm'
+                                ? '确认归档'
+                                : pendingGate.content?.requireHuman
+                                  ? '须人工同意'
+                                  : '需要你确认'
                     }}
                   </div>
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
@@ -360,7 +360,7 @@
                     type="info"
                     :closable="false"
                     show-icon
-                    title="已归档（只释资源）。发送=解档并仍在本会话，不会新开群聊；续跑请右侧「克隆并从此开始」追加节点。本会话可无限归档。"
+                    title="已归档（只释资源）。再发=解档仍在本会话；续跑=「克隆并从此开始」。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -548,27 +548,6 @@
                             放弃
                           </el-button>
                         </template>
-                        <template v-else-if="pendingGate.content?.mode === 'path_busy'">
-                          <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                            同意重试
-                          </el-button>
-                          <el-button plain @click="gate(pendingGate, 'reject')">拒绝</el-button>
-                          <el-button
-                            v-if="pendingGate.content?.holderSessionId"
-                            plain
-                            @click="openHolderSession(pendingGate.content.holderSessionId)"
-                          >
-                            打开占用方
-                          </el-button>
-                          <el-button
-                            v-if="pendingGate.content?.holderSessionId"
-                            plain
-                            @click="archiveHolderSession(pendingGate.content.holderSessionId)"
-                          >
-                            归档占用方
-                          </el-button>
-                          <el-button plain @click="openResourcesTab">资源</el-button>
-                        </template>
                         <template v-else>
                           <el-button type="danger" @click="gate(pendingGate, 'approve')">
                             同意
@@ -610,28 +589,19 @@
             <i class="dot">·</i>
             <span class="accent">皆可 Workflow</span>
           </h1>
-          <p class="core-mvp">只做 MVP，不做花里胡哨</p>
-          <p class="core-desc">
-            脚本与 Agent 都是元节点，Workflow 串起人与机。<br />
-            聊天推进，流程对齐——够用就好。
+          <p class="core-living">
+            <span class="living-lead">节点是死的，人是活的</span>
+            <span class="living-rest">流动的 Workflow · 可绕行、插队、场外再回来</span>
           </p>
-          <div class="welcome-tips">
-            <div class="tip">
-              <span class="tip-num">1</span>
-              <span class="tip-text">选群或成员开聊</span>
-            </div>
-            <div class="tip-line" aria-hidden="true" />
-            <div class="tip">
-              <span class="tip-num">2</span>
-              <span class="tip-text">对话推进</span>
-            </div>
-            <div class="tip-line" aria-hidden="true" />
-            <div class="tip">
-              <span class="tip-num">3</span>
-              <span class="tip-text">闸门拍板</span>
-            </div>
-          </div>
-          <p class="welcome-cta">从左侧选择群模板或成员，点「开聊」开始</p>
+          <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
+          <p class="welcome-journey" aria-label="上手三步">
+            <span>开聊</span>
+            <i aria-hidden="true" />
+            <span>对话</span>
+            <i aria-hidden="true" />
+            <span>闸门</span>
+          </p>
+          <p class="welcome-cta">左侧选群或成员，点「开聊」</p>
         </div>
       </div>
     </section>
@@ -678,10 +648,10 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 仍在本会话 · 可解档/追加节点重开 · 可再归档
+          · 仍在本会话 · 再发=解档 · 可再归档
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          场外段落进行中 · 回主线点正常节点「克隆并从此开始」（本段归档；可再扩展）
+          场外进行中 · 回主线点「克隆并从此开始」
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -720,6 +690,15 @@
                     round
                   >
                     额外
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type === 'archive'"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    归档
                   </el-tag>
                   <el-tag
                     v-else-if="isClonedNode(n)"
@@ -799,7 +778,12 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >场外无「重新开始」；回主线请点正常节点「克隆并从此开始」</span
+                    >回主线请点正常节点「克隆并从此开始」</span
+                  >
+                </template>
+                <template v-else-if="n.step_type === 'archive'">
+                  <span class="flow-offsite-action-tip"
+                    >可手动归档，或等待超时自动归档（设置可改，默认 3 小时）</span
                   >
                 </template>
                 <el-button
@@ -1405,20 +1389,20 @@ const filteredSessions = computed(() => {
   })
 })
 
-/** 会话列表：#1 正文 + 群模板缩写标签；整行 hover 展示群全称 */
+/** 会话列表：#1 正文 + 群模板缩写标签；hover 气泡展示全文（前缀 + 群全称） */
 function sessionListParts(s) {
   const ctx = s?.context && typeof s.context === 'object' ? s.context : {}
-  const groupTitle = s.groupTitle || ctx.groupTitle || ''
+  const groupTitle = String(s.groupTitle || ctx.groupTitle || '').trim()
   const abbr = s.groupTitleAbbr || ctx.groupTitleAbbr || abbrGroupTag(groupTitle)
-  const hoverTitle = groupTitle || s.title || ''
 
   // 手改过：整段标题，不用缩写标签
   if (ctx.titleAuto === false && s.title) {
+    const full = String(s.title).trim()
     return {
-      label: s.title,
-      labelPrefix: s.title,
+      label: full,
+      labelPrefix: full,
       groupAbbr: '',
-      hoverTitle: hoverTitle || s.title,
+      hoverTitle: full,
     }
   }
 
@@ -1439,11 +1423,18 @@ function sessionListParts(s) {
     groupTitle ||
     '未命名'
 
+  // 全文：优先「#1 · 群全称」，否则群全称 / 会话标题
+  let hoverTitle = ''
+  if (p1 && groupTitle) hoverTitle = `${p1} · ${groupTitle}`
+  else if (groupTitle) hoverTitle = groupTitle
+  else if (p1) hoverTitle = p1
+  else hoverTitle = String(s.title || label || '').trim()
+
   return {
     label,
     labelPrefix,
     groupAbbr,
-    hoverTitle: hoverTitle || label,
+    hoverTitle,
   }
 }
 
@@ -1532,7 +1523,7 @@ const pendingGate = computed(() => {
     const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
     if (ig) return ig
   }
-  // 归档确认闸门（无节点）
+  // 归档确认闸门（绑定末尾归档节点）
   const pendingArch = detail.value.session.context?.pendingArchive
   if (pendingArch && detail.value.session.status !== 'interrupted') {
     const archGate = msgs.find(
@@ -1541,6 +1532,7 @@ const pendingGate = computed(() => {
     if (archGate) {
       return {
         ...archGate,
+        node_instance_id: archGate.node_instance_id || pendingArch.nodeInstanceId || null,
         content: {
           ...archGate.content,
           dueAt: archGate.content.dueAt || pendingArch.dueAt,
@@ -1715,7 +1707,6 @@ const footerCollapsedHint = computed(() => {
     if (pendingGate.value.content?.mode === 'human_input') return '需要你输入 · 展开'
     if (pendingGate.value.content?.mode === 'need_params') return '需要项目参数 · 展开'
     if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
-    if (pendingGate.value.content?.mode === 'path_busy') return '目录占用 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
     return '需要你确认 · 展开'
   }
@@ -1905,9 +1896,6 @@ const composerPlaceholder = computed(() => {
   if (mode === 'interrupted') {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
-  if (mode === 'path_busy') {
-    return '（旧闸门）点同意即可重试；同目录已允许多会话并行'
-  }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
 })
@@ -1918,7 +1906,6 @@ const composerToolbarHint = computed(() => {
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点继续/归档/放弃'
-    if (mode === 'path_busy') return '同意重试'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -1977,7 +1964,6 @@ function roleLabel(m) {
     if (m.content?.mode === 'human_input') return '人工输入'
     if (m.content?.mode === 'need_params') return '补齐参数'
     if (m.content?.mode === 'interrupted') return '崩溃恢复'
-    if (m.content?.mode === 'path_busy') return '目录占用'
     return '闸门'
   }
   if (m.role === 'system') return '系统'
@@ -2198,6 +2184,11 @@ function flowClass(n) {
   if (n.step_type === 'offsite') {
     if (n.status === 'running' || n.status === 'waiting_human') return 'offsite-active'
     return 'offsite-idle'
+  }
+  if (n.step_type === 'archive') {
+    if (n.status === 'waiting_human') return 'human-wait'
+    if (n.status === 'succeeded') return 'done'
+    return 'pending'
   }
   if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
   if (n.status === 'failed') return 'failed'
@@ -2825,6 +2816,10 @@ const flowAnchorNodeId = computed(() => {
   if (!nodes.length) return null
   const off = activeOffsiteNode.value
   if (off?.id) return off.id
+  const archWait = nodes.find(
+    (n) => n.step_type === 'archive' && n.status === 'waiting_human',
+  )
+  if (archWait) return archWait.id
   const waiting = nodes.find((n) => n.status === 'waiting_human')
   if (waiting) return waiting.id
   const running = nodes.find((n) => n.status === 'running')
@@ -2867,6 +2862,10 @@ async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
     ElMessage.warning('场外节点没有「重新开始」；请点右侧正常节点')
+    return
+  }
+  if (n.step_type === 'archive') {
+    ElMessage.warning('归档节点没有「重新开始」；请点右侧正常节点')
     return
   }
   if (gating.value) return
@@ -3920,48 +3919,74 @@ loadLists().then(() => {
   color: #b42318;
 }
 
-/* —— 欢迎态：居中主视觉，大气醒目 —— */
+/* —— 欢迎态：一屏一构图，品牌与流动宗旨优先 —— */
 .wb-welcome {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 28px 56px;
+  padding: 32px 24px 48px;
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 900px 420px at 50% 18%, rgba(64, 158, 255, 0.18), transparent 60%),
-    radial-gradient(ellipse 520px 320px at 78% 88%, rgba(103, 194, 58, 0.06), transparent 55%),
-    linear-gradient(180deg, #f7faff 0%, #ffffff 42%, #fafbfd 100%);
+    radial-gradient(ellipse 980px 460px at 50% 12%, rgba(0, 122, 255, 0.14), transparent 62%),
+    radial-gradient(ellipse 420px 280px at 12% 78%, rgba(90, 200, 250, 0.1), transparent 55%),
+    radial-gradient(ellipse 380px 240px at 88% 72%, rgba(175, 82, 222, 0.05), transparent 50%),
+    linear-gradient(180deg, #eef3f9 0%, #f7f9fc 38%, #fbfcfe 100%);
 }
 
 .welcome-hero {
   position: relative;
   z-index: 1;
-  width: min(560px, 100%);
+  width: min(520px, 100%);
   text-align: center;
-  padding: 44px 40px 36px;
+  padding: 36px 28px 28px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(64, 158, 255, 0.14);
+  background: rgba(255, 255, 255, 0.55);
+  border: 0.5px solid rgba(255, 255, 255, 0.7);
   box-shadow:
-    0 28px 64px rgba(15, 23, 42, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
-    0 12px 32px rgba(64, 158, 255, 0.08);
-  backdrop-filter: blur(16px);
+    0 24px 56px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  animation: welcome-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes welcome-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .welcome-glow {
   pointer-events: none;
   position: absolute;
   left: 50%;
-  top: 12%;
-  width: 280px;
-  height: 140px;
+  top: 6%;
+  width: 260px;
+  height: 120px;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(64, 158, 255, 0.22), transparent 70%);
-  filter: blur(8px);
+  background: radial-gradient(ellipse at center, rgba(0, 122, 255, 0.2), transparent 72%);
+  filter: blur(10px);
   z-index: 0;
+  animation: welcome-glow 4.5s ease-in-out infinite;
+}
+
+@keyframes welcome-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.06);
+  }
 }
 
 .welcome-logo-wrap {
@@ -3969,134 +3994,146 @@ loadLists().then(() => {
   z-index: 1;
   display: flex;
   justify-content: center;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
+  animation: welcome-rise 0.75s 0.06s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .welcome-logo {
-  transform: scale(1.08);
+  transform: scale(1.04);
 }
 
 .core-slogan {
   position: relative;
   z-index: 1;
-  margin: 0 0 12px;
-  font-size: clamp(22px, 2.6vw, 28px);
+  margin: 0 0 16px;
+  font-size: clamp(23px, 2.8vw, 30px);
   font-weight: 780;
-  letter-spacing: -0.04em;
-  line-height: 1.32;
-  color: var(--ecw-text-1, #0b0c0f);
+  letter-spacing: -0.045em;
+  line-height: 1.28;
+  color: var(--ecw-text-1, #1d1d1f);
+  animation: welcome-rise 0.75s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .core-slogan .dot {
   font-style: normal;
-  margin: 0 0.18em;
-  color: rgba(15, 23, 42, 0.22);
+  margin: 0 0.16em;
+  color: rgba(29, 29, 31, 0.2);
   font-weight: 500;
 }
 
 .core-slogan .accent {
-  background: linear-gradient(120deg, #409eff 0%, #2b7cd3 55%, #1a6bb8 100%);
+  background: linear-gradient(120deg, #007aff 0%, #2b7cd3 55%, #5856d6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.core-mvp {
-  position: relative;
-  z-index: 1;
-  margin: 0 0 18px;
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ecw-accent, #409eff);
-  letter-spacing: 0.02em;
-}
-
-.core-desc {
-  position: relative;
-  z-index: 1;
-  margin: 0 auto 28px;
-  max-width: 28em;
-  font-size: 14.5px;
-  line-height: 1.7;
-  color: var(--ecw-text-2, #5c5f6a);
-  letter-spacing: -0.01em;
-}
-
-.welcome-tips {
+.core-living {
   position: relative;
   z-index: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0;
-  margin: 0 auto 20px;
+  gap: 6px;
+  margin: 0 auto 14px;
+  max-width: 22em;
+  animation: welcome-rise 0.75s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.tip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
-  border: 1px solid rgba(64, 158, 255, 0.16);
-  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.08);
-  font-size: 13px;
-  color: var(--ecw-text-1, #0b0c0f);
+.living-lead {
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 720;
+  letter-spacing: -0.03em;
+  line-height: 1.35;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.living-rest {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--ecw-text-2, #6e6e73);
+}
+
+.core-mvp {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 22px;
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--ecw-accent, #007aff);
+  letter-spacing: 0.04em;
+  animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.tip-line {
-  width: 20px;
-  height: 2px;
-  margin: 0 6px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(64, 158, 255, 0.15), rgba(64, 158, 255, 0.45), rgba(64, 158, 255, 0.15));
-}
-
-.tip-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #5eb0ff, #409eff);
-  border: none;
-  font-size: 12px;
-  font-weight: 800;
-  color: #fff;
+.welcome-journey {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.35);
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ecw-text-2, #6e6e73);
+  letter-spacing: 0.02em;
+  animation: welcome-rise 0.75s 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.tip-text {
-  white-space: nowrap;
+.welcome-journey i {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.45), transparent);
+  border: 0;
 }
 
 .welcome-cta {
   position: relative;
   z-index: 1;
   margin: 0;
-  font-size: 12.5px;
-  color: var(--ecw-text-3, #8b8f9a);
+  font-size: 12px;
+  color: var(--ecw-text-3, #86868b);
   letter-spacing: 0.01em;
+  animation: welcome-rise 0.75s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-hero,
+  .welcome-glow,
+  .welcome-logo-wrap,
+  .core-slogan,
+  .core-living,
+  .core-mvp,
+  .welcome-journey,
+  .welcome-cta {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 720px) {
   .welcome-hero {
-    padding: 32px 22px 28px;
+    padding: 28px 20px 24px;
   }
-  .tip-line {
-    display: none;
-  }
-  .welcome-tips {
-    flex-direction: column;
+  .welcome-journey {
     gap: 8px;
   }
-  .tip {
-    width: 100%;
-    justify-content: flex-start;
+  .welcome-journey i {
+    width: 12px;
   }
 }
 

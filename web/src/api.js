@@ -57,12 +57,6 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body || {}),
       }),
-    /** 离开场外协助继续主流程：{ nodeInstanceId } */
-    continuePastOffsite: (id, body) =>
-      req(`/sessions/${id}/continue-past-offsite`, {
-        method: 'POST',
-        body: JSON.stringify(body || {}),
-      }),
     message: (id, text, attachments = []) =>
       req(`/sessions/${id}/messages`, {
         method: 'POST',

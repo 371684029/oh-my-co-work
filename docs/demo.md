@@ -3,7 +3,7 @@
 | 属性 | 内容 |
 |------|------|
 | 关联 | 根目录 [README.md](../README.md)；压缩包说明 [RELEASE-USER.md](./RELEASE-USER.md) |
-| 版本 | `1.2.0` |
+| 版本 | `1.2.0`（最终封板） |
 | 更新日期 | 2026-07-22 |
 
 ---
@@ -14,7 +14,7 @@
 2. 解压 → 双击 `start.bat`（或 `./start.sh`）→ 自动开浏览器  
 3. 关闭浏览器 **不会**停服务；**关闭启动窗口或 Ctrl+C** 即可结束服务  
 
-开发者本地打运行包：`npm run pack`（写入 `packages/apple-co-work-v{N}-{平台}-{架构}.zip`）。
+开发者本地打运行包：`npm run pack`（写入 `packages/apple-co-work-v{N}-{平台}-{架构}.zip`；同大版本覆盖，新大版本会删掉旧大版本包）。
 
 ---
 

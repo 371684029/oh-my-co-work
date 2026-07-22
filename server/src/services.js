@@ -23,7 +23,8 @@ import {
   restartFromNode,
   markInterruptedOnBoot,
   resolveInterruptedSession,
-  continuePastOffsite,
+  ensureArchiveTailNode,
+  pruneIdleOffsitePlaceholders,
 } from './engine.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
@@ -380,7 +381,15 @@ export function listSessions({ status, includeDemo } = {}) {
 export function getSessionDetail(id) {
   const session = sessionRow(getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id))
   if (!session) return null
-  // 场外按时序游标插入，不再打开详情时预挂末尾占位
+  // 清旧版预挂的空闲场外占位；末尾固定归档节点（场外仅 @ 时插入）
+  try {
+    if (session.status !== 'archived') {
+      pruneIdleOffsitePlaceholders(id)
+      ensureArchiveTailNode(id)
+    }
+  } catch {
+    /* ignore */
+  }
   const group = getGroup(session.group_id)
   const nodes = getDb()
     .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
@@ -501,7 +510,6 @@ export {
   processDueArchives,
   advance,
   restartFromNode,
-  continuePastOffsite,
   markInterruptedOnBoot,
   resolveInterruptedSession,
 }

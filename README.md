@@ -23,7 +23,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 
 | 项 | 内容 |
 |----|------|
-| 版本 | `1.2.0`（见 [mvp.md §2.13](./docs/mvp.md)；关于页 changelog） |
+| 版本 | `1.2.0` **最终封板**（见 [mvp.md §2.13](./docs/mvp.md)；关于页 changelog） |
 | 形态 | 三栏工作台 + 设置 · **完全本机** |
 | UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
 | 仓库名 | `apple-co-work`（原 `element-co-work`） |
@@ -141,7 +141,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
-| `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（进 git；含 bundle+依赖，用户无需 npm install） |
+| `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（同大版本覆盖；新大版本删旧大版本包；用户无需 npm install） |
 | `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；关启动窗口或 Ctrl+C 结束服务） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
@@ -168,7 +168,7 @@ npm run dev:server
 4. 工作台 → 开聊 **「演示流」**  
 
 > 包内是打包产物（前端 dist + 后端 bundle + 内置依赖），**不是源码**。  
-> 同大版本同平台覆盖；大版本/其它平台增量保留。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
+> 同大版本同平台覆盖最新；仓库只保留当前大版本包。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
 
 ### 方式 B：开发模式（两个终端）
 
