@@ -97,7 +97,7 @@
               <el-select v-model="s.type" style="width: 150px">
                 <el-option label="成员" value="member" />
                 <el-option label="人工" value="human" />
-                <el-option label="场外协助（人活着）" value="offsite" />
+                <el-option label="场外协助" value="offsite" />
               </el-select>
               <el-select
                 v-if="s.type === 'member'"
@@ -116,7 +116,7 @@
                 人工步骤
               </el-tag>
               <el-tag v-else-if="s.type === 'offsite'" size="small" type="warning" effect="plain" round>
-                额外 · 人活着
+                额外
               </el-tag>
               <el-checkbox
                 v-if="s.type === 'human'"
@@ -148,12 +148,11 @@
               </p>
             </div>
             <p v-else class="flow-policy">
-              <strong>节点是死的，人是活的。</strong>
-              额外节点可插任意位置（如中途点外卖）；@办事后点「继续主流程」。未配置则开聊末尾自动补一个。
+              额外节点：可插任意位置。流程走到此为「计划挂起」，随时 @ 为「临时插队」；办完点「继续」。未配置则开聊末尾自动补一个。
             </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">
-            宗旨：人机协同 · 万物归元 · 皆可 Workflow。节点是死的，人是活的——额外节点按步骤内联、琥珀色高亮。
+            场外协助按步骤内联、琥珀色高亮。宗旨见「关于」：节点是死的，人是活的。
           </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}

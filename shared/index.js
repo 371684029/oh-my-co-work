@@ -24,12 +24,13 @@ export const NODE_STATUS = {
   SKIPPED: 'skipped',
 }
 
-/** 节点状态 → 中文（产品统一） */
+/** 节点状态 → 中文（展示细分：待跑 / 待确认） */
 export function nodeStatusLabel(status) {
   const m = {
-    pending: '未执行',
+    pending: '待跑',
+    not_run: '待跑',
     running: '执行中',
-    waiting_human: '未执行',
+    waiting_human: '待确认',
     succeeded: '完成',
     failed: '失败',
     skipped: '跳过',
@@ -45,11 +46,17 @@ export const MEMBER_KIND = {
 /** 脚本/成员节点默认超时：10 分钟 */
 export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
 
-/** 产品宗旨（凝练） */
+/** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',
   living: '节点是死的，人是活的',
   oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、场外办事再回来。',
+}
+
+/** 场外协助进入方式 */
+export const OFFSITE_MODE = {
+  PLANNED: 'planned',
+  INTERRUPT: 'interrupt',
 }
 
 export const STEP_TYPE = {

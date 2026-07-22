@@ -379,7 +379,7 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">人活着 · 记入额外节点</span>
+                        <span class="at-panel-tip">记入场外协助 · 办完点「继续」</span>
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -638,7 +638,11 @@
           · 未执行节点仍在
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          节点是死的，人是活的 · 额外节点办事中 · 办完点「继续主流程」
+          {{
+            offsiteMode === 'planned'
+              ? '场外协助 · 计划挂起 · 办完点「继续」'
+              : '场外协助 · 临时插队 · 办完点「继续」'
+          }}
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -673,22 +677,31 @@
                     额外
                   </el-tag>
                   <el-tag
-                    v-if="n.step_type === 'offsite' && (n.status === 'running' || n.status === 'waiting_human')"
+                    v-if="n.step_type === 'offsite' && offsiteEntryLabel(n)"
                     size="small"
                     type="warning"
                     effect="dark"
                     round
                   >
-                    {{ n.status === 'running' ? '进行中' : '挂起' }}
+                    {{ offsiteEntryLabel(n) }}
                   </el-tag>
                   <el-tag
-                    v-else-if="n.step_type !== 'offsite' && isWaitingHuman(n)"
+                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
                     size="small"
                     type="danger"
                     effect="dark"
                     round
                   >
-                    未执行
+                    待确认
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type !== 'offsite' && isCurrent(n) && n.status === 'pending'"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    待跑
                   </el-tag>
                   <el-tag
                     v-else-if="n.step_type !== 'offsite' && isCurrent(n)"
@@ -713,25 +726,24 @@
               </button>
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
-                  <span class="flow-offsite-action-tip">人活着 · 可插中间 · @办事</span>
                   <el-button
                     v-if="n.status === 'waiting_human' || n.status === 'running'"
                     size="small"
-                    text
                     type="warning"
                     @click.stop="continuePastOffsite(n)"
                   >
-                    继续主流程
+                    继续
                   </el-button>
+                  <span v-else class="flow-offsite-action-tip">场外协助 · 可插中间</span>
                 </template>
                 <el-button
                   v-else
                   size="small"
                   text
-                  type="primary"
+                  :type="offsiteActive ? 'info' : 'primary'"
                   @click.stop="confirmRestartFromNode(n)"
                 >
-                  从此重新开始
+                  {{ offsiteActive ? '重开并重跑' : '从此重新开始' }}
                 </el-button>
               </div>
               <div v-if="expandedNodeId === n.id" class="flow-io">
@@ -756,19 +768,31 @@
             }"
           >
             <span class="flow-current-label">{{
-              offsiteActive ? '人活着' : needsHuman ? '等待人工' : '当前节点'
+              offsiteActive
+                ? offsiteMode === 'planned'
+                  ? '计划挂起'
+                  : '临时插队'
+                : needsHuman
+                  ? '待确认'
+                  : '当前节点'
             }}</span>
             <strong>
               {{
                 offsiteActive
-                  ? detail.nodes.find((n) => n.step_type === 'offsite' && (n.status === 'running' || n.status === 'waiting_human'))
-                      ?.title ||
-                    detail.nodes.find((n) => n.step_type === 'offsite')?.title ||
-                    '场外协助'
+                  ? activeOffsiteNode?.title || '场外协助'
                   : detail.nodes.find((n) => isCurrent(n))?.title ||
                     (detail.session.status === 'archived' ? '已结束' : '—')
               }}
             </strong>
+            <el-button
+              v-if="offsiteActive && activeOffsiteNode"
+              size="small"
+              type="warning"
+              class="flow-continue-btn"
+              @click="continuePastOffsite(activeOffsiteNode)"
+            >
+              继续
+            </el-button>
           </div>
         </template>
         <div v-else class="flow-empty">
@@ -1645,9 +1669,9 @@ const announceProgress = computed(() => {
       .forEach((k) => pushHash(k, ioParams[k]))
 
     let pendingHint = ''
-    if (st === 'pending' || st === 'not_run') pendingHint = '未执行'
+    if (st === 'pending' || st === 'not_run') pendingHint = '待跑'
     else if (st === 'running') pendingHint = '执行中…'
-    else if (st === 'waiting_human' && !outText && !note) pendingHint = '未执行 · 待确认'
+    else if (st === 'waiting_human' && !outText && !note) pendingHint = '待确认'
 
     return {
       id: n.id,
@@ -1742,9 +1766,8 @@ const composerFooterHint = computed(() => {
 })
 
 function statusLabel(s) {
-  if (s === 'pending' || s === 'waiting_human' || s === 'not_run') {
-    return nodeStatusLabel(s) || '未执行'
-  }
+  if (s === 'pending' || s === 'not_run') return '待跑'
+  if (s === 'waiting_human') return '待确认'
   const m = {
     active: '进行中',
     interrupted: '待恢复',
@@ -1923,7 +1946,7 @@ function isWaitingHuman(n) {
   return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
 }
 
-/** 是否正处在场外协助（@ 等流程外操作 / 流程走到额外节点） */
+/** 是否正处在场外协助 */
 const offsiteActive = computed(() => {
   const s = detail.value?.session
   if (!s || s.status === 'archived') return false
@@ -1935,6 +1958,44 @@ const offsiteActive = computed(() => {
       (n.status === 'running' || n.status === 'waiting_human'),
   )
 })
+
+/** planned | interrupt */
+const offsiteMode = computed(() => {
+  const ctx = detail.value?.session?.context
+  if (ctx?.offsiteAssist?.mode === 'planned' || ctx?.offsiteAssist?.planned) return 'planned'
+  const n = activeOffsiteNode.value
+  if (n?.output?.mode === 'planned' || n?.output?.plannedPause) return 'planned'
+  if (offsiteActive.value) return 'interrupt'
+  return null
+})
+
+const activeOffsiteNode = computed(() => {
+  const nodes = detail.value?.nodes || []
+  const ctx = detail.value?.session?.context
+  const pinned = ctx?.offsiteAssist?.nodeInstanceId
+  if (pinned) {
+    const hit = nodes.find((n) => n.id === pinned && n.step_type === 'offsite')
+    if (hit) return hit
+  }
+  return (
+    nodes.find(
+      (n) =>
+        n.step_type === 'offsite' &&
+        (n.status === 'running' || n.status === 'waiting_human'),
+    ) || nodes.find((n) => n.step_type === 'offsite')
+  )
+})
+
+function offsiteEntryLabel(n) {
+  if (!n || n.step_type !== 'offsite') return ''
+  if (n.status !== 'running' && n.status !== 'waiting_human') return ''
+  const mode =
+    n.output?.mode ||
+    (n.output?.plannedPause ? 'planned' : null) ||
+    (activeOffsiteNode.value?.id === n.id ? offsiteMode.value : null)
+  if (mode === 'planned') return '计划'
+  return '插队'
+}
 
 /** 审核三态：pending | approve | reject */
 function reviewAction(n) {
@@ -2467,7 +2528,7 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** 离开场外协助，继续主流程 */
+/** 离开场外协助：主动作「继续」 */
 async function continuePastOffsite(n) {
   if (!n || !activeId.value || n.step_type !== 'offsite') return
   if (gating.value) return
@@ -2476,7 +2537,7 @@ async function continuePastOffsite(n) {
     await api.sessions.continuePastOffsite(activeId.value, {
       nodeInstanceId: n.id,
     })
-    ElMessage.success('已流回主线')
+    ElMessage.success('已继续主流程')
     rightTab.value = 'flow'
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
@@ -2487,11 +2548,11 @@ async function continuePastOffsite(n) {
   }
 }
 
-/** 从节点重新开始（归档前/后均可；场外协助回主流程也走这里） */
+/** 从节点重开（次要入口；场外进行中会写清「将重跑」） */
 async function confirmRestartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('场外协助不能作为重开目标，请选择正常流程节点')
+    ElMessage.warning('请用「继续」离开场外协助；重开请选正常节点')
     return
   }
   const title = n.title || `步骤 ${n.step_index + 1}`
@@ -2500,14 +2561,14 @@ async function confirmRestartFromNode(n) {
   try {
     await ElMessageBox.confirm(
       archived
-        ? `任务已归档。将从「${title}」重新激活并重跑该步及之后的节点（会释放旧进程），是否继续？`
+        ? `任务已归档。将从「${title}」重新激活并重跑该步及之后（会释放旧进程）。确定？`
         : fromOffsite
-          ? `人活着 → 流回「${title}」（该步及之后重跑）。继续？`
+          ? `将结束场外协助，并从「${title}」重跑该步及之后（不可简单撤销）。确定？`
           : `将从「${title}」重新开始，该步及之后会重跑（之前步骤保留）。是否继续？`,
-      fromOffsite ? '流回主线' : '从节点重新开始',
+      fromOffsite ? '重开并重跑' : '从节点重新开始',
       {
         type: 'warning',
-        confirmButtonText: fromOffsite ? '流回此节点' : '重新开始',
+        confirmButtonText: fromOffsite ? '结束场外并重跑' : '重新开始',
         cancelButtonText: '取消',
       },
     )
@@ -2519,13 +2580,7 @@ async function confirmRestartFromNode(n) {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
-    ElMessage.success(
-      fromOffsite
-        ? `已流回「${r.title || title}」`
-        : r.title
-          ? `已从「${r.title}」重新开始`
-          : '已重新开始',
-    )
+    ElMessage.success(r.title ? `已从「${r.title}」重新开始` : '已重新开始')
     rightTab.value = 'flow'
     footerCollapsed.value = false
     await loadDetail(activeId.value)
@@ -2626,7 +2681,12 @@ async function onSenderSubmit() {
     clearSender()
     pendingFiles.value = []
     if (r.mentionPending) {
-      ElMessage.success('人活着 · 已进入额外节点')
+      ElMessage.success(
+        r.offsiteMode === 'planned' ? '场外协助 · 已记入计划挂起节点' : '已进入场外协助',
+      )
+      if (r.mainGateWaiting) {
+        ElMessage.info('主流程仍停在当前闸门，场外不替代提交')
+      }
     }
     if (r.newSession && r.session) {
       await loadLists()

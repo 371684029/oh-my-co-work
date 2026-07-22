@@ -30,6 +30,7 @@ import {
   injectCallArgsParam,
   extractCallArgsFromMention,
   isMentionAssistOnly,
+  OFFSITE_MODE,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
 import { assertPathAvailable } from './pathLock.js'
@@ -40,8 +41,7 @@ function getMember(id) {
 
 /**
  * 解析/确保「场外协助」节点。
- * 可插在流程任意位置；多个时优先进行中的，否则取离当前步最近的。
- * @returns {object} node_instances 行
+ * 优先：当前挂起/进行中的 → context 指定的 → 离当前步最近的；没有则末尾新建。
  */
 export function ensureOffsiteNode(sessionId) {
   const list = getDb()
@@ -49,12 +49,19 @@ export function ensureOffsiteNode(sessionId) {
       `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
     )
     .all(sessionId, STEP_TYPE.OFFSITE)
+  const session = getSession(sessionId)
+  const ctx = parseJson(session?.context_json, {})
+  const pinnedId = ctx.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
+
   if (list.length) {
     const active = list.find(
       (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
     )
     if (active) return active
-    const session = getSession(sessionId)
+    if (pinnedId) {
+      const pinned = list.find((n) => n.id === pinnedId)
+      if (pinned) return pinned
+    }
     const cur = Number(session?.current_step_index) || 0
     let best = list[0]
     let bestDist = Math.abs(Number(best.step_index) - cur)
@@ -90,6 +97,26 @@ export function ensureOffsiteNode(sessionId) {
       0,
     )
   return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+/** 当前场外节点应视为计划挂起还是临时插队 */
+function resolveOffsiteMode(session, offsiteNode) {
+  if (!offsiteNode) return OFFSITE_MODE.INTERRUPT
+  const ctx = parseJson(session?.context_json, {})
+  const out = parseJson(offsiteNode.output_json, {})
+  const hung =
+    offsiteNode.status === NODE_STATUS.WAITING_HUMAN ||
+    offsiteNode.status === NODE_STATUS.RUNNING
+  if (
+    hung &&
+    (ctx.offsiteAssist?.mode === OFFSITE_MODE.PLANNED ||
+      out.mode === OFFSITE_MODE.PLANNED ||
+      out.plannedPause)
+  ) {
+    return OFFSITE_MODE.PLANNED
+  }
+  if (ctx.offsiteAssist?.mode === OFFSITE_MODE.PLANNED && hung) return OFFSITE_MODE.PLANNED
+  return OFFSITE_MODE.INTERRUPT
 }
 
 /**
@@ -132,7 +159,7 @@ export async function continuePastOffsite(sessionId, nodeInstanceId) {
     type: 'status',
     node_instance_id: node.id,
     content: {
-      text: `已离开「${node.title || '场外协助'}」，流回主线`,
+      text: `已离开「${node.title || '场外协助'}」，继续主流程`,
       offsite: true,
       continued: true,
     },
@@ -503,7 +530,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     role: 'system',
     type: 'status',
     content: {
-      text: `人活着 → 流回「${target.title || `步骤 ${idx + 1}`}」（第 ${idx + 1} 步及之后将重跑）`,
+      text: `已从「${target.title || `步骤 ${idx + 1}`}」重开（第 ${idx + 1} 步及之后将重跑）`,
       restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
     },
   })
@@ -809,6 +836,8 @@ export async function advance(sessionId) {
           waiting: true,
           offsiteIdle: false,
           humanAction: 'pending',
+          mode: OFFSITE_MODE.PLANNED,
+          plannedPause: true,
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
@@ -821,6 +850,7 @@ export async function advance(sessionId) {
         active: true,
         nodeInstanceId: node.id,
         at: nowIso(),
+        mode: OFFSITE_MODE.PLANNED,
         planned: true,
       }
       updateSession(sessionId, { context_json: JSON.stringify(ctx) })
@@ -829,9 +859,9 @@ export async function advance(sessionId) {
         type: 'status',
         node_instance_id: node.id,
         content: {
-          text: `额外节点「${title}」· 人活着。可 @办事；办完点「继续主流程」。`,
+          text: `场外协助「${title}」· 计划挂起。可 @办事；办完点「继续」。`,
           offsite: true,
-          mode: 'offsite_pause',
+          mode: OFFSITE_MODE.PLANNED,
         },
       })
       emitSession(sessionId, {
@@ -2450,8 +2480,8 @@ export function parseMemberMentions(text, memberList) {
 }
 
 /**
- * 流程外 @ 成员：写入「场外协助」节点，不推进正常步骤。
- * 回到正常节点：用户在右侧流程点「从此重新开始」。
+ * 流程外 @ 成员：写入当前活跃的「场外协助」节点（优先挂起中的）。
+ * 离开场外：右侧「继续」（主动作）。
  */
 export async function invokeMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
@@ -2472,6 +2502,7 @@ export async function invokeMentionedMembers(sessionId, text) {
   const offsite = ensureOffsiteNode(sessionId)
   const group = getGroup(session.group_id)
   const ctx = parseJson(session.context_json, {})
+  const mode = resolveOffsiteMode(session, offsite)
   const callArgs = extractCallArgsFromMention(text, mentioned)
   const paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
   const invoked = []
@@ -2481,6 +2512,8 @@ export async function invokeMentionedMembers(sessionId, text) {
     active: true,
     nodeInstanceId: offsite.id,
     at: startedAt,
+    mode,
+    planned: mode === OFFSITE_MODE.PLANNED,
     mentionText: String(text || '').slice(0, 500),
   }
   updateSession(sessionId, { context_json: JSON.stringify(ctx) })
@@ -2505,6 +2538,8 @@ export async function invokeMentionedMembers(sessionId, text) {
       offsiteIdle: false,
       assists: history,
       lastMention: String(text || ''),
+      mode,
+      plannedPause: mode === OFFSITE_MODE.PLANNED,
     },
     status: NODE_STATUS.RUNNING,
   })
@@ -2514,8 +2549,12 @@ export async function invokeMentionedMembers(sessionId, text) {
     type: 'status',
     node_instance_id: offsite.id,
     content: {
-      text: '人活着 · 已进入额外节点。办完请继续主流程或从右侧正常节点重开。',
+      text:
+        mode === OFFSITE_MODE.PLANNED
+          ? '场外协助 · 计划挂起中（@ 已记入本节点）。办完点「继续」。'
+          : '已进入场外协助（临时插队）。办完点「继续」。',
       offsite: true,
+      mode,
     },
   })
 
@@ -2554,7 +2593,6 @@ export async function invokeMentionedMembers(sessionId, text) {
       }
     }
 
-    // 会话可能中途被归档
     const still = getSession(sessionId)
     if (!still || still.status === SESSION_STATUS.ARCHIVED) break
 
@@ -2590,6 +2628,7 @@ export async function invokeMentionedMembers(sessionId, text) {
       finishedAt: nowIso(),
       text: String(text || ''),
       invoked,
+      mode,
     })
     persistNodeIo(sessionId, offsite.id, {
       input: parseJson(cur?.input_json, {}),
@@ -2598,8 +2637,9 @@ export async function invokeMentionedMembers(sessionId, text) {
         assists,
         lastInvoked: invoked,
         humanAction: 'pending',
+        mode,
+        plannedPause: mode === OFFSITE_MODE.PLANNED,
       },
-      // 场外协助完成后仍为「未执行」语义挂起：等人从右侧选节点回主流程
       status: NODE_STATUS.WAITING_HUMAN,
       finished: false,
     })
@@ -2609,12 +2649,13 @@ export async function invokeMentionedMembers(sessionId, text) {
         sessionId,
         status: still2.status,
         offsiteAssist: true,
+        offsiteMode: mode,
         nodeInstanceId: offsite.id,
       },
     })
   }
 
-  return { invoked, offsiteNodeId: offsite.id }
+  return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
 }
 
 /**
@@ -2753,14 +2794,21 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       }
     }
     // waiting / 纯 @协助：记消息到场外协助节点，不推进正常流程
-    const offsiteId = mentionOnly || /@/.test(content.text || '')
-      ? ensureOffsiteNode(sessionId)?.id
-      : null
+    const offsiteNode =
+      mentionOnly || /@/.test(content.text || '') ? ensureOffsiteNode(sessionId) : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
+    const mainGateWaiting = !!(
+      node &&
+      (node.step_type === STEP_TYPE.HUMAN ||
+        (node.step_type === STEP_TYPE.MEMBER &&
+          (parseJson(node.output_json, {}).needParams ||
+            parseJson(node.output_json, {}).reason === 'missing_param_1')))
+    )
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
-      node_instance_id: offsiteId || null,
-      content: { ...content, offsite: !!offsiteId },
+      node_instance_id: offsiteNode?.id || null,
+      content: { ...content, offsite: !!offsiteNode },
     })
     if (node && !mentionOnly) {
       appendPendingGateNote(sessionId, node, content.text)
@@ -2772,7 +2820,13 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         )
       })
     }
-    return { session: getSession(sessionId), newSession: false, mentionPending: true }
+    return {
+      session: getSession(sessionId),
+      newSession: false,
+      mentionPending: true,
+      offsiteMode,
+      mainGateWaiting,
+    }
   }
 
   if (!(content.text || '').trim() && !atts.length) {
@@ -2780,21 +2834,27 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   }
   {
     const hasMention = /@/.test(content.text || '')
-    const offsiteId = hasMention ? ensureOffsiteNode(sessionId)?.id : null
+    const offsiteNode = hasMention ? ensureOffsiteNode(sessionId) : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
-      node_instance_id: offsiteId || null,
+      node_instance_id: offsiteNode?.id || null,
       content: hasMention ? { ...content, offsite: true } : content,
     })
-    // 任意 @成员：归入场外协助，不推进步骤
     if (hasMention) {
       setImmediate(() => {
         invokeMentionedMembers(sessionId, content.text).catch((e) =>
           console.warn('[acw] @mention failed', e.message),
         )
       })
-      return { session: getSession(sessionId), newSession: false, mentionPending: true }
+      return {
+        session: getSession(sessionId),
+        newSession: false,
+        mentionPending: true,
+        offsiteMode,
+        mainGateWaiting: false,
+      }
     }
   }
   return { session: getSession(sessionId), newSession: false }
