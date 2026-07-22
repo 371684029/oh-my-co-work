@@ -89,6 +89,7 @@ function writeStartBat(dest) {
       '  exit /b 1',
       ')',
       'echo [acw] 正在启动 apple-co-work（运行包，无需 npm install）…',
+      'echo [acw] 提示：关闭本窗口即可结束服务（关浏览器不会停）',
       'node start.mjs',
       'if errorlevel 1 pause',
       '',
@@ -109,6 +110,7 @@ function writeStartSh(dest) {
       '  exit 1',
       'fi',
       'echo "[acw] 正在启动 apple-co-work（运行包，无需 npm install）…"',
+      'echo "[acw] 提示：关闭本窗口或 Ctrl+C 即可结束服务（关浏览器不会停）"',
       'exec node start.mjs',
       '',
     ].join('\n'),
@@ -290,16 +292,59 @@ async function main() {
   }
   log('运行包启动', ROOT)
   log(\`Node \${process.version}  端口 :\${PORT}  auto-exit=\${AUTO_EXIT ? 'on' : 'off'}\`)
-  const child = spawn(process.execPath, [ENTRY], { cwd: ROOT, env, stdio: 'inherit' })
-  const shutdown = () => {
+  const child = spawn(process.execPath, [ENTRY], {
+    cwd: ROOT,
+    env,
+    stdio: 'inherit',
+    windowsHide: false,
+  })
+
+  const killChild = () => {
+    if (!child || child.killed || child.exitCode != null) return
+    const pid = child.pid
     try {
-      child.kill('SIGTERM')
+      if (process.platform === 'win32' && pid) {
+        spawnSync('taskkill', ['/pid', String(pid), '/T', '/F'], {
+          stdio: 'ignore',
+          windowsHide: true,
+        })
+      } else {
+        try {
+          child.kill('SIGTERM')
+        } catch {
+          /* ignore */
+        }
+        try {
+          child.kill('SIGKILL')
+        } catch {
+          /* ignore */
+        }
+      }
     } catch {
-      /* ignore */
+      try {
+        child.kill()
+      } catch {
+        /* ignore */
+      }
     }
   }
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
+
+  const shutdown = () => {
+    killChild()
+  }
+  process.on('SIGINT', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('SIGTERM', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('SIGHUP', () => {
+    shutdown()
+    process.exit(0)
+  })
+  process.on('exit', killChild)
   child.on('exit', (code) => process.exit(code || 0))
 
   try {
@@ -312,7 +357,7 @@ async function main() {
   const url = \`http://127.0.0.1:\${PORT}/\`
   log('打开浏览器', url)
   if (AUTO_EXIT) log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
-  else log('提示：关闭浏览器不会停服务；请在本窗口 Ctrl+C 结束')
+  else log('提示：关闭本窗口（或 Ctrl+C）即可结束服务；关浏览器不会停服务')
   openBrowser(url)
 }
 

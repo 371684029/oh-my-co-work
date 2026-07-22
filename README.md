@@ -138,7 +138,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
 | `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（进 git；含 bundle+依赖，用户无需 npm install） |
-| `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；默认关浏览器不停服务，终端 Ctrl+C 结束） |
+| `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；关启动窗口或 Ctrl+C 结束服务） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
 ### 重置数据
@@ -160,7 +160,7 @@ npm run dev:server
 
 1. 打开仓库 **[`packages/`](./packages/)**，下载与本机系统匹配的 zip（如 Windows 用 `*-win32-x64.zip`）  
 2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
-3. **通常不需要**再 `npm install`（若本机 Node 版本与打包不一致，启动会自动适配原生模块）；浏览器会自动打开；关掉浏览器后后台默认退出  
+3. **通常不需要**再 `npm install`（若本机 Node 版本与打包不一致，启动会自动适配原生模块）；浏览器会自动打开；**关掉浏览器不会停服务**（启动窗口 Ctrl+C 结束）  
 4. 工作台 → 开聊 **「演示流」**  
 
 > 包内是打包产物（前端 dist + 后端 bundle + 内置依赖），**不是源码**。  
