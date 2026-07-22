@@ -93,7 +93,7 @@ apple-co-work/
 | **群报告 ANNOUNCEMENT.md** | **# 参数全集**（`#群聊` / `#文件夹` / `#1`…）+ **各子节点输入/输出**；人工可 PUT 编辑；手改后 `announcementManual=true`，自动汇总不覆盖除非 force；路径仍为 `journals/sessions/{sessionId}/ANNOUNCEMENT.md`（文件名兼容） |
 | **归档确认** | 完成/失败/拒绝后进入 `pendingArchive`（**不立刻归档**）；待确认时只杀非 `detach` 进程（Cursor CLI 等仅唤起窗口保留）；手工「归档」/闸门同意，或超时（默认 **3h**，`autoArchiveHours`）→ `archiveSession`：**必杀本会话全部进程**（含 detach）；`archive_reason` 区分结果（`failed`/`rejected`→失败，其余→成功） |
 | **审核三态** | 节点 `output.humanAction`：`pending` / `approve` / `reject`；脚本产出或输入框消息保持 `pending`；仅闸门「同意/拒绝」改态并推进 |
-| **从节点重新开始** | 归档前/后均可：`POST /sessions/:id/restart-from-node`（`nodeInstanceId` 或 `stepIndex`）；杀进程、清归档态、目标步及之后重置为 pending 并 `advance`；UI：`@` 选节点或流程轨「从此重新开始」 |
+| **从节点重新开始** | 归档前/后均可：`POST /sessions/:id/restart-from-node`。目标步 **早于当前**：按模板自该步起（跳过场外）**线性追加克隆节点**并开跑，历史保留；目标步 **≥ 当前**：重置该步及之后正常节点为 pending。场外无此操作。UI：流程轨「克隆并从此开始」/「从此重新开始」 |
 | **脚本弹窗** | 全局 `app-settings.json` → `showScriptPopup`（默认 true）；成员 `script.showScriptPopup` / 快捷指令同字段可覆盖。解析：`resolveShowScriptPopup`（局部显式 > 遗留 showConsole/hideWindow > 全局） |
 | **仅唤起 detach** | 成员 `script.detach=true`（或 `waitForExit=false`）：弹窗 `Start-Process` 后**不等待**结束，适合 Cursor CLI；cwd：外部工具优先成员/会话工作目录，不落在 CLI 安装目录 |
 

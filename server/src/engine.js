@@ -231,7 +231,7 @@ function archiveOffsiteOnReturnToMain(sessionId, {
       role: 'system',
       type: 'status',
       content: {
-        text: `已回归正轨 → ${where}（该步及之后将按流程重跑）。本段场外已完成并归档；之后还可再开场外段落（流动扩展）。`,
+        text: `已回归正轨 → ${where}（该步早于当前则线性追加克隆并开跑；历史保留）。本段场外已完成并归档；之后还可再开场外段落（流动扩展）。`,
         offsite: true,
         offsiteArchived: true,
         resumeTitle,
@@ -272,7 +272,7 @@ function isOffsiteArchived(sessionId, nodeId) {
  */
 export async function continuePastOffsite(_sessionId, _nodeInstanceId) {
   throw Object.assign(
-    new Error('场外协助已取消「继续」按钮；请在右侧流程点正常节点「从此重新开始」'),
+    new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点（回退将线性追加克隆）'),
     { code: 'USE_RESTART_FROM_NODE' },
   )
 }
@@ -544,10 +544,105 @@ function updateNode(id, patch) {
 }
 
 /**
+ * 节点对应的群模板步下标（克隆节点记在 output/input.clonedFromStepIndex）
+ */
+function templateStepIndexOf(node, stepsLen = Infinity) {
+  if (!node) return 0
+  const out = parseJson(node.output_json, {})
+  const input = parseJson(node.input_json, {})
+  const raw =
+    out.clonedFromStepIndex ??
+    input.clonedFromStepIndex ??
+    Number(node.step_index)
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return 0
+  if (Number.isFinite(stepsLen) && n >= stepsLen) return Math.max(0, stepsLen - 1)
+  return n
+}
+
+function resolveStepForNode(node, steps) {
+  const list = Array.isArray(steps) ? steps : []
+  const ti = templateStepIndexOf(node, list.length)
+  return { step: list[ti] || {}, templateIndex: ti }
+}
+
+/**
+ * 回退重开：自目标模板步起，跳过场外，按模板线性追加克隆节点
+ */
+function appendClonedSuffixFrom(sessionId, target, steps) {
+  const list = Array.isArray(steps) ? steps : []
+  const startTpl = templateStepIndexOf(target, list.length)
+  const existing = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index`,
+    )
+    .all(sessionId)
+  const maxRow = getDb()
+    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+    .get(sessionId)
+  let nextIdx = maxRow?.m == null ? 0 : Number(maxRow.m) + 1
+  const insertNode = getDb().prepare(
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate, input_json, output_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+  const created = []
+  const batchId = uid('clone')
+  const at = nowIso()
+
+  for (let t = startTpl; t < list.length; t++) {
+    const step = list[t] || {}
+    const st = step.type || STEP_TYPE.MEMBER
+    if (st === STEP_TYPE.OFFSITE) continue
+
+    const src =
+      existing.find(
+        (n) =>
+          n.step_type !== STEP_TYPE.OFFSITE &&
+          templateStepIndexOf(n, list.length) === t &&
+          Number(n.step_index) >= Number(target.step_index),
+      ) ||
+      existing.find(
+        (n) =>
+          n.step_type !== STEP_TYPE.OFFSITE && templateStepIndexOf(n, list.length) === t,
+      ) ||
+      (templateStepIndexOf(target, list.length) === t ? target : null)
+
+    const flow = normalizeStepFlow(step.flow, step.gate)
+    const id = uid('node')
+    const title = src?.title || step.title || `步骤 ${t + 1}`
+    const meta = {
+      cloned: true,
+      cloneBatchId: batchId,
+      clonedFromNodeInstanceId: src?.id || target.id,
+      clonedFromStepIndex: t,
+      clonedAt: at,
+    }
+    insertNode.run(
+      id,
+      sessionId,
+      nextIdx,
+      step.id || src?.step_id || `step_${t}`,
+      title,
+      st,
+      st === STEP_TYPE.HUMAN ? null : step.memberId || src?.member_id || null,
+      NODE_STATUS.PENDING,
+      flowNeedsWait(flow) || step.gate ? 1 : 0,
+      JSON.stringify({ ...meta }),
+      JSON.stringify({ ...meta }),
+    )
+    created.push(
+      getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id),
+    )
+    nextIdx += 1
+  }
+  return { created, batchId, startTpl }
+}
+
+/**
  * 从指定节点重新开始（归档前/后均可）
- * - 杀掉本会话进程
- * - 若已归档则重新激活
- * - 目标节点及之后重置为 pending，current_step_index 指到该步并 advance
+ * - 杀掉本会话进程；活跃场外本段归档
+ * - 目标步 < 当前步：线性追加克隆节点并自克隆段开跑（历史保留；场外不参与重开）
+ * - 目标步 ≥ 当前步：目标及之后正常节点重置为 pending 并 advance
  *
  * @param {string} sessionId
  * @param {{ nodeInstanceId?: string, stepIndex?: number }} opts
@@ -570,12 +665,16 @@ export async function restartFromNode(sessionId, opts = {}) {
   if (!target) throw new Error('目标节点不存在')
   if (target.step_type === STEP_TYPE.OFFSITE) {
     throw Object.assign(
-      new Error('场外协助不能作为「从此重新开始」目标；请在右侧选择正常流程节点'),
+      new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点'),
       { code: 'OFFSITE_NOT_RESTART_TARGET' },
     )
   }
 
   const idx = Number(target.step_index)
+  const currentIdx = Number(session.current_step_index)
+  const goingBack = idx < currentIdx
+  const group = getGroup(session.group_id)
+  const steps = parseJson(group?.steps_json, [])
 
   // 释放 bat / 控制台进程（含场外协助占用的资源）
   try {
@@ -584,57 +683,97 @@ export async function restartFromNode(sessionId, opts = {}) {
     /* ignore */
   }
 
-  // 目标及之后的正常节点：重置为待跑；场外：默认完成并归档
-  for (const n of nodes) {
-    if (n.step_type === STEP_TYPE.OFFSITE) {
-      continue
-    }
-    if (Number(n.step_index) < idx) continue
-    updateNode(n.id, {
-      status: NODE_STATUS.PENDING,
-      output_json: null,
-      started_at: null,
-      finished_at: null,
-      // 保留 input 仅作参考；人工步会在 advance 时重写
-    })
-  }
-
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  let startNode = target
+  let startIdx = idx
+  let cloned = false
+  let cloneBatchId = null
+  let clonedCount = 0
+
+  if (goingBack) {
+    const { created, batchId } = appendClonedSuffixFrom(sessionId, target, steps)
+    if (!created.length) {
+      throw Object.assign(new Error('没有可克隆的正常流程节点'), {
+        code: 'RESTART_CLONE_EMPTY',
+      })
+    }
+    startNode = created[0]
+    startIdx = Number(startNode.step_index)
+    cloned = true
+    cloneBatchId = batchId
+    clonedCount = created.length
+  } else {
+    // 目标及之后的正常节点：重置为待跑（不改写历史回退；仅同位/向前）
+    for (const n of nodes) {
+      if (n.step_type === STEP_TYPE.OFFSITE) continue
+      if (Number(n.step_index) < idx) continue
+      updateNode(n.id, {
+        status: NODE_STATUS.PENDING,
+        output_json: null,
+        started_at: null,
+        finished_at: null,
+      })
+    }
+  }
+
   const offClose = archiveOffsiteOnReturnToMain(sessionId, {
-    reason: 'returned_to_main',
-    resumeTitle: target.title || `步骤 ${idx + 1}`,
-    resumeNodeId: target.id,
-    resumeStepIndex: idx,
+    reason: cloned ? 'clone_restart' : 'returned_to_main',
+    resumeTitle: startNode.title || target.title || `步骤 ${idx + 1}`,
+    resumeNodeId: startNode.id,
+    resumeStepIndex: startIdx,
     silent: false,
   })
   const ctx2 = parseJson(getSession(sessionId)?.context_json, {})
-  // 记录一次重开，便于台账
   ctx2.lastRestart = {
     at: nowIso(),
-    stepIndex: idx,
-    nodeInstanceId: target.id,
-    title: target.title || `步骤 ${idx + 1}`,
+    stepIndex: startIdx,
+    nodeInstanceId: startNode.id,
+    title: startNode.title || target.title || `步骤 ${idx + 1}`,
     fromStatus: session.status,
     fromOffsite: !!offClose.hadActive,
     offsiteArchived: !!offClose.hadActive,
+    cloned,
+    cloneBatchId,
+    clonedCount,
+    sourceNodeInstanceId: target.id,
+    sourceStepIndex: idx,
   }
 
   updateSession(sessionId, {
     status: SESSION_STATUS.ACTIVE,
-    current_step_index: idx,
+    current_step_index: startIdx,
     context_json: JSON.stringify(ctx2),
     archive_reason: null,
     archived_at: null,
   })
 
-  if (!offClose.hadActive) {
+  if (cloned) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；场外不参与重开）`,
+        restartFrom: {
+          stepIndex: startIdx,
+          nodeInstanceId: startNode.id,
+          sourceNodeInstanceId: target.id,
+          sourceStepIndex: idx,
+          cloned: true,
+          cloneBatchId,
+          clonedCount,
+        },
+      },
+    })
+  } else if (!offClose.hadActive) {
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
       content: {
         text: `已从「${target.title || `步骤 ${idx + 1}`}」重开（第 ${idx + 1} 步及之后将重跑）`,
-        restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
+        restartFrom: { stepIndex: idx, nodeInstanceId: target.id, cloned: false },
       },
     })
   }
@@ -643,33 +782,60 @@ export async function restartFromNode(sessionId, opts = {}) {
     type: 'session.restart',
     payload: {
       sessionId,
-      stepIndex: idx,
-      nodeInstanceId: target.id,
-      title: target.title,
+      stepIndex: startIdx,
+      nodeInstanceId: startNode.id,
+      title: startNode.title,
+      cloned,
+      cloneBatchId,
+      sourceNodeInstanceId: target.id,
     },
   })
   emitSession(sessionId, {
     type: 'session.status',
-    payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
+    payload: {
+      sessionId,
+      status: SESSION_STATUS.ACTIVE,
+      currentStepIndex: startIdx,
+      cloned,
+    },
   })
   emitAll({
     type: 'session.restart',
-    payload: { sessionId, stepIndex: idx },
+    payload: { sessionId, stepIndex: startIdx, cloned },
   })
 
   setImmediate(() => advance(sessionId).catch(console.error))
   return {
     ok: true,
     sessionId,
-    stepIndex: idx,
-    nodeInstanceId: target.id,
-    title: target.title,
+    stepIndex: startIdx,
+    nodeInstanceId: startNode.id,
+    title: startNode.title,
+    cloned,
+    cloneBatchId,
+    clonedCount,
+    sourceNodeInstanceId: target.id,
+    sourceStepIndex: idx,
     offsiteArchived: !!offClose.hadActive,
     session: getSession(sessionId),
   }
 }
 
 /** 落库 + 写节点 MD 台账 */
+function inheritCloneMeta(prev = {}, next = {}) {
+  if (!prev?.cloned && !next?.cloned) return next
+  return {
+    ...next,
+    cloned: true,
+    cloneBatchId: next.cloneBatchId || prev.cloneBatchId || null,
+    clonedFromNodeInstanceId:
+      next.clonedFromNodeInstanceId || prev.clonedFromNodeInstanceId || null,
+    clonedFromStepIndex:
+      next.clonedFromStepIndex ?? prev.clonedFromStepIndex ?? null,
+    clonedAt: next.clonedAt || prev.clonedAt || null,
+  }
+}
+
 function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   const session = getSession(sessionId)
   const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
@@ -679,6 +845,13 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
     const m = getMember(n.member_id)
     memberName = m?.display_name || m?.name || ''
   }
+  const prevIn = parseJson(n.input_json, {})
+  const prevOut = parseJson(n.output_json, {})
+  const prevClone = { ...prevIn, ...prevOut }
+  const nextInput =
+    input !== undefined ? inheritCloneMeta(prevClone, input) : undefined
+  const nextOutput =
+    output !== undefined ? inheritCloneMeta(prevClone, output) : undefined
   const next = {
     ...n,
     status: status ?? n.status,
@@ -691,8 +864,8 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
       sessionId,
       sessionTitle: session.title,
       node: next,
-      input: input !== undefined ? input : parseJson(n.input_json, null),
-      output: output !== undefined ? output : parseJson(n.output_json, null),
+      input: nextInput !== undefined ? nextInput : prevIn,
+      output: nextOutput !== undefined ? nextOutput : prevOut,
       memberName,
     })
   } catch (e) {
@@ -700,8 +873,8 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   }
   updateNode(nodeId, {
     status: next.status,
-    input_json: input !== undefined ? JSON.stringify(input) : undefined,
-    output_json: output !== undefined ? JSON.stringify(output) : undefined,
+    input_json: nextInput !== undefined ? JSON.stringify(nextInput) : undefined,
+    output_json: nextOutput !== undefined ? JSON.stringify(nextOutput) : undefined,
     journal_path: journalPath,
     finished_at: next.finished_at,
   })
@@ -910,12 +1083,23 @@ export async function advance(sessionId) {
   const steps = parseJson(group.steps_json, [])
   let idx = session.current_step_index
 
-  while (idx < steps.length) {
+  const maxIndexOf = () => {
+    const row = getDb()
+      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+      .get(sessionId)
+    return row?.m == null ? -1 : Number(row.m)
+  }
+
+  while (idx <= maxIndexOf()) {
     const nodes = getDb()
       .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
       .all(sessionId)
     const node = nodes.find((n) => n.step_index === idx)
-    if (!node) break
+    if (!node) {
+      idx += 1
+      updateSession(sessionId, { current_step_index: idx })
+      continue
+    }
 
     if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) {
       idx += 1
@@ -964,7 +1148,7 @@ export async function advance(sessionId) {
         type: 'status',
         node_instance_id: node.id,
         content: {
-          text: `场外协助「${title}」· 计划挂起。可 @办事；回主线请点右侧正常节点「从此重新开始」。`,
+          text: `场外协助「${title}」· 计划挂起。可 @办事；回主线请点右侧正常节点（回退将线性追加克隆）。`,
           offsite: true,
           mode: OFFSITE_MODE.PLANNED,
         },
@@ -990,17 +1174,30 @@ export async function advance(sessionId) {
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
     })
 
-    const step = steps[idx] || {}
+    const { step } = resolveStepForNode(node, steps)
     const ctx = parseJson(session.context_json, {})
+    const cloneMeta = (() => {
+      const out = parseJson(node.output_json, {})
+      const input = parseJson(node.input_json, {})
+      if (!out.cloned && !input.cloned) return null
+      return {
+        cloned: true,
+        cloneBatchId: out.cloneBatchId || input.cloneBatchId || null,
+        clonedFromNodeInstanceId:
+          out.clonedFromNodeInstanceId || input.clonedFromNodeInstanceId || null,
+        clonedFromStepIndex:
+          out.clonedFromStepIndex ?? input.clonedFromStepIndex ?? null,
+      }
+    })()
 
     if (step.type === STEP_TYPE.HUMAN || node.step_type === STEP_TYPE.HUMAN) {
-      // 显式 true；显式 false 关闭；未写时仅首步默认采集
+      // 显式 true；显式 false 关闭；未写时仅模板首步默认采集
       const captureParams =
         step.captureParams === true
           ? true
           : step.captureParams === false
             ? false
-            : idx === 0
+            : templateStepIndexOf(node, steps.length) === 0
       const basePrompt = step.title || node.title || '请输入 / 确认'
       const prompt = captureParams
         ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；同会话内递增追加，不覆盖；新开聊另起一套。节点输出整段不切分）`
@@ -1010,8 +1207,9 @@ export async function advance(sessionId) {
           kind: 'human',
           prompt: basePrompt,
           captureParams: !!captureParams,
+          ...(cloneMeta || {}),
         },
-        output: { waiting: true },
+        output: { waiting: true, ...(cloneMeta || {}) },
         status: NODE_STATUS.WAITING_HUMAN,
       })
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
@@ -2603,7 +2801,7 @@ export function parseMemberMentions(text, memberList) {
 
 /**
  * 流程外 @ 成员：写入可写场外节点；已归档则末尾扩展新段落。
- * 离开场外：右侧正常节点「从此重新开始」（本段归档，可再次扩展）。
+ * 离开场外：右侧正常节点回主线（早于当前则线性追加克隆；本段归档，可再次扩展）。
  * 同一会话默认串行：后一条 @ 等前一条跑完再执行（不做并发调度）。
  */
 const mentionInvokeTail = new Map()
@@ -2696,8 +2894,8 @@ async function runMentionedMembers(sessionId, text) {
     content: {
       text:
         mode === OFFSITE_MODE.PLANNED
-          ? `场外「${offsite.title || '场外协助'}」· 计划挂起。回主线点右侧正常节点（本段将归档，可再扩展）。`
-          : `场外「${offsite.title || '场外协助'}」· 临时插队。回主线点右侧正常节点（本段将归档，可再扩展）。`,
+          ? `场外「${offsite.title || '场外协助'}」· 计划挂起。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`
+          : `场外「${offsite.title || '场外协助'}」· 临时插队。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`,
       offsite: true,
       mode,
     },

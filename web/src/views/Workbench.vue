@@ -379,7 +379,9 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">记入场外协助 · 回主线点右侧正常节点</span>
+                        <span class="at-panel-tip"
+                          >记入场外 · 回主线点右侧正常节点（回退追加克隆）</span
+                        >
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -638,11 +640,7 @@
           · 未执行节点仍在
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          {{
-            offsiteMode === 'planned'
-              ? '场外段落进行中 · 回主线点右侧正常节点（本段归档；可再扩展）'
-              : '场外段落进行中 · 回主线点右侧正常节点（本段归档；可再扩展）'
-          }}
+          场外段落进行中 · 回主线点右侧正常节点（回退将追加克隆；本段归档；可再扩展）
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -679,6 +677,15 @@
                     额外
                   </el-tag>
                   <el-tag
+                    v-else-if="isClonedNode(n)"
+                    size="small"
+                    type="success"
+                    effect="plain"
+                    round
+                  >
+                    克隆
+                  </el-tag>
+                  <el-tag
                     v-if="isCurrentOffsiteSegment(n)"
                     size="small"
                     type="warning"
@@ -688,7 +695,7 @@
                     当前段
                   </el-tag>
                   <el-tag
-                    v-else-if="n.step_type === 'offsite' && n.output?.archived"
+                    v-if="n.step_type === 'offsite' && n.output?.archived"
                     size="small"
                     type="info"
                     effect="plain"
@@ -697,10 +704,10 @@
                     已归档
                   </el-tag>
                   <el-tag
-                    v-else-if="n.step_type === 'offsite' && offsiteEntryLabel(n)"
+                    v-else-if="offsiteEntryLabel(n)"
                     size="small"
                     type="warning"
-                    effect="dark"
+                    effect="plain"
                     round
                   >
                     {{ offsiteEntryLabel(n) }}
@@ -747,7 +754,7 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >回主线点正常节点 → 本段归档；再 @ 可扩展新场外段落</span
+                    >场外无「重新开始」；回主线请点正常节点（早于当前则线性追加克隆）</span
                   >
                 </template>
                 <el-button
@@ -757,7 +764,7 @@
                   type="primary"
                   @click.stop="restartFromNode(n)"
                 >
-                  从此重新开始
+                  {{ restartActionLabel(n) }}
                 </el-button>
               </div>
               <div v-if="expandedNodeId === n.id" class="flow-io">
@@ -2548,15 +2555,30 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** 离开场外：点右侧正常节点回归正轨；场外默认完成并归档 */
+function isClonedNode(n) {
+  return !!(n?.output?.cloned || n?.input?.cloned)
+}
+
+function restartActionLabel(n) {
+  const cur = detail.value?.session?.current_step_index
+  if (n && cur != null && Number(n.step_index) < Number(cur)) {
+    return '克隆并从此开始'
+  }
+  return '从此重新开始'
+}
+
+/** 离开场外 / 回退重开：场外无入口；早于当前则线性追加克隆 */
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('场外节点不能作为入口；请点右侧正常节点回来')
+    ElMessage.warning('场外节点没有「重新开始」；请点右侧正常节点')
     return
   }
   if (gating.value) return
   const wasOffsite = offsiteActive.value
+  const willClone =
+    detail.value?.session?.current_step_index != null &&
+    Number(n.step_index) < Number(detail.value.session.current_step_index)
   gating.value = true
   try {
     const r = await api.sessions.restartFromNode(activeId.value, {
@@ -2567,13 +2589,20 @@ async function restartFromNode(n) {
     footerCollapsed.value = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
-    expandedNodeId.value = n.id
+    const focusId = r.nodeInstanceId || n.id
+    expandedNodeId.value = focusId
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
-    if (wasOffsite || r.offsiteArchived) {
+    if (r.cloned || willClone) {
+      ElMessage.success(
+        `已追加克隆并自「${title}」开始${
+          wasOffsite || r.offsiteArchived ? ' · 场外本段已归档' : ''
+        }`,
+      )
+    } else if (wasOffsite || r.offsiteArchived) {
       ElMessage.success(`已回归正轨「${title}」· 场外已完成并归档`)
     }
   } catch (e) {
-    ElMessage.error(e.message || '重新开始失败')
+    // 业务异常由接口呈现，不再 toast Error
   } finally {
     gating.value = false
   }

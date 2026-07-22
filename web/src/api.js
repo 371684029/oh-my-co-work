@@ -41,7 +41,7 @@ export const api = {
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
     remove: (id) => req(`/sessions/${id}`, { method: 'DELETE' }),
     archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
-    /** 从节点重新开始：{ nodeInstanceId } 或 { stepIndex } */
+    /** 从节点重开：早于当前则追加克隆；{ nodeInstanceId } 或 { stepIndex } */
     restartFromNode: (id, body) =>
       req(`/sessions/${id}/restart-from-node`, {
         method: 'POST',
