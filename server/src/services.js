@@ -23,6 +23,7 @@ import {
   markInterruptedOnBoot,
   resolveInterruptedSession,
   ensureOffsiteNode,
+  continuePastOffsite,
 } from './engine.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
@@ -478,6 +479,7 @@ export {
   processDueArchives,
   advance,
   restartFromNode,
+  continuePastOffsite,
   markInterruptedOnBoot,
   resolveInterruptedSession,
 }

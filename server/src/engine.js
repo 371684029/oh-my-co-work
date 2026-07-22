@@ -39,16 +39,34 @@ function getMember(id) {
 }
 
 /**
- * 确保会话有「场外协助」节点（流程外操作统归此处；不参与线性 advance）
+ * 解析/确保「场外协助」节点。
+ * 可插在流程任意位置；多个时优先进行中的，否则取离当前步最近的。
  * @returns {object} node_instances 行
  */
 export function ensureOffsiteNode(sessionId) {
-  const existing = getDb()
+  const list = getDb()
     .prepare(
-      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index LIMIT 1`,
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
     )
-    .get(sessionId, STEP_TYPE.OFFSITE)
-  if (existing) return existing
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  if (list.length) {
+    const active = list.find(
+      (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
+    )
+    if (active) return active
+    const session = getSession(sessionId)
+    const cur = Number(session?.current_step_index) || 0
+    let best = list[0]
+    let bestDist = Math.abs(Number(best.step_index) - cur)
+    for (const n of list) {
+      const d = Math.abs(Number(n.step_index) - cur)
+      if (d < bestDist) {
+        best = n
+        bestDist = d
+      }
+    }
+    return best
+  }
 
   const row = getDb()
     .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
@@ -72,6 +90,59 @@ export function ensureOffsiteNode(sessionId) {
       0,
     )
   return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+/**
+ * 离开场外协助，继续主流程（标记额外节点完成并 advance）
+ */
+export async function continuePastOffsite(sessionId, nodeInstanceId) {
+  const session = getSession(sessionId)
+  if (!session) throw new Error('会话不存在')
+  if (session.status === SESSION_STATUS.ARCHIVED) {
+    throw Object.assign(new Error('会话已归档'), { code: 'ARCHIVED' })
+  }
+  const node = getDb()
+    .prepare('SELECT * FROM node_instances WHERE id = ? AND session_id = ?')
+    .get(nodeInstanceId, sessionId)
+  if (!node || node.step_type !== STEP_TYPE.OFFSITE) {
+    throw Object.assign(new Error('目标不是场外协助节点'), { code: 'NOT_OFFSITE' })
+  }
+  const prev = parseJson(node.output_json, {})
+  persistNodeIo(sessionId, node.id, {
+    input: parseJson(node.input_json, {}),
+    output: {
+      ...prev,
+      offsiteIdle: true,
+      continuedAt: nowIso(),
+      humanAction: 'approve',
+    },
+    status: NODE_STATUS.SUCCEEDED,
+    finished: true,
+  })
+  const ctx = parseJson(session.context_json, {})
+  delete ctx.offsiteAssist
+  const nextIdx = Number(node.step_index) + 1
+  updateSession(sessionId, {
+    status: SESSION_STATUS.ACTIVE,
+    current_step_index: nextIdx,
+    context_json: JSON.stringify(ctx),
+  })
+  addMessage(sessionId, {
+    role: 'system',
+    type: 'status',
+    node_instance_id: node.id,
+    content: {
+      text: `已离开「${node.title || '场外协助'}」，继续主流程`,
+      offsite: true,
+      continued: true,
+    },
+  })
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: nextIdx },
+  })
+  setImmediate(() => advance(sessionId).catch(console.error))
+  return { ok: true, title: node.title, nextStepIndex: nextIdx }
 }
 
 function getGroup(id) {
@@ -725,11 +796,55 @@ export async function advance(sessionId) {
       return
     }
 
-    // 场外协助不参与线性推进（防御：模板误配时跳过）
+    // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
     if (node.step_type === STEP_TYPE.OFFSITE) {
-      idx += 1
-      updateSession(sessionId, { current_step_index: idx })
-      continue
+      const title = node.title || '场外协助'
+      persistNodeIo(sessionId, node.id, {
+        input: {
+          kind: 'offsite',
+          prompt: title,
+          at: nowIso(),
+        },
+        output: {
+          waiting: true,
+          offsiteIdle: false,
+          humanAction: 'pending',
+        },
+        status: NODE_STATUS.WAITING_HUMAN,
+      })
+      updateSession(sessionId, {
+        status: SESSION_STATUS.WAITING_HUMAN,
+        current_step_index: idx,
+      })
+      const ctx = parseJson(session.context_json, {})
+      ctx.offsiteAssist = {
+        active: true,
+        nodeInstanceId: node.id,
+        at: nowIso(),
+        planned: true,
+      }
+      updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: {
+          text: `已到额外节点「${title}」。可 @成员办事（如点外卖）；办完后点右侧「继续主流程」，或选下一正常节点「从此重新开始」。`,
+          offsite: true,
+          mode: 'offsite_pause',
+        },
+      })
+      emitSession(sessionId, {
+        type: 'session.status',
+        payload: {
+          sessionId,
+          status: SESSION_STATUS.WAITING_HUMAN,
+          currentStepIndex: idx,
+          offsiteAssist: true,
+          nodeInstanceId: node.id,
+        },
+      })
+      return
     }
 
     // run step

@@ -148,11 +148,12 @@
               </p>
             </div>
             <p v-else class="flow-policy">
-              场外协助是主流程上的<strong>额外节点</strong>：不参与线性推进；@成员等操作记入此节点；回主流程靠右侧选正常节点重开。若模板未配置，开聊仍会自动补一个。
+              场外协助是主流程上的<strong>额外节点</strong>，可插在任意步骤位置（例如干到一半去点外卖）。
+              不绑成员；走到该步会挂起，可 @成员办事，再点「继续主流程」。若模板未配置，开聊仍会在末尾自动补一个。
             </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">
-            「场外协助」可作为模板中的额外节点配置；未配置时开聊也会自动追加一个，并在右侧流程图单独分区高亮。
+            「场外协助」可插在流程中间或末尾；右侧流程图按步骤顺序内联展示，琥珀色高亮区分。未配置时开聊会在末尾自动追加一个。
           </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
@@ -555,6 +556,11 @@ onMounted(load)
 .step-card--gate {
   border-color: var(--el-border-color);
   background: var(--el-fill-color-blank, #fafafa);
+}
+
+.step-card--offsite {
+  border-color: rgba(196, 125, 26, 0.35);
+  background: rgba(230, 162, 60, 0.06);
 }
 
 .step-card-row {

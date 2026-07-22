@@ -28,6 +28,7 @@ import {
   refreshSessionAnnouncement,
   saveSessionAnnouncement,
   restartFromNode,
+  continuePastOffsite,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
@@ -424,6 +425,21 @@ router.post('/sessions/:id/restart-from-node', async (req, res) => {
       nodeInstanceId: req.body?.nodeInstanceId,
       stepIndex: req.body?.stepIndex,
     })
+    res.json({
+      ...r,
+      detail: getSessionDetail(req.params.id),
+    })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+/**
+ * 离开场外协助，继续主流程
+ * body: { nodeInstanceId: string }
+ */
+router.post('/sessions/:id/continue-past-offsite', async (req, res) => {
+  try {
+    const r = await continuePastOffsite(req.params.id, req.body?.nodeInstanceId)
     res.json({
       ...r,
       detail: getSessionDetail(req.params.id),
