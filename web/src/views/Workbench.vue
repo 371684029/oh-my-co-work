@@ -28,6 +28,7 @@
                     round
                     effect="plain"
                     type="info"
+                    :title="g.title"
                   >
                     {{ abbrGroupTag(g.title) }}
                   </el-tag>
@@ -89,8 +90,8 @@
             <el-tooltip
               :content="item.hoverTitle || item.label"
               placement="right"
-              :disabled="!item.hoverTitle"
-              :show-after="300"
+              :disabled="!(item.hoverTitle || item.label)"
+              :show-after="200"
             >
               <span class="conv-label-wrap">
                 <span v-if="item.pinned" class="conv-pin" aria-hidden="true">📌</span>
@@ -102,6 +103,7 @@
                   round
                   effect="plain"
                   type="info"
+                  :title="item.hoverTitle || item.groupAbbr"
                 >
                   {{ item.groupAbbr }}
                 </el-tag>
@@ -1419,20 +1421,20 @@ const filteredSessions = computed(() => {
   })
 })
 
-/** 会话列表：#1 正文 + 群模板缩写标签；整行 hover 展示群全称 */
+/** 会话列表：#1 正文 + 群模板缩写标签；hover 气泡展示全文（前缀 + 群全称） */
 function sessionListParts(s) {
   const ctx = s?.context && typeof s.context === 'object' ? s.context : {}
-  const groupTitle = s.groupTitle || ctx.groupTitle || ''
+  const groupTitle = String(s.groupTitle || ctx.groupTitle || '').trim()
   const abbr = s.groupTitleAbbr || ctx.groupTitleAbbr || abbrGroupTag(groupTitle)
-  const hoverTitle = groupTitle || s.title || ''
 
   // 手改过：整段标题，不用缩写标签
   if (ctx.titleAuto === false && s.title) {
+    const full = String(s.title).trim()
     return {
-      label: s.title,
-      labelPrefix: s.title,
+      label: full,
+      labelPrefix: full,
       groupAbbr: '',
-      hoverTitle: hoverTitle || s.title,
+      hoverTitle: full,
     }
   }
 
@@ -1453,11 +1455,18 @@ function sessionListParts(s) {
     groupTitle ||
     '未命名'
 
+  // 全文：优先「#1 · 群全称」，否则群全称 / 会话标题
+  let hoverTitle = ''
+  if (p1 && groupTitle) hoverTitle = `${p1} · ${groupTitle}`
+  else if (groupTitle) hoverTitle = groupTitle
+  else if (p1) hoverTitle = p1
+  else hoverTitle = String(s.title || label || '').trim()
+
   return {
     label,
     labelPrefix,
     groupAbbr,
-    hoverTitle: hoverTitle || label,
+    hoverTitle,
   }
 }
 
