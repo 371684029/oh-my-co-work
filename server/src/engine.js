@@ -40,46 +40,22 @@ function getMember(id) {
 }
 
 /**
- * 解析/确保「场外协助」节点。
- * 优先：当前挂起/进行中的 → context 指定的 → 离当前步最近的；没有则末尾新建。
+ * 末尾追加一场外段落（流动扩展；可多次）
  */
-export function ensureOffsiteNode(sessionId) {
+function appendOffsiteNode(sessionId, { title } = {}) {
   const list = getDb()
     .prepare(
-      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
+      `SELECT id FROM node_instances WHERE session_id = ? AND step_type = ?`,
     )
     .all(sessionId, STEP_TYPE.OFFSITE)
-  const session = getSession(sessionId)
-  const ctx = parseJson(session?.context_json, {})
-  const pinnedId = ctx.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
-
-  if (list.length) {
-    const active = list.find(
-      (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
-    )
-    if (active) return active
-    if (pinnedId) {
-      const pinned = list.find((n) => n.id === pinnedId)
-      if (pinned) return pinned
-    }
-    const cur = Number(session?.current_step_index) || 0
-    let best = list[0]
-    let bestDist = Math.abs(Number(best.step_index) - cur)
-    for (const n of list) {
-      const d = Math.abs(Number(n.step_index) - cur)
-      if (d < bestDist) {
-        best = n
-        bestDist = d
-      }
-    }
-    return best
-  }
-
   const row = getDb()
     .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
     .get(sessionId)
   const idx = row?.m == null ? 0 : Number(row.m) + 1
+  const seq = list.length + 1
   const id = uid('node')
+  const label =
+    title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
   getDb()
     .prepare(
       `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
@@ -89,14 +65,54 @@ export function ensureOffsiteNode(sessionId) {
       id,
       sessionId,
       idx,
-      'offsite_assist',
-      '场外协助',
+      `offsite_assist_${seq}`,
+      label,
       STEP_TYPE.OFFSITE,
       null,
       NODE_STATUS.PENDING,
       0,
     )
   return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+function offsiteNodeArchived(n) {
+  if (!n) return true
+  const out = parseJson(n.output_json, {})
+  return !!(out.archived || out.closeToken) && n.status === NODE_STATUS.SUCCEEDED
+}
+
+/**
+ * 解析可写的「场外协助」节点（流动扩展）。
+ * - 优先当前未归档的挂起/进行中节点
+ * - expand=true：没有可写节点时末尾新建一段（已归档不复用）
+ * - expand=false：仅保证至少一个（开聊补节点；可返回已有含归档）
+ */
+export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
+  const list = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const session = getSession(sessionId)
+  const ctx = parseJson(session?.context_json, {})
+  const pinnedId = ctx.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
+
+  const writable = list.find(
+    (n) =>
+      !offsiteNodeArchived(n) &&
+      (n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN),
+  )
+  if (writable) return writable
+
+  if (pinnedId && ctx.offsiteAssist?.active) {
+    const pinned = list.find((n) => n.id === pinnedId && !offsiteNodeArchived(n))
+    if (pinned) return pinned
+  }
+
+  if (expand || !list.length) {
+    return appendOffsiteNode(sessionId)
+  }
+  return list[list.length - 1]
 }
 
 /** 当前场外节点应视为计划挂起还是临时插队 */
@@ -120,8 +136,7 @@ function resolveOffsiteMode(session, offsiteNode) {
 }
 
 /**
- * 用户回归主线：场外默认完成并归档（写清提示；堵住后续 @ 收尾盖写）
- * @returns {{ closed: object[], closeToken: string|null, hadActive: boolean }}
+ * 用户回归主线：当前场外段落默认完成并归档（可多次；后续 @ 再扩展新段落）。
  */
 function archiveOffsiteOnReturnToMain(sessionId, {
   reason = 'returned_to_main',
@@ -147,12 +162,14 @@ function archiveOffsiteOnReturnToMain(sessionId, {
       (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
     )
   )
+  if (!hadActive) {
+    return { closed: [], closeToken: null, hadActive: false }
+  }
 
   for (const n of list) {
     const hung =
       n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN
     const pinned = ctx.offsiteAssist?.nodeInstanceId === n.id
-    if (!hung && !pinned && !ctx.offsiteAssist?.active) continue
     if (!hung && !pinned) continue
 
     const prev = parseJson(n.output_json, {})
@@ -195,7 +212,7 @@ function archiveOffsiteOnReturnToMain(sessionId, {
       role: 'system',
       type: 'status',
       content: {
-        text: `已回归正轨 → ${where}（该步及之后将按流程重跑）。场外协助已默认完成并归档；请以右侧流程时序为准。`,
+        text: `已回归正轨 → ${where}（该步及之后将按流程重跑）。本段场外已完成并归档；之后还可再开场外段落（流动扩展）。`,
         offsite: true,
         offsiteArchived: true,
         resumeTitle,
@@ -2569,8 +2586,8 @@ export function parseMemberMentions(text, memberList) {
 }
 
 /**
- * 流程外 @ 成员：写入当前活跃的「场外协助」节点（优先挂起中的）。
- * 离开场外：只允许右侧正常节点「从此重新开始」（无「继续」按钮）。
+ * 流程外 @ 成员：写入可写场外节点；已归档则末尾扩展新段落。
+ * 离开场外：右侧正常节点「从此重新开始」（本段归档，可再次扩展）。
  */
 export async function invokeMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
@@ -2588,7 +2605,7 @@ export async function invokeMentionedMembers(sessionId, text) {
   const mentioned = parseMemberMentions(text, members)
   if (!mentioned.length) return { invoked: [] }
 
-  const offsite = ensureOffsiteNode(sessionId)
+  let offsite = ensureOffsiteNode(sessionId, { expand: true })
   const group = getGroup(session.group_id)
   const ctx = parseJson(session.context_json, {})
   const mode = resolveOffsiteMode(session, offsite)
@@ -2596,6 +2613,7 @@ export async function invokeMentionedMembers(sessionId, text) {
   const paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
   const invoked = []
   const startedAt = nowIso()
+  const startNodeId = offsite.id
 
   ctx.offsiteAssist = {
     active: true,
@@ -2625,6 +2643,7 @@ export async function invokeMentionedMembers(sessionId, text) {
       ...prevOut,
       waiting: false,
       offsiteIdle: false,
+      archived: false,
       assists: history,
       lastMention: String(text || ''),
       mode,
@@ -2640,14 +2659,19 @@ export async function invokeMentionedMembers(sessionId, text) {
     content: {
       text:
         mode === OFFSITE_MODE.PLANNED
-          ? '场外协助 · 计划挂起中（@ 已记入）。回主线请点右侧正常节点。'
-          : '已进入场外协助（临时插队）。回主线请点右侧正常节点。',
+          ? `场外「${offsite.title || '场外协助'}」· 计划挂起。回主线点右侧正常节点（本段将归档，可再扩展）。`
+          : `场外「${offsite.title || '场外协助'}」· 临时插队。回主线点右侧正常节点（本段将归档，可再扩展）。`,
       offsite: true,
       mode,
     },
   })
 
   for (const member of mentioned) {
+    // 主线已回归并归档了原节点：流动扩展到新场外段落继续记结果
+    if (isOffsiteArchived(sessionId, startNodeId) || isOffsiteArchived(sessionId, offsite.id)) {
+      offsite = ensureOffsiteNode(sessionId, { expand: true })
+    }
+
     addMessage(sessionId, {
       role: 'member',
       member_id: member.id,
@@ -2684,7 +2708,10 @@ export async function invokeMentionedMembers(sessionId, text) {
 
     const still = getSession(sessionId)
     if (!still || still.status === SESSION_STATUS.ARCHIVED) break
-    if (isOffsiteArchived(sessionId, offsite.id)) break
+
+    if (isOffsiteArchived(sessionId, offsite.id)) {
+      offsite = ensureOffsiteNode(sessionId, { expand: true })
+    }
 
     addMessage(sessionId, {
       role: 'member',
@@ -2709,56 +2736,99 @@ export async function invokeMentionedMembers(sessionId, text) {
   }
 
   const still2 = getSession(sessionId)
-  if (
-    still2 &&
-    still2.status !== SESSION_STATUS.ARCHIVED &&
-    !isOffsiteArchived(sessionId, offsite.id)
-  ) {
-    const cur = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(offsite.id)
-    const curOut = parseJson(cur?.output_json, {})
-    const assists = Array.isArray(curOut.assists) ? [...curOut.assists] : []
-    assists.push({
-      at: startedAt,
-      finishedAt: nowIso(),
-      text: String(text || ''),
-      invoked,
-      mode,
-    })
+  if (!still2 || still2.status === SESSION_STATUS.ARCHIVED) {
+    return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
+  }
+
+  // 原段落已归档：结果落到新扩展段落，并直接完成本段归档（流动、可多次）
+  const startArchived = isOffsiteArchived(sessionId, startNodeId)
+  if (startArchived || isOffsiteArchived(sessionId, offsite.id)) {
+    offsite = ensureOffsiteNode(sessionId, { expand: true })
+  }
+
+  const cur = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(offsite.id)
+  const curOut = parseJson(cur?.output_json, {})
+  const assists = Array.isArray(curOut.assists) ? [...curOut.assists] : []
+  assists.push({
+    at: startedAt,
+    finishedAt: nowIso(),
+    text: String(text || ''),
+    invoked,
+    mode,
+    expanded: startArchived,
+  })
+
+  if (startArchived) {
+    // 回主线后的异步收尾 = 新场外段落，写完即归档（线性扩展）
     persistNodeIo(sessionId, offsite.id, {
-      input: parseJson(cur?.input_json, {}),
+      input: {
+        kind: 'offsite',
+        text: String(text || ''),
+        callArgs,
+        at: startedAt,
+        lateExpand: true,
+      },
       output: {
         ...curOut,
         assists,
         lastInvoked: invoked,
-        humanAction: 'pending',
-        mode,
-        plannedPause: mode === OFFSITE_MODE.PLANNED,
+        humanAction: 'approve',
+        mode: OFFSITE_MODE.INTERRUPT,
+        archived: true,
+        lateExpand: true,
+        closedAt: nowIso(),
+        closeReason: 'late_expand_archived',
       },
-      status: NODE_STATUS.WAITING_HUMAN,
-      finished: false,
+      status: NODE_STATUS.SUCCEEDED,
+      finished: true,
     })
-    emitSession(sessionId, {
-      type: 'session.status',
-      payload: {
-        sessionId,
-        status: still2.status,
-        offsiteAssist: true,
-        offsiteMode: mode,
-        nodeInstanceId: offsite.id,
-      },
-    })
-  } else if (invoked.length && isOffsiteArchived(sessionId, offsite.id)) {
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
       node_instance_id: offsite.id,
       content: {
-        text: '场外协助结果已忽略：用户已回归正轨，场外已归档。',
+        text: `场外流程已扩展并归档「${offsite.title || '场外协助'}」（异步收尾）。主线仍以右侧时序为准。`,
         offsite: true,
         offsiteArchived: true,
+        lateExpand: true,
       },
     })
+    return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode, lateExpand: true }
   }
+
+  persistNodeIo(sessionId, offsite.id, {
+    input: parseJson(cur?.input_json, {}),
+    output: {
+      ...curOut,
+      assists,
+      lastInvoked: invoked,
+      humanAction: 'pending',
+      mode,
+      plannedPause: mode === OFFSITE_MODE.PLANNED,
+      archived: false,
+    },
+    status: NODE_STATUS.WAITING_HUMAN,
+    finished: false,
+  })
+  const ctxLive = parseJson(getSession(sessionId)?.context_json, {})
+  ctxLive.offsiteAssist = {
+    active: true,
+    nodeInstanceId: offsite.id,
+    at: startedAt,
+    mode,
+    planned: mode === OFFSITE_MODE.PLANNED,
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctxLive) })
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: {
+      sessionId,
+      status: still2.status,
+      offsiteAssist: true,
+      offsiteMode: mode,
+      nodeInstanceId: offsite.id,
+    },
+  })
 
   return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
 }
