@@ -532,6 +532,15 @@ body,
   font-size: 12px;
   color: var(--ecw-text-2);
   line-height: 1.55;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.flow-continue-btn {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .flow-current-bar.is-human-attention {
@@ -549,8 +558,6 @@ body,
 }
 
 .flow-current-bar strong {
-  display: block;
-  margin-top: 4px;
   color: var(--ecw-text-1);
   font-weight: 600;
   font-size: 13.5px;
