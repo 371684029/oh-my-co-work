@@ -132,7 +132,7 @@ router.post('/backup', (_req, res) => {
   }
 })
 
-/** R04：查询某路径占用者 */
+/** 查询某路径占用者（提示用，不互斥） */
 router.get('/path-lock', (req, res) => {
   try {
     res.json({ holders: listPathHolders(String(req.query.path || '')) })
@@ -490,7 +490,7 @@ router.get('/sessions/:id/processes', (req, res) => {
     res.status(500).json({ error: e.message })
   }
 })
-/** 会话资源：进程 + 工作目录软锁占用方 */
+/** 会话资源：进程 + 工作目录占用提示 */
 router.get('/sessions/:id/resources', (req, res) => {
   try {
     res.json(getSessionResources(req.params.id))

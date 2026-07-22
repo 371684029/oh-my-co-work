@@ -43,7 +43,7 @@ export const api = {
     archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
     /** 解档：仍在本会话，可无限归档 */
     unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),
-    /** 会话资源：进程登记 + 目录软锁 */
+    /** 会话资源：进程登记 + 目录占用提示 */
     resources: (id) => req(`/sessions/${id}/resources`),
     /** 再杀本会话进程；body: { runId?, includeDetach? } */
     killProcesses: (id, body) =>

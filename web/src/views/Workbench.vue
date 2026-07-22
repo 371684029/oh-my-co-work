@@ -684,21 +684,10 @@
           场外段落进行中 · 回主线点正常节点「克隆并从此开始」（本段归档；可再扩展）
         </p>
         <template v-if="detail?.nodes?.length">
-          <button
-            v-if="flowHistoryCount > 0"
-            type="button"
-            class="flow-history-toggle"
-            @click="flowHistoryOpen = !flowHistoryOpen"
-          >
-            <span>历史 {{ flowHistoryCount }} 步</span>
-            <span class="flow-history-toggle-hint">{{
-              flowHistoryOpen ? '收起' : '展开查看'
-            }}</span>
-          </button>
           <div
             v-for="n in detail.nodes"
-            v-show="!isFlowHistoryNode(n) || flowHistoryOpen"
             :key="n.id"
+            :data-flow-node-id="n.id"
             class="flow-step"
             :class="[
               flowClass(n),
@@ -709,6 +698,7 @@
                 'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
                 'is-flow-history': isFlowHistoryNode(n),
                 'is-cloned': isClonedNode(n),
+                'is-flow-anchor': n.id === flowAnchorNodeId,
               },
             ]"
           >
@@ -1040,7 +1030,7 @@
         </div>
       </div>
 
-      <!-- Tab：资源（进程 / 目录软锁） -->
+      <!-- Tab：资源（进程 / 目录占用提示） -->
       <div v-show="rightTab === 'resources'" class="wb-right-pane resources-pane">
         <div class="announce-toolbar">
           <span class="announce-title">本机资源</span>
@@ -1069,12 +1059,12 @@
         <p class="resources-note">
           {{
             sessionResources?.note ||
-            '进程与目录锁为尽力保证；仅唤起 / 外部 CLI 可能仍需手动关窗。'
+            '同目录允许多会话并行；进程清理为尽力保证，仅唤起 / 外部 CLI 可能仍需手动关窗。'
           }}
         </p>
         <div v-if="sessionResources" class="resources-body">
           <div class="resources-block">
-            <div class="resources-block-title">工作目录（软锁）</div>
+            <div class="resources-block-title">工作目录（占用提示）</div>
             <div class="resources-path" :title="sessionResources.workPath || ''">
               {{ sessionResources.workPath || '（未配置）' }}
             </div>
@@ -1105,11 +1095,11 @@
                   type="danger"
                   @click="archiveHolderSession(h.id)"
                 >
-                  归档以解占
+                  归档对方
                 </el-button>
               </div>
             </div>
-            <p v-else class="resources-empty-line">当前无其它会话占用该路径</p>
+            <p v-else class="resources-empty-line">当前无其它会话使用该路径</p>
           </div>
           <div class="resources-block">
             <div class="resources-block-title">
@@ -1178,8 +1168,6 @@ const activeId = ref(null)
 const editTitle = ref('')
 const startTarget = ref('')
 const listFilter = ref('all')
-/** 流程轨：历史世代默认折叠 */
-const flowHistoryOpen = ref(false)
 /** XSender 实例：该组件无可靠 v-model，提交时用 ref 取文 */
 const senderRef = ref(null)
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
@@ -1918,7 +1906,7 @@ const composerPlaceholder = computed(() => {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
   if (mode === 'path_busy') {
-    return '目录被其它会话软锁占用：可归档对方、打开「资源」查看，再同意重试'
+    return '（旧闸门）点同意即可重试；同目录已允许多会话并行'
   }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
@@ -1930,7 +1918,7 @@ const composerToolbarHint = computed(() => {
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点继续/归档/放弃'
-    if (mode === 'path_busy') return '同意重试 · 或归档占用方 · 资源'
+    if (mode === 'path_busy') return '同意重试'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -2340,7 +2328,6 @@ function onConvChange(item) {
 
 watch(activeId, (id, prev) => {
   if (id && id !== prev) {
-    flowHistoryOpen.value = false
     sessionResources.value = null
   }
   if (id && id !== prev && (!detail.value || detail.value.session.id !== id)) {
@@ -2410,8 +2397,8 @@ async function archiveHolderSession(id) {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '归档占用方会话以放开目录软锁？会尽量结束对方进程；外部窗口或需手关。',
-      '归档占用方',
+      '归档对方会话？会尽量结束对方进程；外部窗口或需手关。同目录本就不互斥，归档仅为释放对方资源。',
+      '归档对方',
       { type: 'warning', confirmButtonText: '归档对方', cancelButtonText: '取消' },
     )
   } catch {
@@ -2808,7 +2795,7 @@ function isClonedNode(n) {
   return !!(n?.output?.cloned || n?.input?.cloned)
 }
 
-/** 当前世代起点：最近一次克隆批次，否则当前步及之后 */
+/** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
 const flowHistorySplitIndex = computed(() => {
   const nodes = detail.value?.nodes || []
   if (!nodes.length) return 0
@@ -2826,13 +2813,54 @@ const flowHistorySplitIndex = computed(() => {
   return i > 0 ? i : 0
 })
 
-const flowHistoryCount = computed(() => flowHistorySplitIndex.value)
-
 function isFlowHistoryNode(n) {
   const nodes = detail.value?.nodes || []
   const i = nodes.findIndex((x) => x.id === n.id)
   return i >= 0 && i < flowHistorySplitIndex.value
 }
+
+/** 流程轨应锚定滚动的节点：场外当前段 → 待确认 → 执行中 → 当前步 → 游标步 */
+const flowAnchorNodeId = computed(() => {
+  const nodes = detail.value?.nodes || []
+  if (!nodes.length) return null
+  const off = activeOffsiteNode.value
+  if (off?.id) return off.id
+  const waiting = nodes.find((n) => n.status === 'waiting_human')
+  if (waiting) return waiting.id
+  const running = nodes.find((n) => n.status === 'running')
+  if (running) return running.id
+  const cur = nodes.find((n) => isCurrent(n))
+  if (cur) return cur.id
+  const idx = Number(detail.value?.session?.current_step_index)
+  if (Number.isFinite(idx)) {
+    const byIdx = nodes.find((n) => Number(n.step_index) === idx)
+    if (byIdx) return byIdx.id
+  }
+  return nodes[nodes.length - 1]?.id || null
+})
+
+let flowScrollTimer = 0
+function scrollFlowToAnchor() {
+  if (rightTab.value !== 'flow') return
+  const id = flowAnchorNodeId.value
+  if (!id) return
+  window.clearTimeout(flowScrollTimer)
+  flowScrollTimer = window.setTimeout(async () => {
+    await nextTick()
+    const el = document.querySelector(
+      `[data-flow-node-id="${typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id}"]`,
+    )
+    if (!el) return
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+  }, 40)
+}
+
+watch(
+  [flowAnchorNodeId, () => rightTab.value, () => detail.value?.nodes?.length],
+  () => {
+    scrollFlowToAnchor()
+  },
+)
 
 /** 离开场外 / 重开：统一追加克隆；已归档亦可 */
 async function restartFromNode(n) {
@@ -2852,11 +2880,11 @@ async function restartFromNode(n) {
     })
     rightTab.value = 'flow'
     footerCollapsed.value = false
-    flowHistoryOpen.value = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     const focusId = r.nodeInstanceId || n.id
     expandedNodeId.value = focusId
+    scrollFlowToAnchor()
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
     ElMessage.success(
       `已追加克隆并自「${title}」开始${
@@ -3165,6 +3193,7 @@ async function doDelete(targetId) {
 }
 
 onUnmounted(() => {
+  window.clearTimeout(flowScrollTimer)
   if (ws) ws.close()
 })
 
@@ -4916,29 +4945,11 @@ loadLists().then(() => {
   font-size: 11.5px;
   color: var(--ecw-text-3, #8b8f9a);
 }
-.flow-history-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin: 0 0 10px;
-  padding: 7px 10px;
-  border: 0.5px dashed rgba(0, 0, 0, 0.12);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
-  color: var(--ecw-text-2, #5c5f66);
-  font-size: 12px;
-  cursor: pointer;
-}
-.flow-history-toggle:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-.flow-history-toggle-hint {
-  font-size: 11px;
-  color: var(--ecw-text-3, #8b8f9a);
-}
 .flow-step.is-flow-history {
   opacity: 0.72;
+}
+.flow-step.is-flow-anchor {
+  scroll-margin-block: 12px;
 }
 .flow-offsite-hint {
   margin: 0 0 12px;

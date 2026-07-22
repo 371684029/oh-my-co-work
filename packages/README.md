@@ -14,10 +14,10 @@
 | 平台 | 文件 | 大小 |
 |------|------|------|
 | darwin-arm64 | [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip) | 5138218 |
-| linux-x64 | [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip) | 5269899 |
+| linux-x64 | [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip) | 5269873 |
 | win32-x64 | [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip) | 5071721 |
 
-版本：`1.1.1`（大版本 v1）
+版本：`1.2.0`（大版本 v1）
 
 ## 启动
 

@@ -37,38 +37,53 @@ import {
   OFFSITE_MODE,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
-import { assertPathAvailable } from './pathLock.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
 }
 
 /**
- * 末尾追加一场外段落（流动扩展；可多次）
+ * 场外插入游标：当前主线步索引（开场未跑则为 0 → 插到最前）。
  */
-function appendOffsiteNode(sessionId, { title } = {}) {
-  const list = getDb()
+function resolveOffsiteInsertIndex(sessionId) {
+  const session = getSession(sessionId)
+  if (!session) return 0
+  const cur = Number(session.current_step_index)
+  if (!Number.isFinite(cur) || cur < 0) return 0
+  return cur
+}
+
+/**
+ * 在当前时序游标插入一场外段落（开场 @ → 第一位；中途 → 插在当前步前）。
+ * 其后节点 step_index +1；current_step_index 同步后移，主线游标仍指向原节点。
+ */
+function insertOffsiteAtCursor(sessionId, { title } = {}) {
+  const db = getDb()
+  const list = db
     .prepare(
       `SELECT id FROM node_instances WHERE session_id = ? AND step_type = ?`,
     )
     .all(sessionId, STEP_TYPE.OFFSITE)
-  const row = getDb()
-    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
-    .get(sessionId)
-  const idx = row?.m == null ? 0 : Number(row.m) + 1
   const seq = list.length + 1
+  const insertIdx = resolveOffsiteInsertIndex(sessionId)
   const id = uid('node')
-  const label =
-    title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
-  getDb()
-    .prepare(
-      `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
+  const label = title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
+
+  const shift = db.prepare(
+    `UPDATE node_instances SET step_index = step_index + 1
+     WHERE session_id = ? AND step_index >= ?`,
+  )
+  const insert = db.prepare(
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+
+  const run = db.transaction(() => {
+    shift.run(sessionId, insertIdx)
+    insert.run(
       id,
       sessionId,
-      idx,
+      insertIdx,
       `offsite_assist_${seq}`,
       label,
       STEP_TYPE.OFFSITE,
@@ -76,7 +91,15 @@ function appendOffsiteNode(sessionId, { title } = {}) {
       NODE_STATUS.PENDING,
       0,
     )
-  return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+    const session = getSession(sessionId)
+    const cur = Number(session?.current_step_index)
+    if (Number.isFinite(cur) && cur >= insertIdx) {
+      updateSession(sessionId, { current_step_index: cur + 1 })
+    }
+  })
+  run()
+
+  return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
 }
 
 function offsiteNodeArchived(n) {
@@ -88,8 +111,8 @@ function offsiteNodeArchived(n) {
 /**
  * 解析可写的「场外协助」节点（流动扩展）。
  * - 优先当前未归档的挂起/进行中节点
- * - expand=true：没有可写节点时末尾新建一段（已归档不复用）
- * - expand=false：仅保证至少一个（开聊补节点；可返回已有含归档）
+ * - expand=true：没有可写节点时在**当前时序游标**新建一段（已归档不复用）
+ * - expand=false：只返回已有，不新建（开聊不再预挂末尾占位）
  */
 export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
   const list = getDb()
@@ -114,27 +137,16 @@ export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
     if (pinned) return pinned
   }
 
-  // 流动扩展：复用「末尾」未归档 pending（刚 append 尚未标 running），不误用中间计划场外
+  // 流动扩展：复用尚未标 running 的 pending（刚插入），再否则按时序游标新建
   if (expand) {
-    const maxRow = getDb()
-      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
-      .get(sessionId)
-    const maxIdx = maxRow?.m == null ? -1 : Number(maxRow.m)
-    const trailing = [...list]
+    const pending = [...list]
       .reverse()
-      .find(
-        (n) =>
-          !offsiteNodeArchived(n) &&
-          n.status === NODE_STATUS.PENDING &&
-          Number(n.step_index) === maxIdx,
-      )
-    if (trailing) return trailing
-    return appendOffsiteNode(sessionId)
+      .find((n) => !offsiteNodeArchived(n) && n.status === NODE_STATUS.PENDING)
+    if (pending) return pending
+    return insertOffsiteAtCursor(sessionId)
   }
 
-  if (!list.length) {
-    return appendOffsiteNode(sessionId)
-  }
+  if (!list.length) return null
   return list[list.length - 1]
 }
 
@@ -905,9 +917,6 @@ export function createSessionFromGroup(groupId, { title } = {}) {
   const steps = parseJson(group.steps_json, [])
   if (!steps.length) throw new Error('群模板没有步骤')
 
-  // R04：开聊前检查工作目录互斥
-  assertPathAvailable(group.work_folder, null)
-
   const sessionId = uid('ses')
   const t = nowIso()
   const groupTitle = group.title || '未命名群'
@@ -1008,8 +1017,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       st === STEP_TYPE.OFFSITE ? 0 : flowNeedsWait(flow) || step.gate ? 1 : 0,
     )
   })
-  // 模板未配置时，在末尾自动补一个「场外协助」额外节点
-  ensureOffsiteNode(sessionId)
+  // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
 
   addMessage(sessionId, {
     role: 'system',
@@ -1054,8 +1062,6 @@ export function createSessionFromGroup(groupId, { title } = {}) {
 export function createSessionFromMember(memberId, { title } = {}) {
   const raw = getMember(memberId)
   if (!raw || !raw.enabled) throw new Error('成员不存在或未启用')
-  // R04：成员工作目录互斥
-  assertPathAvailable(raw.work_folder, null)
   const name = raw.display_name || raw.name || '成员'
   const t = nowIso()
   const groupId = uid('grp')
@@ -1313,44 +1319,6 @@ export async function advance(sessionId) {
         },
       })
       return
-    }
-
-    // R04：执行前再次确认工作目录未被其它会话占用
-    try {
-      const folderForLock =
-        ctx.primaryWorkFolder ||
-        ctx.groupFolder ||
-        member.work_folder ||
-        group?.work_folder ||
-        null
-      assertPathAvailable(folderForLock, sessionId)
-    } catch (e) {
-      if (e?.code === 'PATH_BUSY') {
-        persistNodeIo(sessionId, node.id, {
-          input: { memberId: member.id, pathBusy: true },
-          output: { error: e.message, code: 'PATH_BUSY', humanAction: 'pending' },
-          status: NODE_STATUS.WAITING_HUMAN,
-        })
-        updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
-        addMessage(sessionId, {
-          role: 'system',
-          type: 'gate',
-          node_instance_id: node.id,
-          content: {
-            text: e.message,
-            mode: 'path_busy',
-            actions: ['approve', 'reject'],
-            policy:
-              '可先归档占用方会话，或打开右侧「资源」查看；再点「同意」重试，或「拒绝」结束本步。外部占用不在软锁范围内。',
-            pathBusy: true,
-            holderSessionId: e.sessionId,
-            holderTitle: e.title || null,
-            busyPath: e.path || null,
-          },
-        })
-        return
-      }
-      throw e
     }
 
     const paramsMap = injectCallArgsParam(
@@ -2627,12 +2595,12 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
 
   if (action === 'approve' || action === 'admin_approve') {
     const out = parseJson(node.output_json, {})
-    // R04：路径占用闸门 — 同意 = 再试一次执行
+    // 兼容旧会话遗留的 path_busy 闸门：同意 = 直接重试执行（已不再互斥拦截）
     if (out.code === 'PATH_BUSY' || out.pathBusy) {
       const { note } = bindGateHumanInput(sessionId, {
         text,
         action: 'approve',
-        actionLabel: '重试（路径锁）',
+        actionLabel: '重试（目录）',
         nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
         nodeInstanceId: node.id,
       })
@@ -2641,7 +2609,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
         type: 'gate',
         node_instance_id: node.id,
         content: {
-          text: note ? `重试路径锁：${note}` : '已确认重试（工作目录锁）',
+          text: note ? `重试：${note}` : '已确认重试',
           action: 'approve',
           mode: 'path_busy',
         },
