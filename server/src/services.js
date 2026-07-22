@@ -25,6 +25,7 @@ import {
   resolveInterruptedSession,
   continuePastOffsite,
   ensureArchiveTailNode,
+  pruneIdleOffsitePlaceholders,
 } from './engine.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
@@ -381,9 +382,12 @@ export function listSessions({ status, includeDemo } = {}) {
 export function getSessionDetail(id) {
   const session = sessionRow(getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id))
   if (!session) return null
-  // 旧会话补齐末尾归档节点；场外按时序插入，不预挂
+  // 清旧版预挂的空闲场外占位；末尾固定归档节点（场外仅 @ 时插入）
   try {
-    if (session.status !== 'archived') ensureArchiveTailNode(id)
+    if (session.status !== 'archived') {
+      pruneIdleOffsitePlaceholders(id)
+      ensureArchiveTailNode(id)
+    }
   } catch {
     /* ignore */
   }

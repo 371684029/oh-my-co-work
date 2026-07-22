@@ -103,6 +103,43 @@ function insertOffsiteAtCursor(sessionId, { title } = {}) {
 }
 
 /**
+ * 清掉从未启用的场外占位（旧版开聊/打开详情预挂的末尾空节点）。
+ * 仅删 pending + step_id=offsite_assist_* + 无实质入出；模板里配置的场外保留。
+ */
+export function pruneIdleOffsitePlaceholders(sessionId) {
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ?`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const del = getDb().prepare('DELETE FROM node_instances WHERE id = ?')
+  let removed = 0
+  for (const n of rows) {
+    if (n.status !== NODE_STATUS.PENDING) continue
+    const sid = String(n.step_id || '')
+    if (!sid.startsWith('offsite_assist_')) continue
+    const input = parseJson(n.input_json, null)
+    const output = parseJson(n.output_json, null)
+    const hasInput =
+      input &&
+      typeof input === 'object' &&
+      Object.keys(input).some((k) => input[k] != null && String(input[k]).trim?.() !== '')
+    const hasOutput =
+      output &&
+      typeof output === 'object' &&
+      (output.assists?.length ||
+        output.lastMention ||
+        output.archived ||
+        output.mode ||
+        output.humanAction)
+    if (hasInput || hasOutput) continue
+    del.run(n.id)
+    removed += 1
+  }
+  return { removed }
+}
+
+/**
  * 确保会话末尾有「归档」节点（每局固定挂尾；克隆续跑后再挂新一段）。
  */
 export function ensureArchiveTailNode(sessionId, { title } = {}) {
