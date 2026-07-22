@@ -30,6 +30,7 @@ import {
   saveSessionAnnouncement,
   restartFromNode,
   continuePastOffsite,
+  getSessionResources,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
@@ -460,14 +461,24 @@ router.post('/sessions/:id/continue-past-offsite', async (req, res) => {
 })
 /**
  * 释放资源：杀掉本会话（或指定 runId）进程，不改变会话状态
- * body: { runId?: string } — 有 runId 时只杀本次运行
+ * body: { runId?: string, includeDetach?: boolean }
  */
 router.post('/sessions/:id/kill-processes', (req, res) => {
   try {
     const runId = req.body?.runId
+    const includeDetach = req.body?.includeDetach !== false
     const before = listSessionProcesses(req.params.id)
-    const result = killSessionProcesses(req.params.id, runId ? { runId } : {})
-    res.json({ ok: true, ...result, before })
+    const result = killSessionProcesses(
+      req.params.id,
+      runId ? { runId, includeDetach } : { includeDetach },
+    )
+    res.json({
+      ok: true,
+      ...result,
+      before,
+      after: listSessionProcesses(req.params.id),
+      note: '已请求结束进程；外部窗口若仍在，请手动关闭。',
+    })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -477,6 +488,14 @@ router.get('/sessions/:id/processes', (req, res) => {
     res.json({ processes: listSessionProcesses(req.params.id) })
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+/** 会话资源：进程 + 工作目录软锁占用方 */
+router.get('/sessions/:id/resources', (req, res) => {
+  try {
+    res.json(getSessionResources(req.params.id))
+  } catch (e) {
+    res.status(404).json({ error: e.message })
   }
 })
 router.post('/sessions/:id/messages', async (req, res) => {

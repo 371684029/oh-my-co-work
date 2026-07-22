@@ -26,9 +26,10 @@ import {
   ensureOffsiteNode,
   continuePastOffsite,
 } from './engine.js'
-import { killSessionProcesses } from './processRegistry.js'
+import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
 import { readSessionAnnouncement } from './journal.js'
+import { sessionWorkPath, listPathHolders } from './pathLock.js'
 
 function memberRow(r) {
   if (!r) return null
@@ -466,6 +467,31 @@ export function deleteSession(id) {
   getDb().prepare('DELETE FROM messages WHERE session_id = ?').run(id)
   getDb().prepare('DELETE FROM node_instances WHERE session_id = ?').run(id)
   getDb().prepare('DELETE FROM sessions WHERE id = ?').run(id)
+}
+
+/**
+ * 会话资源视图：进程登记 + 工作目录占用（软锁）
+ * 说明：杀进程尽力而为；仅唤起/外部 CLI 可能仍需手动关窗。
+ */
+export function getSessionResources(sessionId) {
+  const row = getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId)
+  if (!row) throw new Error('会话不存在')
+  const session = sessionRow(row)
+  const group = getGroup(session.group_id)
+  const workPath = sessionWorkPath(row, group)
+  const processes = listSessionProcesses(sessionId, { includeDisk: true })
+  const holders = workPath ? listPathHolders(workPath) : []
+  return {
+    sessionId,
+    status: session.status,
+    title: session.title,
+    workPath,
+    processes,
+    pathHolders: holders,
+    orphanRisk: processes.some((p) => p.orphanRisk || p.detach),
+    note:
+      '本机进程与目录锁为尽力保证：归档会尽量结束本会话进程并放开目录；仅唤起窗口 / 外部 CLI（如 Cursor）可能仍需手动关闭。',
+  }
 }
 
 export {

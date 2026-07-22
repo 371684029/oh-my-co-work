@@ -53,7 +53,7 @@ export function assertPathAvailable(folderPath, excludeSessionId) {
     if (other && other === norm) {
       throw Object.assign(
         new Error(
-          `工作目录已被会话「${s.title || s.id}」占用，请先归档或完成该任务后再开聊`,
+          `工作目录已被会话「${s.title || s.id}」软锁占用。可归档该会话后重试；外部终端占用不在软锁范围内`,
         ),
         {
           code: 'PATH_BUSY',

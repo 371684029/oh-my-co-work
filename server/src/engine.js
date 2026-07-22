@@ -1,7 +1,11 @@
 import { getDb, parseJson } from './db.js'
 import { emitSession, emitAll } from './bus.js'
 import { runMember } from './runners.js'
-import { killSessionProcesses, killMemberProcesses } from './processRegistry.js'
+import {
+  killSessionProcesses,
+  killMemberProcesses,
+  cleanupArchivedSessionPidFiles,
+} from './processRegistry.js'
 import {
   writeNodeJournal,
   writeSessionJournalIndex,
@@ -649,8 +653,14 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
   ctx.lastUnarchive = { at: nowIso(), reason }
+  const waiting = getDb()
+    .prepare(
+      `SELECT id FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? LIMIT 1`,
+    )
+    .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
+  const nextStatus = waiting ? SESSION_STATUS.WAITING_HUMAN : SESSION_STATUS.ACTIVE
   updateSession(sessionId, {
-    status: SESSION_STATUS.ACTIVE,
+    status: nextStatus,
     archive_reason: null,
     archived_at: null,
     context_json: JSON.stringify(ctx),
@@ -667,11 +677,11 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
   }
   emitSession(sessionId, {
     type: 'session.status',
-    payload: { sessionId, status: SESSION_STATUS.ACTIVE, unarchived: true },
+    payload: { sessionId, status: nextStatus, unarchived: true },
   })
   emitAll({
     type: 'session.status',
-    payload: { sessionId, status: SESSION_STATUS.ACTIVE, unarchived: true },
+    payload: { sessionId, status: nextStatus, unarchived: true },
   })
   return getSession(sessionId)
 }
@@ -1330,9 +1340,12 @@ export async function advance(sessionId) {
             text: e.message,
             mode: 'path_busy',
             actions: ['approve', 'reject'],
-            policy: '可归档其它占用会话后点「同意」重试，或「拒绝」结束本步。',
+            policy:
+              '可先归档占用方会话，或打开右侧「资源」查看；再点「同意」重试，或「拒绝」结束本步。外部占用不在软锁范围内。',
             pathBusy: true,
             holderSessionId: e.sessionId,
+            holderTitle: e.title || null,
+            busyPath: e.path || null,
           },
         })
         return
@@ -1534,7 +1547,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     role: 'system',
     type: 'status',
     content: {
-      text: `${reasonLabel}。归档须人工同意；${hours} 小时内未确认将自动归档并释放资源。`,
+      text: `${reasonLabel}。归档须人工同意；${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。`,
     },
   })
   addMessage(sessionId, {
@@ -1819,7 +1832,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已归档并释放本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）。归档只省资源，本会话仍可解档或从右侧节点重开。`,
+          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录占用。外部窗口（如 Cursor）若仍在请手动关。本会话仍可解档或从右侧节点重开。`,
         },
       })
     } catch {
@@ -1831,7 +1844,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: '已归档（资源已释放）。本会话仍可解档续聊，或从右侧节点「克隆并从此开始」。',
+          text: '已归档：已请求释放进程并放开目录。若仍有外部窗口请手动关闭。本会话仍可解档续聊，或「克隆并从此开始」。',
         },
       })
     } catch {
@@ -1932,6 +1945,19 @@ export function markInterruptedOnBoot() {
   if (ids.length) {
     emitAll({ type: 'sessions.interrupted', payload: { ids } })
     console.log(`[acw] interrupted ${ids.length} session(s) for recovery`)
+  }
+  // 已归档会话：清掉残留 console pid 文件，避免误报占用
+  try {
+    const archived = getDb()
+      .prepare(`SELECT id FROM sessions WHERE status = ?`)
+      .all(SESSION_STATUS.ARCHIVED)
+      .map((r) => r.id)
+    const cleaned = cleanupArchivedSessionPidFiles(archived)
+    if (cleaned.cleared) {
+      console.log(`[acw] cleared pid files for ${cleaned.cleared} archived session(s)`)
+    }
+  } catch (e) {
+    console.warn('[acw] cleanup archived pid files', e?.message || e)
   }
   return { marked: ids.length, ids }
 }

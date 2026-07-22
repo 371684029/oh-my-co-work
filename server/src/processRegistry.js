@@ -93,17 +93,70 @@ export function unregisterProcess(sessionId, runId) {
   if (map.size === 0) bySession.delete(sessionId)
 }
 
-export function listSessionProcesses(sessionId) {
+export function listSessionProcesses(sessionId, { includeDisk = true } = {}) {
+  const out = []
+  const seen = new Set()
   const map = bySession.get(sessionId)
-  if (!map) return []
-  return [...map.entries()].map(([runId, v]) => ({
-    runId,
-    pid: v.pid,
-    kind: v.kind,
-    label: v.label,
-    memberId: v.memberId || null,
-    startedAt: v.startedAt,
-  }))
+  if (map) {
+    for (const [runId, v] of map.entries()) {
+      if (v.pid) seen.add(v.pid)
+      out.push({
+        runId,
+        pid: v.pid,
+        kind: v.kind,
+        label: v.label,
+        memberId: v.memberId || null,
+        startedAt: v.startedAt,
+        detach: !!v.detach,
+        orphanRisk: !!v.detach,
+        source: 'memory',
+      })
+    }
+  }
+  if (includeDisk) {
+    for (const pid of readSessionPidsFromDisk(sessionId)) {
+      if (seen.has(pid)) continue
+      seen.add(pid)
+      out.push({
+        runId: null,
+        pid,
+        kind: 'disk',
+        label: '磁盘登记（可能为仅唤起/遗留）',
+        memberId: null,
+        startedAt: null,
+        detach: true,
+        orphanRisk: true,
+        source: 'disk',
+      })
+    }
+  }
+  return out
+}
+
+/** 清理已归档会话残留的 console pid 文件（启动对账） */
+export function cleanupArchivedSessionPidFiles(sessionIds) {
+  const ids = Array.isArray(sessionIds) ? sessionIds : []
+  let cleared = 0
+  for (const id of ids) {
+    try {
+      clearSessionPidFile(id)
+      const dir = path.join(DATA_ROOT, 'console')
+      if (!fs.existsSync(dir)) continue
+      for (const name of fs.readdirSync(dir)) {
+        if (name.startsWith(`run_${id}_`) && name.endsWith('.pid')) {
+          try {
+            fs.unlinkSync(path.join(dir, name))
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      cleared += 1
+    } catch {
+      /* ignore */
+    }
+  }
+  return { cleared }
 }
 
 /**
