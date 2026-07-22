@@ -23,6 +23,7 @@ import {
   createSessionFromGroup,
   createSessionFromMember,
   archiveSession,
+  unarchiveSession,
   handleGateAction,
   postUserMessage,
   refreshSessionAnnouncement,
@@ -415,8 +416,17 @@ router.post('/sessions/:id/archive', (req, res) => {
   archiveSession(req.params.id, req.body?.reason || 'manual')
   res.json(getSessionDetail(req.params.id)?.session)
 })
+/** 解档：归档只释放资源，本会话可继续 */
+router.post('/sessions/:id/unarchive', (req, res) => {
+  try {
+    unarchiveSession(req.params.id, { reason: req.body?.reason || 'manual' })
+    res.json(getSessionDetail(req.params.id)?.session)
+  } catch (e) {
+    res.status(400).json({ error: e.message, code: e.code })
+  }
+})
 /**
- * 从指定节点重新开始（归档前/后均可）
+ * 从指定节点重新开始（归档前/后均可；统一追加克隆）
  * body: { nodeInstanceId?: string, stepIndex?: number }
  */
 router.post('/sessions/:id/restart-from-node', async (req, res) => {

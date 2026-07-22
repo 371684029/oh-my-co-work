@@ -84,7 +84,7 @@
 | 成员单聊无「说明/参数」步 | `createSessionFromMember` 仅成员一步 | ✅ |
 | 会话历史：群模板 / 成员两大块 | `Workbench` Conversations `groupable` | ✅ |
 | 气泡单层（`noStyle`） | `BubbleList` + `.bubble-rich` | ✅ |
-| 归档后发送 = 新任务 | `postUserMessage` | ✅ |
+| 归档后发送 = 解档续本会话 | `postUserMessage` + `unarchiveSession` | ✅ |
 | 聊天改名 / 删除 | PATCH/DELETE sessions | ✅ |
 | WS 推送 | `bus.js` + 前端 connect | ✅ |
 | 支持与交流 | `Support.vue` + `support.json` | ✅ |
@@ -123,7 +123,7 @@
 4. 人工提交与同意/拒绝闸门行为正确；script 有输出；**等人时界面标红突出**；闸门按钮在输入区右侧  
 4b. 输入框 **Enter 发送**、Shift+Enter 换行；`/` `@` `#` 面板可用  
 4c. 设置中「支持与交流」为浅灰其它区；文案为点赞支持口径  
-5. 跑完待确认归档（或超时自动）；可手动归档；归档后再发 = 新任务  
+5. 跑完待确认归档（或超时自动）；可手动归档；归档只省资源，可解档或节点重开  
 6. 聊天可改名、可删除；刷新后数据仍在  
 7. 设置 → 支持与交流 / 关于与更新可打开  
 

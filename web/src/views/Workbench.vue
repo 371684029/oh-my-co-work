@@ -184,6 +184,16 @@
             >
               归档
             </el-button>
+            <el-button
+              v-else
+              size="default"
+              text
+              bg
+              type="primary"
+              @click="doUnarchive"
+            >
+              解档
+            </el-button>
             <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
           </div>
         </div>
@@ -346,10 +356,10 @@
                 <div class="composer" :class="{ 'composer--gate': !!pendingGate }">
                   <el-alert
                     v-if="detail.session.status === 'archived'"
-                    type="success"
+                    type="info"
                     :closable="false"
                     show-icon
-                    title="任务已归档：发送将开始空白新任务"
+                    title="已归档（只释放资源）。发送将解档并记入本会话；续跑流程请右侧「克隆并从此开始」。空白新任务请另开聊。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -380,7 +390,7 @@
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
                         <span class="at-panel-tip"
-                          >记入场外 · 回主线点右侧正常节点（回退追加克隆）</span
+                          >记入场外 · 续跑请右侧「克隆并从此开始」</span
                         >
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
@@ -628,7 +638,7 @@
       <!-- Tab：流程 -->
       <div v-show="rightTab === 'flow'" class="wb-right-pane">
         <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
-          已归档 · 资源已释放
+          已归档 · 只释放资源
           <template v-if="archiveOutcomeTag">
             ·
             <span
@@ -637,14 +647,26 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 未执行节点仍在
+          · 可解档或从节点重开（追加克隆）
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          场外段落进行中 · 回主线点右侧正常节点（回退将追加克隆；本段归档；可再扩展）
+          场外段落进行中 · 回主线点正常节点「克隆并从此开始」（本段归档；可再扩展）
         </p>
         <template v-if="detail?.nodes?.length">
+          <button
+            v-if="flowHistoryCount > 0"
+            type="button"
+            class="flow-history-toggle"
+            @click="flowHistoryOpen = !flowHistoryOpen"
+          >
+            <span>历史 {{ flowHistoryCount }} 步</span>
+            <span class="flow-history-toggle-hint">{{
+              flowHistoryOpen ? '收起' : '展开查看'
+            }}</span>
+          </button>
           <div
             v-for="n in detail.nodes"
+            v-show="!isFlowHistoryNode(n) || flowHistoryOpen"
             :key="n.id"
             class="flow-step"
             :class="[
@@ -654,6 +676,7 @@
                 'is-extra': n.step_type === 'offsite',
                 'is-offsite-current': isCurrentOffsiteSegment(n),
                 'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
+                'is-flow-history': isFlowHistoryNode(n),
               },
             ]"
           >
@@ -754,7 +777,7 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >场外无「重新开始」；回主线请点正常节点（早于当前则线性追加克隆）</span
+                    >场外无「重新开始」；回主线请点正常节点「克隆并从此开始」</span
                   >
                 </template>
                 <el-button
@@ -764,7 +787,7 @@
                   type="primary"
                   @click.stop="restartFromNode(n)"
                 >
-                  {{ restartActionLabel(n) }}
+                  克隆并从此开始
                 </el-button>
               </div>
               <div v-if="expandedNodeId === n.id" class="flow-io">
@@ -802,7 +825,7 @@
                 offsiteActive
                   ? activeOffsiteNode?.title || '场外协助'
                   : detail.nodes.find((n) => isCurrent(n))?.title ||
-                    (detail.session.status === 'archived' ? '已结束' : '—')
+                    (detail.session.status === 'archived' ? '已归档（可重开）' : '—')
               }}
             </strong>
           </div>
@@ -1017,6 +1040,8 @@ const activeId = ref(null)
 const editTitle = ref('')
 const startTarget = ref('')
 const listFilter = ref('all')
+/** 流程轨：历史世代默认折叠 */
+const flowHistoryOpen = ref(false)
 /** XSender 实例：该组件无可靠 v-model，提交时用 ref 取文 */
 const senderRef = ref(null)
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
@@ -2173,6 +2198,9 @@ function onConvChange(item) {
 }
 
 watch(activeId, (id, prev) => {
+  if (id && id !== prev) {
+    flowHistoryOpen.value = false
+  }
   if (id && id !== prev && (!detail.value || detail.value.session.id !== id)) {
     selectSession(id)
   }
@@ -2559,15 +2587,33 @@ function isClonedNode(n) {
   return !!(n?.output?.cloned || n?.input?.cloned)
 }
 
-function restartActionLabel(n) {
-  const cur = detail.value?.session?.current_step_index
-  if (n && cur != null && Number(n.step_index) < Number(cur)) {
-    return '克隆并从此开始'
+/** 当前世代起点：最近一次克隆批次，否则当前步及之后 */
+const flowHistorySplitIndex = computed(() => {
+  const nodes = detail.value?.nodes || []
+  if (!nodes.length) return 0
+  const last = detail.value?.session?.context?.lastRestart
+  const batch = last?.cloneBatchId
+  if (batch) {
+    const i = nodes.findIndex(
+      (n) => (n.output?.cloneBatchId || n.input?.cloneBatchId) === batch,
+    )
+    if (i > 0) return i
   }
-  return '从此重新开始'
+  const cur = Number(detail.value?.session?.current_step_index)
+  if (!Number.isFinite(cur)) return 0
+  const i = nodes.findIndex((n) => Number(n.step_index) >= cur)
+  return i > 0 ? i : 0
+})
+
+const flowHistoryCount = computed(() => flowHistorySplitIndex.value)
+
+function isFlowHistoryNode(n) {
+  const nodes = detail.value?.nodes || []
+  const i = nodes.findIndex((x) => x.id === n.id)
+  return i >= 0 && i < flowHistorySplitIndex.value
 }
 
-/** 离开场外 / 回退重开：场外无入口；早于当前则线性追加克隆 */
+/** 离开场外 / 重开：统一追加克隆；已归档亦可 */
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
@@ -2576,9 +2622,7 @@ async function restartFromNode(n) {
   }
   if (gating.value) return
   const wasOffsite = offsiteActive.value
-  const willClone =
-    detail.value?.session?.current_step_index != null &&
-    Number(n.step_index) < Number(detail.value.session.current_step_index)
+  const wasArchived = detail.value?.session?.status === 'archived'
   gating.value = true
   try {
     const r = await api.sessions.restartFromNode(activeId.value, {
@@ -2587,20 +2631,17 @@ async function restartFromNode(n) {
     })
     rightTab.value = 'flow'
     footerCollapsed.value = false
+    flowHistoryOpen.value = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     const focusId = r.nodeInstanceId || n.id
     expandedNodeId.value = focusId
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
-    if (r.cloned || willClone) {
-      ElMessage.success(
-        `已追加克隆并自「${title}」开始${
-          wasOffsite || r.offsiteArchived ? ' · 场外本段已归档' : ''
-        }`,
-      )
-    } else if (wasOffsite || r.offsiteArchived) {
-      ElMessage.success(`已回归正轨「${title}」· 场外已完成并归档`)
-    }
+    ElMessage.success(
+      `已追加克隆并自「${title}」开始${
+        wasArchived ? ' · 已解档' : wasOffsite || r.offsiteArchived ? ' · 场外本段已归档' : ''
+      }`,
+    )
   } catch (e) {
     // 业务异常由接口呈现，不再 toast Error
   } finally {
@@ -2833,7 +2874,7 @@ async function doArchive() {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '确认立即归档并释放本会话进程？此操作需人工确认。',
+      '确认归档并释放本会话进程？归档只省资源，之后仍可解档或从右侧节点重开。',
       '归档',
       { type: 'warning', confirmButtonText: '同意归档', cancelButtonText: '取消' },
     )
@@ -2844,9 +2885,22 @@ async function doArchive() {
     await api.sessions.archive(id)
     await loadDetail(id)
     sessions.value = await api.sessions.list()
-    ElMessage.success('已归档')
+    ElMessage.success('已归档（资源已释放）')
   } catch (e) {
-    ElMessage.error(e.message || '归档失败')
+    // 业务异常不 toast Error
+  }
+}
+
+async function doUnarchive() {
+  const id = activeId.value
+  if (!id) return
+  try {
+    await api.sessions.unarchive(id)
+    await loadDetail(id)
+    sessions.value = await api.sessions.list()
+    ElMessage.success('已解档')
+  } catch (e) {
+    // 业务异常不 toast Error
   }
 }
 
@@ -4553,6 +4607,30 @@ loadLists().then(() => {
   margin: 0 0 12px;
   font-size: 11.5px;
   color: var(--ecw-text-3, #8b8f9a);
+}
+.flow-history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border: 0.5px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--ecw-text-2, #5c5f66);
+  font-size: 12px;
+  cursor: pointer;
+}
+.flow-history-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.flow-history-toggle-hint {
+  font-size: 11px;
+  color: var(--ecw-text-3, #8b8f9a);
+}
+.flow-step.is-flow-history {
+  opacity: 0.72;
 }
 .flow-offsite-hint {
   margin: 0 0 12px;

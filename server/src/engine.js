@@ -231,7 +231,7 @@ function archiveOffsiteOnReturnToMain(sessionId, {
       role: 'system',
       type: 'status',
       content: {
-        text: `已回归正轨 → ${where}（该步早于当前则线性追加克隆并开跑；历史保留）。本段场外已完成并归档；之后还可再开场外段落（流动扩展）。`,
+        text: `已回归正轨 → ${where}（将线性追加克隆并开跑；历史保留）。本段场外已完成并归档；之后还可再开场外段落。`,
         offsite: true,
         offsiteArchived: true,
         resumeTitle,
@@ -639,17 +639,60 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
 }
 
 /**
+ * 解档：归档只释放资源，会话仍可续；不新建任务。
+ */
+export function unarchiveSession(sessionId, { silent = false, reason = 'manual' } = {}) {
+  const session = getSession(sessionId)
+  if (!session) throw new Error('会话不存在')
+  if (session.status !== SESSION_STATUS.ARCHIVED) return getSession(sessionId)
+
+  const ctx = parseJson(session.context_json, {})
+  delete ctx.pendingArchive
+  ctx.lastUnarchive = { at: nowIso(), reason }
+  updateSession(sessionId, {
+    status: SESSION_STATUS.ACTIVE,
+    archive_reason: null,
+    archived_at: null,
+    context_json: JSON.stringify(ctx),
+  })
+  if (!silent) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: '已解档。归档只释放进程与目录占用；续跑请在右侧点正常节点「克隆并从此开始」。',
+        unarchived: true,
+      },
+    })
+  }
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: { sessionId, status: SESSION_STATUS.ACTIVE, unarchived: true },
+  })
+  emitAll({
+    type: 'session.status',
+    payload: { sessionId, status: SESSION_STATUS.ACTIVE, unarchived: true },
+  })
+  return getSession(sessionId)
+}
+
+/**
  * 从指定节点重新开始（归档前/后均可）
+ * - 若已归档：先解档（归档只省资源）
  * - 杀掉本会话进程；活跃场外本段归档
- * - 目标步 < 当前步：线性追加克隆节点并自克隆段开跑（历史保留；场外不参与重开）
- * - 目标步 ≥ 当前步：目标及之后正常节点重置为 pending 并 advance
+ * - **统一**：按模板自该步起（跳过场外）线性追加克隆并开跑，历史一律保留
  *
  * @param {string} sessionId
  * @param {{ nodeInstanceId?: string, stepIndex?: number }} opts
  */
 export async function restartFromNode(sessionId, opts = {}) {
-  const session = getSession(sessionId)
+  let session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
+
+  if (session.status === SESSION_STATUS.ARCHIVED) {
+    unarchiveSession(sessionId, { silent: true, reason: 'restart_from_node' })
+    session = getSession(sessionId)
+  }
 
   const nodes = getDb()
     .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
@@ -671,8 +714,6 @@ export async function restartFromNode(sessionId, opts = {}) {
   }
 
   const idx = Number(target.step_index)
-  const currentIdx = Number(session.current_step_index)
-  const goingBack = idx < currentIdx
   const group = getGroup(session.group_id)
   const steps = parseJson(group?.steps_json, [])
 
@@ -687,40 +728,19 @@ export async function restartFromNode(sessionId, opts = {}) {
   delete ctx.pendingArchive
   updateSession(sessionId, { context_json: JSON.stringify(ctx) })
 
-  let startNode = target
-  let startIdx = idx
-  let cloned = false
-  let cloneBatchId = null
-  let clonedCount = 0
-
-  if (goingBack) {
-    const { created, batchId } = appendClonedSuffixFrom(sessionId, target, steps)
-    if (!created.length) {
-      throw Object.assign(new Error('没有可克隆的正常流程节点'), {
-        code: 'RESTART_CLONE_EMPTY',
-      })
-    }
-    startNode = created[0]
-    startIdx = Number(startNode.step_index)
-    cloned = true
-    cloneBatchId = batchId
-    clonedCount = created.length
-  } else {
-    // 目标及之后的正常节点：重置为待跑（不改写历史回退；仅同位/向前）
-    for (const n of nodes) {
-      if (n.step_type === STEP_TYPE.OFFSITE) continue
-      if (Number(n.step_index) < idx) continue
-      updateNode(n.id, {
-        status: NODE_STATUS.PENDING,
-        output_json: null,
-        started_at: null,
-        finished_at: null,
-      })
-    }
+  const { created, batchId } = appendClonedSuffixFrom(sessionId, target, steps)
+  if (!created.length) {
+    throw Object.assign(new Error('没有可克隆的正常流程节点'), {
+      code: 'RESTART_CLONE_EMPTY',
+    })
   }
+  const startNode = created[0]
+  const startIdx = Number(startNode.step_index)
+  const clonedCount = created.length
+  const cloneBatchId = batchId
 
   const offClose = archiveOffsiteOnReturnToMain(sessionId, {
-    reason: cloned ? 'clone_restart' : 'returned_to_main',
+    reason: 'clone_restart',
     resumeTitle: startNode.title || target.title || `步骤 ${idx + 1}`,
     resumeNodeId: startNode.id,
     resumeStepIndex: startIdx,
@@ -735,7 +755,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     fromStatus: session.status,
     fromOffsite: !!offClose.hadActive,
     offsiteArchived: !!offClose.hadActive,
-    cloned,
+    cloned: true,
     cloneBatchId,
     clonedCount,
     sourceNodeInstanceId: target.id,
@@ -750,33 +770,22 @@ export async function restartFromNode(sessionId, opts = {}) {
     archived_at: null,
   })
 
-  if (cloned) {
-    addMessage(sessionId, {
-      role: 'system',
-      type: 'status',
-      content: {
-        text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；场外不参与重开）`,
-        restartFrom: {
-          stepIndex: startIdx,
-          nodeInstanceId: startNode.id,
-          sourceNodeInstanceId: target.id,
-          sourceStepIndex: idx,
-          cloned: true,
-          cloneBatchId,
-          clonedCount,
-        },
+  addMessage(sessionId, {
+    role: 'system',
+    type: 'status',
+    content: {
+      text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；场外不参与重开）`,
+      restartFrom: {
+        stepIndex: startIdx,
+        nodeInstanceId: startNode.id,
+        sourceNodeInstanceId: target.id,
+        sourceStepIndex: idx,
+        cloned: true,
+        cloneBatchId,
+        clonedCount,
       },
-    })
-  } else if (!offClose.hadActive) {
-    addMessage(sessionId, {
-      role: 'system',
-      type: 'status',
-      content: {
-        text: `已从「${target.title || `步骤 ${idx + 1}`}」重开（第 ${idx + 1} 步及之后将重跑）`,
-        restartFrom: { stepIndex: idx, nodeInstanceId: target.id, cloned: false },
-      },
-    })
-  }
+    },
+  })
 
   emitSession(sessionId, {
     type: 'session.restart',
@@ -785,7 +794,7 @@ export async function restartFromNode(sessionId, opts = {}) {
       stepIndex: startIdx,
       nodeInstanceId: startNode.id,
       title: startNode.title,
-      cloned,
+      cloned: true,
       cloneBatchId,
       sourceNodeInstanceId: target.id,
     },
@@ -796,12 +805,12 @@ export async function restartFromNode(sessionId, opts = {}) {
       sessionId,
       status: SESSION_STATUS.ACTIVE,
       currentStepIndex: startIdx,
-      cloned,
+      cloned: true,
     },
   })
   emitAll({
     type: 'session.restart',
-    payload: { sessionId, stepIndex: startIdx, cloned },
+    payload: { sessionId, stepIndex: startIdx, cloned: true },
   })
 
   setImmediate(() => advance(sessionId).catch(console.error))
@@ -811,7 +820,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     stepIndex: startIdx,
     nodeInstanceId: startNode.id,
     title: startNode.title,
-    cloned,
+    cloned: true,
     cloneBatchId,
     clonedCount,
     sourceNodeInstanceId: target.id,
@@ -1810,7 +1819,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已归档并释放本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）。未执行节点仍保留，可在右侧流程查看。`,
+          text: `已归档并释放本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）。归档只省资源，本会话仍可解档或从右侧节点重开。`,
         },
       })
     } catch {
@@ -1822,7 +1831,7 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: '已归档（无运行中进程需释放）。未执行节点仍保留，可在右侧流程查看。',
+          text: '已归档（资源已释放）。本会话仍可解档续聊，或从右侧节点「克隆并从此开始」。',
         },
       })
     } catch {
@@ -3123,41 +3132,15 @@ export async function postUserMessage(sessionId, text, attachments = []) {
     attachments: atts,
   }
 
-  // archived → new session on same group
+  // archived → 解档后仍在本会话（归档只释放资源；空白新任务请另开聊）
   if (session.status === SESSION_STATUS.ARCHIVED) {
-    // 新任务：走自动命名（模板缩写；有新 #1 后再拼）
-    const created = createSessionFromGroup(session.group_id, {})
-    // wait a tick for advance to hit first human step
-    await new Promise((r) => setTimeout(r, 50))
-    const node = getDb()
-      .prepare(
-        `SELECT * FROM node_instances WHERE session_id = ? AND step_index = 0`,
-      )
-      .get(created.id)
-    if (node && node.step_type === STEP_TYPE.HUMAN && node.status === NODE_STATUS.WAITING_HUMAN) {
-      await handleGateAction(created.id, {
-        action: 'submit',
-        text: content.text,
-        nodeInstanceId: node.id,
-      })
-      if (atts.length) {
-        addMessage(created.id, {
-          role: 'user',
-          type: 'text',
-          content: { text: content.text, attachments: atts },
-        })
-      }
-    } else {
-      addMessage(created.id, {
-        role: 'user',
-        type: 'text',
-        content,
-      })
-    }
-    return { session: getSession(created.id) || created, newSession: true }
+    unarchiveSession(sessionId, { reason: 'message' })
   }
 
-  if (session.status === SESSION_STATUS.WAITING_HUMAN) {
+  const live = getSession(sessionId)
+  if (!live) throw new Error('会话不存在')
+
+  if (live.status === SESSION_STATUS.WAITING_HUMAN) {
     // 闸门节点不含场外协助（场外也可能是 waiting_human）
     const node = getDb()
       .prepare(
@@ -3208,7 +3191,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       mentionOnly || /@/.test(content.text || '')
         ? ensureOffsiteNode(sessionId, { expand: true })
         : null
-    const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(live, offsiteNode) : null
     const mainGateWaiting = !!(
       node &&
       (node.step_type === STEP_TYPE.HUMAN ||
@@ -3249,7 +3232,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
     const offsiteNode = hasMention
       ? ensureOffsiteNode(sessionId, { expand: true })
       : null
-    const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(live, offsiteNode) : null
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
