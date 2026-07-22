@@ -610,6 +610,10 @@
             <i class="dot">·</i>
             <span class="accent">皆可 Workflow</span>
           </h1>
+          <p class="core-living">
+            <strong>节点是死的，人是活的</strong>
+            — 流动的 Workflow，人可绕行、插队、场外办事再回来。
+          </p>
           <p class="core-mvp">只做 MVP，不做花里胡哨</p>
           <p class="core-desc">
             脚本与 Agent 都是元节点，Workflow 串起人与机。<br />
@@ -3999,6 +4003,23 @@ loadLists().then(() => {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.core-living {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto 14px;
+  max-width: 28em;
+  font-size: clamp(14.5px, 1.7vw, 16.5px);
+  font-weight: 550;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  color: var(--ecw-text-1, #0b0c0f);
+}
+
+.core-living strong {
+  font-weight: 750;
+  color: var(--ecw-text-1, #0b0c0f);
 }
 
 .core-mvp {
