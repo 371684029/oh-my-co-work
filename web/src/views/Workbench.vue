@@ -722,6 +722,15 @@
                     额外
                   </el-tag>
                   <el-tag
+                    v-else-if="n.step_type === 'archive'"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    归档
+                  </el-tag>
+                  <el-tag
                     v-else-if="isClonedNode(n)"
                     size="small"
                     type="success"
@@ -800,6 +809,11 @@
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
                     >场外无「重新开始」；回主线请点正常节点「克隆并从此开始」</span
+                  >
+                </template>
+                <template v-else-if="n.step_type === 'archive'">
+                  <span class="flow-offsite-action-tip"
+                    >可手动归档，或等待超时自动归档（设置可改，默认 3 小时）</span
                   >
                 </template>
                 <el-button
@@ -1532,7 +1546,7 @@ const pendingGate = computed(() => {
     const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
     if (ig) return ig
   }
-  // 归档确认闸门（无节点）
+  // 归档确认闸门（绑定末尾归档节点）
   const pendingArch = detail.value.session.context?.pendingArchive
   if (pendingArch && detail.value.session.status !== 'interrupted') {
     const archGate = msgs.find(
@@ -1541,6 +1555,7 @@ const pendingGate = computed(() => {
     if (archGate) {
       return {
         ...archGate,
+        node_instance_id: archGate.node_instance_id || pendingArch.nodeInstanceId || null,
         content: {
           ...archGate.content,
           dueAt: archGate.content.dueAt || pendingArch.dueAt,
@@ -2199,6 +2214,11 @@ function flowClass(n) {
     if (n.status === 'running' || n.status === 'waiting_human') return 'offsite-active'
     return 'offsite-idle'
   }
+  if (n.step_type === 'archive') {
+    if (n.status === 'waiting_human') return 'human-wait'
+    if (n.status === 'succeeded') return 'done'
+    return 'pending'
+  }
   if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
   if (n.status === 'failed') return 'failed'
   if (isWaitingHuman(n) || n.status === 'waiting_human') return 'human-wait'
@@ -2825,6 +2845,10 @@ const flowAnchorNodeId = computed(() => {
   if (!nodes.length) return null
   const off = activeOffsiteNode.value
   if (off?.id) return off.id
+  const archWait = nodes.find(
+    (n) => n.step_type === 'archive' && n.status === 'waiting_human',
+  )
+  if (archWait) return archWait.id
   const waiting = nodes.find((n) => n.status === 'waiting_human')
   if (waiting) return waiting.id
   const running = nodes.find((n) => n.status === 'running')
@@ -2867,6 +2891,10 @@ async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
     ElMessage.warning('场外节点没有「重新开始」；请点右侧正常节点')
+    return
+  }
+  if (n.step_type === 'archive') {
+    ElMessage.warning('归档节点没有「重新开始」；请点右侧正常节点')
     return
   }
   if (gating.value) return

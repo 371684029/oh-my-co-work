@@ -78,8 +78,10 @@ export const OFFSITE_MODE = {
 export const STEP_TYPE = {
   MEMBER: 'member',
   HUMAN: 'human',
-  /** 场外协助：额外节点——人活着的出口，可插流程任意位置 */
+  /** 场外协助：按时序游标插入 */
   OFFSITE: 'offsite',
+  /** 归档：每局会话末尾固定节点；可手动或超时自动 */
+  ARCHIVE: 'archive',
 }
 
 /** 步骤类型 → 中文 */
@@ -88,6 +90,7 @@ export function stepTypeLabel(type) {
     member: '成员',
     human: '人工',
     offsite: '场外协助',
+    archive: '归档',
   }
   return m[type] || type || ''
 }

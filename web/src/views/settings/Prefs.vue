@@ -50,8 +50,9 @@
     <section class="prefs-card">
       <div class="prefs-title">归档策略</div>
       <p class="prefs-hint">
-        任务完成/失败后<strong>不会立刻归档</strong>：可手工点「归档」或闸门「同意归档」；
-        超时未确认则按下方小时数自动归档并释放进程。
+        流程末尾固定「归档」节点：可手工点「归档」或闸门「同意归档」；
+        超时未确认则按下方小时数<strong>自动归档</strong>并释放进程。
+        默认 <strong>3 小时</strong>一般够用，可按需自改。
       </p>
       <el-form label-position="top" class="admin-form">
         <el-form-item label="自动归档超时（小时）">
