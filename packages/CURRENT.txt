@@ -5,9 +5,9 @@ needsNpmInstall=false
 policy=same-major-same-platform-replace; new-major-or-platform-keep
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.darwin-arm64=apple-co-work-v1-darwin-arm64.zip
-size.darwin-arm64=5125371
-commit.darwin-arm64=782192e
-built.darwin-arm64=2026-07-22T02:12:22.178Z
+size.darwin-arm64=5126074
+commit.darwin-arm64=0f1f29b
+built.darwin-arm64=2026-07-22T02:17:22.162Z
 file.linux-x64=apple-co-work-v1-linux-x64.zip
 size.linux-x64=5257755
 commit.linux-x64=35a9fb6
