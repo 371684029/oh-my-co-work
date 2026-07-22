@@ -29,6 +29,7 @@ import {
   formatSessionAutoTitle,
   injectCallArgsParam,
   extractCallArgsFromMention,
+  isMentionAssistOnly,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
 import { assertPathAvailable } from './pathLock.js'
@@ -1834,6 +1835,18 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     const prevOut = parseJson(node.output_json, {})
     const ctx = parseJson(session.context_json, {})
     const fullText = text != null ? String(text) : ''
+    // 纯 @成员：不当闸门提交（应走发消息协助）
+    {
+      const enabledMembers = getDb()
+        .prepare('SELECT * FROM members WHERE enabled = 1')
+        .all()
+      if (isMentionAssistOnly(fullText, enabledMembers)) {
+        throw Object.assign(
+          new Error('纯 @ 提及请用发送消息协助，不能作为闸门/项目参数提交'),
+          { code: 'MENTION_ASSIST_ONLY' },
+        )
+      }
+    }
     ctx.lastHumanInput = fullText
     ctx.workFolderReason = ctx.workFolderReason || 'user'
 
@@ -2397,8 +2410,19 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         `SELECT * FROM node_instances WHERE session_id = ? AND status = ? ORDER BY step_index LIMIT 1`,
       )
       .get(sessionId, NODE_STATUS.WAITING_HUMAN)
-    if (node && node.step_type === STEP_TYPE.HUMAN) {
-      // 人工步骤提交：走闸门，不并行 @（避免和项目参数采集冲突）
+
+    const enabledMembers = getDb()
+      .prepare('SELECT * FROM members WHERE enabled = 1')
+      .all()
+      .map((r) => ({
+        ...r,
+        config: parseJson(r.config_json, {}),
+      }))
+    const mentionOnly =
+      /@/.test(content.text || '') && isMentionAssistOnly(content.text, enabledMembers)
+
+    if (node && node.step_type === STEP_TYPE.HUMAN && !mentionOnly) {
+      // 人工步骤提交：走闸门（纯 @成员协助除外）
       await handleGateAction(sessionId, {
         action: 'submit',
         text: content.text,
@@ -2413,8 +2437,8 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       }
       return { session: getSession(sessionId), newSession: false }
     }
-    // CI01：缺参拦截后，Enter 发送即补齐 #1 并重跑本步
-    if (node && node.step_type === STEP_TYPE.MEMBER) {
+    // CI01：缺参拦截后补参（纯 @协助除外）
+    if (node && node.step_type === STEP_TYPE.MEMBER && !mentionOnly) {
       const out = parseJson(node.output_json, {})
       if (out.needParams || out.reason === 'missing_param_1') {
         await handleGateAction(sessionId, {
@@ -2425,13 +2449,13 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         return { session: getSession(sessionId), newSession: false, needParamsFilled: true }
       }
     }
-    // waiting gate but user typed — 记 pending 附言，不推进、不通过/拒绝（可 @ 成员协助）
+    // waiting / 纯 @协助：记消息，可 @ 成员，不推进流程
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
       content,
     })
-    if (node) {
+    if (node && !mentionOnly) {
       appendPendingGateNote(sessionId, node, content.text)
     }
     if (/@/.test(content.text || '')) {

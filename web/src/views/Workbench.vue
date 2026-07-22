@@ -379,23 +379,8 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">成员协助 · 或选节点重新开始</span>
+                        <span class="at-panel-tip">仅成员协助 · 不重跑流程 · 重跑请用右侧「从此重新开始」</span>
                       </div>
-                      <div v-if="filteredAtNodes.length" class="at-section-label">流程节点 · 重新开始</div>
-                      <button
-                        v-for="(n, i) in filteredAtNodes"
-                        :key="n.id"
-                        type="button"
-                        class="slash-item at-item-node"
-                        :class="{ active: i === atIndex }"
-                        @mousedown.prevent="pickAtNode(n)"
-                      >
-                        <span class="at-avatar at-avatar-node">{{ n.step_index + 1 }}</span>
-                        <span class="slash-name">{{ n.title || `步骤 ${n.step_index + 1}` }}</span>
-                        <span class="slash-desc"
-                          >{{ statusLabel(n.status) || n.status }} · 从此重跑</span
-                        >
-                      </button>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
                       <button
@@ -403,9 +388,7 @@
                         :key="m.id"
                         type="button"
                         class="slash-item"
-                        :class="{
-                          active: i + filteredAtNodes.length === atIndex,
-                        }"
+                        :class="{ active: i === atIndex }"
                         @mousedown.prevent="insertAtMember(m)"
                       >
                         <span class="at-avatar">{{ (m.display_name || m.name || '?').slice(0, 1) }}</span>
@@ -922,6 +905,7 @@ import {
   abbrGroupTag,
   formatSessionAutoTitle,
   extractCallArgsFromSlash,
+  isMentionAssistOnly,
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
@@ -1000,18 +984,6 @@ const filteredAtMembers = computed(() => {
         .toLowerCase()
         .includes(q),
   )
-})
-
-/** @ 面板中的流程节点（可从此重新开始） */
-const filteredAtNodes = computed(() => {
-  const nodes = detail.value?.nodes || []
-  const q = (atQuery.value || '').toLowerCase().trim()
-  if (!q) return nodes
-  return nodes.filter((n) => {
-    const title = String(n.title || '').toLowerCase()
-    const idx = String(n.step_index + 1)
-    return title.includes(q) || idx === q || `步骤${idx}`.includes(q) || q === '节点'
-  })
 })
 
 const filterOptions = [
@@ -2263,11 +2235,10 @@ function onComposerKeydown(e) {
     }
   }
 
-  // @ 面板：节点 + 成员
+  // @ 面板：仅成员协助（节点重跑已从面板移除，避免误触重头跑）
   if (atOpen.value) {
-    const nodes = filteredAtNodes.value
     const members = filteredAtMembers.value
-    const total = nodes.length + members.length
+    const total = members.length
     if (e.key === 'Escape') {
       e.preventDefault()
       atOpen.value = false
@@ -2289,9 +2260,7 @@ function onComposerKeydown(e) {
       if (!total) return
       e.preventDefault()
       e.stopPropagation()
-      const i = atIndex.value
-      if (i < nodes.length) pickAtNode(nodes[i] || nodes[0])
-      else insertAtMember(members[i - nodes.length] || members[0])
+      insertAtMember(members[atIndex.value] || members[0])
       return
     }
   }
@@ -2419,16 +2388,7 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** @ 选中流程节点 → 确认是否从此重新开始 */
-async function pickAtNode(n) {
-  if (!n || !activeId.value) return
-  atOpen.value = false
-  atQuery.value = ''
-  clearSender()
-  await confirmRestartFromNode(n)
-}
-
-/** 从节点重新开始（归档前/后均可） */
+/** 从节点重新开始（归档前/后均可；入口在右侧流程轨） */
 async function confirmRestartFromNode(n) {
   if (!n || !activeId.value) return
   const title = n.title || `步骤 ${n.step_index + 1}`
@@ -2521,13 +2481,26 @@ async function onSenderSubmit() {
     return
   }
 
-  // 人工输入 / 缺参补齐闸门：Enter = 提交闸门（共用底部输入）
+  // 人工输入 / 缺参补齐闸门：Enter = 提交闸门（纯 @成员协助除外，不推进流程）
   const g = pendingGate.value
-  if (g?.content?.mode === 'human_input' || g?.content?.mode === 'need_params') {
+  const mentionAssist =
+    !!text &&
+    isMentionAssistOnly(
+      text,
+      (members.value || []).map((m) => ({
+        display_name: m.display_name,
+        name: m.name,
+      })),
+    )
+  if (
+    (g?.content?.mode === 'human_input' || g?.content?.mode === 'need_params') &&
+    !mentionAssist
+  ) {
     await submitHuman(g)
     return
   }
   // 启动闸门 / 审核闸门：Enter 只发消息，保持 pending，不默认通过或拒绝
+  // 人工闸门下纯 @：走发消息协助，不当项目参数提交
 
   if (!text && !atts.length) return
 
@@ -2566,9 +2539,23 @@ function nextIdempotencyKey(action, nodeInstanceId) {
 
 async function submitHuman(m) {
   if (gating.value) return
+  const text = readSenderText()
+  // 闸门「提交」按钮：纯 @ 协助不当参数
+  if (
+    text &&
+    isMentionAssistOnly(
+      text,
+      (members.value || []).map((x) => ({
+        display_name: x.display_name,
+        name: x.name,
+      })),
+    )
+  ) {
+    await onSenderSubmit()
+    return
+  }
   gating.value = true
   try {
-    const text = readSenderText()
     await api.sessions.gate(activeId.value, {
       action: 'submit',
       text,

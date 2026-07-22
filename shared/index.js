@@ -215,6 +215,31 @@ export function formatAddedParamsText(added, startIndex) {
 }
 
 /**
+ * 去掉已识别的 @成员名后是否几乎为空 → 视为「仅 @协助」，不当项目参数提交
+ * @param {string} text
+ * @param {Array<{display_name?: string, name?: string}>} [memberList]
+ */
+export function isMentionAssistOnly(text, memberList = []) {
+  let rest = String(text || '')
+  if (!rest.includes('@')) return false
+  const names = []
+  for (const m of memberList || []) {
+    if (m?.display_name) names.push(String(m.display_name))
+    if (m?.name) names.push(String(m.name))
+  }
+  names.sort((a, b) => b.length - a.length)
+  for (const n of [...new Set(names)]) {
+    const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`@${escaped}(?=$|[\\s,，、@])`, 'g')
+    rest = rest.replace(re, ' ')
+  }
+  if (!names.length) {
+    rest = rest.replace(/@[\w\u4e00-\u9fff·.\-]+/g, ' ')
+  }
+  return !rest.replace(/[\s,，、]/g, '').length
+}
+
+/**
  * 从节点 output 取整段业务正文（不切分）
  * @param {unknown} output
  * @returns {string}
