@@ -640,8 +640,8 @@
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           {{
             offsiteMode === 'planned'
-              ? '场外协助 · 计划挂起 · 回主线请点右侧正常节点'
-              : '场外协助 · 临时插队 · 回主线请点右侧正常节点'
+              ? '场外协助 · 计划挂起 · 回主线点右侧正常节点（场外将完成并归档）'
+              : '场外协助 · 临时插队 · 回主线点右侧正常节点（场外将完成并归档）'
           }}
         </p>
         <template v-if="detail?.nodes?.length">
@@ -727,7 +727,7 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >回主线：点下方或上方的正常节点「从此重新开始」</span
+                    >回主线：点正常节点「从此重新开始」→ 场外默认完成并归档</span
                   >
                 </template>
                 <el-button
@@ -1931,15 +1931,17 @@ function isWaitingHuman(n) {
   return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
 }
 
-/** 是否正处在场外协助 */
+/** 是否正处在场外协助（已归档则不算活跃） */
 const offsiteActive = computed(() => {
   const s = detail.value?.session
   if (!s || s.status === 'archived') return false
   const ctx = s.context && typeof s.context === 'object' ? s.context : {}
+  if (ctx.offsiteAssist?.archived && ctx.offsiteAssist?.active === false) return false
   if (ctx.offsiteAssist?.active) return true
   return (detail.value?.nodes || []).some(
     (n) =>
       n.step_type === 'offsite' &&
+      !n.output?.archived &&
       (n.status === 'running' || n.status === 'waiting_human'),
   )
 })
@@ -2513,7 +2515,7 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** 离开场外：不提供「继续」按钮，只允许点右侧正常节点「从此重新开始」 */
+/** 离开场外：点右侧正常节点回归正轨；场外默认完成并归档 */
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
@@ -2521,9 +2523,10 @@ async function restartFromNode(n) {
     return
   }
   if (gating.value) return
+  const wasOffsite = offsiteActive.value
   gating.value = true
   try {
-    await api.sessions.restartFromNode(activeId.value, {
+    const r = await api.sessions.restartFromNode(activeId.value, {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
@@ -2532,6 +2535,10 @@ async function restartFromNode(n) {
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     expandedNodeId.value = n.id
+    const title = r.title || n.title || `步骤 ${n.step_index + 1}`
+    if (wasOffsite || r.offsiteArchived) {
+      ElMessage.success(`已回归正轨「${title}」· 场外已完成并归档`)
+    }
   } catch (e) {
     ElMessage.error(e.message || '重新开始失败')
   } finally {

@@ -120,6 +120,120 @@ function resolveOffsiteMode(session, offsiteNode) {
 }
 
 /**
+ * 用户回归主线：场外默认完成并归档（写清提示；堵住后续 @ 收尾盖写）
+ * @returns {{ closed: object[], closeToken: string|null, hadActive: boolean }}
+ */
+function archiveOffsiteOnReturnToMain(sessionId, {
+  reason = 'returned_to_main',
+  resumeTitle = '',
+  resumeNodeId = null,
+  resumeStepIndex = null,
+  silent = false,
+} = {}) {
+  const session = getSession(sessionId)
+  if (!session) return { closed: [], closeToken: null, hadActive: false }
+  const ctx = parseJson(session.context_json, {})
+  const list = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const closeAt = nowIso()
+  const closeToken = uid('offclose')
+  const closed = []
+  const hadActive = !!(
+    ctx.offsiteAssist?.active ||
+    list.some(
+      (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
+    )
+  )
+
+  for (const n of list) {
+    const hung =
+      n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN
+    const pinned = ctx.offsiteAssist?.nodeInstanceId === n.id
+    if (!hung && !pinned && !ctx.offsiteAssist?.active) continue
+    if (!hung && !pinned) continue
+
+    const prev = parseJson(n.output_json, {})
+    persistNodeIo(sessionId, n.id, {
+      input: parseJson(n.input_json, {}),
+      output: {
+        ...prev,
+        archived: true,
+        offsiteIdle: true,
+        closedAt: closeAt,
+        closeToken,
+        closeReason: reason,
+        humanAction: 'approve',
+        resumeTo: {
+          stepIndex: resumeStepIndex,
+          nodeInstanceId: resumeNodeId,
+          title: resumeTitle,
+        },
+      },
+      status: NODE_STATUS.SUCCEEDED,
+      finished: true,
+    })
+    closed.push(n)
+  }
+
+  ctx.offsiteAssist = {
+    active: false,
+    archived: true,
+    closedAt: closeAt,
+    closeToken,
+    reason,
+    resumeTitle,
+    resumeNodeId,
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  if (!silent && (closed.length || hadActive)) {
+    const where = resumeTitle ? `「${resumeTitle}」` : '主线节点'
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: `已回归正轨 → ${where}（该步及之后将按流程重跑）。场外协助已默认完成并归档；请以右侧流程时序为准。`,
+        offsite: true,
+        offsiteArchived: true,
+        resumeTitle,
+        resumeNodeId,
+      },
+    })
+  }
+
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: {
+      sessionId,
+      offsiteAssist: false,
+      offsiteArchived: true,
+      closeToken,
+    },
+  })
+
+  return { closed, closeToken, hadActive: hadActive || closed.length > 0 }
+}
+
+/** 场外是否已关闭（禁止 @ 收尾再写回 waiting_human） */
+function isOffsiteArchived(sessionId, nodeId) {
+  const session = getSession(sessionId)
+  if (!session) return true
+  if (session.status === SESSION_STATUS.ARCHIVED) return true
+  const ctx = parseJson(session.context_json, {})
+  if (ctx.offsiteAssist?.archived && ctx.offsiteAssist?.active === false) return true
+  if (ctx.offsiteAssist?.active === false && ctx.offsiteAssist?.closeToken) return true
+  const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
+  if (!n) return true
+  const out = parseJson(n.output_json, {})
+  if (out.archived && n.status === NODE_STATUS.SUCCEEDED) return true
+  if (out.closeToken && n.status === NODE_STATUS.SUCCEEDED) return true
+  return false
+}
+
+/**
  * 已废弃 UI「继续」入口：回主线只允许 restartFromNode（右侧正常节点）。
  * 保留路由避免旧客户端 404，调用即明确报错。
  */
@@ -437,20 +551,9 @@ export async function restartFromNode(sessionId, opts = {}) {
     /* ignore */
   }
 
-  // 目标及之后的正常节点：重置为未执行；场外协助节点保留历史，仅标记回未执行待命
+  // 目标及之后的正常节点：重置为待跑；场外：默认完成并归档
   for (const n of nodes) {
     if (n.step_type === STEP_TYPE.OFFSITE) {
-      const prev = parseJson(n.output_json, {})
-      updateNode(n.id, {
-        status: NODE_STATUS.PENDING,
-        output_json: JSON.stringify({
-          ...prev,
-          offsiteIdle: true,
-          leftAt: nowIso(),
-          resumeTo: { stepIndex: idx, nodeInstanceId: target.id },
-        }),
-        finished_at: nowIso(),
-      })
       continue
     }
     if (Number(n.step_index) < idx) continue
@@ -465,33 +568,43 @@ export async function restartFromNode(sessionId, opts = {}) {
 
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
-  delete ctx.offsiteAssist
+  const offClose = archiveOffsiteOnReturnToMain(sessionId, {
+    reason: 'returned_to_main',
+    resumeTitle: target.title || `步骤 ${idx + 1}`,
+    resumeNodeId: target.id,
+    resumeStepIndex: idx,
+    silent: false,
+  })
+  const ctx2 = parseJson(getSession(sessionId)?.context_json, {})
   // 记录一次重开，便于台账
-  ctx.lastRestart = {
+  ctx2.lastRestart = {
     at: nowIso(),
     stepIndex: idx,
     nodeInstanceId: target.id,
     title: target.title || `步骤 ${idx + 1}`,
     fromStatus: session.status,
-    fromOffsite: true,
+    fromOffsite: !!offClose.hadActive,
+    offsiteArchived: !!offClose.hadActive,
   }
 
   updateSession(sessionId, {
     status: SESSION_STATUS.ACTIVE,
     current_step_index: idx,
-    context_json: JSON.stringify(ctx),
+    context_json: JSON.stringify(ctx2),
     archive_reason: null,
     archived_at: null,
   })
 
-  addMessage(sessionId, {
-    role: 'system',
-    type: 'status',
-    content: {
-      text: `已从「${target.title || `步骤 ${idx + 1}`}」重开（第 ${idx + 1} 步及之后将重跑）`,
-      restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
-    },
-  })
+  if (!offClose.hadActive) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: `已从「${target.title || `步骤 ${idx + 1}`}」重开（第 ${idx + 1} 步及之后将重跑）`,
+        restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
+      },
+    })
+  }
 
   emitSession(sessionId, {
     type: 'session.restart',
@@ -518,6 +631,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     stepIndex: idx,
     nodeInstanceId: target.id,
     title: target.title,
+    offsiteArchived: !!offClose.hadActive,
     session: getSession(sessionId),
   }
 }
@@ -2037,6 +2151,23 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     : null
   if (!node) throw new Error('节点不存在')
 
+  // 闸门推进主线 = 回归正轨：场外默认完成并归档
+  if (
+    action === 'submit' ||
+    action === 'human_submit' ||
+    action === 'approve' ||
+    action === 'admin_approve' ||
+    action === 'reject'
+  ) {
+    archiveOffsiteOnReturnToMain(sessionId, {
+      reason: 'gate_progress',
+      resumeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+      resumeNodeId: node.id,
+      resumeStepIndex: Number(node.step_index),
+      silent: false,
+    })
+  }
+
   if (action === 'submit' || action === 'human_submit') {
     const prevOut = parseJson(node.output_json, {})
     const ctx = parseJson(session.context_json, {})
@@ -2553,6 +2684,7 @@ export async function invokeMentionedMembers(sessionId, text) {
 
     const still = getSession(sessionId)
     if (!still || still.status === SESSION_STATUS.ARCHIVED) break
+    if (isOffsiteArchived(sessionId, offsite.id)) break
 
     addMessage(sessionId, {
       role: 'member',
@@ -2577,7 +2709,11 @@ export async function invokeMentionedMembers(sessionId, text) {
   }
 
   const still2 = getSession(sessionId)
-  if (still2 && still2.status !== SESSION_STATUS.ARCHIVED) {
+  if (
+    still2 &&
+    still2.status !== SESSION_STATUS.ARCHIVED &&
+    !isOffsiteArchived(sessionId, offsite.id)
+  ) {
     const cur = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(offsite.id)
     const curOut = parseJson(cur?.output_json, {})
     const assists = Array.isArray(curOut.assists) ? [...curOut.assists] : []
@@ -2609,6 +2745,17 @@ export async function invokeMentionedMembers(sessionId, text) {
         offsiteAssist: true,
         offsiteMode: mode,
         nodeInstanceId: offsite.id,
+      },
+    })
+  } else if (invoked.length && isOffsiteArchived(sessionId, offsite.id)) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      node_instance_id: offsite.id,
+      content: {
+        text: '场外协助结果已忽略：用户已回归正轨，场外已归档。',
+        offsite: true,
+        offsiteArchived: true,
       },
     })
   }
