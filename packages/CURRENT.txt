@@ -14,5 +14,5 @@ commit.linux-x64=4729801
 built.linux-x64=2026-07-22T02:12:32.060Z
 file.win32-x64=apple-co-work-v1-win32-x64.zip
 size.win32-x64=5059100
-commit.win32-x64=253aa57
-built.win32-x64=2026-07-22T02:12:55.515Z
+commit.win32-x64=0247061
+built.win32-x64=2026-07-22T02:13:24.066Z
