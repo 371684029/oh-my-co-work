@@ -23,7 +23,6 @@ import {
   restartFromNode,
   markInterruptedOnBoot,
   resolveInterruptedSession,
-  ensureOffsiteNode,
   continuePastOffsite,
 } from './engine.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
@@ -381,12 +380,7 @@ export function listSessions({ status, includeDemo } = {}) {
 export function getSessionDetail(id) {
   const session = sessionRow(getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id))
   if (!session) return null
-  // 旧会话补齐「场外协助」节点（归档会话也保留，便于查看未执行节点）
-  try {
-    ensureOffsiteNode(id)
-  } catch {
-    /* ignore */
-  }
+  // 场外按时序游标插入，不再打开详情时预挂末尾占位
   const group = getGroup(session.group_id)
   const nodes = getDb()
     .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')

@@ -43,31 +43,47 @@ function getMember(id) {
 }
 
 /**
- * 末尾追加一场外段落（流动扩展；可多次）
+ * 场外插入游标：当前主线步索引（开场未跑则为 0 → 插到最前）。
  */
-function appendOffsiteNode(sessionId, { title } = {}) {
-  const list = getDb()
+function resolveOffsiteInsertIndex(sessionId) {
+  const session = getSession(sessionId)
+  if (!session) return 0
+  const cur = Number(session.current_step_index)
+  if (!Number.isFinite(cur) || cur < 0) return 0
+  return cur
+}
+
+/**
+ * 在当前时序游标插入一场外段落（开场 @ → 第一位；中途 → 插在当前步前）。
+ * 其后节点 step_index +1；current_step_index 同步后移，主线游标仍指向原节点。
+ */
+function insertOffsiteAtCursor(sessionId, { title } = {}) {
+  const db = getDb()
+  const list = db
     .prepare(
       `SELECT id FROM node_instances WHERE session_id = ? AND step_type = ?`,
     )
     .all(sessionId, STEP_TYPE.OFFSITE)
-  const row = getDb()
-    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
-    .get(sessionId)
-  const idx = row?.m == null ? 0 : Number(row.m) + 1
   const seq = list.length + 1
+  const insertIdx = resolveOffsiteInsertIndex(sessionId)
   const id = uid('node')
-  const label =
-    title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
-  getDb()
-    .prepare(
-      `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
+  const label = title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
+
+  const shift = db.prepare(
+    `UPDATE node_instances SET step_index = step_index + 1
+     WHERE session_id = ? AND step_index >= ?`,
+  )
+  const insert = db.prepare(
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+
+  const run = db.transaction(() => {
+    shift.run(sessionId, insertIdx)
+    insert.run(
       id,
       sessionId,
-      idx,
+      insertIdx,
       `offsite_assist_${seq}`,
       label,
       STEP_TYPE.OFFSITE,
@@ -75,7 +91,15 @@ function appendOffsiteNode(sessionId, { title } = {}) {
       NODE_STATUS.PENDING,
       0,
     )
-  return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+    const session = getSession(sessionId)
+    const cur = Number(session?.current_step_index)
+    if (Number.isFinite(cur) && cur >= insertIdx) {
+      updateSession(sessionId, { current_step_index: cur + 1 })
+    }
+  })
+  run()
+
+  return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
 }
 
 function offsiteNodeArchived(n) {
@@ -87,8 +111,8 @@ function offsiteNodeArchived(n) {
 /**
  * 解析可写的「场外协助」节点（流动扩展）。
  * - 优先当前未归档的挂起/进行中节点
- * - expand=true：没有可写节点时末尾新建一段（已归档不复用）
- * - expand=false：仅保证至少一个（开聊补节点；可返回已有含归档）
+ * - expand=true：没有可写节点时在**当前时序游标**新建一段（已归档不复用）
+ * - expand=false：只返回已有，不新建（开聊不再预挂末尾占位）
  */
 export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
   const list = getDb()
@@ -113,27 +137,16 @@ export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
     if (pinned) return pinned
   }
 
-  // 流动扩展：复用「末尾」未归档 pending（刚 append 尚未标 running），不误用中间计划场外
+  // 流动扩展：复用尚未标 running 的 pending（刚插入），再否则按时序游标新建
   if (expand) {
-    const maxRow = getDb()
-      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
-      .get(sessionId)
-    const maxIdx = maxRow?.m == null ? -1 : Number(maxRow.m)
-    const trailing = [...list]
+    const pending = [...list]
       .reverse()
-      .find(
-        (n) =>
-          !offsiteNodeArchived(n) &&
-          n.status === NODE_STATUS.PENDING &&
-          Number(n.step_index) === maxIdx,
-      )
-    if (trailing) return trailing
-    return appendOffsiteNode(sessionId)
+      .find((n) => !offsiteNodeArchived(n) && n.status === NODE_STATUS.PENDING)
+    if (pending) return pending
+    return insertOffsiteAtCursor(sessionId)
   }
 
-  if (!list.length) {
-    return appendOffsiteNode(sessionId)
-  }
+  if (!list.length) return null
   return list[list.length - 1]
 }
 
@@ -1004,8 +1017,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       st === STEP_TYPE.OFFSITE ? 0 : flowNeedsWait(flow) || step.gate ? 1 : 0,
     )
   })
-  // 模板未配置时，在末尾自动补一个「场外协助」额外节点
-  ensureOffsiteNode(sessionId)
+  // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
 
   addMessage(sessionId, {
     role: 'system',
