@@ -120,56 +120,14 @@ function resolveOffsiteMode(session, offsiteNode) {
 }
 
 /**
- * 离开场外协助，继续主流程（标记额外节点完成并 advance）
+ * 已废弃 UI「继续」入口：回主线只允许 restartFromNode（右侧正常节点）。
+ * 保留路由避免旧客户端 404，调用即明确报错。
  */
-export async function continuePastOffsite(sessionId, nodeInstanceId) {
-  const session = getSession(sessionId)
-  if (!session) throw new Error('会话不存在')
-  if (session.status === SESSION_STATUS.ARCHIVED) {
-    throw Object.assign(new Error('会话已归档'), { code: 'ARCHIVED' })
-  }
-  const node = getDb()
-    .prepare('SELECT * FROM node_instances WHERE id = ? AND session_id = ?')
-    .get(nodeInstanceId, sessionId)
-  if (!node || node.step_type !== STEP_TYPE.OFFSITE) {
-    throw Object.assign(new Error('目标不是场外协助节点'), { code: 'NOT_OFFSITE' })
-  }
-  const prev = parseJson(node.output_json, {})
-  persistNodeIo(sessionId, node.id, {
-    input: parseJson(node.input_json, {}),
-    output: {
-      ...prev,
-      offsiteIdle: true,
-      continuedAt: nowIso(),
-      humanAction: 'approve',
-    },
-    status: NODE_STATUS.SUCCEEDED,
-    finished: true,
-  })
-  const ctx = parseJson(session.context_json, {})
-  delete ctx.offsiteAssist
-  const nextIdx = Number(node.step_index) + 1
-  updateSession(sessionId, {
-    status: SESSION_STATUS.ACTIVE,
-    current_step_index: nextIdx,
-    context_json: JSON.stringify(ctx),
-  })
-  addMessage(sessionId, {
-    role: 'system',
-    type: 'status',
-    node_instance_id: node.id,
-    content: {
-      text: `已离开「${node.title || '场外协助'}」，继续主流程`,
-      offsite: true,
-      continued: true,
-    },
-  })
-  emitSession(sessionId, {
-    type: 'session.status',
-    payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: nextIdx },
-  })
-  setImmediate(() => advance(sessionId).catch(console.error))
-  return { ok: true, title: node.title, nextStepIndex: nextIdx }
+export async function continuePastOffsite(_sessionId, _nodeInstanceId) {
+  throw Object.assign(
+    new Error('场外协助已取消「继续」按钮；请在右侧流程点正常节点「从此重新开始」'),
+    { code: 'USE_RESTART_FROM_NODE' },
+  )
 }
 
 function getGroup(id) {
