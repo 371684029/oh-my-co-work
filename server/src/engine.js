@@ -859,7 +859,7 @@ export async function advance(sessionId) {
         type: 'status',
         node_instance_id: node.id,
         content: {
-          text: `场外协助「${title}」· 计划挂起。可 @办事；办完点「继续」。`,
+          text: `场外协助「${title}」· 计划挂起。可 @办事；回主线请点右侧正常节点「从此重新开始」。`,
           offsite: true,
           mode: OFFSITE_MODE.PLANNED,
         },
@@ -2481,7 +2481,7 @@ export function parseMemberMentions(text, memberList) {
 
 /**
  * 流程外 @ 成员：写入当前活跃的「场外协助」节点（优先挂起中的）。
- * 离开场外：右侧「继续」（主动作）。
+ * 离开场外：只允许右侧正常节点「从此重新开始」（无「继续」按钮）。
  */
 export async function invokeMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
@@ -2551,8 +2551,8 @@ export async function invokeMentionedMembers(sessionId, text) {
     content: {
       text:
         mode === OFFSITE_MODE.PLANNED
-          ? '场外协助 · 计划挂起中（@ 已记入本节点）。办完点「继续」。'
-          : '已进入场外协助（临时插队）。办完点「继续」。',
+          ? '场外协助 · 计划挂起中（@ 已记入）。回主线请点右侧正常节点。'
+          : '已进入场外协助（临时插队）。回主线请点右侧正常节点。',
       offsite: true,
       mode,
     },

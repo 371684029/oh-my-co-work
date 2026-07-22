@@ -379,7 +379,7 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">记入场外协助 · 办完点「继续」</span>
+                        <span class="at-panel-tip">记入场外协助 · 回主线点右侧正常节点</span>
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -640,8 +640,8 @@
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           {{
             offsiteMode === 'planned'
-              ? '场外协助 · 计划挂起 · 办完点「继续」'
-              : '场外协助 · 临时插队 · 办完点「继续」'
+              ? '场外协助 · 计划挂起 · 回主线请点右侧正常节点'
+              : '场外协助 · 临时插队 · 回主线请点右侧正常节点'
           }}
         </p>
         <template v-if="detail?.nodes?.length">
@@ -726,15 +726,9 @@
               </button>
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
-                  <el-button
-                    v-if="n.status === 'waiting_human' || n.status === 'running'"
-                    size="small"
-                    type="warning"
-                    @click.stop="continuePastOffsite(n)"
+                  <span class="flow-offsite-action-tip"
+                    >回主线：点下方或上方的正常节点「从此重新开始」</span
                   >
-                    继续
-                  </el-button>
-                  <span v-else class="flow-offsite-action-tip">场外协助 · 可插中间</span>
                 </template>
                 <el-button
                   v-else
@@ -784,15 +778,6 @@
                     (detail.session.status === 'archived' ? '已结束' : '—')
               }}
             </strong>
-            <el-button
-              v-if="offsiteActive && activeOffsiteNode"
-              size="small"
-              type="warning"
-              class="flow-continue-btn"
-              @click="continuePastOffsite(activeOffsiteNode)"
-            >
-              继续
-            </el-button>
           </div>
         </template>
         <div v-else class="flow-empty">
@@ -2528,37 +2513,17 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** 离开场外协助：主动作「继续」 */
-async function continuePastOffsite(n) {
-  if (!n || !activeId.value || n.step_type !== 'offsite') return
-  if (gating.value) return
-  gating.value = true
-  try {
-    await api.sessions.continuePastOffsite(activeId.value, {
-      nodeInstanceId: n.id,
-    })
-    ElMessage.success('已继续主流程')
-    rightTab.value = 'flow'
-    await loadDetail(activeId.value)
-    sessions.value = await api.sessions.list()
-  } catch (e) {
-    ElMessage.error(e.message || '继续失败')
-  } finally {
-    gating.value = false
-  }
-}
-
-/** 从节点重开：以右侧流程时序为准，不弹确认（状态看流程图） */
+/** 离开场外：不提供「继续」按钮，只允许点右侧正常节点「从此重新开始」 */
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('场外请用「继续」；重开请点正常节点')
+    ElMessage.warning('场外节点不能作为入口；请点右侧正常节点回来')
     return
   }
   if (gating.value) return
   gating.value = true
   try {
-    const r = await api.sessions.restartFromNode(activeId.value, {
+    await api.sessions.restartFromNode(activeId.value, {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
@@ -2566,18 +2531,12 @@ async function restartFromNode(n) {
     footerCollapsed.value = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
-    const title = r.title || n.title || `步骤 ${n.step_index + 1}`
-    ElMessage.success(`已从「${title}」开始 · 以右侧流程为准`)
+    expandedNodeId.value = n.id
   } catch (e) {
     ElMessage.error(e.message || '重新开始失败')
   } finally {
     gating.value = false
   }
-}
-
-/** @deprecated 兼容旧调用名 */
-async function confirmRestartFromNode(n) {
-  return restartFromNode(n)
 }
 
 function goShortcuts() {
