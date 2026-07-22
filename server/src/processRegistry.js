@@ -121,7 +121,7 @@ export function listSessionProcesses(sessionId, { includeDisk = true } = {}) {
         runId: null,
         pid,
         kind: 'disk',
-        label: '磁盘登记（可能为仅唤起/遗留）',
+        label: '磁盘登记（可能需手动关窗）',
         memberId: null,
         startedAt: null,
         detach: true,

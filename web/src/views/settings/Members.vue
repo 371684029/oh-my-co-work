@@ -95,43 +95,6 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="运行时 / 解释器">
-            <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
-              <el-option label="自动（按扩展名 / 系统）" value="auto" />
-              <el-option label="cmd" value="cmd" />
-              <el-option label="PowerShell" value="powershell" />
-              <el-option label="pwsh" value="pwsh" />
-              <el-option label="bash" value="bash" />
-              <el-option label="python" value="python" />
-              <el-option label="node" value="node" />
-            </el-select>
-            <div class="field-hint">也可直接填解释器路径，如 C:\Python311\python.exe</div>
-          </el-form-item>
-
-          <el-form-item v-if="form.script.mode === 'file'" label="附加参数（空格分隔）">
-            <el-input v-model="form.script.argsText" placeholder="--flag value" />
-          </el-form-item>
-
-          <el-form-item label="环境变量（可选）">
-            <el-input
-              v-model="form.script.envText"
-              type="textarea"
-              :rows="2"
-              placeholder="KEY=value 每行一个；留空则继承本机环境（含系统代理）"
-            />
-            <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
-          </el-form-item>
-
-          <el-form-item label="超时（毫秒）">
-            <el-input-number
-              v-model="form.script.timeoutMs"
-              :min="1000"
-              :step="60000"
-              :max="3600000"
-            />
-            <div class="field-hint">默认 600000（10 分钟）；可按成员单独改</div>
-          </el-form-item>
-
           <el-form-item label="是否展示脚本弹窗">
             <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
               <el-option label="跟随全局设置" value="inherit" />
@@ -143,16 +106,57 @@
             >
           </el-form-item>
 
-          <el-form-item label="仅唤起（不等待结束）">
-            <el-switch v-model="form.script.detach" />
-            <span class="switch-hint"
-              >适合 Cursor CLI 等交互工具：打开窗口后立刻回「已打开」，不把关窗当成失败。</span
-            >
-          </el-form-item>
+          <el-collapse class="member-advanced">
+            <el-collapse-item title="高级" name="adv">
+              <el-form-item label="运行时 / 解释器">
+                <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
+                  <el-option label="自动（按扩展名 / 系统）" value="auto" />
+                  <el-option label="cmd" value="cmd" />
+                  <el-option label="PowerShell" value="powershell" />
+                  <el-option label="pwsh" value="pwsh" />
+                  <el-option label="bash" value="bash" />
+                  <el-option label="python" value="python" />
+                  <el-option label="node" value="node" />
+                </el-select>
+                <div class="field-hint">也可直接填解释器路径，如 C:\Python311\python.exe</div>
+              </el-form-item>
 
-          <el-form-item label="把人工输入写入 stdin">
-            <el-switch v-model="form.script.useHumanAsStdin" />
-          </el-form-item>
+              <el-form-item v-if="form.script.mode === 'file'" label="附加参数（空格分隔）">
+                <el-input v-model="form.script.argsText" placeholder="--flag value" />
+              </el-form-item>
+
+              <el-form-item label="环境变量（可选）">
+                <el-input
+                  v-model="form.script.envText"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="KEY=value 每行一个；留空则继承本机环境（含系统代理）"
+                />
+                <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
+              </el-form-item>
+
+              <el-form-item label="超时（毫秒）">
+                <el-input-number
+                  v-model="form.script.timeoutMs"
+                  :min="1000"
+                  :step="60000"
+                  :max="3600000"
+                />
+                <div class="field-hint">默认 600000（10 分钟）；可按成员单独改</div>
+              </el-form-item>
+
+              <el-form-item label="打开后不等待结束">
+                <el-switch v-model="form.script.detach" />
+                <span class="switch-hint"
+                  >适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。</span
+                >
+              </el-form-item>
+
+              <el-form-item label="把输入写入 stdin">
+                <el-switch v-model="form.script.useHumanAsStdin" />
+              </el-form-item>
+            </el-collapse-item>
+          </el-collapse>
         </template>
 
         <el-button type="primary" @click="save">
@@ -458,6 +462,14 @@ onMounted(load)
   margin-left: 10px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+.member-advanced {
+  margin: 8px 0 16px;
+}
+.member-advanced :deep(.el-collapse-item__header) {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
 }
 .cfg-pre {
   margin: 0;

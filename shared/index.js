@@ -50,7 +50,7 @@ export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',
   living: '节点是死的，人是活的',
-  oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、场外办事再回来。',
+  oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、临时协助再回来。',
 }
 
 /**
@@ -58,7 +58,7 @@ export const PRODUCT_MISSION = {
  * - 归档只释放本机进程与目录占用，不是「结束并另开新群聊」
  * - 同一会话（同一次开聊）可无限次归档 / 解档
  * - 归档后再发消息 = 解档并仍在本会话，不新建 Session / 不新建群模板
- * - 续跑流程 = 本会话右侧「克隆并从此开始」，线性追加克隆节点
+ * - 续跑流程 = 本会话右侧「从这里继续」，线性追加克隆节点
  * - 只有左栏主动「开聊」才新建会话
  */
 export const SESSION_ARCHIVE_RULES = {
@@ -89,7 +89,7 @@ export function stepTypeLabel(type) {
   const m = {
     member: '成员',
     human: '人工',
-    offsite: '场外协助',
+    offsite: '临时协助',
     archive: '归档',
   }
   return m[type] || type || ''

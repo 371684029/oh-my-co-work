@@ -493,7 +493,7 @@ export function getSessionResources(sessionId) {
     pathHolders: holders,
     orphanRisk: processes.some((p) => p.orphanRisk || p.detach),
     note:
-      '同目录允许多会话并行；下方占用列表仅提示。归档会尽量结束本会话进程；仅唤起窗口 / 外部 CLI（如 Cursor）可能仍需手动关闭。',
+      '同目录允许多会话并行；占用仅提示。归档会尽量结束本会话进程；外部窗口可能还需手动关窗。',
   }
 }
 
