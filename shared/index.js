@@ -45,13 +45,17 @@ export const MEMBER_KIND = {
 /** 脚本/成员节点默认超时：10 分钟 */
 export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
 
+/** 产品宗旨（凝练） */
+export const PRODUCT_MISSION = {
+  tagline: '人机协同 · 万物归元 · 皆可 Workflow',
+  living: '节点是死的，人是活的',
+  oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、场外办事再回来。',
+}
+
 export const STEP_TYPE = {
   MEMBER: 'member',
   HUMAN: 'human',
-  /**
-   * 场外协助：流程外操作（@成员等）统归此节点；
-   * 不参与线性 advance；回到正常节点由用户在右侧流程选择「从此重新开始」。
-   */
+  /** 场外协助：额外节点——人活着的出口，可插流程任意位置 */
   OFFSITE: 'offsite',
 }
 

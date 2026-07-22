@@ -379,7 +379,7 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">仅成员 · 记入场外协助 · 回主流程用右侧节点</span>
+                        <span class="at-panel-tip">人活着 · 记入额外节点</span>
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -626,7 +626,7 @@
       <!-- Tab：流程 -->
       <div v-show="rightTab === 'flow'" class="wb-right-pane">
         <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
-          已归档 · 已释放进程资源
+          已归档 · 资源已释放
           <template v-if="archiveOutcomeTag">
             ·
             <span
@@ -635,10 +635,10 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 未执行节点仍展示，可展开查看
+          · 未执行节点仍在
         </p>
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
-          当前在额外节点（场外协助）· 可 @成员办事；回主流程请点相邻正常节点「从此重新开始」或「继续主流程」
+          节点是死的，人是活的 · 额外节点办事中 · 办完点「继续主流程」
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -713,9 +713,7 @@
               </button>
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
-                  <span class="flow-offsite-action-tip"
-                    >可插在流程任意位置 · @成员办事记于此</span
-                  >
+                  <span class="flow-offsite-action-tip">人活着 · 可插中间 · @办事</span>
                   <el-button
                     v-if="n.status === 'waiting_human' || n.status === 'running'"
                     size="small"
@@ -758,7 +756,7 @@
             }"
           >
             <span class="flow-current-label">{{
-              offsiteActive ? '额外 · 场外协助' : needsHuman ? '等待人工' : '当前节点'
+              offsiteActive ? '人活着' : needsHuman ? '等待人工' : '当前节点'
             }}</span>
             <strong>
               {{
@@ -2478,7 +2476,7 @@ async function continuePastOffsite(n) {
     await api.sessions.continuePastOffsite(activeId.value, {
       nodeInstanceId: n.id,
     })
-    ElMessage.success('已继续主流程')
+    ElMessage.success('已流回主线')
     rightTab.value = 'flow'
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
@@ -2504,12 +2502,12 @@ async function confirmRestartFromNode(n) {
       archived
         ? `任务已归档。将从「${title}」重新激活并重跑该步及之后的节点（会释放旧进程），是否继续？`
         : fromOffsite
-          ? `将离开场外协助，从「${title}」继续正常流程（该步及之后会重跑）。是否继续？`
+          ? `人活着 → 流回「${title}」（该步及之后重跑）。继续？`
           : `将从「${title}」重新开始，该步及之后会重跑（之前步骤保留）。是否继续？`,
-      fromOffsite ? '回到正常流程' : '从节点重新开始',
+      fromOffsite ? '流回主线' : '从节点重新开始',
       {
         type: 'warning',
-        confirmButtonText: fromOffsite ? '回到此节点' : '重新开始',
+        confirmButtonText: fromOffsite ? '流回此节点' : '重新开始',
         cancelButtonText: '取消',
       },
     )
@@ -2523,7 +2521,7 @@ async function confirmRestartFromNode(n) {
     })
     ElMessage.success(
       fromOffsite
-        ? `已回到「${r.title || title}」`
+        ? `已流回「${r.title || title}」`
         : r.title
           ? `已从「${r.title}」重新开始`
           : '已重新开始',
@@ -2628,7 +2626,7 @@ async function onSenderSubmit() {
     clearSender()
     pendingFiles.value = []
     if (r.mentionPending) {
-      ElMessage.success('已进入场外协助（不推进正常流程）')
+      ElMessage.success('人活着 · 已进入额外节点')
     }
     if (r.newSession && r.session) {
       await loadLists()

@@ -16,6 +16,7 @@
           <div class="about-brand-text">
             <div class="about-name">{{ data.productName }}</div>
             <div class="about-tagline">{{ data.tagline }}</div>
+            <div v-if="data.livingLine" class="about-living">{{ data.livingLine }}</div>
           </div>
         </div>
         <div class="about-version-row">
@@ -91,7 +92,8 @@ import AppLogo from '../../components/AppLogo.vue'
 
 const data = ref({
   productName: 'apple-co-work',
-  tagline: '人机协同 · 协同办公',
+  tagline: '人机协同 · 万物归元 · 皆可 Workflow',
+  livingLine: '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、场外办事再回来。',
   version: '—',
   updateUrl: '',
   updateHint: '',
@@ -174,6 +176,14 @@ onMounted(async () => {
   margin-top: 4px;
   font-size: 12.5px;
   color: var(--el-text-color-secondary);
+}
+
+.about-living {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9a6414;
+  max-width: 36em;
 }
 
 .about-version-row {

@@ -132,7 +132,7 @@ export async function continuePastOffsite(sessionId, nodeInstanceId) {
     type: 'status',
     node_instance_id: node.id,
     content: {
-      text: `已离开「${node.title || '场外协助'}」，继续主流程`,
+      text: `已离开「${node.title || '场外协助'}」，流回主线`,
       offsite: true,
       continued: true,
     },
@@ -503,7 +503,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     role: 'system',
     type: 'status',
     content: {
-      text: `已离开场外协助，从节点「${target.title || `步骤 ${idx + 1}`}」继续正常流程（第 ${idx + 1} 步及之后将重跑）`,
+      text: `人活着 → 流回「${target.title || `步骤 ${idx + 1}`}」（第 ${idx + 1} 步及之后将重跑）`,
       restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
     },
   })
@@ -829,7 +829,7 @@ export async function advance(sessionId) {
         type: 'status',
         node_instance_id: node.id,
         content: {
-          text: `已到额外节点「${title}」。可 @成员办事（如点外卖）；办完后点右侧「继续主流程」，或选下一正常节点「从此重新开始」。`,
+          text: `额外节点「${title}」· 人活着。可 @办事；办完点「继续主流程」。`,
           offsite: true,
           mode: 'offsite_pause',
         },
@@ -2514,7 +2514,7 @@ export async function invokeMentionedMembers(sessionId, text) {
     type: 'status',
     node_instance_id: offsite.id,
     content: {
-      text: '已进入场外协助（不推进正常流程）。回到主流程请在右侧选择节点「从此重新开始」。',
+      text: '人活着 · 已进入额外节点。办完请继续主流程或从右侧正常节点重开。',
       offsite: true,
     },
   })

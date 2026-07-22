@@ -11,7 +11,9 @@
         <AppLogo size="md" class="brand-logo" />
         <div class="brand-block">
           <span class="brand">apple-co-work</span>
-          <span class="brand-sub">人机协同 · 万物归元 · 皆可 Workflow</span>
+          <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow"
+            >人机协同 · 万物归元 · 皆可 Workflow</span
+          >
         </div>
         <nav class="top-nav" aria-label="主导航">
           <button

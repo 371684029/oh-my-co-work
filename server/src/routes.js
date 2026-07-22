@@ -607,7 +607,10 @@ router.get('/about', (_req, res) => {
   }
   res.json({
     productName: data.productName || 'apple-co-work',
-    tagline: data.tagline || '人机协同 · 协同办公',
+    tagline: data.tagline || '人机协同 · 万物归元 · 皆可 Workflow',
+    livingLine:
+      data.livingLine ||
+      '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、场外办事再回来。',
     version: data.version || pkgVersion,
     updateUrl: data.updateUrl || '',
     updateHint: data.updateHint || '更新包发布后在此填写地址。',
