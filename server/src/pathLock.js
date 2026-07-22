@@ -1,6 +1,6 @@
 /**
- * R04：工作目录互斥
- * 同一规范化路径上，非归档 / 非 interrupted 会话不可并行占用。
+ * 工作目录占用查询（仅提示，不互斥）。
+ * 同一模板 / 同一目录可开多个并行会话；不因路径挡开聊或执行。
  */
 import path from 'node:path'
 import { getDb, parseJson } from './db.js'
@@ -32,42 +32,15 @@ export function sessionWorkPath(session, group) {
 }
 
 /**
- * 若路径被其它进行中会话占用则抛错 PATH_BUSY
- * @returns {string|null} 规范化路径
+ * 规范化路径；**不再互斥拦截**（同目录允许多会话并行）。
+ * 保留函数名以免旧调用崩；excludeSessionId 忽略。
+ * @returns {string|null}
  */
-export function assertPathAvailable(folderPath, excludeSessionId) {
-  const norm = normalizeWorkPath(folderPath)
-  if (!norm) return null
-
-  const rows = getDb()
-    .prepare(
-      `SELECT id, title, status, group_id, context_json FROM sessions
-       WHERE status NOT IN ('archived', 'failed', 'interrupted')
-         AND (? IS NULL OR id != ?)`,
-    )
-    .all(excludeSessionId || null, excludeSessionId || '')
-
-  for (const s of rows) {
-    const group = getDb().prepare('SELECT * FROM groups WHERE id = ?').get(s.group_id)
-    const other = sessionWorkPath(s, group)
-    if (other && other === norm) {
-      throw Object.assign(
-        new Error(
-          `工作目录已被会话「${s.title || s.id}」软锁占用。可归档该会话后重试；外部终端占用不在软锁范围内`,
-        ),
-        {
-          code: 'PATH_BUSY',
-          sessionId: s.id,
-          title: s.title,
-          path: norm,
-        },
-      )
-    }
-  }
-  return norm
+export function assertPathAvailable(folderPath, _excludeSessionId) {
+  return normalizeWorkPath(folderPath)
 }
 
-/** 列出占用某路径的会话（调试/API） */
+/** 列出占用某路径的会话（资源面板提示用，不挡操作） */
 export function listPathHolders(folderPath) {
   const norm = normalizeWorkPath(folderPath)
   if (!norm) return []

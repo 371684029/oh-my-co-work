@@ -99,7 +99,7 @@
 | 归档后再发 = 仍在本会话（解档） | `postUserMessage` + `unarchiveSession` | ✅ |
 | 可无限归档 / 本会话追加克隆续跑 | `archiveSession` / `restartFromNode` | ✅ |
 | **场外协助** `offsite` | 线性可扩展；`@` 串行；回主线克隆正常节点 | ✅ |
-| **本机资源**面板 | 进程 / 目录软锁；再杀 / 归档占用方 | ✅ |
+| **本机资源**面板 | 进程 / 目录占用提示；再杀 / 归档对方 | ✅ |
 | 聊天改名 / 删除 | PATCH/DELETE sessions | ✅ |
 | WS 推送 | `bus.js` + 前端 connect | ✅ |
 | 支持与交流 | `Support.vue` + `support.json` | ✅ |
@@ -199,7 +199,7 @@
 | 项 | 说明 |
 |----|------|
 | 定位 | 首个正式大版本；在 0.4 稳定主路径上收敛体验与工程债 |
-| 已落地（dev） | FIX health/showDemo；**CI01**；**CI03** script-guide；**CI04**；**X07**；**R02** interrupted；**R03** 幂等；**R04** 路径锁；**M01** backup；**M07** integrity_check |
+| 已落地（dev） | FIX health/showDemo；**CI01**；**CI03** script-guide；**CI04**；**X07**；**R02** interrupted；**R03** 幂等；~~R04 路径锁~~ **已撤**；**M01** backup；**M07** integrity_check |
 | 候选后续 | R06 event_log、CI02 context.json、M03 对账；GUI 壳后置 |
 | 纪律 | 先改 mvp / data-and-ops，再写代码；GUI 壳后置 |
 
@@ -285,5 +285,6 @@
 | 2026-07-21 | **1.0.0-dev**：R02/R04/M01/M07 + 前序 CI/X07/R03 全套 |
 | 2026-07-21 | **1.0.0-dev**：CI01/CI03/CI04/X07/R03；health 与演示默认修复 |
 | 2026-07-20 | **`0.4.0` 最终封板**：§2.10；**此后新需求一律 `1.0.0`** |
+| 2026-07-22 | **R04 撤销**：同目录允许多会话并行，不再挡开聊/执行 |
 | 2026-07-22 | **1.1.0**：运行包 / 参数追加 / 关页退出默认关 |
 | 2026-07-22 | **1.1.1**：场外协助 · 归档可解档（§1.0）· 本机资源 · 流程轨动效；§2.12 |
