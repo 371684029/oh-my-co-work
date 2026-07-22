@@ -24,6 +24,7 @@ import {
   markInterruptedOnBoot,
   resolveInterruptedSession,
   continuePastOffsite,
+  ensureArchiveTailNode,
 } from './engine.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
@@ -380,7 +381,12 @@ export function listSessions({ status, includeDemo } = {}) {
 export function getSessionDetail(id) {
   const session = sessionRow(getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id))
   if (!session) return null
-  // 场外按时序游标插入，不再打开详情时预挂末尾占位
+  // 旧会话补齐末尾归档节点；场外按时序插入，不预挂
+  try {
+    if (session.status !== 'archived') ensureArchiveTailNode(id)
+  } catch {
+    /* ignore */
+  }
   const group = getGroup(session.group_id)
   const nodes = getDb()
     .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')

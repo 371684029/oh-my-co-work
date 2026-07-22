@@ -102,6 +102,71 @@ function insertOffsiteAtCursor(sessionId, { title } = {}) {
   return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
 }
 
+/**
+ * 确保会话末尾有「归档」节点（每局固定挂尾；克隆续跑后再挂新一段）。
+ */
+export function ensureArchiveTailNode(sessionId, { title } = {}) {
+  const db = getDb()
+  const tail = db
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index DESC LIMIT 1`,
+    )
+    .get(sessionId)
+  if (tail && tail.step_type === STEP_TYPE.ARCHIVE) {
+    const out = parseJson(tail.output_json, {})
+    // 已成功归档的旧尾节点不再复用：续跑后再挂新归档段
+    if (tail.status === NODE_STATUS.SUCCEEDED && (out.archived || out.sessionArchived)) {
+      /* fall through to append */
+    } else {
+      return tail
+    }
+  }
+  const row = db
+    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+    .get(sessionId)
+  const idx = row?.m == null ? 0 : Number(row.m) + 1
+  const id = uid('node')
+  db.prepare(
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    sessionId,
+    idx,
+    'archive_tail',
+    title || '归档',
+    STEP_TYPE.ARCHIVE,
+    null,
+    NODE_STATUS.PENDING,
+    1,
+  )
+  return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+function markArchiveNodeDone(sessionId, { reason, note } = {}) {
+  const node = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index DESC LIMIT 1`,
+    )
+    .get(sessionId, STEP_TYPE.ARCHIVE)
+  if (!node) return null
+  const prev = parseJson(node.output_json, {})
+  persistNodeIo(sessionId, node.id, {
+    input: parseJson(node.input_json, { kind: 'archive' }),
+    output: {
+      ...prev,
+      archived: true,
+      sessionArchived: true,
+      humanAction: 'approve',
+      reason: reason || prev.reason || 'manual',
+      note: note || undefined,
+      at: nowIso(),
+    },
+    status: NODE_STATUS.SUCCEEDED,
+  })
+  return node
+}
+
 function offsiteNodeArchived(n) {
   if (!n) return true
   const out = parseJson(n.output_json, {})
@@ -608,18 +673,21 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
   for (let t = startTpl; t < list.length; t++) {
     const step = list[t] || {}
     const st = step.type || STEP_TYPE.MEMBER
-    if (st === STEP_TYPE.OFFSITE) continue
+    if (st === STEP_TYPE.OFFSITE || st === STEP_TYPE.ARCHIVE) continue
 
     const src =
       existing.find(
         (n) =>
           n.step_type !== STEP_TYPE.OFFSITE &&
+          n.step_type !== STEP_TYPE.ARCHIVE &&
           templateStepIndexOf(n, list.length) === t &&
           Number(n.step_index) >= Number(target.step_index),
       ) ||
       existing.find(
         (n) =>
-          n.step_type !== STEP_TYPE.OFFSITE && templateStepIndexOf(n, list.length) === t,
+          n.step_type !== STEP_TYPE.OFFSITE &&
+          n.step_type !== STEP_TYPE.ARCHIVE &&
+          templateStepIndexOf(n, list.length) === t,
       ) ||
       (templateStepIndexOf(target, list.length) === t ? target : null)
 
@@ -650,6 +718,11 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
       getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id),
     )
     nextIdx += 1
+  }
+  // 克隆续跑后仍挂一段新的归档尾节点
+  const arch = ensureArchiveTailNode(sessionId)
+  if (arch && !created.find((n) => n.id === arch.id)) {
+    /* archive is pending tail; not a clone start target */
   }
   return { created, batchId, startTpl }
 }
@@ -732,6 +805,12 @@ export async function restartFromNode(sessionId, opts = {}) {
     throw Object.assign(
       new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点'),
       { code: 'OFFSITE_NOT_RESTART_TARGET' },
+    )
+  }
+  if (target.step_type === STEP_TYPE.ARCHIVE) {
+    throw Object.assign(
+      new Error('归档节点没有「重新开始」；请选择正常流程节点'),
+      { code: 'ARCHIVE_NOT_RESTART_TARGET' },
     )
   }
 
@@ -1018,6 +1097,8 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     )
   })
   // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
+  // 末尾固定挂「归档」节点（手动确认或超时自动）
+  ensureArchiveTailNode(sessionId)
 
   addMessage(sessionId, {
     role: 'system',
@@ -1134,6 +1215,12 @@ export async function advance(sessionId) {
 
     if (node.status === NODE_STATUS.WAITING_HUMAN) {
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
+      return
+    }
+
+    // 末尾归档节点：进入确认闸门（手动 / 超时自动）
+    if (node.step_type === STEP_TYPE.ARCHIVE) {
+      requestArchiveConsent(sessionId, 'completed')
       return
     }
 
@@ -1480,6 +1567,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
   const ctx0 = parseJson(session.context_json, {})
   if (ctx0.pendingArchive?.dueAt) return ctx0.pendingArchive
 
+  const archNode = ensureArchiveTailNode(sessionId)
   const hours = getAppSettings().autoArchiveHours ?? 3
   const requestedAt = new Date()
   const dueAt = new Date(requestedAt.getTime() + hours * 3600 * 1000)
@@ -1489,10 +1577,30 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     requestedAt: requestedAt.toISOString(),
     dueAt: dueAt.toISOString(),
     hours,
+    nodeInstanceId: archNode.id,
   }
   updateSession(sessionId, {
     status: SESSION_STATUS.WAITING_HUMAN,
+    current_step_index: Number(archNode.step_index),
     context_json: JSON.stringify(ctx),
+  })
+
+  persistNodeIo(sessionId, archNode.id, {
+    input: {
+      kind: 'archive',
+      reason,
+      at: requestedAt.toISOString(),
+      hours,
+      dueAt: dueAt.toISOString(),
+    },
+    output: {
+      waiting: true,
+      humanAction: 'pending',
+      reason,
+      hours,
+      dueAt: dueAt.toISOString(),
+    },
+    status: NODE_STATUS.WAITING_HUMAN,
   })
 
   // 待确认归档：只清非 detach 进程；Cursor CLI 等「仅唤起」窗口保留到真正归档
@@ -1514,14 +1622,15 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
   addMessage(sessionId, {
     role: 'system',
     type: 'status',
+    node_instance_id: archNode.id,
     content: {
-      text: `${reasonLabel}。归档须人工同意；${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。`,
+      text: `${reasonLabel}。请在右侧「归档」节点确认；也可手动归档。${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。超时可在设置里改。`,
     },
   })
   addMessage(sessionId, {
     role: 'system',
     type: 'gate',
-    node_instance_id: null,
+    node_instance_id: archNode.id,
     content: {
       mode: 'archive_confirm',
       text: `${reasonLabel}。是否确认归档？`,
@@ -1529,7 +1638,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
       dueAt: dueAt.toISOString(),
       hours,
       actions: ['approve_archive', 'defer_archive'],
-      policy: `同意=立即归档；暂不归档=仍保留任务，但满 ${hours} 小时后仍会自动归档。`,
+      policy: `同意=立即归档；暂不归档=仍保留任务，但满 ${hours} 小时后仍会自动归档（设置 → 偏好可改）。`,
     },
   })
   emitSession(sessionId, {
@@ -1539,6 +1648,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
       dueAt: dueAt.toISOString(),
       hours,
       reason,
+      nodeInstanceId: archNode.id,
     },
   })
   emitSession(sessionId, {
@@ -1547,6 +1657,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
       sessionId,
       status: SESSION_STATUS.WAITING_HUMAN,
       pendingArchive: ctx.pendingArchive,
+      currentStepIndex: Number(archNode.step_index),
     },
   })
   return ctx.pendingArchive
@@ -1787,6 +1898,11 @@ export function archiveSession(sessionId, reason = 'manual') {
       resolvedAt: t,
       resolution: reason,
     }
+  }
+  try {
+    markArchiveNodeDone(sessionId, { reason })
+  } catch {
+    /* ignore */
   }
   updateSession(sessionId, {
     status: SESSION_STATUS.ARCHIVED,
@@ -2299,7 +2415,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     }
   }
 
-  // —— 归档确认闸门（无节点，context.pendingArchive）——
+  // —— 归档确认闸门（绑定末尾归档节点，context.pendingArchive）——
   {
     const ctxArch = parseJson(session.context_json, {})
     const pending = ctxArch.pendingArchive
@@ -2307,7 +2423,16 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
       action === 'approve_archive' ||
       action === 'defer_archive' ||
       (!!pending &&
-        !nodeInstanceId &&
+        (!nodeInstanceId ||
+          nodeInstanceId === pending.nodeInstanceId ||
+          (() => {
+            const n = nodeInstanceId
+              ? getDb()
+                  .prepare('SELECT step_type FROM node_instances WHERE id = ?')
+                  .get(nodeInstanceId)
+              : null
+            return n?.step_type === STEP_TYPE.ARCHIVE
+          })()) &&
         (action === 'approve' || action === 'reject'))
     if (isArchiveAction) {
       if (!pending) throw new Error('当前没有待确认的归档')
