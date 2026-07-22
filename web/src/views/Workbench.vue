@@ -1040,7 +1040,7 @@
         </div>
       </div>
 
-      <!-- Tab：资源（进程 / 目录软锁） -->
+      <!-- Tab：资源（进程 / 目录占用提示） -->
       <div v-show="rightTab === 'resources'" class="wb-right-pane resources-pane">
         <div class="announce-toolbar">
           <span class="announce-title">本机资源</span>
@@ -1069,12 +1069,12 @@
         <p class="resources-note">
           {{
             sessionResources?.note ||
-            '进程与目录锁为尽力保证；仅唤起 / 外部 CLI 可能仍需手动关窗。'
+            '同目录允许多会话并行；进程清理为尽力保证，仅唤起 / 外部 CLI 可能仍需手动关窗。'
           }}
         </p>
         <div v-if="sessionResources" class="resources-body">
           <div class="resources-block">
-            <div class="resources-block-title">工作目录（软锁）</div>
+            <div class="resources-block-title">工作目录（占用提示）</div>
             <div class="resources-path" :title="sessionResources.workPath || ''">
               {{ sessionResources.workPath || '（未配置）' }}
             </div>
@@ -1105,11 +1105,11 @@
                   type="danger"
                   @click="archiveHolderSession(h.id)"
                 >
-                  归档以解占
+                  归档对方
                 </el-button>
               </div>
             </div>
-            <p v-else class="resources-empty-line">当前无其它会话占用该路径</p>
+            <p v-else class="resources-empty-line">当前无其它会话使用该路径</p>
           </div>
           <div class="resources-block">
             <div class="resources-block-title">
@@ -1918,7 +1918,7 @@ const composerPlaceholder = computed(() => {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
   if (mode === 'path_busy') {
-    return '目录被其它会话软锁占用：可归档对方、打开「资源」查看，再同意重试'
+    return '（旧闸门）点同意即可重试；同目录已允许多会话并行'
   }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   return 'Enter 发送意见（pending）；点「同意」通过 /「拒绝」不通过…'
@@ -1930,7 +1930,7 @@ const composerToolbarHint = computed(() => {
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交闸门'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点继续/归档/放弃'
-    if (mode === 'path_busy') return '同意重试 · 或归档占用方 · 资源'
+    if (mode === 'path_busy') return '同意重试'
     return 'Enter=pending 附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -2410,8 +2410,8 @@ async function archiveHolderSession(id) {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '归档占用方会话以放开目录软锁？会尽量结束对方进程；外部窗口或需手关。',
-      '归档占用方',
+      '归档对方会话？会尽量结束对方进程；外部窗口或需手关。同目录本就不互斥，归档仅为释放对方资源。',
+      '归档对方',
       { type: 'warning', confirmButtonText: '归档对方', cancelButtonText: '取消' },
     )
   } catch {

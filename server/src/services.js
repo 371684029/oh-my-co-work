@@ -470,7 +470,7 @@ export function deleteSession(id) {
 }
 
 /**
- * 会话资源视图：进程登记 + 工作目录占用（软锁）
+ * 会话资源视图：进程登记 + 工作目录占用（仅提示，不互斥）
  * 说明：杀进程尽力而为；仅唤起/外部 CLI 可能仍需手动关窗。
  */
 export function getSessionResources(sessionId) {
@@ -490,7 +490,7 @@ export function getSessionResources(sessionId) {
     pathHolders: holders,
     orphanRisk: processes.some((p) => p.orphanRisk || p.detach),
     note:
-      '本机进程与目录锁为尽力保证：归档会尽量结束本会话进程并放开目录；仅唤起窗口 / 外部 CLI（如 Cursor）可能仍需手动关闭。',
+      '同目录允许多会话并行；下方占用列表仅提示。归档会尽量结束本会话进程；仅唤起窗口 / 外部 CLI（如 Cursor）可能仍需手动关闭。',
   }
 }
 

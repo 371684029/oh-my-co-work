@@ -79,7 +79,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 | 归档 | 只释放进程与目录；**同一会话可无限归档**；再发/解档仍在本会话，**不会新开群聊** |
 | 场外协助 | `@` 成员插队：线性可扩展段落；回主线点右侧正常节点「克隆并从此开始」；同会话 `@` 串行排队 |
 | 续跑 | 本会话右侧「克隆并从此开始」→ **线性追加克隆节点**（场外节点不可作重开目标） |
-| 本机资源 | 右侧 Tab「资源」：进程 PID / orphanRisk / 目录软锁；再杀一次与归档占用方 |
+| 本机资源 | 右侧 Tab「资源」：进程 PID / orphanRisk / 目录占用提示；再杀一次与归档对方 |
 | 新会话 | **仅**左栏选模板/成员 →「开聊」 |
 | 聊天 | **名称可编辑**、**可删除** |
 | 支持与交流 | 侧栏浅灰「其它」分区；含蓄 **点赞支持** 文案 |
@@ -271,7 +271,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | DELETE | `/sessions/:id` | 删除聊天 |
 | POST | `/sessions/:id/archive` | 归档（释放资源） |
 | POST | `/sessions/:id/unarchive` | 解档（仍同一会话） |
-| GET | `/sessions/:id/resources` | 进程登记 + 工作目录软锁占用 |
+| GET | `/sessions/:id/resources` | 进程登记 + 工作目录占用提示 |
 | POST | `/sessions/:id/kill-processes` | 再杀本会话进程（尽力） |
 | POST | `/sessions/:id/restart-from-node` | 从节点线性追加克隆并开跑 |
 | POST | `/sessions/:id/gate` | 闸门 `{ action, nodeInstanceId, text? }` |
