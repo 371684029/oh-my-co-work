@@ -1,7 +1,11 @@
 import { getDb, parseJson } from './db.js'
 import { emitSession, emitAll } from './bus.js'
 import { runMember } from './runners.js'
-import { killSessionProcesses, killMemberProcesses } from './processRegistry.js'
+import {
+  killSessionProcesses,
+  killMemberProcesses,
+  cleanupArchivedSessionPidFiles,
+} from './processRegistry.js'
 import {
   writeNodeJournal,
   writeSessionJournalIndex,
@@ -29,12 +33,252 @@ import {
   formatSessionAutoTitle,
   injectCallArgsParam,
   extractCallArgsFromMention,
+  isMentionAssistOnly,
+  OFFSITE_MODE,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
 import { assertPathAvailable } from './pathLock.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
+}
+
+/**
+ * 末尾追加一场外段落（流动扩展；可多次）
+ */
+function appendOffsiteNode(sessionId, { title } = {}) {
+  const list = getDb()
+    .prepare(
+      `SELECT id FROM node_instances WHERE session_id = ? AND step_type = ?`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const row = getDb()
+    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+    .get(sessionId)
+  const idx = row?.m == null ? 0 : Number(row.m) + 1
+  const seq = list.length + 1
+  const id = uid('node')
+  const label =
+    title || (seq <= 1 ? '场外协助' : `场外协助 · ${seq}`)
+  getDb()
+    .prepare(
+      `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      sessionId,
+      idx,
+      `offsite_assist_${seq}`,
+      label,
+      STEP_TYPE.OFFSITE,
+      null,
+      NODE_STATUS.PENDING,
+      0,
+    )
+  return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+function offsiteNodeArchived(n) {
+  if (!n) return true
+  const out = parseJson(n.output_json, {})
+  return !!(out.archived || out.closeToken) && n.status === NODE_STATUS.SUCCEEDED
+}
+
+/**
+ * 解析可写的「场外协助」节点（流动扩展）。
+ * - 优先当前未归档的挂起/进行中节点
+ * - expand=true：没有可写节点时末尾新建一段（已归档不复用）
+ * - expand=false：仅保证至少一个（开聊补节点；可返回已有含归档）
+ */
+export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
+  const list = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const session = getSession(sessionId)
+  const ctx = parseJson(session?.context_json, {})
+  const pinnedId = ctx.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
+
+  // 进行中的场外段落优先
+  const writable = list.find(
+    (n) =>
+      !offsiteNodeArchived(n) &&
+      (n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN),
+  )
+  if (writable) return writable
+
+  if (pinnedId && ctx.offsiteAssist?.active) {
+    const pinned = list.find((n) => n.id === pinnedId && !offsiteNodeArchived(n))
+    if (pinned) return pinned
+  }
+
+  // 流动扩展：复用「末尾」未归档 pending（刚 append 尚未标 running），不误用中间计划场外
+  if (expand) {
+    const maxRow = getDb()
+      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+      .get(sessionId)
+    const maxIdx = maxRow?.m == null ? -1 : Number(maxRow.m)
+    const trailing = [...list]
+      .reverse()
+      .find(
+        (n) =>
+          !offsiteNodeArchived(n) &&
+          n.status === NODE_STATUS.PENDING &&
+          Number(n.step_index) === maxIdx,
+      )
+    if (trailing) return trailing
+    return appendOffsiteNode(sessionId)
+  }
+
+  if (!list.length) {
+    return appendOffsiteNode(sessionId)
+  }
+  return list[list.length - 1]
+}
+
+/** 当前场外节点应视为计划挂起还是临时插队 */
+function resolveOffsiteMode(session, offsiteNode) {
+  if (!offsiteNode) return OFFSITE_MODE.INTERRUPT
+  const ctx = parseJson(session?.context_json, {})
+  const out = parseJson(offsiteNode.output_json, {})
+  const hung =
+    offsiteNode.status === NODE_STATUS.WAITING_HUMAN ||
+    offsiteNode.status === NODE_STATUS.RUNNING
+  if (
+    hung &&
+    (ctx.offsiteAssist?.mode === OFFSITE_MODE.PLANNED ||
+      out.mode === OFFSITE_MODE.PLANNED ||
+      out.plannedPause)
+  ) {
+    return OFFSITE_MODE.PLANNED
+  }
+  if (ctx.offsiteAssist?.mode === OFFSITE_MODE.PLANNED && hung) return OFFSITE_MODE.PLANNED
+  return OFFSITE_MODE.INTERRUPT
+}
+
+/**
+ * 用户回归主线：当前场外段落默认完成并归档（可多次；后续 @ 再扩展新段落）。
+ */
+function archiveOffsiteOnReturnToMain(sessionId, {
+  reason = 'returned_to_main',
+  resumeTitle = '',
+  resumeNodeId = null,
+  resumeStepIndex = null,
+  silent = false,
+} = {}) {
+  const session = getSession(sessionId)
+  if (!session) return { closed: [], closeToken: null, hadActive: false }
+  const ctx = parseJson(session.context_json, {})
+  const list = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index`,
+    )
+    .all(sessionId, STEP_TYPE.OFFSITE)
+  const closeAt = nowIso()
+  const closeToken = uid('offclose')
+  const closed = []
+  const hadActive = !!(
+    ctx.offsiteAssist?.active ||
+    list.some(
+      (n) => n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN,
+    )
+  )
+  if (!hadActive) {
+    return { closed: [], closeToken: null, hadActive: false }
+  }
+
+  for (const n of list) {
+    const hung =
+      n.status === NODE_STATUS.RUNNING || n.status === NODE_STATUS.WAITING_HUMAN
+    const pinned = ctx.offsiteAssist?.nodeInstanceId === n.id
+    if (!hung && !pinned) continue
+
+    const prev = parseJson(n.output_json, {})
+    persistNodeIo(sessionId, n.id, {
+      input: parseJson(n.input_json, {}),
+      output: {
+        ...prev,
+        archived: true,
+        offsiteIdle: true,
+        closedAt: closeAt,
+        closeToken,
+        closeReason: reason,
+        humanAction: 'approve',
+        resumeTo: {
+          stepIndex: resumeStepIndex,
+          nodeInstanceId: resumeNodeId,
+          title: resumeTitle,
+        },
+      },
+      status: NODE_STATUS.SUCCEEDED,
+      finished: true,
+    })
+    closed.push(n)
+  }
+
+  ctx.offsiteAssist = {
+    active: false,
+    archived: true,
+    closedAt: closeAt,
+    closeToken,
+    reason,
+    resumeTitle,
+    resumeNodeId,
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  if (!silent && (closed.length || hadActive)) {
+    const where = resumeTitle ? `「${resumeTitle}」` : '主线节点'
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: `已回归正轨 → ${where}（将线性追加克隆并开跑；历史保留）。本段场外已完成并归档；之后还可再开场外段落。`,
+        offsite: true,
+        offsiteArchived: true,
+        resumeTitle,
+        resumeNodeId,
+      },
+    })
+  }
+
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: {
+      sessionId,
+      offsiteAssist: false,
+      offsiteArchived: true,
+      closeToken,
+    },
+  })
+
+  return { closed, closeToken, hadActive: hadActive || closed.length > 0 }
+}
+
+/** 指定场外节点是否已归档（新扩展段落不算） */
+function isOffsiteArchived(sessionId, nodeId) {
+  const session = getSession(sessionId)
+  if (!session) return true
+  if (session.status === SESSION_STATUS.ARCHIVED) return true
+  const n = nodeId
+    ? getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
+    : null
+  if (!n) return true
+  if (offsiteNodeArchived(n)) return true
+  return false
+}
+
+/**
+ * 已废弃 UI「继续」入口：回主线只允许 restartFromNode（右侧正常节点）。
+ * 保留路由避免旧客户端 404，调用即明确报错。
+ */
+export async function continuePastOffsite(_sessionId, _nodeInstanceId) {
+  throw Object.assign(
+    new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点（回退将线性追加克隆）'),
+    { code: 'USE_RESTART_FROM_NODE' },
+  )
 }
 
 function getGroup(id) {
@@ -304,17 +548,161 @@ function updateNode(id, patch) {
 }
 
 /**
+ * 节点对应的群模板步下标（克隆节点记在 output/input.clonedFromStepIndex）
+ */
+function templateStepIndexOf(node, stepsLen = Infinity) {
+  if (!node) return 0
+  const out = parseJson(node.output_json, {})
+  const input = parseJson(node.input_json, {})
+  const raw =
+    out.clonedFromStepIndex ??
+    input.clonedFromStepIndex ??
+    Number(node.step_index)
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return 0
+  if (Number.isFinite(stepsLen) && n >= stepsLen) return Math.max(0, stepsLen - 1)
+  return n
+}
+
+function resolveStepForNode(node, steps) {
+  const list = Array.isArray(steps) ? steps : []
+  const ti = templateStepIndexOf(node, list.length)
+  return { step: list[ti] || {}, templateIndex: ti }
+}
+
+/**
+ * 回退重开：自目标模板步起，跳过场外，按模板线性追加克隆节点
+ */
+function appendClonedSuffixFrom(sessionId, target, steps) {
+  const list = Array.isArray(steps) ? steps : []
+  const startTpl = templateStepIndexOf(target, list.length)
+  const existing = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index`,
+    )
+    .all(sessionId)
+  const maxRow = getDb()
+    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+    .get(sessionId)
+  let nextIdx = maxRow?.m == null ? 0 : Number(maxRow.m) + 1
+  const insertNode = getDb().prepare(
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate, input_json, output_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+  const created = []
+  const batchId = uid('clone')
+  const at = nowIso()
+
+  for (let t = startTpl; t < list.length; t++) {
+    const step = list[t] || {}
+    const st = step.type || STEP_TYPE.MEMBER
+    if (st === STEP_TYPE.OFFSITE) continue
+
+    const src =
+      existing.find(
+        (n) =>
+          n.step_type !== STEP_TYPE.OFFSITE &&
+          templateStepIndexOf(n, list.length) === t &&
+          Number(n.step_index) >= Number(target.step_index),
+      ) ||
+      existing.find(
+        (n) =>
+          n.step_type !== STEP_TYPE.OFFSITE && templateStepIndexOf(n, list.length) === t,
+      ) ||
+      (templateStepIndexOf(target, list.length) === t ? target : null)
+
+    const flow = normalizeStepFlow(step.flow, step.gate)
+    const id = uid('node')
+    const title = src?.title || step.title || `步骤 ${t + 1}`
+    const meta = {
+      cloned: true,
+      cloneBatchId: batchId,
+      clonedFromNodeInstanceId: src?.id || target.id,
+      clonedFromStepIndex: t,
+      clonedAt: at,
+    }
+    insertNode.run(
+      id,
+      sessionId,
+      nextIdx,
+      step.id || src?.step_id || `step_${t}`,
+      title,
+      st,
+      st === STEP_TYPE.HUMAN ? null : step.memberId || src?.member_id || null,
+      NODE_STATUS.PENDING,
+      flowNeedsWait(flow) || step.gate ? 1 : 0,
+      JSON.stringify({ ...meta }),
+      JSON.stringify({ ...meta }),
+    )
+    created.push(
+      getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id),
+    )
+    nextIdx += 1
+  }
+  return { created, batchId, startTpl }
+}
+
+/**
+ * 解档：归档只释放资源；同一会话可无限归档/解档，不新建群聊。
+ */
+export function unarchiveSession(sessionId, { silent = false, reason = 'manual' } = {}) {
+  const session = getSession(sessionId)
+  if (!session) throw new Error('会话不存在')
+  if (session.status !== SESSION_STATUS.ARCHIVED) return getSession(sessionId)
+
+  const ctx = parseJson(session.context_json, {})
+  delete ctx.pendingArchive
+  ctx.lastUnarchive = { at: nowIso(), reason }
+  const waiting = getDb()
+    .prepare(
+      `SELECT id FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? LIMIT 1`,
+    )
+    .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
+  const nextStatus = waiting ? SESSION_STATUS.WAITING_HUMAN : SESSION_STATUS.ACTIVE
+  updateSession(sessionId, {
+    status: nextStatus,
+    archive_reason: null,
+    archived_at: null,
+    context_json: JSON.stringify(ctx),
+  })
+  if (!silent) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: '已解档。仍在本会话（不会新开群聊）。续跑请右侧「克隆并从此开始」追加节点；本会话可再次归档。',
+        unarchived: true,
+      },
+    })
+  }
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: { sessionId, status: nextStatus, unarchived: true },
+  })
+  emitAll({
+    type: 'session.status',
+    payload: { sessionId, status: nextStatus, unarchived: true },
+  })
+  return getSession(sessionId)
+}
+
+/**
  * 从指定节点重新开始（归档前/后均可）
- * - 杀掉本会话进程
- * - 若已归档则重新激活
- * - 目标节点及之后重置为 pending，current_step_index 指到该步并 advance
+ * - 若已归档：先解档（归档只省资源）
+ * - 杀掉本会话进程；活跃场外本段归档
+ * - **统一**：按模板自该步起（跳过场外）线性追加克隆并开跑，历史一律保留
  *
  * @param {string} sessionId
  * @param {{ nodeInstanceId?: string, stepIndex?: number }} opts
  */
 export async function restartFromNode(sessionId, opts = {}) {
-  const session = getSession(sessionId)
+  let session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
+
+  if (session.status === SESSION_STATUS.ARCHIVED) {
+    unarchiveSession(sessionId, { silent: true, reason: 'restart_from_node' })
+    session = getSession(sessionId)
+  }
 
   const nodes = getDb()
     .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
@@ -328,43 +716,66 @@ export async function restartFromNode(sessionId, opts = {}) {
     target = nodes.find((n) => Number(n.step_index) === Number(opts.stepIndex))
   }
   if (!target) throw new Error('目标节点不存在')
+  if (target.step_type === STEP_TYPE.OFFSITE) {
+    throw Object.assign(
+      new Error('场外协助没有「重新开始」；请在右侧选择正常流程节点'),
+      { code: 'OFFSITE_NOT_RESTART_TARGET' },
+    )
+  }
 
   const idx = Number(target.step_index)
+  const group = getGroup(session.group_id)
+  const steps = parseJson(group?.steps_json, [])
 
-  // 释放 bat / 控制台进程
+  // 释放 bat / 控制台进程（含场外协助占用的资源）
   try {
     killSessionProcesses(sessionId)
   } catch {
     /* ignore */
   }
 
-  // 目标及之后：重置为待执行
-  for (const n of nodes) {
-    if (Number(n.step_index) < idx) continue
-    updateNode(n.id, {
-      status: NODE_STATUS.PENDING,
-      output_json: null,
-      started_at: null,
-      finished_at: null,
-      // 保留 input 仅作参考；人工步会在 advance 时重写
-    })
-  }
-
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
-  // 记录一次重开，便于台账
-  ctx.lastRestart = {
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  const { created, batchId } = appendClonedSuffixFrom(sessionId, target, steps)
+  if (!created.length) {
+    throw Object.assign(new Error('没有可克隆的正常流程节点'), {
+      code: 'RESTART_CLONE_EMPTY',
+    })
+  }
+  const startNode = created[0]
+  const startIdx = Number(startNode.step_index)
+  const clonedCount = created.length
+  const cloneBatchId = batchId
+
+  const offClose = archiveOffsiteOnReturnToMain(sessionId, {
+    reason: 'clone_restart',
+    resumeTitle: startNode.title || target.title || `步骤 ${idx + 1}`,
+    resumeNodeId: startNode.id,
+    resumeStepIndex: startIdx,
+    silent: false,
+  })
+  const ctx2 = parseJson(getSession(sessionId)?.context_json, {})
+  ctx2.lastRestart = {
     at: nowIso(),
-    stepIndex: idx,
-    nodeInstanceId: target.id,
-    title: target.title || `步骤 ${idx + 1}`,
+    stepIndex: startIdx,
+    nodeInstanceId: startNode.id,
+    title: startNode.title || target.title || `步骤 ${idx + 1}`,
     fromStatus: session.status,
+    fromOffsite: !!offClose.hadActive,
+    offsiteArchived: !!offClose.hadActive,
+    cloned: true,
+    cloneBatchId,
+    clonedCount,
+    sourceNodeInstanceId: target.id,
+    sourceStepIndex: idx,
   }
 
   updateSession(sessionId, {
     status: SESSION_STATUS.ACTIVE,
-    current_step_index: idx,
-    context_json: JSON.stringify(ctx),
+    current_step_index: startIdx,
+    context_json: JSON.stringify(ctx2),
     archive_reason: null,
     archived_at: null,
   })
@@ -373,8 +784,16 @@ export async function restartFromNode(sessionId, opts = {}) {
     role: 'system',
     type: 'status',
     content: {
-      text: `从节点「${target.title || `步骤 ${idx + 1}`}」重新开始（第 ${idx + 1} 步及之后将重跑）`,
-      restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
+      text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；场外不参与重开）`,
+      restartFrom: {
+        stepIndex: startIdx,
+        nodeInstanceId: startNode.id,
+        sourceNodeInstanceId: target.id,
+        sourceStepIndex: idx,
+        cloned: true,
+        cloneBatchId,
+        clonedCount,
+      },
     },
   })
 
@@ -382,32 +801,60 @@ export async function restartFromNode(sessionId, opts = {}) {
     type: 'session.restart',
     payload: {
       sessionId,
-      stepIndex: idx,
-      nodeInstanceId: target.id,
-      title: target.title,
+      stepIndex: startIdx,
+      nodeInstanceId: startNode.id,
+      title: startNode.title,
+      cloned: true,
+      cloneBatchId,
+      sourceNodeInstanceId: target.id,
     },
   })
   emitSession(sessionId, {
     type: 'session.status',
-    payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
+    payload: {
+      sessionId,
+      status: SESSION_STATUS.ACTIVE,
+      currentStepIndex: startIdx,
+      cloned: true,
+    },
   })
   emitAll({
     type: 'session.restart',
-    payload: { sessionId, stepIndex: idx },
+    payload: { sessionId, stepIndex: startIdx, cloned: true },
   })
 
   setImmediate(() => advance(sessionId).catch(console.error))
   return {
     ok: true,
     sessionId,
-    stepIndex: idx,
-    nodeInstanceId: target.id,
-    title: target.title,
+    stepIndex: startIdx,
+    nodeInstanceId: startNode.id,
+    title: startNode.title,
+    cloned: true,
+    cloneBatchId,
+    clonedCount,
+    sourceNodeInstanceId: target.id,
+    sourceStepIndex: idx,
+    offsiteArchived: !!offClose.hadActive,
     session: getSession(sessionId),
   }
 }
 
 /** 落库 + 写节点 MD 台账 */
+function inheritCloneMeta(prev = {}, next = {}) {
+  if (!prev?.cloned && !next?.cloned) return next
+  return {
+    ...next,
+    cloned: true,
+    cloneBatchId: next.cloneBatchId || prev.cloneBatchId || null,
+    clonedFromNodeInstanceId:
+      next.clonedFromNodeInstanceId || prev.clonedFromNodeInstanceId || null,
+    clonedFromStepIndex:
+      next.clonedFromStepIndex ?? prev.clonedFromStepIndex ?? null,
+    clonedAt: next.clonedAt || prev.clonedAt || null,
+  }
+}
+
 function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   const session = getSession(sessionId)
   const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
@@ -417,6 +864,13 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
     const m = getMember(n.member_id)
     memberName = m?.display_name || m?.name || ''
   }
+  const prevIn = parseJson(n.input_json, {})
+  const prevOut = parseJson(n.output_json, {})
+  const prevClone = { ...prevIn, ...prevOut }
+  const nextInput =
+    input !== undefined ? inheritCloneMeta(prevClone, input) : undefined
+  const nextOutput =
+    output !== undefined ? inheritCloneMeta(prevClone, output) : undefined
   const next = {
     ...n,
     status: status ?? n.status,
@@ -429,8 +883,8 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
       sessionId,
       sessionTitle: session.title,
       node: next,
-      input: input !== undefined ? input : parseJson(n.input_json, null),
-      output: output !== undefined ? output : parseJson(n.output_json, null),
+      input: nextInput !== undefined ? nextInput : prevIn,
+      output: nextOutput !== undefined ? nextOutput : prevOut,
       memberName,
     })
   } catch (e) {
@@ -438,8 +892,8 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   }
   updateNode(nodeId, {
     status: next.status,
-    input_json: input !== undefined ? JSON.stringify(input) : undefined,
-    output_json: output !== undefined ? JSON.stringify(output) : undefined,
+    input_json: nextInput !== undefined ? JSON.stringify(nextInput) : undefined,
+    output_json: nextOutput !== undefined ? JSON.stringify(nextOutput) : undefined,
     journal_path: journalPath,
     finished_at: next.finished_at,
   })
@@ -539,18 +993,23 @@ export function createSessionFromGroup(groupId, { title } = {}) {
 
   steps.forEach((step, i) => {
     const flow = normalizeStepFlow(step.flow, step.gate)
+    const st = step.type || STEP_TYPE.MEMBER
     insertNode.run(
       uid('node'),
       sessionId,
       i,
       step.id || `step_${i}`,
-      step.title || `步骤 ${i + 1}`,
-      step.type || STEP_TYPE.MEMBER,
-      step.memberId || null,
+      st === STEP_TYPE.OFFSITE
+        ? step.title || '场外协助'
+        : step.title || `步骤 ${i + 1}`,
+      st,
+      st === STEP_TYPE.OFFSITE ? null : step.memberId || null,
       NODE_STATUS.PENDING,
-      flowNeedsWait(flow) || step.gate ? 1 : 0,
+      st === STEP_TYPE.OFFSITE ? 0 : flowNeedsWait(flow) || step.gate ? 1 : 0,
     )
   })
+  // 模板未配置时，在末尾自动补一个「场外协助」额外节点
+  ensureOffsiteNode(sessionId)
 
   addMessage(sessionId, {
     role: 'system',
@@ -643,12 +1102,23 @@ export async function advance(sessionId) {
   const steps = parseJson(group.steps_json, [])
   let idx = session.current_step_index
 
-  while (idx < steps.length) {
+  const maxIndexOf = () => {
+    const row = getDb()
+      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+      .get(sessionId)
+    return row?.m == null ? -1 : Number(row.m)
+  }
+
+  while (idx <= maxIndexOf()) {
     const nodes = getDb()
       .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
       .all(sessionId)
     const node = nodes.find((n) => n.step_index === idx)
-    if (!node) break
+    if (!node) {
+      idx += 1
+      updateSession(sessionId, { current_step_index: idx })
+      continue
+    }
 
     if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) {
       idx += 1
@@ -661,6 +1131,60 @@ export async function advance(sessionId) {
       return
     }
 
+    // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
+    if (node.step_type === STEP_TYPE.OFFSITE) {
+      const title = node.title || '场外协助'
+      persistNodeIo(sessionId, node.id, {
+        input: {
+          kind: 'offsite',
+          prompt: title,
+          at: nowIso(),
+        },
+        output: {
+          waiting: true,
+          offsiteIdle: false,
+          humanAction: 'pending',
+          mode: OFFSITE_MODE.PLANNED,
+          plannedPause: true,
+        },
+        status: NODE_STATUS.WAITING_HUMAN,
+      })
+      updateSession(sessionId, {
+        status: SESSION_STATUS.WAITING_HUMAN,
+        current_step_index: idx,
+      })
+      const ctx = parseJson(session.context_json, {})
+      ctx.offsiteAssist = {
+        active: true,
+        nodeInstanceId: node.id,
+        at: nowIso(),
+        mode: OFFSITE_MODE.PLANNED,
+        planned: true,
+      }
+      updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: {
+          text: `场外协助「${title}」· 计划挂起。可 @办事；回主线请点右侧正常节点（回退将线性追加克隆）。`,
+          offsite: true,
+          mode: OFFSITE_MODE.PLANNED,
+        },
+      })
+      emitSession(sessionId, {
+        type: 'session.status',
+        payload: {
+          sessionId,
+          status: SESSION_STATUS.WAITING_HUMAN,
+          currentStepIndex: idx,
+          offsiteAssist: true,
+          nodeInstanceId: node.id,
+        },
+      })
+      return
+    }
+
     // run step
     updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
     updateNode(node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
@@ -669,17 +1193,30 @@ export async function advance(sessionId) {
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
     })
 
-    const step = steps[idx] || {}
+    const { step } = resolveStepForNode(node, steps)
     const ctx = parseJson(session.context_json, {})
+    const cloneMeta = (() => {
+      const out = parseJson(node.output_json, {})
+      const input = parseJson(node.input_json, {})
+      if (!out.cloned && !input.cloned) return null
+      return {
+        cloned: true,
+        cloneBatchId: out.cloneBatchId || input.cloneBatchId || null,
+        clonedFromNodeInstanceId:
+          out.clonedFromNodeInstanceId || input.clonedFromNodeInstanceId || null,
+        clonedFromStepIndex:
+          out.clonedFromStepIndex ?? input.clonedFromStepIndex ?? null,
+      }
+    })()
 
     if (step.type === STEP_TYPE.HUMAN || node.step_type === STEP_TYPE.HUMAN) {
-      // 显式 true；显式 false 关闭；未写时仅首步默认采集
+      // 显式 true；显式 false 关闭；未写时仅模板首步默认采集
       const captureParams =
         step.captureParams === true
           ? true
           : step.captureParams === false
             ? false
-            : idx === 0
+            : templateStepIndexOf(node, steps.length) === 0
       const basePrompt = step.title || node.title || '请输入 / 确认'
       const prompt = captureParams
         ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；同会话内递增追加，不覆盖；新开聊另起一套。节点输出整段不切分）`
@@ -689,8 +1226,9 @@ export async function advance(sessionId) {
           kind: 'human',
           prompt: basePrompt,
           captureParams: !!captureParams,
+          ...(cloneMeta || {}),
         },
-        output: { waiting: true },
+        output: { waiting: true, ...(cloneMeta || {}) },
         status: NODE_STATUS.WAITING_HUMAN,
       })
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
@@ -802,9 +1340,12 @@ export async function advance(sessionId) {
             text: e.message,
             mode: 'path_busy',
             actions: ['approve', 'reject'],
-            policy: '可归档其它占用会话后点「同意」重试，或「拒绝」结束本步。',
+            policy:
+              '可先归档占用方会话，或打开右侧「资源」查看；再点「同意」重试，或「拒绝」结束本步。外部占用不在软锁范围内。',
             pathBusy: true,
             holderSessionId: e.sessionId,
+            holderTitle: e.title || null,
+            busyPath: e.path || null,
           },
         })
         return
@@ -1006,7 +1547,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     role: 'system',
     type: 'status',
     content: {
-      text: `${reasonLabel}。归档须人工同意；${hours} 小时内未确认将自动归档并释放资源。`,
+      text: `${reasonLabel}。归档须人工同意；${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。`,
     },
   })
   addMessage(sessionId, {
@@ -1250,6 +1791,27 @@ export function archiveSession(sessionId, reason = 'manual') {
   const s0 = getSession(sessionId)
   const ctx0 = parseJson(s0?.context_json, {})
   delete ctx0.pendingArchive
+  // 归档 = 释放资源；未执行节点状态保留，流程轨默认仍可查看
+  if (ctx0.offsiteAssist) {
+    ctx0.offsiteAssist = { ...ctx0.offsiteAssist, active: false, archivedAt: t }
+  }
+  try {
+    const off = getDb()
+      .prepare(
+        `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? LIMIT 1`,
+      )
+      .get(sessionId, STEP_TYPE.OFFSITE)
+    if (off && (off.status === NODE_STATUS.RUNNING || off.status === NODE_STATUS.WAITING_HUMAN)) {
+      const prev = parseJson(off.output_json, {})
+      updateNode(off.id, {
+        status: NODE_STATUS.PENDING,
+        output_json: JSON.stringify({ ...prev, archivedIdle: true }),
+        finished_at: t,
+      })
+    }
+  } catch {
+    /* ignore */
+  }
   if (ctx0.interrupted) {
     ctx0.interrupted = {
       ...ctx0.interrupted,
@@ -1270,7 +1832,19 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已结束本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）`,
+          text: `已归档：已请求结束 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）并放开目录。外部窗口若仍在请手关。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。`,
+        },
+      })
+    } catch {
+      /* ignore */
+    }
+  } else {
+    try {
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        content: {
+          text: '已归档：已请求释放进程并放开目录。本会话仍在，可解档续聊或「克隆并从此开始」追加节点；可再次归档。外部窗口若仍在请手关。',
         },
       })
     } catch {
@@ -1371,6 +1945,19 @@ export function markInterruptedOnBoot() {
   if (ids.length) {
     emitAll({ type: 'sessions.interrupted', payload: { ids } })
     console.log(`[acw] interrupted ${ids.length} session(s) for recovery`)
+  }
+  // 已归档会话：清掉残留 console pid 文件，避免误报占用
+  try {
+    const archived = getDb()
+      .prepare(`SELECT id FROM sessions WHERE status = ?`)
+      .all(SESSION_STATUS.ARCHIVED)
+      .map((r) => r.id)
+    const cleaned = cleanupArchivedSessionPidFiles(archived)
+    if (cleaned.cleared) {
+      console.log(`[acw] cleared pid files for ${cleaned.cleared} archived session(s)`)
+    }
+  } catch (e) {
+    console.warn('[acw] cleanup archived pid files', e?.message || e)
   }
   return { marked: ids.length, ids }
 }
@@ -1830,10 +2417,39 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     : null
   if (!node) throw new Error('节点不存在')
 
+  // 闸门推进主线 = 回归正轨：场外默认完成并归档
+  if (
+    action === 'submit' ||
+    action === 'human_submit' ||
+    action === 'approve' ||
+    action === 'admin_approve' ||
+    action === 'reject'
+  ) {
+    archiveOffsiteOnReturnToMain(sessionId, {
+      reason: 'gate_progress',
+      resumeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+      resumeNodeId: node.id,
+      resumeStepIndex: Number(node.step_index),
+      silent: false,
+    })
+  }
+
   if (action === 'submit' || action === 'human_submit') {
     const prevOut = parseJson(node.output_json, {})
     const ctx = parseJson(session.context_json, {})
     const fullText = text != null ? String(text) : ''
+    // 纯 @成员：不当闸门提交（应走发消息协助）
+    {
+      const enabledMembers = getDb()
+        .prepare('SELECT * FROM members WHERE enabled = 1')
+        .all()
+      if (isMentionAssistOnly(fullText, enabledMembers)) {
+        throw Object.assign(
+          new Error('纯 @ 提及请用发送消息协助，不能作为闸门/项目参数提交'),
+          { code: 'MENTION_ASSIST_ONLY' },
+        )
+      }
+    }
     ctx.lastHumanInput = fullText
     ctx.workFolderReason = ctx.workFolderReason || 'user'
 
@@ -2219,9 +2835,31 @@ export function parseMemberMentions(text, memberList) {
 }
 
 /**
- * 流程外 @ 成员：不推进步骤，仅聊天协助
+ * 流程外 @ 成员：写入可写场外节点；已归档则末尾扩展新段落。
+ * 离开场外：右侧正常节点回主线（早于当前则线性追加克隆；本段归档，可再次扩展）。
+ * 同一会话默认串行：后一条 @ 等前一条跑完再执行（不做并发调度）。
  */
+const mentionInvokeTail = new Map()
+
+function enqueueMentionInvoke(sessionId, task) {
+  const prev = mentionInvokeTail.get(sessionId) || Promise.resolve()
+  const next = prev
+    .catch(() => {})
+    .then(() => task())
+  mentionInvokeTail.set(
+    sessionId,
+    next.finally(() => {
+      if (mentionInvokeTail.get(sessionId) === next) mentionInvokeTail.delete(sessionId)
+    }),
+  )
+  return next
+}
+
 export async function invokeMentionedMembers(sessionId, text) {
+  return enqueueMentionInvoke(sessionId, () => runMentionedMembers(sessionId, text))
+}
+
+async function runMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
   if (!session) return { invoked: [] }
   if (session.status === SESSION_STATUS.ARCHIVED) return { invoked: [] }
@@ -2237,21 +2875,83 @@ export async function invokeMentionedMembers(sessionId, text) {
   const mentioned = parseMemberMentions(text, members)
   if (!mentioned.length) return { invoked: [] }
 
+  let offsite = ensureOffsiteNode(sessionId, { expand: true })
   const group = getGroup(session.group_id)
   const ctx = parseJson(session.context_json, {})
+  const mode = resolveOffsiteMode(session, offsite)
   const callArgs = extractCallArgsFromMention(text, mentioned)
   const paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
   const invoked = []
+  const startedAt = nowIso()
+  const startNodeId = offsite.id
+
+  ctx.offsiteAssist = {
+    active: true,
+    nodeInstanceId: offsite.id,
+    at: startedAt,
+    mode,
+    planned: mode === OFFSITE_MODE.PLANNED,
+    mentionText: String(text || '').slice(0, 500),
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  const prevOut = parseJson(offsite.output_json, {})
+  const history = Array.isArray(prevOut.assists) ? prevOut.assists : []
+  updateNode(offsite.id, {
+    status: NODE_STATUS.RUNNING,
+    started_at: startedAt,
+    finished_at: null,
+  })
+  persistNodeIo(sessionId, offsite.id, {
+    input: {
+      kind: 'offsite',
+      text: String(text || ''),
+      callArgs,
+      at: startedAt,
+    },
+    output: {
+      ...prevOut,
+      waiting: false,
+      offsiteIdle: false,
+      archived: false,
+      assists: history,
+      lastMention: String(text || ''),
+      mode,
+      plannedPause: mode === OFFSITE_MODE.PLANNED,
+    },
+    status: NODE_STATUS.RUNNING,
+  })
+
+  addMessage(sessionId, {
+    role: 'system',
+    type: 'status',
+    node_instance_id: offsite.id,
+    content: {
+      text:
+        mode === OFFSITE_MODE.PLANNED
+          ? `场外「${offsite.title || '场外协助'}」· 计划挂起。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`
+          : `场外「${offsite.title || '场外协助'}」· 临时插队。回主线点右侧正常节点（回退追加克隆；本段归档；可再扩展）。`,
+      offsite: true,
+      mode,
+    },
+  })
 
   for (const member of mentioned) {
+    // 主线已回归并归档了原节点：流动扩展到新场外段落继续记结果
+    if (isOffsiteArchived(sessionId, startNodeId) || isOffsiteArchived(sessionId, offsite.id)) {
+      offsite = ensureOffsiteNode(sessionId, { expand: true })
+    }
+
     addMessage(sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
+      node_instance_id: offsite.id,
       content: {
         text: `▶ @${member.display_name || member.name} 协助处理中…`,
         adHoc: true,
         mention: true,
+        offsite: true,
       },
     })
 
@@ -2276,30 +2976,131 @@ export async function invokeMentionedMembers(sessionId, text) {
       }
     }
 
-    // 会话可能中途被归档
     const still = getSession(sessionId)
     if (!still || still.status === SESSION_STATUS.ARCHIVED) break
+
+    if (isOffsiteArchived(sessionId, offsite.id)) {
+      offsite = ensureOffsiteNode(sessionId, { expand: true })
+    }
 
     addMessage(sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
+      node_instance_id: offsite.id,
       content: {
         text: result.summary || (result.ok ? '完成' : '失败'),
         ok: !!result.ok,
         data: result.data,
         adHoc: true,
         mention: true,
+        offsite: true,
       },
     })
     invoked.push({
       memberId: member.id,
       memberName: member.display_name || member.name,
       ok: !!result.ok,
+      summary: result.summary || '',
     })
   }
 
-  return { invoked }
+  const still2 = getSession(sessionId)
+  if (!still2 || still2.status === SESSION_STATUS.ARCHIVED) {
+    return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
+  }
+
+  // 原段落已归档：结果落到当前可写/新扩展段落，并直接完成本段归档（流动、可多次）
+  const startArchived = isOffsiteArchived(sessionId, startNodeId)
+  if (isOffsiteArchived(sessionId, offsite.id)) {
+    offsite = ensureOffsiteNode(sessionId, { expand: true })
+  }
+
+  const cur = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(offsite.id)
+  const curOut = parseJson(cur?.output_json, {})
+  const assists = Array.isArray(curOut.assists) ? [...curOut.assists] : []
+  assists.push({
+    at: startedAt,
+    finishedAt: nowIso(),
+    text: String(text || ''),
+    invoked,
+    mode,
+    expanded: startArchived,
+  })
+
+  if (startArchived) {
+    // 回主线后的异步收尾 = 新场外段落，写完即归档（线性扩展）
+    persistNodeIo(sessionId, offsite.id, {
+      input: {
+        kind: 'offsite',
+        text: String(text || ''),
+        callArgs,
+        at: startedAt,
+        lateExpand: true,
+      },
+      output: {
+        ...curOut,
+        assists,
+        lastInvoked: invoked,
+        humanAction: 'approve',
+        mode: OFFSITE_MODE.INTERRUPT,
+        archived: true,
+        lateExpand: true,
+        closedAt: nowIso(),
+        closeReason: 'late_expand_archived',
+      },
+      status: NODE_STATUS.SUCCEEDED,
+      finished: true,
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      node_instance_id: offsite.id,
+      content: {
+        text: `场外流程已扩展并归档「${offsite.title || '场外协助'}」（异步收尾）。主线仍以右侧时序为准。`,
+        offsite: true,
+        offsiteArchived: true,
+        lateExpand: true,
+      },
+    })
+    return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode, lateExpand: true }
+  }
+
+  persistNodeIo(sessionId, offsite.id, {
+    input: parseJson(cur?.input_json, {}),
+    output: {
+      ...curOut,
+      assists,
+      lastInvoked: invoked,
+      humanAction: 'pending',
+      mode,
+      plannedPause: mode === OFFSITE_MODE.PLANNED,
+      archived: false,
+    },
+    status: NODE_STATUS.WAITING_HUMAN,
+    finished: false,
+  })
+  const ctxLive = parseJson(getSession(sessionId)?.context_json, {})
+  ctxLive.offsiteAssist = {
+    active: true,
+    nodeInstanceId: offsite.id,
+    at: startedAt,
+    mode,
+    planned: mode === OFFSITE_MODE.PLANNED,
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctxLive) })
+  emitSession(sessionId, {
+    type: 'session.status',
+    payload: {
+      sessionId,
+      status: still2.status,
+      offsiteAssist: true,
+      offsiteMode: mode,
+      nodeInstanceId: offsite.id,
+    },
+  })
+
+  return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
 }
 
 /**
@@ -2357,48 +3158,34 @@ export async function postUserMessage(sessionId, text, attachments = []) {
     attachments: atts,
   }
 
-  // archived → new session on same group
+  // archived → 解档，仍在本会话（绝不因此新建 Session / 群聊）
   if (session.status === SESSION_STATUS.ARCHIVED) {
-    // 新任务：走自动命名（模板缩写；有新 #1 后再拼）
-    const created = createSessionFromGroup(session.group_id, {})
-    // wait a tick for advance to hit first human step
-    await new Promise((r) => setTimeout(r, 50))
-    const node = getDb()
-      .prepare(
-        `SELECT * FROM node_instances WHERE session_id = ? AND step_index = 0`,
-      )
-      .get(created.id)
-    if (node && node.step_type === STEP_TYPE.HUMAN && node.status === NODE_STATUS.WAITING_HUMAN) {
-      await handleGateAction(created.id, {
-        action: 'submit',
-        text: content.text,
-        nodeInstanceId: node.id,
-      })
-      if (atts.length) {
-        addMessage(created.id, {
-          role: 'user',
-          type: 'text',
-          content: { text: content.text, attachments: atts },
-        })
-      }
-    } else {
-      addMessage(created.id, {
-        role: 'user',
-        type: 'text',
-        content,
-      })
-    }
-    return { session: getSession(created.id) || created, newSession: true }
+    unarchiveSession(sessionId, { reason: 'message' })
   }
 
-  if (session.status === SESSION_STATUS.WAITING_HUMAN) {
+  const live = getSession(sessionId)
+  if (!live) throw new Error('会话不存在')
+
+  if (live.status === SESSION_STATUS.WAITING_HUMAN) {
+    // 闸门节点不含场外协助（场外也可能是 waiting_human）
     const node = getDb()
       .prepare(
-        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? ORDER BY step_index LIMIT 1`,
+        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? ORDER BY step_index LIMIT 1`,
       )
-      .get(sessionId, NODE_STATUS.WAITING_HUMAN)
-    if (node && node.step_type === STEP_TYPE.HUMAN) {
-      // 人工步骤提交：走闸门，不并行 @（避免和项目参数采集冲突）
+      .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
+
+    const enabledMembers = getDb()
+      .prepare('SELECT * FROM members WHERE enabled = 1')
+      .all()
+      .map((r) => ({
+        ...r,
+        config: parseJson(r.config_json, {}),
+      }))
+    const mentionOnly =
+      /@/.test(content.text || '') && isMentionAssistOnly(content.text, enabledMembers)
+
+    if (node && node.step_type === STEP_TYPE.HUMAN && !mentionOnly) {
+      // 人工步骤提交：走闸门（纯 @成员协助除外）
       await handleGateAction(sessionId, {
         action: 'submit',
         text: content.text,
@@ -2413,8 +3200,8 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       }
       return { session: getSession(sessionId), newSession: false }
     }
-    // CI01：缺参拦截后，Enter 发送即补齐 #1 并重跑本步
-    if (node && node.step_type === STEP_TYPE.MEMBER) {
+    // CI01：缺参拦截后补参（纯 @协助除外）
+    if (node && node.step_type === STEP_TYPE.MEMBER && !mentionOnly) {
       const out = parseJson(node.output_json, {})
       if (out.needParams || out.reason === 'missing_param_1') {
         await handleGateAction(sessionId, {
@@ -2425,13 +3212,26 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         return { session: getSession(sessionId), newSession: false, needParamsFilled: true }
       }
     }
-    // waiting gate but user typed — 记 pending 附言，不推进、不通过/拒绝（可 @ 成员协助）
+    // waiting / 纯 @协助：记消息到场外协助节点，不推进正常流程
+    const offsiteNode =
+      mentionOnly || /@/.test(content.text || '')
+        ? ensureOffsiteNode(sessionId, { expand: true })
+        : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(live, offsiteNode) : null
+    const mainGateWaiting = !!(
+      node &&
+      (node.step_type === STEP_TYPE.HUMAN ||
+        (node.step_type === STEP_TYPE.MEMBER &&
+          (parseJson(node.output_json, {}).needParams ||
+            parseJson(node.output_json, {}).reason === 'missing_param_1')))
+    )
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
-      content,
+      node_instance_id: offsiteNode?.id || null,
+      content: { ...content, offsite: !!offsiteNode },
     })
-    if (node) {
+    if (node && !mentionOnly) {
       appendPendingGateNote(sessionId, node, content.text)
     }
     if (/@/.test(content.text || '')) {
@@ -2441,25 +3241,44 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         )
       })
     }
-    return { session: getSession(sessionId), newSession: false, mentionPending: true }
+    return {
+      session: getSession(sessionId),
+      newSession: false,
+      mentionPending: true,
+      offsiteMode,
+      mainGateWaiting,
+    }
   }
 
   if (!(content.text || '').trim() && !atts.length) {
     throw new Error('消息不能为空')
   }
-  addMessage(sessionId, {
-    role: 'user',
-    type: 'text',
-    content,
-  })
-  // 任意 @成员：流程外协助，不推进步骤
-  if (/@/.test(content.text || '')) {
-    setImmediate(() => {
-      invokeMentionedMembers(sessionId, content.text).catch((e) =>
-        console.warn('[acw] @mention failed', e.message),
-      )
+  {
+    const hasMention = /@/.test(content.text || '')
+    const offsiteNode = hasMention
+      ? ensureOffsiteNode(sessionId, { expand: true })
+      : null
+    const offsiteMode = offsiteNode ? resolveOffsiteMode(live, offsiteNode) : null
+    addMessage(sessionId, {
+      role: 'user',
+      type: 'text',
+      node_instance_id: offsiteNode?.id || null,
+      content: hasMention ? { ...content, offsite: true } : content,
     })
-    return { session: getSession(sessionId), newSession: false, mentionPending: true }
+    if (hasMention) {
+      setImmediate(() => {
+        invokeMentionedMembers(sessionId, content.text).catch((e) =>
+          console.warn('[acw] @mention failed', e.message),
+        )
+      })
+      return {
+        session: getSession(sessionId),
+        newSession: false,
+        mentionPending: true,
+        offsiteMode,
+        mainGateWaiting: false,
+      }
+    }
   }
   return { session: getSession(sessionId), newSession: false }
 }

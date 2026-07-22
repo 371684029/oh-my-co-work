@@ -130,9 +130,10 @@ export function digestIoValue(val, { maxLen = 160 } = {}) {
 }
 
 const STATUS_LABEL = {
-  pending: '待执行',
+  pending: '待跑',
+  not_run: '待跑',
   running: '执行中',
-  waiting_human: '等人',
+  waiting_human: '待确认',
   succeeded: '完成',
   failed: '失败',
   skipped: '跳过',

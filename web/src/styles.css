@@ -360,6 +360,7 @@ body,
   color: var(--ecw-text-3);
 }
 
+/* —— 流程轨状态动效（iMac 克制风：同屏尽量一个呼吸焦点）—— */
 .flow-step {
   display: flex;
   gap: 12px;
@@ -368,14 +369,25 @@ body,
   margin-left: 7px;
   padding-left: 16px;
   position: relative;
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.28s ease,
+    background 0.28s ease,
+    opacity 0.28s ease;
 }
 
 .flow-step:last-of-type {
   border-left-color: transparent;
 }
 
+.flow-step.pending {
+  border-left-color: rgba(0, 0, 0, 0.05);
+}
+
 .flow-step.current {
+  border-left-color: var(--ecw-accent);
+}
+
+.flow-step.running {
   border-left-color: var(--ecw-accent);
 }
 
@@ -392,6 +404,120 @@ body,
 /* 运行时等人：标红突出 */
 .flow-step.human-wait {
   border-left-color: var(--el-color-danger, #f56c6c);
+}
+
+/* 额外节点 · 场外协助：琥珀色系，非蓝非红 */
+.flow-step.is-extra {
+  border-left-style: dashed;
+  border-left-color: rgba(184, 130, 48, 0.35);
+  background: linear-gradient(90deg, rgba(230, 162, 60, 0.06), transparent 72%);
+  border-radius: 0 10px 10px 0;
+  margin-right: 2px;
+}
+
+.flow-step.offsite-idle {
+  border-left-color: rgba(184, 130, 48, 0.28);
+}
+
+.flow-step.offsite-active {
+  border-left-style: solid;
+  border-left-color: #c47d1a;
+  background: linear-gradient(90deg, rgba(230, 162, 60, 0.14), transparent 80%);
+}
+
+.flow-step.is-offsite-current {
+  border-left-style: solid;
+  border-left-width: 3px;
+  border-left-color: #b86e0f;
+  background: linear-gradient(90deg, rgba(230, 162, 60, 0.22), transparent 78%);
+  box-shadow: inset 0 0 0 1px rgba(196, 125, 26, 0.18);
+}
+
+.flow-step.is-offsite-current .flow-step-title {
+  font-weight: 600;
+}
+
+.flow-step.is-offsite-archived {
+  opacity: 0.62;
+  border-left-style: dashed;
+  border-left-color: rgba(140, 140, 140, 0.35);
+  background: linear-gradient(90deg, rgba(140, 140, 140, 0.05), transparent 72%);
+}
+
+.flow-step.is-extra:not(.is-offsite-current):not(.is-offsite-archived) {
+  opacity: 0.78;
+}
+
+.flow-step.is-cloned:not(.is-flow-history) {
+  animation: ecw-flow-enter 0.38s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.flow-step.offsite-active .flow-dot {
+  background: #c47d1a;
+  box-shadow:
+    0 0 0 3px var(--ecw-surface-muted),
+    0 0 0 5px rgba(230, 162, 60, 0.22);
+  animation: ecw-breathe-amber 1.6s ease-in-out infinite;
+}
+
+.flow-step.is-offsite-current .flow-dot {
+  background: #b86e0f;
+  box-shadow:
+    0 0 0 3px var(--ecw-surface-muted),
+    0 0 0 6px rgba(230, 162, 60, 0.28);
+}
+
+.flow-step.is-offsite-archived .flow-dot {
+  background: #b0b4bc;
+  box-shadow: 0 0 0 3px var(--ecw-surface-muted);
+  animation: none;
+}
+
+.flow-step.offsite-idle .flow-dot {
+  background: #d4a35c;
+  box-shadow: 0 0 0 3px var(--ecw-surface-muted);
+}
+
+.flow-step.offsite-active .flow-idx,
+.flow-idx--extra {
+  background: rgba(230, 162, 60, 0.18) !important;
+  color: #9a6414 !important;
+}
+
+.flow-step.is-offsite-current .flow-idx {
+  background: rgba(230, 162, 60, 0.32) !important;
+  color: #7a4e0c !important;
+}
+
+.flow-extra-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+  padding-left: 4px;
+}
+
+.flow-extra-sep-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(184, 130, 48, 0.28);
+}
+
+.flow-extra-sep-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #9a6414;
+}
+
+.flow-current-bar.is-offsite-attention {
+  border-color: rgba(196, 125, 26, 0.45);
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+.flow-current-bar.is-offsite-attention .flow-current-label {
+  color: #9a6414;
 }
 
 .flow-step.done {
@@ -411,32 +537,197 @@ body,
   margin-left: -21px;
   flex-shrink: 0;
   box-shadow: 0 0 0 3px var(--ecw-surface-muted);
-  transition: all 0.2s;
+  transition:
+    background 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.28s ease;
+}
+
+.flow-step.pending .flow-dot {
+  background: #d8d8de;
 }
 
 .flow-step.current .flow-dot {
   background: var(--ecw-accent);
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 6px var(--ecw-accent-mid);
+    0 0 0 5px rgba(0, 122, 255, 0.18);
+}
+
+.flow-step.running .flow-dot {
+  background: var(--ecw-accent);
+  box-shadow:
+    0 0 0 3px var(--ecw-surface-muted),
+    0 0 0 5px rgba(0, 122, 255, 0.2);
+  animation: ecw-breathe-blue 1.5s ease-in-out infinite;
+}
+
+.flow-step.running .flow-step-name {
+  background: linear-gradient(
+    100deg,
+    var(--ecw-text-1, #1d1d1f) 0%,
+    var(--ecw-text-1, #1d1d1f) 36%,
+    rgba(0, 122, 255, 0.55) 50%,
+    var(--ecw-text-1, #1d1d1f) 64%,
+    var(--ecw-text-1, #1d1d1f) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ecw-title-shimmer 2.2s ease-in-out infinite;
 }
 
 .flow-step.human-wait .flow-dot {
   background: var(--el-color-danger, #f56c6c);
   box-shadow:
     0 0 0 3px var(--ecw-surface-muted),
-    0 0 0 6px var(--el-color-danger-light-7, #fde2e2);
-  animation: ecw-pulse-red 1.4s ease-in-out infinite;
+    0 0 0 5px rgba(245, 108, 108, 0.22);
+  animation: ecw-breathe-red 1.7s ease-in-out infinite;
 }
 
 .flow-step.done .flow-dot {
   background: var(--el-color-success, #67c23a);
+  box-shadow: 0 0 0 3px var(--ecw-surface-muted);
+  animation: ecw-done-settle 0.32s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
+.flow-step.failed .flow-dot {
+  background: var(--el-color-danger, #f56c6c);
   box-shadow: 0 0 0 3px var(--ecw-surface-muted);
 }
 
 .flow-step.human-wait .flow-idx {
   background: var(--el-color-danger-light-9, #fef0f0);
   color: var(--el-color-danger, #f56c6c);
+}
+
+.flow-step.running .flow-idx {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--ecw-accent, #007aff);
+}
+
+@keyframes ecw-breathe-blue {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(0, 122, 255, 0.16);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(0, 122, 255, 0.28);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes ecw-breathe-red {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(245, 108, 108, 0.18);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(245, 108, 108, 0.28);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ecw-breathe-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(230, 162, 60, 0.18);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(230, 162, 60, 0.3);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes ecw-title-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@keyframes ecw-done-settle {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ecw-flow-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ecw-pulse-amber {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(230, 162, 60, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(230, 162, 60, 0.3);
+  }
+}
+
+@keyframes ecw-pulse-red {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 5px rgba(245, 108, 108, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px var(--ecw-surface-muted),
+      0 0 0 7px rgba(245, 108, 108, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-step,
+  .flow-dot,
+  .flow-step.running .flow-step-name,
+  .flow-step.is-cloned {
+    animation: none !important;
+    transition: none !important;
+  }
+  .flow-step.running .flow-step-name {
+    color: var(--ecw-text-1, #1d1d1f);
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+  }
 }
 
 .flow-current-bar {
@@ -449,6 +740,15 @@ body,
   font-size: 12px;
   color: var(--ecw-text-2);
   line-height: 1.55;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.flow-continue-btn {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .flow-current-bar.is-human-attention {
@@ -466,26 +766,10 @@ body,
 }
 
 .flow-current-bar strong {
-  display: block;
-  margin-top: 4px;
   color: var(--ecw-text-1);
   font-weight: 600;
   font-size: 13.5px;
   letter-spacing: -0.02em;
-}
-
-@keyframes ecw-pulse-red {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 6px rgba(245, 108, 108, 0.25);
-  }
-  50% {
-    box-shadow:
-      0 0 0 3px var(--ecw-surface-muted),
-      0 0 0 9px rgba(245, 108, 108, 0.12);
-  }
 }
 
 /* ========== 设置 ========== */

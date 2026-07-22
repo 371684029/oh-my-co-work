@@ -41,9 +41,25 @@ export const api = {
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
     remove: (id) => req(`/sessions/${id}`, { method: 'DELETE' }),
     archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
-    /** 从节点重新开始：{ nodeInstanceId } 或 { stepIndex } */
+    /** 解档：仍在本会话，可无限归档 */
+    unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),
+    /** 会话资源：进程登记 + 目录软锁 */
+    resources: (id) => req(`/sessions/${id}/resources`),
+    /** 再杀本会话进程；body: { runId?, includeDetach? } */
+    killProcesses: (id, body) =>
+      req(`/sessions/${id}/kill-processes`, {
+        method: 'POST',
+        body: JSON.stringify(body || {}),
+      }),
+    /** 从节点重开：统一追加克隆；{ nodeInstanceId } 或 { stepIndex } */
     restartFromNode: (id, body) =>
       req(`/sessions/${id}/restart-from-node`, {
+        method: 'POST',
+        body: JSON.stringify(body || {}),
+      }),
+    /** 离开场外协助继续主流程：{ nodeInstanceId } */
+    continuePastOffsite: (id, body) =>
+      req(`/sessions/${id}/continue-past-offsite`, {
         method: 'POST',
         body: JSON.stringify(body || {}),
       }),

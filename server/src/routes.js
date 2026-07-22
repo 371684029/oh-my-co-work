@@ -23,11 +23,14 @@ import {
   createSessionFromGroup,
   createSessionFromMember,
   archiveSession,
+  unarchiveSession,
   handleGateAction,
   postUserMessage,
   refreshSessionAnnouncement,
   saveSessionAnnouncement,
   restartFromNode,
+  continuePastOffsite,
+  getSessionResources,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
@@ -414,8 +417,17 @@ router.post('/sessions/:id/archive', (req, res) => {
   archiveSession(req.params.id, req.body?.reason || 'manual')
   res.json(getSessionDetail(req.params.id)?.session)
 })
+/** 解档：同一会话继续，不新建群聊 */
+router.post('/sessions/:id/unarchive', (req, res) => {
+  try {
+    unarchiveSession(req.params.id, { reason: req.body?.reason || 'manual' })
+    res.json(getSessionDetail(req.params.id)?.session)
+  } catch (e) {
+    res.status(400).json({ error: e.message, code: e.code })
+  }
+})
 /**
- * 从指定节点重新开始（归档前/后均可）
+ * 从指定节点重新开始（归档前/后均可；统一追加克隆）
  * body: { nodeInstanceId?: string, stepIndex?: number }
  */
 router.post('/sessions/:id/restart-from-node', async (req, res) => {
@@ -433,15 +445,40 @@ router.post('/sessions/:id/restart-from-node', async (req, res) => {
   }
 })
 /**
+ * 离开场外协助，继续主流程
+ * body: { nodeInstanceId: string }
+ */
+router.post('/sessions/:id/continue-past-offsite', async (req, res) => {
+  try {
+    const r = await continuePastOffsite(req.params.id, req.body?.nodeInstanceId)
+    res.json({
+      ...r,
+      detail: getSessionDetail(req.params.id),
+    })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+/**
  * 释放资源：杀掉本会话（或指定 runId）进程，不改变会话状态
- * body: { runId?: string } — 有 runId 时只杀本次运行
+ * body: { runId?: string, includeDetach?: boolean }
  */
 router.post('/sessions/:id/kill-processes', (req, res) => {
   try {
     const runId = req.body?.runId
+    const includeDetach = req.body?.includeDetach !== false
     const before = listSessionProcesses(req.params.id)
-    const result = killSessionProcesses(req.params.id, runId ? { runId } : {})
-    res.json({ ok: true, ...result, before })
+    const result = killSessionProcesses(
+      req.params.id,
+      runId ? { runId, includeDetach } : { includeDetach },
+    )
+    res.json({
+      ok: true,
+      ...result,
+      before,
+      after: listSessionProcesses(req.params.id),
+      note: '已请求结束进程；外部窗口若仍在，请手动关闭。',
+    })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -451,6 +488,14 @@ router.get('/sessions/:id/processes', (req, res) => {
     res.json({ processes: listSessionProcesses(req.params.id) })
   } catch (e) {
     res.status(500).json({ error: e.message })
+  }
+})
+/** 会话资源：进程 + 工作目录软锁占用方 */
+router.get('/sessions/:id/resources', (req, res) => {
+  try {
+    res.json(getSessionResources(req.params.id))
+  } catch (e) {
+    res.status(404).json({ error: e.message })
   }
 })
 router.post('/sessions/:id/messages', async (req, res) => {
@@ -591,7 +636,10 @@ router.get('/about', (_req, res) => {
   }
   res.json({
     productName: data.productName || 'apple-co-work',
-    tagline: data.tagline || '人机协同 · 协同办公',
+    tagline: data.tagline || '人机协同 · 万物归元 · 皆可 Workflow',
+    livingLine:
+      data.livingLine ||
+      '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、场外办事再回来。',
     version: data.version || pkgVersion,
     updateUrl: data.updateUrl || '',
     updateHint: data.updateHint || '更新包发布后在此填写地址。',

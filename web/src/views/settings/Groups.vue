@@ -83,16 +83,21 @@
             v-for="(s, i) in form.steps"
             :key="i"
             class="step-card"
-            :class="{ 'step-card--human': s.type === 'human', 'step-card--gate': s.gate }"
+            :class="{
+              'step-card--human': s.type === 'human',
+              'step-card--gate': s.gate,
+              'step-card--offsite': s.type === 'offsite',
+            }"
           >
             <div class="step-card-row">
               <span class="step-idx">{{ i + 1 }}.</span>
               <el-input v-model="s.title" placeholder="步骤标题" />
             </div>
             <div class="step-card-row step-card-tools">
-              <el-select v-model="s.type" style="width: 120px">
+              <el-select v-model="s.type" style="width: 150px">
                 <el-option label="成员" value="member" />
                 <el-option label="人工" value="human" />
+                <el-option label="场外协助" value="offsite" />
               </el-select>
               <el-select
                 v-if="s.type === 'member'"
@@ -110,6 +115,9 @@
               <el-tag v-if="s.type === 'human'" size="small" type="info" effect="plain" round>
                 人工步骤
               </el-tag>
+              <el-tag v-else-if="s.type === 'offsite'" size="small" type="warning" effect="plain" round>
+                额外
+              </el-tag>
               <el-checkbox
                 v-if="s.type === 'human'"
                 v-model="s.captureParams"
@@ -125,7 +133,7 @@
                 删
               </el-button>
             </div>
-            <div class="flow-block">
+            <div class="flow-block" v-if="s.type !== 'offsite'">
               <div class="flow-label">
                 节点流转
                 <span class="flow-hint">可多选 · 默认全开</span>
@@ -139,7 +147,13 @@
                 规则：明确拒绝=不通过；「人工流转」须人工同意；「管理员总结与流转」会汇总 # 参数与节点 I/O 到群报告；否则自动产出一票可通过。
               </p>
             </div>
+            <p v-else class="flow-policy">
+              额外节点可插任意位置，并随 @ 流动扩展。场外无「重新开始」；回主线/重开一律「克隆并从此开始」（本会话追加节点）。归档只释资源、可无限次，再发仍在本会话、不会新开群聊。未配置则开聊末尾自动补一个。
+            </p>
           </div>
+          <p class="flow-policy" style="margin-top: 4px">
+            场外协助按步骤内联、琥珀色高亮。宗旨见「关于」：节点是死的，人是活的。
+          </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
           </el-button>
@@ -160,10 +174,12 @@
                 size="small"
                 effect="plain"
                 round
-                :type="s.type === 'human' ? 'info' : ''"
+                :type="s.type === 'human' ? 'info' : s.type === 'offsite' ? 'warning' : ''"
                 class="view-step-tag"
               >
-                {{ s.type === 'human' ? '人工' : '成员' }}
+                {{
+                  s.type === 'human' ? '人工' : s.type === 'offsite' ? '场外协助' : '成员'
+                }}
               </el-tag>
               <el-tag
                 v-if="s.type === 'human' && s.captureParams"
@@ -539,6 +555,11 @@ onMounted(load)
 .step-card--gate {
   border-color: var(--el-border-color);
   background: var(--el-fill-color-blank, #fafafa);
+}
+
+.step-card--offsite {
+  border-color: rgba(196, 125, 26, 0.35);
+  background: rgba(230, 162, 60, 0.06);
 }
 
 .step-card-row {

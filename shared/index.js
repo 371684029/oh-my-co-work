@@ -11,12 +11,31 @@ export const SESSION_STATUS = {
 }
 
 export const NODE_STATUS = {
+  /** 未执行（尚未跑 / 排队）；展示文案统一「未执行」 */
   PENDING: 'pending',
   RUNNING: 'running',
+  /**
+   * 未执行（等人交互 / 闸门挂起）。产品文案「未执行」，不再用「等人」。
+   * 归档后仍可保留该状态（节点未跑完也存在）。
+   */
   WAITING_HUMAN: 'waiting_human',
   SUCCEEDED: 'succeeded',
   FAILED: 'failed',
   SKIPPED: 'skipped',
+}
+
+/** 节点状态 → 中文（展示细分：待跑 / 待确认） */
+export function nodeStatusLabel(status) {
+  const m = {
+    pending: '待跑',
+    not_run: '待跑',
+    running: '执行中',
+    waiting_human: '待确认',
+    succeeded: '完成',
+    failed: '失败',
+    skipped: '跳过',
+  }
+  return m[status] || status || ''
 }
 
 export const MEMBER_KIND = {
@@ -27,9 +46,50 @@ export const MEMBER_KIND = {
 /** 脚本/成员节点默认超时：10 分钟 */
 export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
 
+/** 产品宗旨（口号放关于页；日常控件用功能名） */
+export const PRODUCT_MISSION = {
+  tagline: '人机协同 · 万物归元 · 皆可 Workflow',
+  living: '节点是死的，人是活的',
+  oneLiner: '流动的 Workflow：节点是锚点，人可绕行、插队、场外办事再回来。',
+}
+
+/**
+ * 归档 / 会话边界（已决，文档与实现冲突时以本条为准）
+ * - 归档只释放本机进程与目录占用，不是「结束并另开新群聊」
+ * - 同一会话（同一次开聊）可无限次归档 / 解档
+ * - 归档后再发消息 = 解档并仍在本会话，不新建 Session / 不新建群模板
+ * - 续跑流程 = 本会话右侧「克隆并从此开始」，线性追加克隆节点
+ * - 只有左栏主动「开聊」才新建会话
+ */
+export const SESSION_ARCHIVE_RULES = {
+  archiveMeans: 'release_resources_only',
+  sameSessionAfterArchiveSend: true,
+  infiniteArchiveUnarchive: true,
+  resumeByCloneAppend: true,
+  newSessionOnlyViaStartChat: true,
+}
+
+/** 场外协助进入方式 */
+export const OFFSITE_MODE = {
+  PLANNED: 'planned',
+  INTERRUPT: 'interrupt',
+}
+
 export const STEP_TYPE = {
   MEMBER: 'member',
   HUMAN: 'human',
+  /** 场外协助：额外节点——人活着的出口，可插流程任意位置 */
+  OFFSITE: 'offsite',
+}
+
+/** 步骤类型 → 中文 */
+export function stepTypeLabel(type) {
+  const m = {
+    member: '成员',
+    human: '人工',
+    offsite: '场外协助',
+  }
+  return m[type] || type || ''
 }
 
 /**
@@ -212,6 +272,31 @@ export function formatAddedParamsText(added, startIndex) {
   return (Array.isArray(added) ? added : [])
     .map((v, i) => `#${from + i}=${v}`)
     .join(' · ')
+}
+
+/**
+ * 去掉已识别的 @成员名后是否几乎为空 → 视为「仅 @协助」，不当项目参数提交
+ * @param {string} text
+ * @param {Array<{display_name?: string, name?: string}>} [memberList]
+ */
+export function isMentionAssistOnly(text, memberList = []) {
+  let rest = String(text || '')
+  if (!rest.includes('@')) return false
+  const names = []
+  for (const m of memberList || []) {
+    if (m?.display_name) names.push(String(m.display_name))
+    if (m?.name) names.push(String(m.name))
+  }
+  names.sort((a, b) => b.length - a.length)
+  for (const n of [...new Set(names)]) {
+    const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const re = new RegExp(`@${escaped}(?=$|[\\s,，、@])`, 'g')
+    rest = rest.replace(re, ' ')
+  }
+  if (!names.length) {
+    rest = rest.replace(/@[\w\u4e00-\u9fff·.\-]+/g, ' ')
+  }
+  return !rest.replace(/[\s,，、]/g, '').length
 }
 
 /**
