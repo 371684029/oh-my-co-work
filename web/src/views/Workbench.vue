@@ -654,6 +654,8 @@
               {
                 open: expandedNodeId === n.id,
                 'is-extra': n.step_type === 'offsite',
+                'is-offsite-current': isCurrentOffsiteSegment(n),
+                'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
               },
             ]"
           >
@@ -677,7 +679,16 @@
                     额外
                   </el-tag>
                   <el-tag
-                    v-if="n.step_type === 'offsite' && n.output?.archived"
+                    v-if="isCurrentOffsiteSegment(n)"
+                    size="small"
+                    type="warning"
+                    effect="dark"
+                    round
+                  >
+                    当前段
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type === 'offsite' && n.output?.archived"
                     size="small"
                     type="info"
                     effect="plain"
@@ -1968,27 +1979,40 @@ const offsiteMode = computed(() => {
 const activeOffsiteNode = computed(() => {
   const nodes = detail.value?.nodes || []
   const ctx = detail.value?.session?.context
-  const pinned = ctx?.offsiteAssist?.nodeInstanceId
+  const pinned = ctx?.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
   if (pinned) {
-    const hit = nodes.find((n) => n.id === pinned && n.step_type === 'offsite')
+    const hit = nodes.find(
+      (n) =>
+        n.id === pinned &&
+        n.step_type === 'offsite' &&
+        !n.output?.archived,
+    )
     if (hit) return hit
   }
   return (
     nodes.find(
       (n) =>
         n.step_type === 'offsite' &&
+        !n.output?.archived &&
         (n.status === 'running' || n.status === 'waiting_human'),
-    ) || nodes.find((n) => n.step_type === 'offsite')
+    ) || null
   )
 })
 
+/** 多段场外并存时，仅高亮当前活跃段落 */
+function isCurrentOffsiteSegment(n) {
+  if (!n || n.step_type !== 'offsite' || n.output?.archived) return false
+  if (n.status !== 'running' && n.status !== 'waiting_human') return false
+  return activeOffsiteNode.value?.id === n.id
+}
+
 function offsiteEntryLabel(n) {
   if (!n || n.step_type !== 'offsite') return ''
-  if (n.status !== 'running' && n.status !== 'waiting_human') return ''
+  if (!isCurrentOffsiteSegment(n)) return ''
   const mode =
     n.output?.mode ||
     (n.output?.plannedPause ? 'planned' : null) ||
-    (activeOffsiteNode.value?.id === n.id ? offsiteMode.value : null)
+    offsiteMode.value
   if (mode === 'planned') return '计划'
   return '插队'
 }
