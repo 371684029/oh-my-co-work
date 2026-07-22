@@ -337,7 +337,7 @@
                       "
                       class="gate-params-hint"
                     >
-                      示例：<code>demo-app v1 D:\work</code> → #1=demo-app · #2=v1 · #3=D:\work（空格/换行均可；新开聊另起一套）
+                      示例：<code>demo-app v1 D:\work</code> → #1=demo-app · #2=v1 · #3=D:\work（空格/换行均可；同会话递增追加，新开聊另起一套）
                     </p>
                   </div>
                   <!-- 操作按钮下沉到输入区，见 composer-toolbar -->
@@ -1674,7 +1674,7 @@ const composerPlaceholder = computed(() => {
   }
   if (mode === 'human_input') {
     return g.content?.captureParams
-      ? '在此输入参数（空格或换行 → #1 #2…；新开聊另起一套），Enter 或点「提交」'
+      ? '在此输入参数（空格或换行 → #1 #2…；同会话递增追加，不覆盖；新开聊另起一套），Enter 或点「提交」'
       : '在此输入内容，Enter 或点「提交」'
   }
   if (mode === 'need_params') {

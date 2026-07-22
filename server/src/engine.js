@@ -17,7 +17,8 @@ import {
   uid,
   normalizeStepFlow,
   flowNeedsWait,
-  parseProjectParams,
+  appendProjectParams,
+  formatAddedParamsText,
   applyParamPlaceholders,
   getParamsMap,
   mergeSystemParams,
@@ -570,7 +571,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       actions: ['approve_start', 'cancel_start'],
       policy: isAdhoc
         ? '通过=开始执行成员；取消=关闭。输入全文记为 #a（调用参数），成员命令里可用 #a / {#a}。'
-        : '通过=开始执行流程；取消=关闭本任务。输入可选：多段用空格或换行分隔为 #1、#2…；新开聊另起一套。输出整段不切分。',
+        : '通过=开始执行流程；取消=关闭本任务。输入可选：多段用空格或换行分隔为 #1、#2…；同会话内递增追加，新开聊另起一套。输出整段不切分。',
     },
   })
 
@@ -681,7 +682,7 @@ export async function advance(sessionId) {
             : idx === 0
       const basePrompt = step.title || node.title || '请输入 / 确认'
       const prompt = captureParams
-        ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；新开聊另起一套。节点输出整段不切分）`
+        ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；同会话内递增追加，不覆盖；新开聊另起一套。节点输出整段不切分）`
         : basePrompt
       persistNodeIo(sessionId, node.id, {
         input: {
@@ -1651,8 +1652,11 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
 
       let parsed = null
       if (inputText.trim() && !callArgsOnly) {
-        parsed = parseProjectParams(inputText)
-        ctxStart.projectInfoRaw = parsed.raw
+        // 同会话递增追加（开聊一般为首次，等价于从 #1 起）
+        parsed = appendProjectParams(ctxStart, inputText)
+        ctxStart.projectInfoRaw = [ctxStart.projectInfoRaw, parsed.raw]
+          .filter((s) => s != null && String(s).trim())
+          .join('\n')
         ctxStart.paramsList = parsed.list
         const group = getGroup(session.group_id)
         const steps = parseJson(group?.steps_json, [])
@@ -1708,9 +1712,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
           role: 'system',
           type: 'status',
           content: {
-            text: `已写入项目参数：${parsed.list
-              .map((v, i) => `#${i + 1}=${v}`)
-              .join(' · ')}`,
+            text: `已写入项目参数：${formatAddedParamsText(parsed.added, parsed.startIndex)}`,
             params: parsed.map,
             paramsList: parsed.list,
           },
@@ -1847,8 +1849,10 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
           code: 'NEED_PARAMS',
         })
       }
-      const parsed = parseProjectParams(fullText)
-      ctx.projectInfoRaw = parsed.raw
+      const parsed = appendProjectParams(ctx, fullText)
+      ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
+        .filter((s) => s != null && String(s).trim())
+        .join('\n')
       ctx.paramsList = parsed.list
       const gObj = { ...group, steps }
       const sysCard =
@@ -1907,7 +1911,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
         role: 'system',
         type: 'status',
         content: {
-          text: `已补齐项目参数：${parsed.list.map((v, i) => `#${i + 1}=${v}`).join(' · ')}，继续执行本步`,
+          text: `已补齐项目参数：${formatAddedParamsText(parsed.added, parsed.startIndex)}，继续执行本步`,
           paramsList: parsed.list,
         },
       })
@@ -1925,8 +1929,11 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
 
     let parsed = null
     if (captureParams) {
-      parsed = parseProjectParams(fullText)
-      ctx.projectInfoRaw = parsed.raw
+      // 同会话内追加：开聊已写 #1 时，本步再输入 → #2…，不覆盖
+      parsed = appendProjectParams(ctx, fullText)
+      ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
+        .filter((s) => s != null && String(s).trim())
+        .join('\n')
       ctx.paramsList = parsed.list
       // 保留系统 #群聊 / #文件夹，合并用户 #1 #2…
       const gObj = { ...group, steps }
@@ -1965,9 +1972,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     if (parsed) {
       outPayload.params = parsed.map
       outPayload.paramsList = parsed.list
-      outPayload.paramsPreview = parsed.list
-        .map((v, i) => `#${i + 1}=${v}`)
-        .join(' · ')
+      outPayload.paramsPreview = formatAddedParamsText(parsed.added, parsed.startIndex)
     }
 
     persistNodeIo(sessionId, node.id, {
@@ -1986,14 +1991,12 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
       node_instance_id: node.id,
       content: { text: fullText || '(空)', params: parsed?.map || undefined },
     })
-    if (parsed?.list?.length) {
+    if (parsed?.added?.length) {
       addMessage(sessionId, {
         role: 'system',
         type: 'status',
         content: {
-          text: `已写入项目参数：${parsed.list
-            .map((v, i) => `#${i + 1}=${v}`)
-            .join(' · ')}`,
+          text: `已写入项目参数：${formatAddedParamsText(parsed.added, parsed.startIndex)}`,
           params: parsed.map,
           paramsList: parsed.list,
         },

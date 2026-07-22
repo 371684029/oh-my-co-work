@@ -131,7 +131,7 @@ export function formatSessionAutoTitle(opts = {}) {
  * 项目信息 → 节点参数 #1 #2 …
  * **仅用于用户输入**：空格或换行均可分隔多段；空段丢弃。
  * 节点/成员**输出**不要走本函数（输出整段使用，不切分）。
- * 另：新开聊（新会话）各自独立一套 #1…。
+ * 另：新开聊（新会话）各自独立一套 #1…；**同会话内多次采集为递增追加，不覆盖**。
  * @param {string} text
  * @returns {{ list: string[], map: Record<string,string>, raw: string }}
  */
@@ -151,6 +151,67 @@ export function parseProjectParams(text) {
     map[String(n)] = v
   })
   return { list: parts, map, raw }
+}
+
+/** list → #1/#2 map */
+export function listToParamMap(list) {
+  const map = {}
+  ;(Array.isArray(list) ? list : []).forEach((v, i) => {
+    const n = i + 1
+    map[`#${n}`] = v
+    map[String(n)] = v
+  })
+  return map
+}
+
+/**
+ * 从会话上下文取出已有项目参数列表（仅用户 #1…，不含系统键）
+ * @param {object|null|undefined} sessionContext
+ * @returns {string[]}
+ */
+export function existingProjectParamsList(sessionContext) {
+  const ctx = sessionContext || {}
+  if (Array.isArray(ctx.paramsList) && ctx.paramsList.length) {
+    return ctx.paramsList.map((v) => String(v))
+  }
+  const p = ctx.params && typeof ctx.params === 'object' ? ctx.params : {}
+  const out = []
+  for (let i = 1; i < 1000; i++) {
+    const v = p[`#${i}`]
+    if (v == null || !String(v).trim()) break
+    out.push(String(v))
+  }
+  return out
+}
+
+/**
+ * 同会话追加项目参数：在已有 #1… 之后继续编号，不覆盖旧值。
+ * @param {string[]|object|null|undefined} existingListOrCtx 已有 list，或 session context
+ * @param {string} text 本轮用户输入
+ * @returns {{ list: string[], map: Record<string,string>, raw: string, added: string[], startIndex: number }}
+ */
+export function appendProjectParams(existingListOrCtx, text) {
+  const base = Array.isArray(existingListOrCtx)
+    ? existingListOrCtx.map((v) => String(v)).filter((v) => v.length)
+    : existingProjectParamsList(existingListOrCtx)
+  const parsed = parseProjectParams(text)
+  const list = [...base, ...parsed.list]
+  const startIndex = base.length + 1
+  return {
+    list,
+    map: listToParamMap(list),
+    raw: parsed.raw,
+    added: parsed.list,
+    startIndex,
+  }
+}
+
+/** 状态文案：本轮追加的 #n=… */
+export function formatAddedParamsText(added, startIndex) {
+  const from = Number(startIndex) || 1
+  return (Array.isArray(added) ? added : [])
+    .map((v, i) => `#${from + i}=${v}`)
+    .join(' · ')
 }
 
 /**
