@@ -38,6 +38,42 @@ function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
 }
 
+/**
+ * 确保会话有「场外协助」节点（流程外操作统归此处；不参与线性 advance）
+ * @returns {object} node_instances 行
+ */
+export function ensureOffsiteNode(sessionId) {
+  const existing = getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index LIMIT 1`,
+    )
+    .get(sessionId, STEP_TYPE.OFFSITE)
+  if (existing) return existing
+
+  const row = getDb()
+    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+    .get(sessionId)
+  const idx = row?.m == null ? 0 : Number(row.m) + 1
+  const id = uid('node')
+  getDb()
+    .prepare(
+      `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      sessionId,
+      idx,
+      'offsite_assist',
+      '场外协助',
+      STEP_TYPE.OFFSITE,
+      null,
+      NODE_STATUS.PENDING,
+      0,
+    )
+  return getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
 function getGroup(id) {
   return getDb().prepare('SELECT * FROM groups WHERE id = ?').get(id)
 }
@@ -329,18 +365,38 @@ export async function restartFromNode(sessionId, opts = {}) {
     target = nodes.find((n) => Number(n.step_index) === Number(opts.stepIndex))
   }
   if (!target) throw new Error('目标节点不存在')
+  if (target.step_type === STEP_TYPE.OFFSITE) {
+    throw Object.assign(
+      new Error('场外协助不能作为「从此重新开始」目标；请在右侧选择正常流程节点'),
+      { code: 'OFFSITE_NOT_RESTART_TARGET' },
+    )
+  }
 
   const idx = Number(target.step_index)
 
-  // 释放 bat / 控制台进程
+  // 释放 bat / 控制台进程（含场外协助占用的资源）
   try {
     killSessionProcesses(sessionId)
   } catch {
     /* ignore */
   }
 
-  // 目标及之后：重置为待执行
+  // 目标及之后的正常节点：重置为未执行；场外协助节点保留历史，仅标记回未执行待命
   for (const n of nodes) {
+    if (n.step_type === STEP_TYPE.OFFSITE) {
+      const prev = parseJson(n.output_json, {})
+      updateNode(n.id, {
+        status: NODE_STATUS.PENDING,
+        output_json: JSON.stringify({
+          ...prev,
+          offsiteIdle: true,
+          leftAt: nowIso(),
+          resumeTo: { stepIndex: idx, nodeInstanceId: target.id },
+        }),
+        finished_at: nowIso(),
+      })
+      continue
+    }
     if (Number(n.step_index) < idx) continue
     updateNode(n.id, {
       status: NODE_STATUS.PENDING,
@@ -353,6 +409,7 @@ export async function restartFromNode(sessionId, opts = {}) {
 
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
+  delete ctx.offsiteAssist
   // 记录一次重开，便于台账
   ctx.lastRestart = {
     at: nowIso(),
@@ -360,6 +417,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     nodeInstanceId: target.id,
     title: target.title || `步骤 ${idx + 1}`,
     fromStatus: session.status,
+    fromOffsite: true,
   }
 
   updateSession(sessionId, {
@@ -374,7 +432,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     role: 'system',
     type: 'status',
     content: {
-      text: `从节点「${target.title || `步骤 ${idx + 1}`}」重新开始（第 ${idx + 1} 步及之后将重跑）`,
+      text: `已离开场外协助，从节点「${target.title || `步骤 ${idx + 1}`}」继续正常流程（第 ${idx + 1} 步及之后将重跑）`,
       restartFrom: { stepIndex: idx, nodeInstanceId: target.id },
     },
   })
@@ -540,18 +598,22 @@ export function createSessionFromGroup(groupId, { title } = {}) {
 
   steps.forEach((step, i) => {
     const flow = normalizeStepFlow(step.flow, step.gate)
+    // 模板里若误配场外协助，仍按普通步骤写入；系统会再追加标准场外节点
+    const st = step.type === STEP_TYPE.OFFSITE ? STEP_TYPE.MEMBER : step.type || STEP_TYPE.MEMBER
     insertNode.run(
       uid('node'),
       sessionId,
       i,
       step.id || `step_${i}`,
       step.title || `步骤 ${i + 1}`,
-      step.type || STEP_TYPE.MEMBER,
+      st,
       step.memberId || null,
       NODE_STATUS.PENDING,
       flowNeedsWait(flow) || step.gate ? 1 : 0,
     )
   })
+  // 每场任务固定带「场外协助」节点（在模板步骤之后）
+  ensureOffsiteNode(sessionId)
 
   addMessage(sessionId, {
     role: 'system',
@@ -660,6 +722,13 @@ export async function advance(sessionId) {
     if (node.status === NODE_STATUS.WAITING_HUMAN) {
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
       return
+    }
+
+    // 场外协助不参与线性推进（防御：模板误配时跳过）
+    if (node.step_type === STEP_TYPE.OFFSITE) {
+      idx += 1
+      updateSession(sessionId, { current_step_index: idx })
+      continue
     }
 
     // run step
@@ -1251,6 +1320,27 @@ export function archiveSession(sessionId, reason = 'manual') {
   const s0 = getSession(sessionId)
   const ctx0 = parseJson(s0?.context_json, {})
   delete ctx0.pendingArchive
+  // 归档 = 释放资源；未执行节点状态保留，流程轨默认仍可查看
+  if (ctx0.offsiteAssist) {
+    ctx0.offsiteAssist = { ...ctx0.offsiteAssist, active: false, archivedAt: t }
+  }
+  try {
+    const off = getDb()
+      .prepare(
+        `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? LIMIT 1`,
+      )
+      .get(sessionId, STEP_TYPE.OFFSITE)
+    if (off && (off.status === NODE_STATUS.RUNNING || off.status === NODE_STATUS.WAITING_HUMAN)) {
+      const prev = parseJson(off.output_json, {})
+      updateNode(off.id, {
+        status: NODE_STATUS.PENDING,
+        output_json: JSON.stringify({ ...prev, archivedIdle: true }),
+        finished_at: t,
+      })
+    }
+  } catch {
+    /* ignore */
+  }
   if (ctx0.interrupted) {
     ctx0.interrupted = {
       ...ctx0.interrupted,
@@ -1271,7 +1361,19 @@ export function archiveSession(sessionId, reason = 'manual') {
         role: 'system',
         type: 'status',
         content: {
-          text: `已结束本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）`,
+          text: `已归档并释放本会话 ${killed.killed} 个进程（PID: ${killed.pids.join(', ')}）。未执行节点仍保留，可在右侧流程查看。`,
+        },
+      })
+    } catch {
+      /* ignore */
+    }
+  } else {
+    try {
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        content: {
+          text: '已归档（无运行中进程需释放）。未执行节点仍保留，可在右侧流程查看。',
         },
       })
     } catch {
@@ -2232,7 +2334,8 @@ export function parseMemberMentions(text, memberList) {
 }
 
 /**
- * 流程外 @ 成员：不推进步骤，仅聊天协助
+ * 流程外 @ 成员：写入「场外协助」节点，不推进正常步骤。
+ * 回到正常节点：用户在右侧流程点「从此重新开始」。
  */
 export async function invokeMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
@@ -2250,21 +2353,67 @@ export async function invokeMentionedMembers(sessionId, text) {
   const mentioned = parseMemberMentions(text, members)
   if (!mentioned.length) return { invoked: [] }
 
+  const offsite = ensureOffsiteNode(sessionId)
   const group = getGroup(session.group_id)
   const ctx = parseJson(session.context_json, {})
   const callArgs = extractCallArgsFromMention(text, mentioned)
   const paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
   const invoked = []
+  const startedAt = nowIso()
+
+  ctx.offsiteAssist = {
+    active: true,
+    nodeInstanceId: offsite.id,
+    at: startedAt,
+    mentionText: String(text || '').slice(0, 500),
+  }
+  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  const prevOut = parseJson(offsite.output_json, {})
+  const history = Array.isArray(prevOut.assists) ? prevOut.assists : []
+  updateNode(offsite.id, {
+    status: NODE_STATUS.RUNNING,
+    started_at: startedAt,
+    finished_at: null,
+  })
+  persistNodeIo(sessionId, offsite.id, {
+    input: {
+      kind: 'offsite',
+      text: String(text || ''),
+      callArgs,
+      at: startedAt,
+    },
+    output: {
+      ...prevOut,
+      waiting: false,
+      offsiteIdle: false,
+      assists: history,
+      lastMention: String(text || ''),
+    },
+    status: NODE_STATUS.RUNNING,
+  })
+
+  addMessage(sessionId, {
+    role: 'system',
+    type: 'status',
+    node_instance_id: offsite.id,
+    content: {
+      text: '已进入场外协助（不推进正常流程）。回到主流程请在右侧选择节点「从此重新开始」。',
+      offsite: true,
+    },
+  })
 
   for (const member of mentioned) {
     addMessage(sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
+      node_instance_id: offsite.id,
       content: {
         text: `▶ @${member.display_name || member.name} 协助处理中…`,
         adHoc: true,
         mention: true,
+        offsite: true,
       },
     })
 
@@ -2297,22 +2446,59 @@ export async function invokeMentionedMembers(sessionId, text) {
       role: 'member',
       member_id: member.id,
       type: 'text',
+      node_instance_id: offsite.id,
       content: {
         text: result.summary || (result.ok ? '完成' : '失败'),
         ok: !!result.ok,
         data: result.data,
         adHoc: true,
         mention: true,
+        offsite: true,
       },
     })
     invoked.push({
       memberId: member.id,
       memberName: member.display_name || member.name,
       ok: !!result.ok,
+      summary: result.summary || '',
     })
   }
 
-  return { invoked }
+  const still2 = getSession(sessionId)
+  if (still2 && still2.status !== SESSION_STATUS.ARCHIVED) {
+    const cur = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(offsite.id)
+    const curOut = parseJson(cur?.output_json, {})
+    const assists = Array.isArray(curOut.assists) ? [...curOut.assists] : []
+    assists.push({
+      at: startedAt,
+      finishedAt: nowIso(),
+      text: String(text || ''),
+      invoked,
+    })
+    persistNodeIo(sessionId, offsite.id, {
+      input: parseJson(cur?.input_json, {}),
+      output: {
+        ...curOut,
+        assists,
+        lastInvoked: invoked,
+        humanAction: 'pending',
+      },
+      // 场外协助完成后仍为「未执行」语义挂起：等人从右侧选节点回主流程
+      status: NODE_STATUS.WAITING_HUMAN,
+      finished: false,
+    })
+    emitSession(sessionId, {
+      type: 'session.status',
+      payload: {
+        sessionId,
+        status: still2.status,
+        offsiteAssist: true,
+        nodeInstanceId: offsite.id,
+      },
+    })
+  }
+
+  return { invoked, offsiteNodeId: offsite.id }
 }
 
 /**
@@ -2405,11 +2591,12 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   }
 
   if (session.status === SESSION_STATUS.WAITING_HUMAN) {
+    // 闸门节点不含场外协助（场外也可能是 waiting_human）
     const node = getDb()
       .prepare(
-        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? ORDER BY step_index LIMIT 1`,
+        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? ORDER BY step_index LIMIT 1`,
       )
-      .get(sessionId, NODE_STATUS.WAITING_HUMAN)
+      .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
 
     const enabledMembers = getDb()
       .prepare('SELECT * FROM members WHERE enabled = 1')
@@ -2449,11 +2636,15 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         return { session: getSession(sessionId), newSession: false, needParamsFilled: true }
       }
     }
-    // waiting / 纯 @协助：记消息，可 @ 成员，不推进流程
+    // waiting / 纯 @协助：记消息到场外协助节点，不推进正常流程
+    const offsiteId = mentionOnly || /@/.test(content.text || '')
+      ? ensureOffsiteNode(sessionId)?.id
+      : null
     addMessage(sessionId, {
       role: 'user',
       type: 'text',
-      content,
+      node_instance_id: offsiteId || null,
+      content: { ...content, offsite: !!offsiteId },
     })
     if (node && !mentionOnly) {
       appendPendingGateNote(sessionId, node, content.text)
@@ -2471,19 +2662,24 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   if (!(content.text || '').trim() && !atts.length) {
     throw new Error('消息不能为空')
   }
-  addMessage(sessionId, {
-    role: 'user',
-    type: 'text',
-    content,
-  })
-  // 任意 @成员：流程外协助，不推进步骤
-  if (/@/.test(content.text || '')) {
-    setImmediate(() => {
-      invokeMentionedMembers(sessionId, content.text).catch((e) =>
-        console.warn('[acw] @mention failed', e.message),
-      )
+  {
+    const hasMention = /@/.test(content.text || '')
+    const offsiteId = hasMention ? ensureOffsiteNode(sessionId)?.id : null
+    addMessage(sessionId, {
+      role: 'user',
+      type: 'text',
+      node_instance_id: offsiteId || null,
+      content: hasMention ? { ...content, offsite: true } : content,
     })
-    return { session: getSession(sessionId), newSession: false, mentionPending: true }
+    // 任意 @成员：归入场外协助，不推进步骤
+    if (hasMention) {
+      setImmediate(() => {
+        invokeMentionedMembers(sessionId, content.text).catch((e) =>
+          console.warn('[acw] @mention failed', e.message),
+        )
+      })
+      return { session: getSession(sessionId), newSession: false, mentionPending: true }
+    }
   }
   return { session: getSession(sessionId), newSession: false }
 }

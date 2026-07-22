@@ -379,7 +379,7 @@
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
                         <span>@ 提及</span>
-                        <span class="at-panel-tip">仅成员协助 · 不重跑流程 · 重跑请用右侧「从此重新开始」</span>
+                        <span class="at-panel-tip">仅成员 · 记入场外协助 · 回主流程用右侧节点</span>
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -626,7 +626,7 @@
       <!-- Tab：流程 -->
       <div v-show="rightTab === 'flow'" class="wb-right-pane">
         <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
-          已归档
+          已归档 · 已释放进程资源
           <template v-if="archiveOutcomeTag">
             ·
             <span
@@ -635,7 +635,10 @@
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
-          · 可展开节点查看输入/输出
+          · 未执行节点仍展示，可展开查看
+        </p>
+        <p v-else-if="offsiteActive" class="flow-offsite-hint">
+          当前在场外协助 · 回到主流程请点下方正常节点的「从此重新开始」
         </p>
         <template v-if="detail?.nodes?.length">
           <div
@@ -651,13 +654,22 @@
                   <span class="flow-idx">{{ n.step_index + 1 }}</span>
                   {{ n.title }}
                   <el-tag
-                    v-if="isWaitingHuman(n)"
+                    v-if="n.step_type === 'offsite' && (isWaitingHuman(n) || n.status === 'running')"
+                    size="small"
+                    type="warning"
+                    effect="dark"
+                    round
+                  >
+                    场外
+                  </el-tag>
+                  <el-tag
+                    v-else-if="isWaitingHuman(n)"
                     size="small"
                     type="danger"
                     effect="dark"
                     round
                   >
-                    等人
+                    未执行
                   </el-tag>
                   <el-tag
                     v-else-if="isCurrent(n)"
@@ -681,7 +693,11 @@
                 </div>
               </button>
               <div class="flow-step-actions">
+                <template v-if="n.step_type === 'offsite'">
+                  <span class="flow-offsite-action-tip">流程外操作记于此 · 回主流程请选其它节点</span>
+                </template>
                 <el-button
+                  v-else
                   size="small"
                   text
                   type="primary"
@@ -704,11 +720,15 @@
             </div>
           </div>
           <div class="flow-current-bar" :class="{ 'is-human-attention': needsHuman }">
-            <span class="flow-current-label">{{ needsHuman ? '等待人工' : '当前节点' }}</span>
+            <span class="flow-current-label">{{
+              offsiteActive ? '场外协助' : needsHuman ? '等待人工' : '当前节点'
+            }}</span>
             <strong>
               {{
-                detail.nodes.find((n) => isCurrent(n))?.title ||
-                (detail.session.status === 'archived' ? '已结束' : '—')
+                offsiteActive
+                  ? detail.nodes.find((n) => n.step_type === 'offsite')?.title || '场外协助'
+                  : detail.nodes.find((n) => isCurrent(n))?.title ||
+                    (detail.session.status === 'archived' ? '已结束' : '—')
               }}
             </strong>
           </div>
@@ -906,6 +926,8 @@ import {
   formatSessionAutoTitle,
   extractCallArgsFromSlash,
   isMentionAssistOnly,
+  nodeStatusLabel,
+  stepTypeLabel as sharedStepTypeLabel,
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
@@ -1585,9 +1607,9 @@ const announceProgress = computed(() => {
       .forEach((k) => pushHash(k, ioParams[k]))
 
     let pendingHint = ''
-    if (st === 'pending') pendingHint = '待执行'
+    if (st === 'pending' || st === 'not_run') pendingHint = '未执行'
     else if (st === 'running') pendingHint = '执行中…'
-    else if (st === 'waiting_human' && !outText && !note) pendingHint = '等待确认…'
+    else if (st === 'waiting_human' && !outText && !note) pendingHint = '未执行 · 待确认'
 
     return {
       id: n.id,
@@ -1682,9 +1704,11 @@ const composerFooterHint = computed(() => {
 })
 
 function statusLabel(s) {
+  if (s === 'pending' || s === 'waiting_human' || s === 'not_run') {
+    return nodeStatusLabel(s) || '未执行'
+  }
   const m = {
     active: '进行中',
-    waiting_human: '等人',
     interrupted: '待恢复',
     archived: '已归档',
     failed: '失败',
@@ -1693,13 +1717,11 @@ function statusLabel(s) {
     succeeded: '完成',
     skipped: '跳过',
   }
-  return m[s] || s
+  return m[s] || nodeStatusLabel(s) || s
 }
 
 function stepTypeLabel(t) {
-  if (t === 'human') return '人工'
-  if (t === 'member') return '成员'
-  return t
+  return sharedStepTypeLabel(t) || t
 }
 
 function statusType(s) {
@@ -1848,6 +1870,7 @@ function isPendingGate(m) {
 
 function isCurrent(n) {
   if (!detail.value) return false
+  if (n.step_type === 'offsite') return false
   const s = detail.value.session
   if (s.status === 'archived') return false
   return (
@@ -1858,8 +1881,19 @@ function isCurrent(n) {
 }
 
 function isWaitingHuman(n) {
+  if (n.step_type === 'offsite') return n.status === 'waiting_human' || n.status === 'running'
   return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
 }
+
+/** 是否正处在场外协助（@ 等流程外操作） */
+const offsiteActive = computed(() => {
+  const s = detail.value?.session
+  if (!s || s.status === 'archived') return false
+  const ctx = s.context && typeof s.context === 'object' ? s.context : {}
+  if (ctx.offsiteAssist?.active) return true
+  const off = (detail.value?.nodes || []).find((n) => n.step_type === 'offsite')
+  return !!(off && (off.status === 'running' || off.status === 'waiting_human'))
+})
 
 /** 审核三态：pending | approve | reject */
 function reviewAction(n) {
@@ -1878,9 +1912,13 @@ function reviewLabel(n) {
 }
 
 function flowClass(n) {
+  if (n.step_type === 'offsite') {
+    if (n.status === 'running' || n.status === 'waiting_human') return 'offsite-active'
+    return 'offsite-idle'
+  }
   if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
   if (n.status === 'failed') return 'failed'
-  // 运行时等人 / 当前人工节点：红色强调
+  // 未执行（原等人）/ 当前人工节点：红色强调
   if (isWaitingHuman(n) || n.status === 'waiting_human') return 'human-wait'
   if (isCurrent(n) || n.status === 'running') return 'current'
   // 配置上是人工/闸门但尚未轮到：不红，仅轻量标记
@@ -2388,20 +2426,27 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-/** 从节点重新开始（归档前/后均可；入口在右侧流程轨） */
+/** 从节点重新开始（归档前/后均可；场外协助回主流程也走这里） */
 async function confirmRestartFromNode(n) {
   if (!n || !activeId.value) return
+  if (n.step_type === 'offsite') {
+    ElMessage.warning('场外协助不能作为重开目标，请选择正常流程节点')
+    return
+  }
   const title = n.title || `步骤 ${n.step_index + 1}`
   const archived = detail.value?.session?.status === 'archived'
+  const fromOffsite = offsiteActive.value
   try {
     await ElMessageBox.confirm(
       archived
-        ? `任务已归档。将从「${title}」重新激活并重跑该步及之后的节点，是否继续？`
-        : `将从「${title}」重新开始，该步及之后会重跑（之前步骤保留）。是否继续？`,
-      '从节点重新开始',
+        ? `任务已归档。将从「${title}」重新激活并重跑该步及之后的节点（会释放旧进程），是否继续？`
+        : fromOffsite
+          ? `将离开场外协助，从「${title}」继续正常流程（该步及之后会重跑）。是否继续？`
+          : `将从「${title}」重新开始，该步及之后会重跑（之前步骤保留）。是否继续？`,
+      fromOffsite ? '回到正常流程' : '从节点重新开始',
       {
         type: 'warning',
-        confirmButtonText: '重新开始',
+        confirmButtonText: fromOffsite ? '回到此节点' : '重新开始',
         cancelButtonText: '取消',
       },
     )
@@ -2413,7 +2458,13 @@ async function confirmRestartFromNode(n) {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
-    ElMessage.success(r.title ? `已从「${r.title}」重新开始` : '已重新开始')
+    ElMessage.success(
+      fromOffsite
+        ? `已回到「${r.title || title}」`
+        : r.title
+          ? `已从「${r.title}」重新开始`
+          : '已重新开始',
+    )
     rightTab.value = 'flow'
     footerCollapsed.value = false
     await loadDetail(activeId.value)
@@ -2514,7 +2565,7 @@ async function onSenderSubmit() {
     clearSender()
     pendingFiles.value = []
     if (r.mentionPending) {
-      ElMessage.success('已通知 @ 成员协助（不推进流程）')
+      ElMessage.success('已进入场外协助（不推进正常流程）')
     }
     if (r.newSession && r.session) {
       await loadLists()
@@ -4362,6 +4413,25 @@ loadLists().then(() => {
 .flow-archive-hint {
   margin: 0 0 12px;
   font-size: 11.5px;
+  color: var(--ecw-text-3, #8b8f9a);
+}
+.flow-offsite-hint {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  color: var(--el-color-warning-dark-2, #b88230);
+  line-height: 1.45;
+}
+.flow-offsite-action-tip {
+  font-size: 11px;
+  color: var(--ecw-text-3, #8b8f9a);
+  line-height: 1.4;
+}
+.flow-step.offsite-active .flow-idx {
+  background: rgba(230, 162, 60, 0.2);
+  color: var(--el-color-warning-dark-2, #b88230);
+}
+.flow-step.offsite-idle .flow-idx {
+  background: rgba(0, 0, 0, 0.04);
   color: var(--ecw-text-3, #8b8f9a);
 }
 .flow-archive-outcome.is-ok {

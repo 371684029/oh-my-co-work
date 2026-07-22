@@ -11,12 +11,30 @@ export const SESSION_STATUS = {
 }
 
 export const NODE_STATUS = {
+  /** 未执行（尚未跑 / 排队）；展示文案统一「未执行」 */
   PENDING: 'pending',
   RUNNING: 'running',
+  /**
+   * 未执行（等人交互 / 闸门挂起）。产品文案「未执行」，不再用「等人」。
+   * 归档后仍可保留该状态（节点未跑完也存在）。
+   */
   WAITING_HUMAN: 'waiting_human',
   SUCCEEDED: 'succeeded',
   FAILED: 'failed',
   SKIPPED: 'skipped',
+}
+
+/** 节点状态 → 中文（产品统一） */
+export function nodeStatusLabel(status) {
+  const m = {
+    pending: '未执行',
+    running: '执行中',
+    waiting_human: '未执行',
+    succeeded: '完成',
+    failed: '失败',
+    skipped: '跳过',
+  }
+  return m[status] || status || ''
 }
 
 export const MEMBER_KIND = {
@@ -30,6 +48,21 @@ export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
 export const STEP_TYPE = {
   MEMBER: 'member',
   HUMAN: 'human',
+  /**
+   * 场外协助：流程外操作（@成员等）统归此节点；
+   * 不参与线性 advance；回到正常节点由用户在右侧流程选择「从此重新开始」。
+   */
+  OFFSITE: 'offsite',
+}
+
+/** 步骤类型 → 中文 */
+export function stepTypeLabel(type) {
+  const m = {
+    member: '成员',
+    human: '人工',
+    offsite: '场外协助',
+  }
+  return m[type] || type || ''
 }
 
 /**

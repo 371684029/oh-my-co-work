@@ -140,6 +140,9 @@
               </p>
             </div>
           </div>
+          <p class="flow-policy" style="margin-top: 4px">
+            开聊后系统会自动追加「场外协助」节点（@成员等流程外操作归入该节点；不在此配置）。
+          </p>
           <el-button type="primary" @click="save">
             {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
           </el-button>
