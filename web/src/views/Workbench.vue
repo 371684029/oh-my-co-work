@@ -740,10 +740,10 @@
                   v-else
                   size="small"
                   text
-                  :type="offsiteActive ? 'info' : 'primary'"
-                  @click.stop="confirmRestartFromNode(n)"
+                  type="primary"
+                  @click.stop="restartFromNode(n)"
                 >
-                  {{ offsiteActive ? '重开并重跑' : '从此重新开始' }}
+                  从此重新开始
                 </el-button>
               </div>
               <div v-if="expandedNodeId === n.id" class="flow-io">
@@ -2548,46 +2548,36 @@ async function continuePastOffsite(n) {
   }
 }
 
-/** 从节点重开（次要入口；场外进行中会写清「将重跑」） */
-async function confirmRestartFromNode(n) {
+/** 从节点重开：以右侧流程时序为准，不弹确认（状态看流程图） */
+async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('请用「继续」离开场外协助；重开请选正常节点')
+    ElMessage.warning('场外请用「继续」；重开请点正常节点')
     return
   }
-  const title = n.title || `步骤 ${n.step_index + 1}`
-  const archived = detail.value?.session?.status === 'archived'
-  const fromOffsite = offsiteActive.value
-  try {
-    await ElMessageBox.confirm(
-      archived
-        ? `任务已归档。将从「${title}」重新激活并重跑该步及之后（会释放旧进程）。确定？`
-        : fromOffsite
-          ? `将结束场外协助，并从「${title}」重跑该步及之后（不可简单撤销）。确定？`
-          : `将从「${title}」重新开始，该步及之后会重跑（之前步骤保留）。是否继续？`,
-      fromOffsite ? '重开并重跑' : '从节点重新开始',
-      {
-        type: 'warning',
-        confirmButtonText: fromOffsite ? '结束场外并重跑' : '重新开始',
-        cancelButtonText: '取消',
-      },
-    )
-  } catch {
-    return
-  }
+  if (gating.value) return
+  gating.value = true
   try {
     const r = await api.sessions.restartFromNode(activeId.value, {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
-    ElMessage.success(r.title ? `已从「${r.title}」重新开始` : '已重新开始')
     rightTab.value = 'flow'
     footerCollapsed.value = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
+    const title = r.title || n.title || `步骤 ${n.step_index + 1}`
+    ElMessage.success(`已从「${title}」开始 · 以右侧流程为准`)
   } catch (e) {
     ElMessage.error(e.message || '重新开始失败')
+  } finally {
+    gating.value = false
   }
+}
+
+/** @deprecated 兼容旧调用名 */
+async function confirmRestartFromNode(n) {
+  return restartFromNode(n)
 }
 
 function goShortcuts() {
