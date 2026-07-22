@@ -2515,7 +2515,8 @@ async function startChat() {
     await selectSession(s.id)
     ElMessage.success(kind === 'm:' ? '已与成员开聊' : '已开聊')
   } catch (e) {
-    // 业务异常不 toast Error
+    // 业务异常不 toast Error；用 warning 避免欢迎页/开聊像「点了没反应」
+    if (e?.message) ElMessage.warning(e.message)
   }
 }
 
