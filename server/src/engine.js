@@ -2604,8 +2604,29 @@ export function parseMemberMentions(text, memberList) {
 /**
  * 流程外 @ 成员：写入可写场外节点；已归档则末尾扩展新段落。
  * 离开场外：右侧正常节点「从此重新开始」（本段归档，可再次扩展）。
+ * 同一会话默认串行：后一条 @ 等前一条跑完再执行（不做并发调度）。
  */
+const mentionInvokeTail = new Map()
+
+function enqueueMentionInvoke(sessionId, task) {
+  const prev = mentionInvokeTail.get(sessionId) || Promise.resolve()
+  const next = prev
+    .catch(() => {})
+    .then(() => task())
+  mentionInvokeTail.set(
+    sessionId,
+    next.finally(() => {
+      if (mentionInvokeTail.get(sessionId) === next) mentionInvokeTail.delete(sessionId)
+    }),
+  )
+  return next
+}
+
 export async function invokeMentionedMembers(sessionId, text) {
+  return enqueueMentionInvoke(sessionId, () => runMentionedMembers(sessionId, text))
+}
+
+async function runMentionedMembers(sessionId, text) {
   const session = getSession(sessionId)
   if (!session) return { invoked: [] }
   if (session.status === SESSION_STATUS.ARCHIVED) return { invoked: [] }
