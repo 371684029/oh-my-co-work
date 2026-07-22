@@ -640,8 +640,8 @@
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           {{
             offsiteMode === 'planned'
-              ? '场外协助 · 计划挂起 · 回主线点右侧正常节点（场外将完成并归档）'
-              : '场外协助 · 临时插队 · 回主线点右侧正常节点（场外将完成并归档）'
+              ? '场外段落进行中 · 回主线点右侧正常节点（本段归档；可再扩展）'
+              : '场外段落进行中 · 回主线点右侧正常节点（本段归档；可再扩展）'
           }}
         </p>
         <template v-if="detail?.nodes?.length">
@@ -677,7 +677,16 @@
                     额外
                   </el-tag>
                   <el-tag
-                    v-if="n.step_type === 'offsite' && offsiteEntryLabel(n)"
+                    v-if="n.step_type === 'offsite' && n.output?.archived"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    已归档
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type === 'offsite' && offsiteEntryLabel(n)"
                     size="small"
                     type="warning"
                     effect="dark"
@@ -727,7 +736,7 @@
               <div class="flow-step-actions">
                 <template v-if="n.step_type === 'offsite'">
                   <span class="flow-offsite-action-tip"
-                    >回主线：点正常节点「从此重新开始」→ 场外默认完成并归档</span
+                    >回主线点正常节点 → 本段归档；再 @ 可扩展新场外段落</span
                   >
                 </template>
                 <el-button

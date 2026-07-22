@@ -97,6 +97,7 @@ export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
   const ctx = parseJson(session?.context_json, {})
   const pinnedId = ctx.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
 
+  // 进行中的场外段落优先
   const writable = list.find(
     (n) =>
       !offsiteNodeArchived(n) &&
@@ -109,7 +110,25 @@ export function ensureOffsiteNode(sessionId, { expand = false } = {}) {
     if (pinned) return pinned
   }
 
-  if (expand || !list.length) {
+  // 流动扩展：复用「末尾」未归档 pending（刚 append 尚未标 running），不误用中间计划场外
+  if (expand) {
+    const maxRow = getDb()
+      .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
+      .get(sessionId)
+    const maxIdx = maxRow?.m == null ? -1 : Number(maxRow.m)
+    const trailing = [...list]
+      .reverse()
+      .find(
+        (n) =>
+          !offsiteNodeArchived(n) &&
+          n.status === NODE_STATUS.PENDING &&
+          Number(n.step_index) === maxIdx,
+      )
+    if (trailing) return trailing
+    return appendOffsiteNode(sessionId)
+  }
+
+  if (!list.length) {
     return appendOffsiteNode(sessionId)
   }
   return list[list.length - 1]
@@ -234,19 +253,16 @@ function archiveOffsiteOnReturnToMain(sessionId, {
   return { closed, closeToken, hadActive: hadActive || closed.length > 0 }
 }
 
-/** 场外是否已关闭（禁止 @ 收尾再写回 waiting_human） */
+/** 指定场外节点是否已归档（新扩展段落不算） */
 function isOffsiteArchived(sessionId, nodeId) {
   const session = getSession(sessionId)
   if (!session) return true
   if (session.status === SESSION_STATUS.ARCHIVED) return true
-  const ctx = parseJson(session.context_json, {})
-  if (ctx.offsiteAssist?.archived && ctx.offsiteAssist?.active === false) return true
-  if (ctx.offsiteAssist?.active === false && ctx.offsiteAssist?.closeToken) return true
-  const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
+  const n = nodeId
+    ? getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
+    : null
   if (!n) return true
-  const out = parseJson(n.output_json, {})
-  if (out.archived && n.status === NODE_STATUS.SUCCEEDED) return true
-  if (out.closeToken && n.status === NODE_STATUS.SUCCEEDED) return true
+  if (offsiteNodeArchived(n)) return true
   return false
 }
 
@@ -2740,9 +2756,9 @@ export async function invokeMentionedMembers(sessionId, text) {
     return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode }
   }
 
-  // 原段落已归档：结果落到新扩展段落，并直接完成本段归档（流动、可多次）
+  // 原段落已归档：结果落到当前可写/新扩展段落，并直接完成本段归档（流动、可多次）
   const startArchived = isOffsiteArchived(sessionId, startNodeId)
-  if (startArchived || isOffsiteArchived(sessionId, offsite.id)) {
+  if (isOffsiteArchived(sessionId, offsite.id)) {
     offsite = ensureOffsiteNode(sessionId, { expand: true })
   }
 
@@ -2970,7 +2986,9 @@ export async function postUserMessage(sessionId, text, attachments = []) {
     }
     // waiting / 纯 @协助：记消息到场外协助节点，不推进正常流程
     const offsiteNode =
-      mentionOnly || /@/.test(content.text || '') ? ensureOffsiteNode(sessionId) : null
+      mentionOnly || /@/.test(content.text || '')
+        ? ensureOffsiteNode(sessionId, { expand: true })
+        : null
     const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
     const mainGateWaiting = !!(
       node &&
@@ -3009,7 +3027,9 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   }
   {
     const hasMention = /@/.test(content.text || '')
-    const offsiteNode = hasMention ? ensureOffsiteNode(sessionId) : null
+    const offsiteNode = hasMention
+      ? ensureOffsiteNode(sessionId, { expand: true })
+      : null
     const offsiteMode = offsiteNode ? resolveOffsiteMode(session, offsiteNode) : null
     addMessage(sessionId, {
       role: 'user',
