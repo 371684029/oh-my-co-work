@@ -59,7 +59,12 @@
               </el-option>
             </el-option-group>
           </el-select>
-          <el-button type="primary" :disabled="!startTarget" @click="startChat">
+          <el-button
+            type="primary"
+            :disabled="!startTarget || startingChat"
+            :loading="startingChat"
+            @click="startChat"
+          >
             开聊
           </el-button>
         </div>
@@ -602,7 +607,14 @@
             <span>确认</span>
           </p>
           <div class="welcome-actions">
-            <el-button type="primary" size="large" round @click="startDemoChat">
+            <el-button
+              type="primary"
+              size="large"
+              round
+              :loading="startingChat"
+              :disabled="startingChat"
+              @click="startDemoChat"
+            >
               一键开聊：演示流
             </el-button>
             <p class="welcome-cta">或左侧自选群/成员后点「开聊」</p>
@@ -1155,6 +1167,8 @@ const senderRef = ref(null)
 let hashInsertLockUntil = 0
 const sending = ref(false)
 const gating = ref(false)
+/** 开聊 / 一键演示防连点 */
+const startingChat = ref(false)
 /** 快捷指令 / */
 const slashCommands = ref([])
 const slashOpen = ref(false)
@@ -2506,6 +2520,8 @@ async function startChat() {
     ElMessage.warning('请选择群模板或成员')
     return
   }
+  if (startingChat.value) return
+  startingChat.value = true
   try {
     const s =
       kind === 'm:'
@@ -2515,19 +2531,23 @@ async function startChat() {
     await selectSession(s.id)
     ElMessage.success(kind === 'm:' ? '已与成员开聊' : '已开聊')
   } catch (e) {
-    // 业务异常不 toast Error；用 warning 避免欢迎页/开聊像「点了没反应」
-    if (e?.message) ElMessage.warning(e.message)
+    // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」
+    ElMessage.warning(e?.message || '开聊失败，请稍后重试')
+  } finally {
+    startingChat.value = false
   }
 }
 
 /** 欢迎页：一键开聊演示流 */
 async function startDemoChat() {
+  if (startingChat.value) return
   let demo = groups.value.find((g) => g.title === '演示流')
   if (!demo) {
     try {
       await loadLists()
-    } catch {
-      /* ignore */
+    } catch (e) {
+      ElMessage.warning(e?.message || '加载群模板失败，请稍后重试')
+      return
     }
     demo = groups.value.find((g) => g.title === '演示流')
   }
