@@ -3163,19 +3163,6 @@ async function doArchive() {
   }
 }
 
-async function doUnarchive() {
-  const id = activeId.value
-  if (!id) return
-  try {
-    await api.sessions.unarchive(id)
-    await loadDetail(id)
-    sessions.value = await api.sessions.list()
-    ElMessage.success('已恢复')
-  } catch (e) {
-    // 业务异常不 toast Error
-  }
-}
-
 /** @param {string} [targetId] 侧栏菜单可传指定会话 id；顶栏按钮不传则删当前 */
 async function doDelete(targetId) {
   const id = targetId || activeId.value
