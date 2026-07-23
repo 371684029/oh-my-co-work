@@ -417,7 +417,9 @@ router.post('/sessions/:id/unarchive', (req, res) => {
   }
 })
 /**
- * 从指定节点重新开始（归档前/后均可；统一追加克隆）
+ * 从指定节点继续（归档前/后均可）
+ * - 往前跳未完成原轨节点：直达不克隆
+ * - 往回/再跑：线性追加克隆
  * body: { nodeInstanceId?: string, stepIndex?: number }
  */
 router.post('/sessions/:id/restart-from-node', async (req, res) => {
