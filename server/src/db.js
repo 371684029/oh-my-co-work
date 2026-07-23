@@ -32,6 +32,31 @@ function openNodeSqliteCompat(dbPath) {
     exec(sql) {
       return raw.exec(sql)
     },
+    /**
+     * 对齐 better-sqlite3：db.transaction(fn) 返回可调用函数。
+     * 运行包在 ABI 不匹配回退 node:sqlite 时必须提供，否则 @/插队插入临时协助会报
+     *「db2.transaction is not a function」。
+     */
+    transaction(fn) {
+      if (typeof fn !== 'function') {
+        throw new TypeError('db.transaction(fn) requires a function')
+      }
+      return (...args) => {
+        raw.exec('BEGIN')
+        try {
+          const result = fn(...args)
+          raw.exec('COMMIT')
+          return result
+        } catch (e) {
+          try {
+            raw.exec('ROLLBACK')
+          } catch {
+            /* ignore */
+          }
+          throw e
+        }
+      }
+    },
     pragma(src) {
       const body = String(src || '').trim()
       if (!body) return undefined
