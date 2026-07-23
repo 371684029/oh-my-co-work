@@ -182,7 +182,6 @@
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button size="default" text bg @click="openResourcesTab">资源</el-button>
             <el-button
               v-if="detail.session.status !== 'archived'"
               size="default"
@@ -191,16 +190,6 @@
               @click="doArchive"
             >
               归档
-            </el-button>
-            <el-button
-              v-else
-              size="default"
-              text
-              bg
-              type="primary"
-              @click="doUnarchive"
-            >
-              恢复
             </el-button>
             <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
           </div>
