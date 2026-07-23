@@ -182,7 +182,6 @@
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button size="default" text bg @click="openResourcesTab">资源</el-button>
             <el-button
               v-if="detail.session.status !== 'archived'"
               size="default"
@@ -191,16 +190,6 @@
               @click="doArchive"
             >
               归档
-            </el-button>
-            <el-button
-              v-else
-              size="default"
-              text
-              bg
-              type="primary"
-              @click="doUnarchive"
-            >
-              恢复
             </el-button>
             <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
           </div>
@@ -3169,19 +3158,6 @@ async function doArchive() {
     sessions.value = await api.sessions.list()
     ElMessage.success('已归档（已请求释放进程）')
     if (rightTab.value === 'resources') await loadResources()
-  } catch (e) {
-    // 业务异常不 toast Error
-  }
-}
-
-async function doUnarchive() {
-  const id = activeId.value
-  if (!id) return
-  try {
-    await api.sessions.unarchive(id)
-    await loadDetail(id)
-    sessions.value = await api.sessions.list()
-    ElMessage.success('已恢复')
   } catch (e) {
     // 业务异常不 toast Error
   }
