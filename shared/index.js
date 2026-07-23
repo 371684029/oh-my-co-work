@@ -33,7 +33,7 @@ export function nodeStatusLabel(status) {
     waiting_human: '待确认',
     succeeded: '完成',
     failed: '失败',
-    skipped: '跳过',
+    skipped: '已绕过',
   }
   return m[status] || status || ''
 }
@@ -58,7 +58,7 @@ export const PRODUCT_MISSION = {
  * - 归档只释放本机进程与目录占用，不是「结束并另开新群聊」
  * - 同一会话（同一次开聊）可无限次归档 / 解档
  * - 归档后再发消息 = 解档并仍在本会话，不新建 Session / 不新建群模板
- * - 续跑流程 = 本会话右侧「从这里继续」，线性追加克隆节点
+ * - 续跑：往回/再跑=追加克隆；往前跳未完成步=直达不克隆；旧待确认标已绕过
  * - 只有左栏主动「开聊」才新建会话
  */
 export const SESSION_ARCHIVE_RULES = {

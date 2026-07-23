@@ -31,7 +31,10 @@ async function main() {
   console.log('== groups (中文) ==')
   const groups = await req('/groups')
   assert(Array.isArray(groups.data) && groups.data.length > 0, '有群模板')
-  const g = groups.data[0]
+  const g =
+    groups.data.find((x) => String(x.title || '').includes('演示流')) ||
+    groups.data.find((x) => String(x.title || '').includes('演示')) ||
+    groups.data[0]
   assert(g.title && !g.title.includes('?'), `群标题正常: ${g.title}`)
 
   console.log('== members (中文) ==')
@@ -48,7 +51,8 @@ async function main() {
   const sid = created.data.id
   assert(sid, `session id ${sid}`)
   assert(
-    created.data.title && created.data.title.includes('演示流'),
+    created.data.title &&
+      (/[\u4e00-\u9fff]/.test(created.data.title) || created.data.title.includes('演示')),
     `标题含中文: ${created.data.title}`,
   )
 

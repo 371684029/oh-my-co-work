@@ -673,6 +673,58 @@ function resolveStepForNode(node, steps) {
   return { step: list[ti] || {}, templateIndex: ti }
 }
 
+function nodeLooksCloned(node) {
+  if (!node) return false
+  const out = parseJson(node.output_json, {})
+  const input = parseJson(node.input_json, {})
+  return !!(out.cloned || input.cloned)
+}
+
+/**
+ * 「从这里继续」后：旧轨上仍 waiting/running（及被越过的 pending）标为跳过（已绕过），
+ * 避免多处「待确认」抢交互。
+ * - beforeStepIndex 有值（往前跳）：只处理该下标之前的节点
+ * - 无 beforeStepIndex（往回/再跑克隆）：旧轨上未完成的一并绕过
+ */
+function bypassAbandonedNodes(sessionId, { keepNodeIds = [], beforeStepIndex = null } = {}) {
+  const keep = new Set((keepNodeIds || []).filter(Boolean))
+  const nodes = getDb()
+    .prepare('SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index')
+    .all(sessionId)
+  const at = nowIso()
+  const cut =
+    beforeStepIndex != null && Number.isFinite(Number(beforeStepIndex))
+      ? Number(beforeStepIndex)
+      : null
+  let n = 0
+  for (const node of nodes) {
+    if (keep.has(node.id)) continue
+    if (node.step_type === STEP_TYPE.ARCHIVE) continue
+    const idx = Number(node.step_index)
+    if (cut != null && idx >= cut) continue
+    const abandon =
+      node.status === NODE_STATUS.WAITING_HUMAN ||
+      node.status === NODE_STATUS.RUNNING ||
+      node.status === NODE_STATUS.PENDING
+    if (!abandon) continue
+    const prevOut = parseJson(node.output_json, {})
+    updateNode(node.id, {
+      status: NODE_STATUS.SKIPPED,
+      finished_at: at,
+      output_json: JSON.stringify({
+        ...prevOut,
+        bypassed: true,
+        bypassReason: 'continue_from_here',
+        bypassedAt: at,
+        previousStatus: node.status,
+        humanAction: prevOut.humanAction === 'pending' ? 'bypassed' : prevOut.humanAction,
+      }),
+    })
+    n += 1
+  }
+  return n
+}
+
 /**
  * 回退重开：自目标模板步起，跳过场外，按模板线性追加克隆节点
  */
@@ -798,10 +850,10 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
 }
 
 /**
- * 从指定节点重新开始（归档前/后均可）
+ * 从指定节点继续
+ * - 往前跳到尚未完成的原轨节点：不追加克隆，游标直达；旧待确认标「已绕过」
+ * - 往回 / 再跑：线性追加克隆；旧待确认同样绕过
  * - 若已归档：先解档（归档只省资源）
- * - 杀掉本会话进程；活跃场外本段归档
- * - **统一**：按模板自该步起（跳过场外）线性追加克隆并开跑，历史一律保留
  *
  * @param {string} sessionId
  * @param {{ nodeInstanceId?: string, stepIndex?: number }} opts
@@ -841,10 +893,10 @@ export async function restartFromNode(sessionId, opts = {}) {
   }
 
   const idx = Number(target.step_index)
+  const curIdx = Number(session.current_step_index)
   const group = getGroup(session.group_id)
   const steps = parseJson(group?.steps_json, [])
 
-  // 释放 bat / 控制台进程（含场外协助占用的资源）
   try {
     killSessionProcesses(sessionId)
   } catch {
@@ -854,6 +906,122 @@ export async function restartFromNode(sessionId, opts = {}) {
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
   updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+
+  const targetDone =
+    target.status === NODE_STATUS.SUCCEEDED || target.status === NODE_STATUS.SKIPPED
+  /** 往前跳：目标在游标之后、非克隆、尚未完成 → 不追加，直达 */
+  const forwardJump =
+    Number.isFinite(idx) &&
+    Number.isFinite(curIdx) &&
+    idx > curIdx &&
+    !nodeLooksCloned(target) &&
+    !targetDone
+
+  if (forwardJump) {
+    bypassAbandonedNodes(sessionId, {
+      keepNodeIds: [target.id],
+      beforeStepIndex: idx,
+    })
+    // 仅把「执行中」收回待跑以便重入；已在待确认的保留闸门，勿清空产出重跑
+    if (target.status === NODE_STATUS.RUNNING) {
+      const prevOut = parseJson(target.output_json, {})
+      updateNode(target.id, {
+        status: NODE_STATUS.PENDING,
+        finished_at: null,
+        started_at: null,
+        output_json: JSON.stringify({
+          ...prevOut,
+          humanAction: 'pending',
+          resumedByForwardJump: true,
+        }),
+      })
+    }
+
+    const offClose = archiveOffsiteOnReturnToMain(sessionId, {
+      reason: 'forward_jump',
+      resumeTitle: target.title || `步骤 ${idx + 1}`,
+      resumeNodeId: target.id,
+      resumeStepIndex: idx,
+      silent: false,
+    })
+    const ctx2 = parseJson(getSession(sessionId)?.context_json, {})
+    ctx2.lastRestart = {
+      at: nowIso(),
+      stepIndex: idx,
+      nodeInstanceId: target.id,
+      title: target.title || `步骤 ${idx + 1}`,
+      fromStatus: session.status,
+      fromOffsite: !!offClose.hadActive,
+      offsiteArchived: !!offClose.hadActive,
+      cloned: false,
+      forwardJump: true,
+      sourceNodeInstanceId: target.id,
+      sourceStepIndex: idx,
+    }
+    updateSession(sessionId, {
+      status: SESSION_STATUS.ACTIVE,
+      current_step_index: idx,
+      context_json: JSON.stringify(ctx2),
+      archive_reason: null,
+      archived_at: null,
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: `已跳到「${target.title || `步骤 ${idx + 1}`}」继续（未追加克隆；途经节点已绕过）`,
+        restartFrom: {
+          stepIndex: idx,
+          nodeInstanceId: target.id,
+          sourceNodeInstanceId: target.id,
+          sourceStepIndex: idx,
+          cloned: false,
+          forwardJump: true,
+        },
+      },
+    })
+    emitSession(sessionId, {
+      type: 'session.restart',
+      payload: {
+        sessionId,
+        stepIndex: idx,
+        nodeInstanceId: target.id,
+        title: target.title,
+        cloned: false,
+        forwardJump: true,
+      },
+    })
+    emitSession(sessionId, {
+      type: 'session.status',
+      payload: {
+        sessionId,
+        status: SESSION_STATUS.ACTIVE,
+        currentStepIndex: idx,
+        cloned: false,
+        forwardJump: true,
+      },
+    })
+    emitAll({
+      type: 'session.restart',
+      payload: { sessionId, stepIndex: idx, cloned: false, forwardJump: true },
+    })
+    setImmediate(() => advance(sessionId).catch(console.error))
+    return {
+      ok: true,
+      sessionId,
+      stepIndex: idx,
+      nodeInstanceId: target.id,
+      title: target.title,
+      cloned: false,
+      forwardJump: true,
+      sourceNodeInstanceId: target.id,
+      sourceStepIndex: idx,
+      offsiteArchived: !!offClose.hadActive,
+      session: getSession(sessionId),
+    }
+  }
+
+  bypassAbandonedNodes(sessionId, { keepNodeIds: [] })
 
   const { created, batchId } = appendClonedSuffixFrom(sessionId, target, steps)
   if (!created.length) {
@@ -901,7 +1069,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     role: 'system',
     type: 'status',
     content: {
-      text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；场外不参与重开）`,
+      text: `已从「${target.title || `步骤 ${idx + 1}`}」线性追加 ${clonedCount} 个克隆节点并开始（历史保留；途经待确认已绕过）`,
       restartFrom: {
         stepIndex: startIdx,
         nodeInstanceId: startNode.id,
@@ -1241,6 +1409,11 @@ export async function advance(sessionId) {
 
     if (node.status === NODE_STATUS.WAITING_HUMAN) {
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
+      return
+    }
+
+    if (node.status === NODE_STATUS.RUNNING) {
+      updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
       return
     }
 
@@ -2554,6 +2727,9 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
   }
 
   if (action === 'submit' || action === 'human_submit') {
+    if (node.status !== NODE_STATUS.WAITING_HUMAN) {
+      throw Object.assign(new Error('当前节点不在等待输入状态'), { code: 'NOT_WAITING' })
+    }
     const prevOut = parseJson(node.output_json, {})
     const ctx = parseJson(session.context_json, {})
     const fullText = text != null ? String(text) : ''
@@ -2574,7 +2750,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
 
     const group = getGroup(session.group_id)
     const steps = parseJson(group?.steps_json, [])
-    const step = steps[node.step_index] || {}
+    const { step } = resolveStepForNode(node, steps)
     const prevIn = parseJson(node.input_json, {})
 
     // CI01：缺 #1 拦截后的补参提交 → 写入参数后从本步重跑（不前进 step_index）
@@ -2656,11 +2832,12 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     }
 
     // human input step
-    // 采集项目参数：步骤显式 captureParams，或首个人工步默认开启
+    // 采集项目参数：步骤显式 captureParams，或模板首个人工步默认开启
+    const tplIdx = templateStepIndexOf(node, steps.length)
     const captureParams =
       prevIn.captureParams === true ||
       step.captureParams === true ||
-      (step.captureParams !== false && Number(node.step_index) === 0)
+      (step.captureParams !== false && tplIdx === 0)
 
     let parsed = null
     if (captureParams) {
@@ -3286,12 +3463,18 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   if (!live) throw new Error('会话不存在')
 
   if (live.status === SESSION_STATUS.WAITING_HUMAN) {
-    // 闸门节点不含场外协助（场外也可能是 waiting_human）
-    const node = getDb()
+    // 优先当前游标上的待确认节点，避免旧闸门抢走提交
+    const curIdx = Number(live.current_step_index)
+    const waiters = getDb()
       .prepare(
-        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? ORDER BY step_index LIMIT 1`,
+        `SELECT * FROM node_instances WHERE session_id = ? AND status = ? AND step_type != ? ORDER BY step_index`,
       )
-      .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
+      .all(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
+    const node =
+      waiters.find((n) => Number(n.step_index) === curIdx) ||
+      waiters.find((n) => Number(n.step_index) >= curIdx) ||
+      waiters[waiters.length - 1] ||
+      null
 
     const enabledMembers = getDb()
       .prepare('SELECT * FROM members WHERE enabled = 1')

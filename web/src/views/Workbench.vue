@@ -742,13 +742,31 @@
                     {{ offsiteEntryLabel(n) }}
                   </el-tag>
                   <el-tag
-                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
+                    v-else-if="n.step_type !== 'offsite' && n.status === 'skipped'"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    {{ nodeBypassed(n) ? '已绕过' : '跳过' }}
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human' && isCurrent(n)"
                     size="small"
                     type="danger"
                     effect="dark"
                     round
                   >
                     待确认
+                  </el-tag>
+                  <el-tag
+                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
+                    size="small"
+                    type="info"
+                    effect="plain"
+                    round
+                  >
+                    已挂起
                   </el-tag>
                   <el-tag
                     v-else-if="n.step_type !== 'offsite' && isCurrent(n) && n.status === 'pending'"
@@ -1510,6 +1528,11 @@ const pendingGate = computed(() => {
   if (!detail.value) return null
   if (detail.value.session.status === 'archived') return null
   const msgs = [...detail.value.messages].reverse()
+  const nodes = detail.value.nodes || []
+  const curIdx = Number(detail.value.session.current_step_index)
+  const curNode = Number.isFinite(curIdx)
+    ? nodes.find((n) => Number(n.step_index) === curIdx)
+    : null
   // 开聊启动闸门（无节点，等人点通过后再跑流程）
   const pendingStart = detail.value.session.context?.pendingStart
   if (pendingStart && detail.value.session.status !== 'interrupted') {
@@ -1541,7 +1564,26 @@ const pendingGate = computed(() => {
       }
     }
   }
-  return msgs.find((m) => m.type === 'gate' && isPendingGate(m)) || null
+  // 优先当前游标节点上的待确认闸门，避免旧「待确认」抢交互
+  if (curNode?.status === 'waiting_human') {
+    const curGate = msgs.find(
+      (m) =>
+        m.type === 'gate' &&
+        m.node_instance_id === curNode.id &&
+        isPendingGate(m),
+    )
+    if (curGate) return curGate
+  }
+  // 回退：只认仍 waiting_human、且不早于游标的闸门（已绕过节点的 gate 会被 isPendingGate 滤掉）
+  return (
+    msgs.find((m) => {
+      if (m.type !== 'gate' || !isPendingGate(m)) return false
+      const n = nodes.find((x) => x.id === m.node_instance_id)
+      if (!n) return !m.node_instance_id
+      if (!Number.isFinite(curIdx)) return true
+      return Number(n.step_index) >= curIdx
+    }) || null
+  )
 })
 
 const autoArchiveHours = computed(() => {
@@ -1926,9 +1968,13 @@ function statusLabel(s) {
     paused: '暂停',
     running: '执行中',
     succeeded: '完成',
-    skipped: '跳过',
+    skipped: '已绕过',
   }
   return m[s] || nodeStatusLabel(s) || s
+}
+
+function nodeBypassed(n) {
+  return !!(n?.output?.bypassed || n?.input?.bypassed)
 }
 
 function stepTypeLabel(t) {
@@ -2843,7 +2889,11 @@ const flowAnchorNodeId = computed(() => {
     (n) => n.step_type === 'archive' && n.status === 'waiting_human',
   )
   if (archWait) return archWait.id
-  const waiting = nodes.find((n) => n.status === 'waiting_human')
+  const waitingAtCur = nodes.find(
+    (n) => n.status === 'waiting_human' && Number(n.step_index) === Number(detail.value?.session?.current_step_index),
+  )
+  if (waitingAtCur) return waitingAtCur.id
+  const waiting = [...nodes].reverse().find((n) => n.status === 'waiting_human')
   if (waiting) return waiting.id
   const running = nodes.find((n) => n.status === 'running')
   if (running) return running.id
@@ -2880,7 +2930,7 @@ watch(
   },
 )
 
-/** 离开场外 / 重开：统一追加克隆；已归档亦可 */
+/** 离开场外 / 从这里继续：往前跳直达；往回/再跑追加克隆；已归档亦可 */
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
@@ -2908,10 +2958,15 @@ async function restartFromNode(n) {
     expandedNodeId.value = focusId
     scrollFlowToAnchor()
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
+    const suffix = wasArchived
+      ? ' · 已恢复'
+      : wasOffsite || r.offsiteArchived
+        ? ' · 临时协助本段已归档'
+        : ''
     ElMessage.success(
-      `已从「${title}」继续${
-        wasArchived ? ' · 已恢复' : wasOffsite || r.offsiteArchived ? ' · 临时协助本段已归档' : ''
-      }`,
+      r.forwardJump
+        ? `已跳到「${title}」继续${suffix}`
+        : `已从「${title}」继续${suffix}`,
     )
   } catch (e) {
     // 业务异常由接口呈现，不再 toast Error
