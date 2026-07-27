@@ -522,6 +522,103 @@ function bindGateHumanInput(sessionId, {
   return { full, note }
 }
 
+/**
+ * 群聊用户消息：追加 #1… 参数并记入群报告 userNotes（与人工闸门提交共用同一套 paramsList）
+ */
+function recordUserChatInput(
+  sessionId,
+  text,
+  {
+    action = 'chat',
+    actionLabel = '群聊',
+    nodeTitle,
+    nodeInstanceId,
+  } = {},
+) {
+  const note = text != null ? String(text).trim() : ''
+  if (!note) return null
+  const session = getSession(sessionId)
+  if (!session) return null
+  const group = getGroup(session.group_id)
+  const steps = parseJson(group?.steps_json, [])
+  const ctx = parseJson(session.context_json, {})
+  ctx.lastHumanInput = note
+  const parsed = appendProjectParams(ctx, note)
+  ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
+    .filter((s) => s != null && String(s).trim())
+    .join('\n')
+  ctx.paramsList = parsed.list
+  const gObj = group ? { ...group, steps } : null
+  const sysCard =
+    ctx.params?.[SYSTEM_PARAM_KEYS.GROUP_CARD] ||
+    ctx.groupCard ||
+    (gObj
+      ? formatGroupCard(gObj, {
+          memberNameOf: (id) => {
+            const m = getMember(id)
+            return m?.display_name || m?.name || id
+          },
+        })
+      : '')
+  if (sysCard) ctx.groupCard = sysCard
+  if (gObj) ctx.groupFolder = resolveGroupFolder(gObj, ctx)
+  ctx.params = mergeSystemParams(
+    {
+      ...parsed.map,
+      [SYSTEM_PARAM_KEYS.CALL_ARGS]: note,
+    },
+    {
+      group: gObj,
+      sessionContext: ctx,
+      memberNameOf: (id) => {
+        const m = getMember(id)
+        return m?.display_name || m?.name || id
+      },
+    },
+  )
+  ctx.userNotes = Array.isArray(ctx.userNotes) ? ctx.userNotes : []
+  ctx.userNotes.push({
+    at: nowIso(),
+    action,
+    actionLabel,
+    text: note,
+    nodeTitle: nodeTitle || undefined,
+    nodeInstanceId: nodeInstanceId || undefined,
+  })
+  const autoTitle = syncAutoSessionTitle(ctx, group)
+  updateSession(sessionId, {
+    context_json: JSON.stringify(ctx),
+    ...(autoTitle ? { title: autoTitle } : {}),
+  })
+  refreshSessionAnnouncement(sessionId)
+  return parsed
+}
+
+/** 临时协助节点：累积群聊正文，供群报告节点 I/O 展示 */
+function appendOffsiteNodeChat(sessionId, nodeId, text) {
+  const note = text != null ? String(text).trim() : ''
+  if (!note || !nodeId) return
+  const node = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
+  if (!node || node.step_type !== STEP_TYPE.OFFSITE) return
+  const prevIn = parseJson(node.input_json, {})
+  const prevOut = parseJson(node.output_json, {})
+  const prevHuman = String(prevIn.humanInput || '').trim()
+  const humanInput = prevHuman ? `${prevHuman}\n${note}` : note
+  persistNodeIo(sessionId, nodeId, {
+    input: {
+      ...prevIn,
+      kind: 'offsite',
+      humanInput,
+      text: note,
+      lastChatAt: nowIso(),
+    },
+    output: {
+      ...prevOut,
+      lastChat: note,
+    },
+  })
+}
+
 /** 用户参数 + #群聊 名片 + #文件夹 */
 function resolveParamsMap(sessionContext, group) {
   const user = getParamsMap(sessionContext)
@@ -3422,22 +3519,12 @@ function appendPendingGateNote(sessionId, node, text) {
       ],
     }),
   })
-  const session = getSession(sessionId)
-  if (session) {
-    const ctx = parseJson(session.context_json, {})
-    ctx.lastHumanInput = note
-    ctx.userNotes = Array.isArray(ctx.userNotes) ? ctx.userNotes : []
-    ctx.userNotes.push({
-      at: nowIso(),
-      action: 'pending',
-      actionLabel: '待定',
-      text: note,
-      nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
-      nodeInstanceId: node.id,
-    })
-    updateSession(sessionId, { context_json: JSON.stringify(ctx) })
-  }
-  refreshSessionAnnouncement(sessionId)
+  recordUserChatInput(sessionId, note, {
+    action: 'pending',
+    actionLabel: '待定',
+    nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
+    nodeInstanceId: node.id,
+  })
 }
 
 export async function postUserMessage(sessionId, text, attachments = []) {
@@ -3533,8 +3620,16 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       node_instance_id: offsiteNode?.id || null,
       content: { ...content, offsite: !!offsiteNode },
     })
-    if (node && !mentionOnly) {
-      appendPendingGateNote(sessionId, node, content.text)
+    if ((content.text || '').trim()) {
+      if (node && !mentionOnly) {
+        appendPendingGateNote(sessionId, node, content.text)
+      } else {
+        recordUserChatInput(sessionId, content.text, {
+          nodeTitle: offsiteNode?.title || node?.title,
+          nodeInstanceId: offsiteNode?.id || node?.id,
+        })
+      }
+      if (offsiteNode?.id) appendOffsiteNodeChat(sessionId, offsiteNode.id, content.text)
     }
     if (/@/.test(content.text || '')) {
       setImmediate(() => {
@@ -3567,6 +3662,13 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       node_instance_id: offsiteNode?.id || null,
       content: hasMention ? { ...content, offsite: true } : content,
     })
+    if ((content.text || '').trim()) {
+      recordUserChatInput(sessionId, content.text, {
+        nodeTitle: offsiteNode?.title,
+        nodeInstanceId: offsiteNode?.id,
+      })
+      if (offsiteNode?.id) appendOffsiteNodeChat(sessionId, offsiteNode.id, content.text)
+    }
     if (hasMention) {
       setImmediate(() => {
         invokeMentionedMembers(sessionId, content.text).catch((e) =>

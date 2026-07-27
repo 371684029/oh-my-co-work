@@ -1954,7 +1954,7 @@ const composerFooterHint = computed(() => {
   if (pendingGate.value) {
     return '待确认与消息共用下方输入框 · 附言会记入群报告'
   }
-  return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助'
+  return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告'
 })
 
 function statusLabel(s) {
