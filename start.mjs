@@ -2,7 +2,7 @@
  * 一键启动（压缩包 / 本机推荐入口）
  * - 必要时 npm install
  * - 启动 API（默认不随浏览器退出；需要时设 ACW_AUTO_EXIT=1）
- * - 自动打开浏览器
+ * - 自动打开浏览器；或 ACW_HEADLESS_BROWSER=1 用 Playwright 无头加载页面（关脚本即关浏览器）
  *
  * 用法：node start.mjs
  * 或双击 start.bat / ./start.sh
@@ -21,6 +21,15 @@ const AUTO_EXIT =
   process.env.ACW_AUTO_EXIT === '1' ||
   process.env.ACW_AUTO_EXIT === 'true' ||
   process.env.ACW_AUTO_EXIT === 'yes'
+/** Playwright 无头打开工作台（无界面）；退出 start 进程时自动 browser.close() */
+const HEADLESS_BROWSER =
+  process.env.ACW_HEADLESS_BROWSER === '1' ||
+  process.env.ACW_HEADLESS_BROWSER === 'true' ||
+  process.env.ACW_HEADLESS_BROWSER === 'yes'
+
+/** @type {import('playwright').Browser | null} */
+let headlessBrowser = null
+let shuttingDown = false
 
 function log(...a) {
   console.log('[acw-start]', ...a)
@@ -87,13 +96,41 @@ function openBrowser(url) {
   }
 }
 
+async function closeHeadlessBrowser() {
+  if (!headlessBrowser) return
+  try {
+    await headlessBrowser.close()
+  } catch {
+    /* ignore */
+  }
+  headlessBrowser = null
+}
+
+async function openHeadlessBrowser(url) {
+  let chromium
+  try {
+    ;({ chromium } = await import('playwright'))
+  } catch {
+    throw new Error(
+      '无头模式需要 dev 依赖 playwright：在项目根执行 npm install && npx playwright install chromium',
+    )
+  }
+  headlessBrowser = await chromium.launch({ headless: true })
+  const page = await headlessBrowser.newPage()
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+  log('无头浏览器已加载', url)
+  log('提示：无界面；按 Ctrl+C 或关闭本窗口将自动关闭无头浏览器并停止服务')
+}
+
 async function ensureInstall() {
-  if (exists(path.join(ROOT, 'node_modules', 'better-sqlite3'))) {
+  const sqliteOk = exists(path.join(ROOT, 'node_modules', 'better-sqlite3'))
+  const playwrightOk = exists(path.join(ROOT, 'node_modules', 'playwright'))
+  if (sqliteOk && (!HEADLESS_BROWSER || playwrightOk)) {
     log('依赖已就绪')
     return
   }
   log('首次启动，正在 npm install …')
-  await run('npm', ['install', '--omit=dev'])
+  await run('npm', HEADLESS_BROWSER ? ['install'] : ['install', '--omit=dev'])
 }
 
 async function main() {
@@ -149,26 +186,29 @@ async function main() {
     }
   }
 
-  const shutdown = () => {
+  const shutdown = async (code = 0) => {
+    if (shuttingDown) return
+    shuttingDown = true
+    await closeHeadlessBrowser()
     killChild()
+    process.exit(code)
   }
   process.on('SIGINT', () => {
-    shutdown()
-    process.exit(0)
+    shutdown(0)
   })
   process.on('SIGTERM', () => {
-    shutdown()
-    process.exit(0)
+    shutdown(0)
   })
   process.on('SIGHUP', () => {
-    shutdown()
-    process.exit(0)
+    shutdown(0)
   })
-  process.on('exit', killChild)
+  process.on('exit', () => {
+    killChild()
+  })
 
   child.on('exit', (code) => {
     log('服务已退出', code)
-    process.exit(code || 0)
+    shutdown(code || 0)
   })
 
   try {
@@ -180,13 +220,24 @@ async function main() {
   }
 
   const url = `http://127.0.0.1:${PORT}/`
-  log('打开浏览器', url)
-  if (AUTO_EXIT) {
-    log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
+  if (HEADLESS_BROWSER) {
+    log('无头浏览器模式', url)
+    try {
+      await openHeadlessBrowser(url)
+    } catch (e) {
+      log(e.message || e)
+      await shutdown(1)
+      return
+    }
   } else {
-    log('提示：关闭本窗口（或 Ctrl+C）即可结束服务；关浏览器不会停服务')
+    log('打开浏览器', url)
+    if (AUTO_EXIT) {
+      log('提示：已开启 ACW_AUTO_EXIT，关闭浏览器后后台可能退出')
+    } else {
+      log('提示：关闭本窗口（或 Ctrl+C）即可结束服务；关浏览器不会停服务')
+    }
+    openBrowser(url)
   }
-  openBrowser(url)
 }
 
 main().catch((e) => {
