@@ -23,7 +23,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 
 | 项 | 内容 |
 |----|------|
-| 版本 | `1.5.0` **最终封板**（见 [mvp.md §2.16](./docs/mvp.md)；关于页 changelog） |
+| 版本 | `1.5.1` **当前**（见 [mvp.md §2.16](./docs/mvp.md)；关于页 changelog） |
 | 形态 | 三栏工作台 + 设置 · **完全本机** |
 | UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
 | 仓库名 | `apple-co-work`（原 `element-co-work`） |
@@ -143,6 +143,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
 | `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（同大版本覆盖；新大版本删旧大版本包；用户无需 npm install） |
 | `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；关启动窗口或 Ctrl+C 结束服务） |
+| `ACW_HEADLESS_BROWSER=1 node start.mjs` | **无头**加载首页（无窗口）；结束 start 即关浏览器并停服务（需 `playwright` + `npx playwright install chromium`） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
 
 ### 重置数据
@@ -292,7 +293,8 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | `server/config/about.json` | 版本、更新日志、更新地址、本地说明 |
 | 环境变量 `ACW_PORT` | API 端口，默认 `3780` |
 | 环境变量 `ACW_DATA_ROOT` | 数据根目录，默认 `./data` |
-| 环境变量 `ACW_HEADLESS_BROWSER` | `1` 时用 Playwright 无头加载首页（无界面）；**结束 `start.mjs`（Ctrl+C）会同时关闭无头浏览器并停服务**。需 `npm install` 与 `npx playwright install chromium` |
+| 环境变量 `ACW_AUTO_EXIT` | `1` 实验性：浏览器全关后尝试退出服务（易误杀） |
+| 环境变量 `ACW_HEADLESS_BROWSER` | `1` 时用 Playwright 无头加载首页（无界面）；**结束 `start.mjs`（Ctrl+C）会同时关闭无头浏览器并停服务**。需 `npm install` 与 `npx playwright install chromium`；运行包 zip 不支持 |
 
 ---
 

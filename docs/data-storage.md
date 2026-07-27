@@ -82,6 +82,7 @@ apple-co-work/
 - **空格或换行**均可分隔 → 依次为 `#1`、`#2`、…  
 - **新开聊**（新会话）各自独立一套参数，互不串号  
 - **节点/成员输出**不走切分：整段使用；工作台 `#` 面板以 `#出1`、`#出2`… 插入全文  
+- **群聊普通发送**（`POST /sessions/:id/messages`，含进行中 / 临时协助期间）：正文按同规则 **追加** `#1…`（`appendProjectParams`），写入 `userNotes` 并刷新群报告；纯 `@` 协助、人工闸门「提交」、开聊「通过」等路径不重复写入  
 
 | 落点 | 字段 |
 |------|------|
@@ -103,7 +104,8 @@ apple-co-work/
 ### 2.4 消息
 
 聊天区内容在 **`messages` 表**，不按整段会话塞进一个大 JSON。  
-类型包括普通文本、系统提示、闸门（`type = gate`）等，正文在 `content_json`。
+类型包括普通文本、系统提示、闸门（`type = gate`）等，正文在 `content_json`。  
+普通用户消息除气泡外，会同步进会话 **`#` 参数** 与群报告 **用户参与**（见 §2.3）；实现见 `server/src/engine.js` 的 `recordUserChatInput` / `postUserMessage`。
 
 ### 2.4 备份 SQLite 时注意
 
@@ -293,6 +295,8 @@ data/journals/sessions/{sessionId}/README.md
 |------|------|------|
 | `ACW_DATA_ROOT` | 数据根目录（兼容旧名 `ECW_DATA_ROOT`） | 仓库下 `data/` |
 | `ACW_PORT` | API 端口（兼容旧名 `ECW_PORT`） | `3780` |
+| `ACW_AUTO_EXIT` | `1` 时尝试在浏览器全部离开后退出服务（实验性，易误杀） | 关 |
+| `ACW_HEADLESS_BROWSER` | `1` 时 `start.mjs` 用 Playwright **无头**加载首页；**结束 start（Ctrl+C）会 `browser.close()` 并停 API**（仅源码树 + dev 依赖 `playwright`） | 关 |
 
 健康检查接口会回 `dataRoot` 实际路径，便于确认写到哪。
 

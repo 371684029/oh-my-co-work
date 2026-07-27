@@ -51,6 +51,18 @@ set ACW_AUTO_EXIT=1&& node start.mjs
 ACW_AUTO_EXIT=1 node start.mjs
 ```
 
+### 无头模式（仅源码仓库 / 开发者）
+
+运行包 zip **不含** Playwright。若在本机克隆源码调试、又不想弹出系统浏览器：
+
+```bash
+npm install
+npx playwright install chromium
+ACW_HEADLESS_BROWSER=1 node start.mjs
+```
+
+无界面加载 `http://127.0.0.1:3780/`；**Ctrl+C 或关闭启动终端** 会同时关闭无头浏览器并停止服务。详见 [data-storage.md §7](./data-storage.md#7-环境变量)。
+
 ## 演示流
 
 打开后进入 **工作台** → 开聊选 **「演示流」**。  
