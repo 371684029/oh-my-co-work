@@ -360,10 +360,22 @@
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
                     <div v-if="slashOpen" class="slash-panel">
                       <div class="slash-panel-head">
-                        <span>快捷指令</span>
-                        <el-button link type="primary" size="small" @click="goShortcuts">
-                          设置
-                        </el-button>
+                        <span class="slash-panel-head-title">快捷指令</span>
+                        <div class="slash-panel-head-end">
+                          <el-button link type="primary" size="small" @click="goShortcuts">
+                            设置
+                          </el-button>
+                          <button
+                            type="button"
+                            class="slash-panel-close"
+                            title="关闭"
+                            aria-label="关闭"
+                            @mousedown.prevent
+                            @click="closeComposerPanel('slash')"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                       <div v-if="!filteredSlashCmds.length" class="slash-empty">
                         无匹配指令 · 可在设置中添加
@@ -383,10 +395,20 @@
                     </div>
                     <div v-if="atOpen" class="slash-panel at-panel">
                       <div class="slash-panel-head">
-                        <span>@ 提及</span>
-                        <span class="at-panel-tip"
-                          >将记入临时协助</span
-                        >
+                        <span class="slash-panel-head-title">@ 提及</span>
+                        <div class="slash-panel-head-end">
+                          <span class="at-panel-tip">将记入临时协助</span>
+                          <button
+                            type="button"
+                            class="slash-panel-close"
+                            title="关闭"
+                            aria-label="关闭"
+                            @mousedown.prevent
+                            @click="closeComposerPanel('at')"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                       <div class="at-section-label">成员 · 流程外协助</div>
                       <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
@@ -408,8 +430,20 @@
                     </div>
                     <div v-if="hashOpen" class="slash-panel hash-panel">
                       <div class="slash-panel-head">
-                        <span># 文本快捷</span>
-                        <span class="at-panel-tip"># 选中后插入正文（不含 #）</span>
+                        <span class="slash-panel-head-title"># 文本快捷</span>
+                        <div class="slash-panel-head-end">
+                          <span class="at-panel-tip"># 选中后插入正文（不含 #）</span>
+                          <button
+                            type="button"
+                            class="slash-panel-close"
+                            title="关闭"
+                            aria-label="关闭"
+                            @mousedown.prevent
+                            @click="closeComposerPanel('hash')"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                       <div v-if="!filteredHashItems.length" class="slash-empty">
                         无匹配 · 开聊后可见群聊/文件夹；人工提交参数后有第 1 段…
@@ -2790,6 +2824,24 @@ function toggleSlashPanel() {
   }
 }
 
+/** 关闭 / @ # 浮层（与 Esc 一致，不关输入框里的唤起符） */
+function closeComposerPanel(kind) {
+  if (kind === 'slash') {
+    slashOpen.value = false
+    slashQuery.value = ''
+    return
+  }
+  if (kind === 'at') {
+    atOpen.value = false
+    atQuery.value = ''
+    return
+  }
+  if (kind === 'hash') {
+    hashOpen.value = false
+    hashQuery.value = ''
+  }
+}
+
 function toggleAtPanel() {
   slashOpen.value = false
   hashOpen.value = false
@@ -4476,10 +4528,50 @@ loadLists().then(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px 8px;
+  gap: 8px;
+  padding: 4px 4px 8px 8px;
   font-size: 12px;
   font-weight: 650;
   color: var(--ecw-text-2, #5c5f6a);
+}
+
+.slash-panel-head-title {
+  flex-shrink: 0;
+}
+
+.slash-panel-head-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.slash-panel-head-end .at-panel-tip {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--ecw-text-3, #8b8f9a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slash-panel-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--ecw-text-3, #8b8f9a);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.slash-panel-close:hover {
+  color: var(--ecw-text-1, #0b0c0f);
+  background: rgba(15, 23, 42, 0.06);
 }
 
 .slash-empty {
