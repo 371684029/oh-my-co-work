@@ -292,6 +292,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | `server/config/about.json` | 版本、更新日志、更新地址、本地说明 |
 | 环境变量 `ACW_PORT` | API 端口，默认 `3780` |
 | 环境变量 `ACW_DATA_ROOT` | 数据根目录，默认 `./data` |
+| 环境变量 `ACW_HEADLESS_BROWSER` | `1` 时用 Playwright 无头加载首页（无界面）；**结束 `start.mjs`（Ctrl+C）会同时关闭无头浏览器并停服务**。需 `npm install` 与 `npx playwright install chromium` |
 
 ---
 
