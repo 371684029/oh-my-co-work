@@ -15,6 +15,7 @@
 | [brand-logo.md](./brand-logo.md) | **Logo 含义与资产** |
 | [directory-structure.md](./directory-structure.md) | 目录与模块边界（对齐代码） |
 | [author-contact.example.json](./author-contact.example.json) | 支持与交流配置示例 |
+| `../web/public/support/` | 微信二维码 / 收款码静态图（见根 [README](../README.md#支持与交流)） |
 
 ## 维护原则
 

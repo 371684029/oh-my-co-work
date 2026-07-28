@@ -2,12 +2,18 @@
   "name": "",
   "phone": "17312678391",
   "wechat": "17312678391",
-  "wechatQrPath": "",
+  "wechatQrPath": "/support/wechat-pay.png",
+  "wechatQrLabel": "微信扫码（交流 / 收款）",
   "email": "",
   "links": [],
   "note": "欢迎技术交流与问题反馈。顺手点个赞，比什么都暖。",
   "sponsorTitle": "点赞支持",
   "sponsorHint": "完全自愿，不影响任何功能。",
   "sponsorSubHint": "若你愿意，期待一点点小惊喜 ✨",
-  "sponsorQrPaths": []
+  "sponsorQrPaths": [
+    "/support/wechat-collect.png",
+    "/support/wechat-pay.png",
+    "/support/alipay-pay.png"
+  ],
+  "sponsorQrLabels": ["微信零钱收款", "微信支付", "支付宝"]
 }

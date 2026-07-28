@@ -39,8 +39,9 @@ apple-co-work/
 │       └── seed.js              # 手动 seed 脚本
 │
 ├── web/                         # @acw/web — Vue3 前端
-│   ├── public/favicon.svg       # 标签页 Logo
-│   └── src/components/AppLogo.vue
+│   ├── public/
+│   │   ├── favicon.svg
+│   │   └── support/           # 微信/收款码（静态资源，/support/*.png）
 │   ├── package.json
 │   ├── vite.config.js           # host 127.0.0.1:5173；代理 /api、/ws → :3780
 │   ├── index.html
