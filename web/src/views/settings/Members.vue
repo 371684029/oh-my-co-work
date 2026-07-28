@@ -23,7 +23,6 @@
           {{ runSummary(row) }}
         </template>
       </el-table-column>
-      <el-table-column prop="work_folder" label="工作文件夹" show-overflow-tooltip />
       <el-table-column label="操作" width="260">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
@@ -52,14 +51,6 @@
             maxlength="120"
             show-word-limit
             clearable
-          />
-        </el-form-item>
-        <el-form-item label="工作文件夹（可选）">
-          <PathPicker
-            v-model="form.workFolder"
-            mode="folder"
-            placeholder="流程、#文件夹、开编辑器等"
-            hint="与「脚本工作目录」无关；脚本相对路径只认脚本工作目录"
           />
         </el-form-item>
         <el-form-item label="类型" required>
@@ -201,7 +192,6 @@
             {{ viewRow.config?.description || '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="类型">{{ viewRow.kind }}</el-descriptions-item>
-          <el-descriptions-item label="工作文件夹">{{ viewRow.work_folder || '—' }}</el-descriptions-item>
           <el-descriptions-item label="配置">
             <pre class="cfg-pre">{{ JSON.stringify(viewRow.config, null, 2) }}</pre>
           </el-descriptions-item>
@@ -251,7 +241,6 @@ function emptyForm() {
   return {
     displayName: '',
     description: '',
-    workFolder: '',
     kind: 'script',
     script: {
       mode: 'file',
@@ -367,7 +356,6 @@ function fillFromRow(row, { asClone = false } = {}) {
   return {
     displayName: asClone ? `${row.display_name} 副本` : row.display_name,
     description: row.config?.description || '',
-    workFolder: row.work_folder || '',
     kind: row.kind,
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
@@ -439,7 +427,6 @@ async function save() {
       displayName: form.value.displayName.trim(),
       name: form.value.displayName.trim(),
       kind: form.value.kind,
-      workFolder: form.value.workFolder || null,
       config:
         form.value.kind === 'script'
           ? {
