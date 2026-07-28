@@ -117,12 +117,37 @@ export function resolveScriptFilePath(rawPath, folderCandidates = [], { scriptDi
 }
 
 /**
- * 根据 filePath / scriptDir 补全 script.scriptDir（保存成员时调用）
+ * 从 command 行里抽出「像脚本文件」的片段（如 node index.mjs → index.mjs）
+ * @param {string} command
+ * @returns {string|null}
+ */
+export function extractScriptPathFromCommand(command) {
+  const s = String(command || '').trim()
+  if (!s) return null
+  const parts = s.match(/(?:[^\s"'`]+|"[^"]*"|'[^']*')+/g) || []
+  const extRe = /\.(mjs|cjs|js|ts|tsx|jsx|bat|cmd|ps1|py|sh)$/i
+  for (let i = parts.length - 1; i >= 0; i--) {
+    let t = parts[i].replace(/^["']|["']$/g, '').trim()
+    if (!t || t.startsWith('-')) continue
+    if (extRe.test(t)) return t
+  }
+  return null
+}
+
+/**
+ * 根据 filePath / scriptPath / 命令中的脚本名 补全 script.scriptDir（保存成员 / 快捷指令时调用）
  */
 export function enrichScriptConfig(script, workFolder) {
   if (!script || typeof script !== 'object') return script
   const next = { ...script }
-  const raw = next.filePath || next.path
+  const raw =
+    next.filePath ||
+    next.path ||
+    next.scriptPath ||
+    extractScriptPathFromCommand(next.command)
+  if (raw && !next.scriptPath && !next.filePath && !next.path) {
+    next.scriptPath = String(raw).trim()
+  }
   if (!raw || !String(raw).trim()) return next
 
   if (next.scriptDir && String(next.scriptDir).trim() && fs.existsSync(String(next.scriptDir))) {
@@ -133,7 +158,7 @@ export function enrichScriptConfig(script, workFolder) {
     member: workFolder ? { work_folder: workFolder } : {},
     scriptCfg: next,
   })
-  const abs = resolveScriptFilePath(String(raw), folderCandidates, {
+  const abs = resolveScriptFilePath(String(raw).trim(), folderCandidates, {
     scriptDir: next.scriptDir,
   })
   if (abs && fs.existsSync(abs)) {

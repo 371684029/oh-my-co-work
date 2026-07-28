@@ -78,7 +78,7 @@
               placeholder="选择 .bat / .ps1 / .py / .js …"
               :extensions="scriptExts"
               hint="可手填，或点「浏览」选择本机脚本；相对路径以脚本所在目录为基准（非工作目录、非快捷指令目录）"
-              @update:model-value="onScriptFilePathChange"
+              @update:model-value="onScriptAnchorPathChange"
             />
           </el-form-item>
 
@@ -87,13 +87,27 @@
               v-model="form.script.command"
               type="textarea"
               :rows="3"
-              placeholder="本机 PATH 中的命令，如 my-cli、python app.py、npm test（勿写死盘符）"
+              placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本基准目录）"
             />
             <div class="field-hint">
               <strong>完全由你配置</strong>，产品不内置任何工具名。走 PATH；占位符
               <code>#a</code> / <code>{#a}</code>（调用时输入框参数）、{#1} #群聊 #文件夹 {input}
               {folder}（空占位自动去掉）。含 $env: 时 runtime 用 PowerShell 或 auto。
             </div>
+          </el-form-item>
+
+          <el-form-item
+            v-if="form.script.mode === 'command'"
+            label="锚点脚本（可选）"
+          >
+            <PathPicker
+              v-model="form.script.scriptPath"
+              mode="file"
+              placeholder="选 index.mjs 等，自动写入脚本基准目录"
+              :extensions="scriptExts"
+              hint="不必手填「高级」里的文件夹：浏览选中脚本即可；与命令里 node index.mjs 二选一或同时用"
+              @update:model-value="onScriptAnchorPathChange"
+            />
           </el-form-item>
 
           <el-form-item label="是否展示脚本弹窗">
@@ -113,8 +127,8 @@
                 <PathPicker
                   v-model="form.script.scriptDir"
                   mode="folder"
-                  placeholder="脚本所在文件夹（命令模式如 node index.mjs 时必填）"
-                  hint="相对路径与运行 cwd 优先以此为准，而不是成员工作目录或快捷指令目录"
+                  placeholder="一般由「选脚本」自动填写，仅目录与脚本不在一处时手改"
+                  hint="选文件路径或锚点脚本后会自动写入；保存时也会从 node index.mjs 等命令推断"
                 />
               </el-form-item>
               <el-form-item label="运行时 / 解释器">
@@ -235,6 +249,7 @@ function emptyForm() {
     script: {
       mode: 'file',
       filePath: '',
+      scriptPath: '',
       scriptDir: '',
       command: 'echo ECW-OK',
       runtime: 'auto',
@@ -320,8 +335,8 @@ function dirnameOfFilePath(p) {
   return norm.slice(0, i) || norm
 }
 
-/** 浏览选脚本后记录 scriptDir，供相对路径解析（不以快捷指令/工作目录为首选） */
-function onScriptFilePathChange(v) {
+/** 浏览选脚本后写入 scriptDir（文件路径 / 命令锚点脚本共用） */
+function onScriptAnchorPathChange(v) {
   const raw = (v ?? '').trim()
   if (!raw) {
     form.value.script.scriptDir = ''
@@ -346,6 +361,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
+      scriptPath: s.scriptPath || '',
       scriptDir: s.scriptDir || '',
       command: s.command || 'echo ECW-OK',
       runtime: s.runtime || 'auto',
@@ -419,6 +435,7 @@ async function save() {
               script: {
                 mode: s.mode,
                 filePath: s.mode === 'file' ? s.filePath : undefined,
+                scriptPath: s.mode === 'command' ? s.scriptPath || undefined : undefined,
                 scriptDir: s.scriptDir || undefined,
                 command: s.mode === 'command' ? s.command : undefined,
                 runtime: s.runtime || 'auto',

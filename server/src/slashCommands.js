@@ -8,6 +8,7 @@ import { resolveShowScriptPopup } from './appSettings.js'
 import {
   enrichScriptConfig,
   resolveScriptFilePath,
+  extractScriptPathFromCommand,
 } from './runners.js'
 
 const CONFIG_PATH = path.join(ROOT, 'server/config/slash-commands.json')
@@ -166,9 +167,20 @@ function enrichSlashCommand(cmd) {
   const next = { ...cmd }
   const workFolder =
     next.openTarget === 'custom' && next.customPath ? next.customPath : null
-  if (next.scriptPath) {
+  const anchor =
+    next.scriptPath ||
+    extractScriptPathFromCommand(next.command)
+  if (anchor) {
+    if (!next.scriptPath) next.scriptPath = anchor
     const enriched = enrichScriptConfig(
-      { filePath: next.scriptPath, scriptDir: next.scriptDir },
+      { filePath: anchor, scriptDir: next.scriptDir, command: next.command },
+      workFolder,
+    )
+    next.scriptDir = enriched.scriptDir || next.scriptDir
+    if (enriched.scriptPath && !cmd.scriptPath) next.scriptPath = enriched.scriptPath
+  } else if (next.command) {
+    const enriched = enrichScriptConfig(
+      { scriptDir: next.scriptDir, command: next.command },
       workFolder,
     )
     next.scriptDir = enriched.scriptDir || next.scriptDir

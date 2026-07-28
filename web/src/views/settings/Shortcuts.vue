@@ -121,7 +121,7 @@
               v-model="form.scriptPath"
               mode="file"
               placeholder="选本机脚本后相对路径以该文件所在目录为准"
-              hint="与成员脚本相同：index.mjs 等相对路径先相对脚本目录，而非会话工作文件夹"
+              hint="选文件后自动填 scriptDir；仅写 node index.mjs 时保存后也会从命令推断脚本目录"
               @update:model-value="onSlashScriptPathChange"
             />
           </el-form-item>
