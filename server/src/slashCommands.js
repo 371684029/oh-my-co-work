@@ -5,6 +5,10 @@ import { ROOT } from './db.js'
 import { getSessionDetail, getGroup, listMembers, createMember } from './services.js'
 import { MEMBER_KIND, applyParamPlaceholders, SYSTEM_PARAM_KEYS } from '@acw/shared'
 import { resolveShowScriptPopup } from './appSettings.js'
+import {
+  enrichScriptConfig,
+  resolveScriptFilePath,
+} from './runners.js'
 
 const CONFIG_PATH = path.join(ROOT, 'server/config/slash-commands.json')
 
@@ -150,12 +154,80 @@ function normalizeCommand(c) {
     memberName: String(c.memberName || '').trim(),
     memberKey: String(c.memberKey || '').trim(),
     prompt: String(c.prompt || '').trim(),
+    scriptPath: String(c.scriptPath || c.scriptFile || '').trim(),
+    scriptDir: String(c.scriptDir || '').trim(),
+    anchorMemberId: String(c.anchorMemberId || '').trim(),
   }
+}
+
+/** 保存时补全 scriptDir；相对 scriptPath 以脚本目录为基准 */
+function enrichSlashCommand(cmd) {
+  if (!cmd || cmd.kind !== 'shell') return cmd
+  const next = { ...cmd }
+  const workFolder =
+    next.openTarget === 'custom' && next.customPath ? next.customPath : null
+  if (next.scriptPath) {
+    const enriched = enrichScriptConfig(
+      { filePath: next.scriptPath, scriptDir: next.scriptDir },
+      workFolder,
+    )
+    next.scriptDir = enriched.scriptDir || next.scriptDir
+  }
+  return next
+}
+
+function folderCandidatesForSlash(cmd, sessionId) {
+  const sessionFolder = resolveFolder(cmd, sessionId)
+  const list = []
+  const push = (p) => {
+    if (p && String(p).trim() && !list.includes(p)) list.push(String(p).trim())
+  }
+  if (cmd.openTarget === 'custom' && cmd.customPath) push(path.resolve(cmd.customPath))
+  push(sessionFolder)
+  push(process.cwd())
+  return list
+}
+
+/**
+ * 快捷指令运行 cwd：脚本基准目录优先，其次继承成员 scriptDir，最后会话/自定义工作目录
+ */
+function resolveSlashCwd(cmd, sessionId) {
+  const sessionFolder = resolveFolder(cmd, sessionId)
+  const candidates = folderCandidatesForSlash(cmd, sessionId)
+
+  if (cmd.scriptDir && String(cmd.scriptDir).trim()) {
+    const sd = path.resolve(String(cmd.scriptDir).trim())
+    if (fs.existsSync(sd)) return sd
+  }
+
+  if (cmd.scriptPath && String(cmd.scriptPath).trim()) {
+    const abs = resolveScriptFilePath(String(cmd.scriptPath).trim(), candidates, {
+      scriptDir: cmd.scriptDir,
+    })
+    if (abs && fs.existsSync(abs)) return path.dirname(path.resolve(abs))
+  }
+
+  if (cmd.anchorMemberId) {
+    const m = listMembers().find((x) => x.id === cmd.anchorMemberId)
+    const sc = m?.config?.script
+    if (sc?.scriptDir && fs.existsSync(String(sc.scriptDir))) {
+      return path.resolve(String(sc.scriptDir))
+    }
+    if (sc && (sc.filePath || sc.path)) {
+      const memCandidates = [m.work_folder, ...candidates].filter(Boolean)
+      const abs = resolveScriptFilePath(String(sc.filePath || sc.path), memCandidates, {
+        scriptDir: sc.scriptDir,
+      })
+      if (abs && fs.existsSync(abs)) return path.dirname(path.resolve(abs))
+    }
+  }
+
+  return sessionFolder
 }
 
 export function saveSlashCommands(commands) {
   if (!Array.isArray(commands)) throw new Error('commands 必须是数组')
-  const list = commands.map(normalizeCommand)
+  const list = commands.map(normalizeCommand).map(enrichSlashCommand)
   const seen = new Set()
   for (const c of list) {
     if (!c.slash) throw new Error(`指令「${c.name}」缺少 / 触发词`)
@@ -238,11 +310,13 @@ function findAgentMember(cmd) {
  * 执行快捷指令（仅本机）
  */
 export async function runSlashCommand(id, { sessionId, url, args } = {}) {
-  const cmd = listSlashCommands().find((c) => c.id === id)
+  let cmd = listSlashCommands().find((c) => c.id === id)
   if (!cmd) throw new Error('指令不存在')
   if (!cmd.enabled) throw new Error('指令已禁用')
+  if (cmd.kind === 'shell') cmd = enrichSlashCommand(cmd)
 
   const folder = resolveFolder(cmd, sessionId)
+  const execFolder = resolveSlashCwd(cmd, sessionId)
   const callArgs = args != null ? String(args) : ''
   let title = ''
   try {
@@ -281,7 +355,7 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   }
 
   const ctx = {
-    folder,
+    folder: execFolder,
     sessionId: sessionId || '',
     title,
     url: url || cmd.url || '',
@@ -310,12 +384,13 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   if (!line.trim()) throw new Error('命令为空')
   // 弹窗优先级：本指令 showScriptPopup > 全局
   const showPopup = resolveShowScriptPopup(cmd)
-  await spawnDetached(line, folder, { showPopup })
+  await spawnDetached(line, execFolder, { showPopup })
   return {
     ok: true,
     kind: 'shell',
     command: line,
-    folder,
+    folder: execFolder,
+    sessionFolder: folder,
     args: callArgs,
     showScriptPopup: showPopup,
     message: `已执行：${line}`,

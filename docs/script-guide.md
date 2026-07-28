@@ -54,19 +54,17 @@
 
 ## 4. cwd 与相对路径
 
-**相对路径（`filePath`、命令里的 `index.mjs` 等）优先相对 `script.scriptDir`（脚本基准目录）解析**，其次才是成员/会话/群工作目录，**不会**用快捷指令（`/`）的工作目录。
+**成员 script** 与 **快捷指令 shell** 共用同一套路径解析（`resolveScriptFilePath` / `scriptDir`）。
 
-| 顺序 | 规则 |
-|------|------|
-| 1 | `script.cwd`（显式） |
-| 2 | `script.scriptDir`（成员「高级 → 脚本基准目录」；选脚本文件时自动写入） |
-| 3 | **脚本文件所在目录**（file 模式） |
-| 4 | 成员 · 工作文件夹 |
-| 5 | 会话约定目录 |
-| 6 | 群 · 工作文件夹 |
-| 7 | 进程默认目录 |
+| 场景 | 相对路径 / cwd 基准 |
+|------|---------------------|
+| 成员 · 脚本文件 | `script.scriptDir`（选文件或高级里填写）优先 |
+| 快捷指令 · shell | 同上：`scriptPath` / `scriptDir`；或 **继承成员脚本目录**（`anchorMemberId`） |
+| 均未配置 | 会话 / 群工作文件夹（快捷指令里的「工作目录目标」） |
 
-保存成员时服务端会尝试根据 `filePath` 补全 `scriptDir`。命令模式若写 `node index.mjs`，请在高级里指定脚本基准目录为 `index.mjs` 所在文件夹。
+配置了脚本基准时，快捷指令里 `{folder}` / `{cwd}` 与 **spawn cwd** 均为脚本目录，而不是会话工作文件夹。
+
+保存快捷指令时会自动根据 `scriptPath` 补全 `scriptDir`。
 
 ---
 

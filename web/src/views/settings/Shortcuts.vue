@@ -15,7 +15,7 @@
       :closable="false"
       show-icon
       class="hint"
-      title="占位符：#a / {#a} = 调用 /指令 时输入框参数 · {folder} 工作文件夹 · {url} 网址 · {sessionId} · {title}。shell 在本机执行，不经过任何外部后台。"
+      title="占位符：#a / {#a} = 调用 /指令 时输入框参数 · {folder}/{cwd} = 运行目录（配置了脚本基准时为脚本目录，否则为会话工作文件夹）· {url} · {sessionId} · {title}。shell 在本机执行。"
     />
 
     <el-table :data="commands" stripe v-loading="loading">
@@ -113,8 +113,41 @@
               v-model="form.command"
               type="textarea"
               :rows="2"
-              placeholder='code "{folder}"  或  explorer "{folder}"'
+              placeholder='node index.mjs  或  code "{folder}"'
             />
+          </el-form-item>
+          <el-form-item label="脚本文件（相对路径基准，可选）">
+            <PathPicker
+              v-model="form.scriptPath"
+              mode="file"
+              placeholder="选本机脚本后相对路径以该文件所在目录为准"
+              hint="与成员脚本相同：index.mjs 等相对路径先相对脚本目录，而非会话工作文件夹"
+              @update:model-value="onSlashScriptPathChange"
+            />
+          </el-form-item>
+          <el-form-item label="脚本基准目录（可选）">
+            <PathPicker
+              v-model="form.scriptDir"
+              mode="folder"
+              placeholder="命令如 node index.mjs 时填 index.mjs 所在文件夹"
+              hint="选脚本文件后会自动写入；也可手填或从成员继承"
+            />
+          </el-form-item>
+          <el-form-item label="继承成员脚本目录（可选）">
+            <el-select
+              v-model="form.anchorMemberId"
+              filterable
+              clearable
+              placeholder="与某成员的 scriptDir / 脚本文件对齐"
+              style="width: 100%"
+            >
+              <el-option
+                v-for="m in scriptMembers"
+                :key="m.id"
+                :label="m.display_name"
+                :value="m.id"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="工作目录目标">
             <el-select v-model="form.openTarget" style="width: 100%">
@@ -154,9 +187,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
+import PathPicker from '../../components/PathPicker.vue'
 
 const commands = ref([])
 const members = ref([])
@@ -165,6 +199,10 @@ const drawer = ref(false)
 const drawerTitle = ref('添加指令')
 const editIndex = ref(-1)
 const form = ref(emptyForm())
+
+const scriptMembers = computed(() =>
+  (members.value || []).filter((m) => m.kind === 'script'),
+)
 
 function emptyForm() {
   return {
@@ -185,6 +223,26 @@ function emptyForm() {
     prompt: '请【统一管理员】协助处理：',
     /** inherit | yes | no — 仅 shell 有效 */
     showScriptPopupMode: 'inherit',
+    scriptPath: '',
+    scriptDir: '',
+    anchorMemberId: '',
+  }
+}
+
+function dirnameOfFilePath(p) {
+  if (!p) return ''
+  const norm = String(p).replace(/[/\\]+$/, '')
+  const i = Math.max(norm.lastIndexOf('\\'), norm.lastIndexOf('/'))
+  if (i <= 0) return norm
+  if (/^[a-zA-Z]:$/.test(norm.slice(0, i))) return norm.slice(0, i + 1)
+  return norm.slice(0, i) || norm
+}
+
+function onSlashScriptPathChange(v) {
+  const raw = (v ?? '').trim()
+  if (!raw) return
+  if (/^[a-zA-Z]:[\\/]|^\\\\|^\//.test(raw)) {
+    form.value.scriptDir = dirnameOfFilePath(raw)
   }
 }
 
