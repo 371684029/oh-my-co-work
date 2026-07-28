@@ -219,7 +219,7 @@ data/journals/sessions/{sessionId}/README.md
 | `data/uploads/` | 会话附件上传目录（multer）；消息里引用 URL/相对路径 |
 | `data/logs/` | 脚本类成员运行日志等 |
 | `data/console/` | 可选：Windows 弹窗相关临时文件（HTA 控制窗等） |
-| `server/config/slash-commands.json` | 快捷指令（`showScriptPopup`；shell 可选 **`scriptPath` / `scriptWorkDir`（兼容 `scriptDir`）/ `anchorMemberId`**） |
+| `server/config/slash-commands.json` | 斜杠 `/` 与桌面快捷键（`desktopHotkey`；shell 可选 **`scriptPath` / `scriptWorkDir` / `anchorMemberId`**） |
 | `server/config/app-settings.json` | `showDemo`、`admin`、`autoArchiveHours`、**`showScriptPopup`** 等 |
 | `server/config/about.json` | 关于页文案 |
 | `server/config/support.json` | 支持与交流 / 点赞文案 |

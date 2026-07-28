@@ -360,7 +360,7 @@
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
                     <div v-if="slashOpen" class="slash-panel">
                       <div class="slash-panel-head">
-                        <span class="slash-panel-head-title">快捷指令</span>
+                        <span class="slash-panel-head-title">斜杠指令</span>
                         <div class="slash-panel-head-end">
                           <el-button link type="primary" size="small" @click="goShortcuts">
                             设置
@@ -485,7 +485,7 @@
                         size="small"
                         round
                         class="slash-btn"
-                        title="快捷指令 /"
+                        title="斜杠指令 /"
                         @click="toggleSlashPanel"
                       >
                         /
@@ -3081,7 +3081,7 @@ async function onSenderSubmit() {
       await runSlash(cmd)
       return
     }
-    ElMessage.warning(`未找到指令 /${token}，可在 设置 → 快捷指令 中配置`)
+    ElMessage.warning(`未找到指令 /${token}，可在 设置 → 斜杠 / 快捷键 中配置`)
     return
   }
 

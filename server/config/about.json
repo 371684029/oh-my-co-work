@@ -2,7 +2,7 @@
   "productName": "apple-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "updateUrl": "https://github.com/371684029/apple-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -12,6 +12,16 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "1.5.4",
+      "date": "2026-07-28",
+      "title": "1.5.4：斜杠 vs 桌面快捷键",
+      "items": [
+        "聊天 / 斜杠指令：跑脚本时脚本工作目录仍随选脚本/保存自动填写",
+        "桌面快捷键 desktopHotkey：跑脚本须手填脚本工作目录（必填），不自动推断、不继承成员",
+        "设置页与文档区分「斜杠指令」与「桌面快捷键」"
+      ]
+    },
     {
       "version": "1.5.3",
       "date": "2026-07-28",

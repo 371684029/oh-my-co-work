@@ -2,9 +2,9 @@
   <div class="shortcuts-page">
     <div class="page-head">
       <div>
-        <h2 class="page-title">快捷指令</h2>
+        <h2 class="page-title">斜杠指令与桌面快捷键</h2>
         <p class="page-desc">
-          输入 <code>/</code> 唤起指令。首位默认是管理员 Agent「统一管理员」；可继续添加本机命令、网址等，条数不限。
+          聊天输入 <code>/</code> 唤起<strong>斜杠指令</strong>；勾选「桌面快捷键」的项用于页内/桌面热键绑脚本（脚本工作目录须手填）。
         </p>
       </div>
       <el-button type="primary" @click="openCreate">添加指令</el-button>
@@ -15,7 +15,7 @@
       :closable="false"
       show-icon
       class="hint"
-      title="占位符：#a / {#a} = 调用 /指令 时输入框参数 · {folder}/{cwd} = 运行目录（配置了脚本基准时为脚本目录，否则为会话工作文件夹）· {url} · {sessionId} · {title}。shell 在本机执行。"
+      title="斜杠指令：选脚本可自动填脚本工作目录。桌面快捷键跑脚本：脚本工作目录必填且不会自动填写。{folder} 指会话工作目录目标；跑脚本时 {cwd} 用脚本工作目录。"
     />
 
     <el-table :data="commands" stripe v-loading="loading">
@@ -25,9 +25,10 @@
         </template>
       </el-table-column>
       <el-table-column label="名称" prop="name" min-width="120" />
-      <el-table-column label="触发" width="120">
+      <el-table-column label="触发" width="140">
         <template #default="{ row }">
-          <code class="slash">/{{ row.slash }}</code>
+          <code v-if="row.desktopHotkey" class="slash">⌨ {{ row.hotkey || '热键' }}</code>
+          <code v-else class="slash">/{{ row.slash }}</code>
         </template>
       </el-table-column>
       <el-table-column label="类型" width="100">
@@ -65,10 +66,25 @@
         <el-form-item label="显示名称" required>
           <el-input v-model="form.name" placeholder="如：打开编辑器" />
         </el-form-item>
-        <el-form-item label="触发词（/ 后面）" required>
+        <el-form-item label="桌面快捷键">
+          <el-switch v-model="form.desktopHotkey" />
+          <p class="field-hint">
+            开启后用于热键触发（非聊天 <code>/</code>）。跑脚本时<strong>脚本工作目录必填</strong>，选脚本文件也不会自动填写。
+          </p>
+        </el-form-item>
+        <el-form-item v-if="!form.desktopHotkey" label="触发词（/ 后面）" required>
           <el-input v-model="form.slash" placeholder="editor">
             <template #prepend>/</template>
           </el-input>
+        </el-form-item>
+        <el-form-item v-else label="快捷键（可选，预留）">
+          <el-input v-model="form.hotkey" placeholder="如 Ctrl+Shift+E（绑定能力随桌面壳接入）" />
+        </el-form-item>
+        <el-form-item v-if="form.desktopHotkey" label="内部标识（/ 触发词，必填）" required>
+          <el-input v-model="form.slash" placeholder="run_my_script">
+            <template #prepend>/</template>
+          </el-input>
+          <p class="field-hint">仅作配置 id，聊天里不一定要用 / 唤起。</p>
         </el-form-item>
         <el-form-item label="说明">
           <el-input v-model="form.description" type="textarea" :rows="2" />
@@ -121,19 +137,34 @@
               v-model="form.scriptPath"
               mode="file"
               placeholder="选本机脚本；相对路径以「脚本工作目录」为基准"
-              hint="选文件后自动填脚本工作目录；仅写 node index.mjs 时保存也会从命令推断"
+              :hint="
+                form.desktopHotkey
+                  ? '桌面快捷键：选文件不会自动填脚本工作目录'
+                  : '斜杠指令：选文件后自动填脚本工作目录；仅写 node index.mjs 时保存也会从命令推断'
+              "
               @update:model-value="onSlashScriptPathChange"
             />
           </el-form-item>
-          <el-form-item label="脚本工作目录">
+          <el-form-item
+            label="脚本工作目录"
+            :required="form.desktopHotkey && shellHasScriptAnchor(form)"
+          >
             <PathPicker
               v-model="form.scriptWorkDir"
               mode="folder"
-              placeholder="命令如 node index.mjs 时填 index.mjs 所在文件夹"
-              hint="运行脚本的 cwd，与会话工作文件夹无关；{folder} 仍指会话工作目录"
+              :placeholder="
+                form.desktopHotkey
+                  ? '桌面快捷键跑脚本时必填'
+                  : '命令如 node index.mjs 时一般会自动填写'
+              "
+              :hint="
+                form.desktopHotkey
+                  ? '须手填；不会用会话工作文件夹或脚本路径自动顶替'
+                  : '运行脚本的 cwd；{folder} 仍指会话工作目录'
+              "
             />
           </el-form-item>
-          <el-form-item label="继承成员脚本工作目录（可选）">
+          <el-form-item v-if="!form.desktopHotkey" label="继承成员脚本工作目录（可选）">
             <el-select
               v-model="form.anchorMemberId"
               filterable
@@ -227,7 +258,24 @@ function emptyForm() {
     scriptWorkDir: '',
     scriptDir: '',
     anchorMemberId: '',
+    desktopHotkey: false,
+    hotkey: '',
   }
+}
+
+const SCRIPT_EXT_RE = /\.(mjs|cjs|js|ts|tsx|jsx|bat|cmd|ps1|py|sh)$/i
+
+function shellHasScriptAnchor(f) {
+  if (!f || f.kind !== 'shell') return false
+  if (String(f.scriptPath || '').trim()) return true
+  if (!f.desktopHotkey && String(f.anchorMemberId || '').trim()) return true
+  const cmd = String(f.command || '').trim()
+  if (!cmd) return false
+  const parts = cmd.match(/(?:[^\s"'`]+|"[^"]*"|'[^']*')+/g) || []
+  return parts.some((p) => {
+    const t = p.replace(/^["']|["']$/g, '').trim()
+    return t && SCRIPT_EXT_RE.test(t)
+  })
 }
 
 function dirnameOfFilePath(p) {
@@ -240,6 +288,7 @@ function dirnameOfFilePath(p) {
 }
 
 function onSlashScriptPathChange(v) {
+  if (form.value.desktopHotkey) return
   const raw = (v ?? '').trim()
   if (!raw) return
   if (/^[a-zA-Z]:[\\/]|^\\\\|^\//.test(raw)) {
@@ -329,6 +378,8 @@ function openEdit(row, index) {
     ...row,
     scriptWorkDir: row.scriptWorkDir || row.scriptDir || '',
     scriptDir: row.scriptWorkDir || row.scriptDir || '',
+    desktopHotkey: !!row.desktopHotkey,
+    hotkey: row.hotkey || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
   drawerTitle.value = '编辑指令'
@@ -352,6 +403,8 @@ function openClone(row) {
     slash,
     scriptWorkDir: row.scriptWorkDir || row.scriptDir || '',
     scriptDir: row.scriptWorkDir || row.scriptDir || '',
+    desktopHotkey: !!row.desktopHotkey,
+    hotkey: row.hotkey || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
   drawerTitle.value = '克隆指令'
@@ -366,6 +419,16 @@ async function saveForm() {
   if (!f.name.trim() || !f.slash) {
     ElMessage.warning('请填写名称与触发词')
     return
+  }
+  if (f.kind === 'shell' && f.desktopHotkey && shellHasScriptAnchor(f)) {
+    const sw = String(f.scriptWorkDir || f.scriptDir || '').trim()
+    if (!sw) {
+      ElMessage.warning('桌面快捷键跑脚本须手填脚本工作目录')
+      return
+    }
+  }
+  if (f.desktopHotkey) {
+    f.anchorMemberId = ''
   }
   f = applyPopupModeToCmd(f)
   const sw = String(f.scriptWorkDir || f.scriptDir || '').trim()

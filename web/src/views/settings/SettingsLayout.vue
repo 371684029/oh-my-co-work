@@ -5,7 +5,7 @@
       <el-menu :default-active="route.path" router class="settings-menu">
         <el-menu-item index="/settings/members">成员管理</el-menu-item>
         <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
-        <el-menu-item index="/settings/shortcuts">快捷指令</el-menu-item>
+        <el-menu-item index="/settings/shortcuts">斜杠 / 快捷键</el-menu-item>
       </el-menu>
 
       <div class="settings-side-divider" aria-hidden="true" />
