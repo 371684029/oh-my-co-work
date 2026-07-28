@@ -130,7 +130,7 @@
             >
           </el-form-item>
 
-          <el-collapse class="member-advanced">
+          <el-collapse :border="false" class="member-advanced">
             <el-collapse-item title="高级" name="adv">
               <el-form-item label="运行时 / 解释器">
                 <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
@@ -521,12 +521,28 @@ onMounted(load)
   color: var(--el-text-color-secondary);
 }
 .member-advanced {
-  margin: 8px 0 16px;
+  margin-top: 12px;
+  margin-bottom: 16px;
 }
 .member-advanced :deep(.el-collapse-item__header) {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 650;
+  height: 36px;
+  line-height: 36px;
   color: var(--el-text-color-regular);
+  background-color: transparent;
+  border: none;
+  border-top: 1px dashed var(--el-border-color-lighter);
+  padding-left: 0;
+  padding-right: 0;
+}
+.member-advanced :deep(.el-collapse-item__wrap) {
+  border: none;
+}
+.member-advanced :deep(.el-collapse-item__content) {
+  padding-bottom: 4px;
+  padding-left: 0;
+  padding-right: 0;
 }
 .cfg-pre {
   margin: 0;
