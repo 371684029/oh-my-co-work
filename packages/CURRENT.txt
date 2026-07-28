@@ -6,8 +6,8 @@ policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-ma
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.darwin-arm64=apple-co-work-v1-darwin-arm64.zip
 size.darwin-arm64=5145925
-commit.darwin-arm64=57e6ae6
-built.darwin-arm64=2026-07-28T03:24:30.956Z
+commit.darwin-arm64=f000a32
+built.darwin-arm64=2026-07-28T03:24:45.118Z
 file.linux-x64=apple-co-work-v1-linux-x64.zip
 size.linux-x64=5277411
 commit.linux-x64=0731574
