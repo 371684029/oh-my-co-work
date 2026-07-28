@@ -1,4 +1,5 @@
 import { getDb, parseJson } from './db.js'
+import { enrichScriptConfig } from './runners.js'
 import {
   nowIso,
   uid,
@@ -116,7 +117,10 @@ export function createMember(body) {
   const t = nowIso()
   const config = body.config || {}
   if (body.kind === MEMBER_KIND.SCRIPT && body.script) {
-    config.script = body.script
+    config.script = enrichScriptConfig(
+      body.script,
+      body.workFolder || body.work_folder || null,
+    )
   }
   getDb()
     .prepare(
@@ -161,7 +165,15 @@ export function updateMember(id, body = {}) {
   if (body.config !== undefined) {
     config = body.config || {}
   } else if (body.kind === MEMBER_KIND.SCRIPT || src.kind === MEMBER_KIND.SCRIPT) {
-    if (body.script) config = { ...config, script: body.script }
+    if (body.script) {
+      const wf =
+        body.workFolder !== undefined
+          ? body.workFolder || null
+          : body.work_folder !== undefined
+            ? body.work_folder || null
+            : src.work_folder
+      config = { ...config, script: enrichScriptConfig(body.script, wf) }
+    }
   }
   const kind = body.kind || src.kind
   if (kind === MEMBER_KIND.ECHO && body.config === undefined && !body.script) {

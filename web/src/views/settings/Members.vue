@@ -77,7 +77,8 @@
               mode="file"
               placeholder="选择 .bat / .ps1 / .py / .js …"
               :extensions="scriptExts"
-              hint="可手填，或点「浏览」选择本机脚本；也支持相对工作目录的相对路径"
+              hint="可手填，或点「浏览」选择本机脚本；相对路径以脚本所在目录为基准（非工作目录、非快捷指令目录）"
+              @update:model-value="onScriptFilePathChange"
             />
           </el-form-item>
 
@@ -108,6 +109,14 @@
 
           <el-collapse class="member-advanced">
             <el-collapse-item title="高级" name="adv">
+              <el-form-item label="脚本基准目录">
+                <PathPicker
+                  v-model="form.script.scriptDir"
+                  mode="folder"
+                  placeholder="脚本所在文件夹（命令模式如 node index.mjs 时必填）"
+                  hint="相对路径与运行 cwd 优先以此为准，而不是成员工作目录或快捷指令目录"
+                />
+              </el-form-item>
               <el-form-item label="运行时 / 解释器">
                 <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
                   <el-option label="自动（按扩展名 / 系统）" value="auto" />
@@ -226,6 +235,7 @@ function emptyForm() {
     script: {
       mode: 'file',
       filePath: '',
+      scriptDir: '',
       command: 'echo ECW-OK',
       runtime: 'auto',
       argsText: '',
@@ -301,6 +311,27 @@ function parseArgs(text) {
   return out
 }
 
+function dirnameOfFilePath(p) {
+  if (!p) return ''
+  const norm = String(p).replace(/[/\\]+$/, '')
+  const i = Math.max(norm.lastIndexOf('\\'), norm.lastIndexOf('/'))
+  if (i <= 0) return norm
+  if (/^[a-zA-Z]:$/.test(norm.slice(0, i))) return norm.slice(0, i + 1)
+  return norm.slice(0, i) || norm
+}
+
+/** 浏览选脚本后记录 scriptDir，供相对路径解析（不以快捷指令/工作目录为首选） */
+function onScriptFilePathChange(v) {
+  const raw = (v ?? '').trim()
+  if (!raw) {
+    form.value.script.scriptDir = ''
+    return
+  }
+  if (/^[a-zA-Z]:[\\/]|^\\\\|^\//.test(raw)) {
+    form.value.script.scriptDir = dirnameOfFilePath(raw)
+  }
+}
+
 async function load() {
   list.value = await api.members.list()
 }
@@ -315,6 +346,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
+      scriptDir: s.scriptDir || '',
       command: s.command || 'echo ECW-OK',
       runtime: s.runtime || 'auto',
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
@@ -387,6 +419,7 @@ async function save() {
               script: {
                 mode: s.mode,
                 filePath: s.mode === 'file' ? s.filePath : undefined,
+                scriptDir: s.scriptDir || undefined,
                 command: s.mode === 'command' ? s.command : undefined,
                 runtime: s.runtime || 'auto',
                 args: s.mode === 'file' ? parseArgs(s.argsText) : undefined,
