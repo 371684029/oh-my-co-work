@@ -34,7 +34,13 @@
       </el-table-column>
     </el-table>
 
-    <el-drawer v-model="drawer" :title="drawerTitle" size="480px" destroy-on-close>
+    <el-drawer
+      v-model="drawer"
+      :title="drawerTitle"
+      size="480px"
+      destroy-on-close
+      class="member-settings-drawer"
+    >
       <el-form v-if="!readonly" label-position="top">
         <el-form-item label="显示名称" required>
           <el-input v-model="form.displayName" placeholder="如：示例回声" />
@@ -522,11 +528,33 @@ onMounted(load)
 }
 .member-advanced {
   margin: 8px 0 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-blank);
 }
 .member-advanced :deep(.el-collapse-item__header) {
   font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-regular);
+  padding: 12px 16px;
+  line-height: 1.4;
+  border-bottom: none;
+}
+.member-advanced :deep(.el-collapse-item__wrap) {
+  border-bottom: none;
+}
+.member-advanced :deep(.el-collapse-item__content) {
+  padding: 4px 16px 16px;
+}
+.member-advanced :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+.member-advanced :deep(.el-form-item:last-child) {
+  margin-bottom: 4px;
+}
+.member-settings-drawer :deep(.el-drawer__body) {
+  padding: 8px 20px 24px;
 }
 .cfg-pre {
   margin: 0;
