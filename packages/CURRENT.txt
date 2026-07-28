@@ -5,9 +5,9 @@ needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.darwin-arm64=apple-co-work-v1-darwin-arm64.zip
-size.darwin-arm64=5145925
-commit.darwin-arm64=f000a32
-built.darwin-arm64=2026-07-28T03:24:45.118Z
+size.darwin-arm64=5145860
+commit.darwin-arm64=e7d9f75
+built.darwin-arm64=2026-07-28T05:08:20.111Z
 file.linux-x64=apple-co-work-v1-linux-x64.zip
 size.linux-x64=5277693
 commit.linux-x64=5ddd7ad
