@@ -206,14 +206,32 @@ export function parseProjectParams(text) {
   }
   // 空格、换行、tab 均一视同仁作分隔
   const parts = trimmed.split(/\s+/).filter(Boolean)
+  const list = dedupeProjectParamsList(parts)
 
   const map = {}
-  parts.forEach((v, i) => {
+  list.forEach((v, i) => {
     const n = i + 1
     map[`#${n}`] = v
     map[String(n)] = v
   })
-  return { list: parts, map, raw }
+  return { list, map, raw }
+}
+
+/**
+ * 项目参数 #1… 去重：保留首次出现顺序（trim 后完全相同视为重复）
+ * @param {string[]} list
+ * @returns {string[]}
+ */
+export function dedupeProjectParamsList(list) {
+  const seen = new Set()
+  const out = []
+  for (const item of Array.isArray(list) ? list : []) {
+    const t = String(item ?? '').trim()
+    if (!t || seen.has(t)) continue
+    seen.add(t)
+    out.push(t)
+  }
+  return out
 }
 
 /** list → #1/#2 map */
@@ -254,17 +272,27 @@ export function existingProjectParamsList(sessionContext) {
  * @returns {{ list: string[], map: Record<string,string>, raw: string, added: string[], startIndex: number }}
  */
 export function appendProjectParams(existingListOrCtx, text) {
-  const base = Array.isArray(existingListOrCtx)
-    ? existingListOrCtx.map((v) => String(v)).filter((v) => v.length)
-    : existingProjectParamsList(existingListOrCtx)
+  const base = dedupeProjectParamsList(
+    Array.isArray(existingListOrCtx)
+      ? existingListOrCtx.map((v) => String(v)).filter((v) => v.length)
+      : existingProjectParamsList(existingListOrCtx),
+  )
   const parsed = parseProjectParams(text)
-  const list = [...base, ...parsed.list]
+  const seen = new Set(base.map((v) => v.trim()))
+  const added = []
+  for (const p of parsed.list) {
+    const t = String(p).trim()
+    if (!t || seen.has(t)) continue
+    seen.add(t)
+    added.push(t)
+  }
+  const list = [...base, ...added]
   const startIndex = base.length + 1
   return {
     list,
     map: listToParamMap(list),
     raw: parsed.raw,
-    added: parsed.list,
+    added,
     startIndex,
   }
 }
@@ -586,8 +614,11 @@ function clipText(s, maxLen) {
 /** 只保留用户项目参数 #1 #2…（去掉 #群聊 名片等大段） */
 function userParamsLines(paramsList, params) {
   const lines = []
-  if (Array.isArray(paramsList) && paramsList.length) {
-    paramsList.forEach((v, i) => {
+  const list = dedupeProjectParamsList(
+    Array.isArray(paramsList) ? paramsList : [],
+  )
+  if (list.length) {
+    list.forEach((v, i) => {
       const t = clipText(v, 120)
       if (t) lines.push(`#${i + 1} ${t}`)
     })
@@ -597,10 +628,13 @@ function userParamsLines(paramsList, params) {
     const keys = Object.keys(params)
       .filter((k) => /^#\d+$/.test(k))
       .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)))
-    for (const k of keys) {
-      const t = clipText(params[k], 120)
-      if (t) lines.push(`${k} ${t}`)
-    }
+    const vals = dedupeProjectParamsList(
+      keys.map((k) => String(params[k] ?? '').trim()).filter(Boolean),
+    )
+    vals.forEach((v, i) => {
+      const t = clipText(v, 120)
+      if (t) lines.push(`#${i + 1} ${t}`)
+    })
   }
   return lines
 }
