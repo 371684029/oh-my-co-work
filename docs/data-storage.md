@@ -4,7 +4,7 @@
 |------|------|
 | 状态 | 与代码一致（MVP） |
 | 关联 | [data-and-ops.md](./data-and-ops.md)（原则与演进清单）、[technical-design.md](./technical-design.md) |
-| 更新日期 | 2026-07-17 |
+| 更新日期 | 2026-07-28 |
 
 一句话：**业务调度真相在 SQLite；节点 I/O 另有一份 Markdown 给人读；附件/日志/部分配置是文件。**  
 不是「只存 MD」，也不是「只存 SQL」——**双轨，职责分开**。
@@ -219,7 +219,7 @@ data/journals/sessions/{sessionId}/README.md
 | `data/uploads/` | 会话附件上传目录（multer）；消息里引用 URL/相对路径 |
 | `data/logs/` | 脚本类成员运行日志等 |
 | `data/console/` | 可选：Windows 弹窗相关临时文件（HTA 控制窗等） |
-| `server/config/slash-commands.json` | 快捷指令列表（可含 `showScriptPopup`） |
+| `server/config/slash-commands.json` | 快捷指令（`showScriptPopup`；shell 可选 **`scriptPath` / `scriptDir` / `anchorMemberId`** 作脚本基准目录） |
 | `server/config/app-settings.json` | `showDemo`、`admin`、`autoArchiveHours`、**`showScriptPopup`** 等 |
 | `server/config/about.json` | 关于页文案 |
 | `server/config/support.json` | 支持与交流 / 点赞文案 |
@@ -235,7 +235,7 @@ data/journals/sessions/{sessionId}/README.md
 | 新建成员 / 群模板 | SQLite `members` / `groups` |
 | 开聊 | SQLite `sessions` + `node_instances` + 首批 `messages`；群模板或**成员单聊**（临时 `config.adhoc` 群） |
 | **会话默认名** | `context.titleAuto`：采集 `#1` 后自动 `formatSessionAutoTitle`（`#1 · 群模板缩写`）；`groupTitle` / `groupTitleAbbr` 供列表 hover；手改标题则 `titleAuto=false` |
-| 发消息 / 附件 | `messages`；文件 → `uploads/` |
+| 发消息 / 附件 | `messages`；文件 → `uploads/`；**普通群聊**另追加 `context.paramsList` / `userNotes` 并刷新群报告 |
 | **项目参数 #1 #2…** | **用户输入**人工步提交：空格/换行切分 → `sessions.context_json.params` / `paramsList`；**新开聊另起一套**。节点输出整段不切分；`#` 面板可用 `#出n` 插入 |
 | **#群聊（群聊名片）** | 开聊时写入 `context_json.groupCard` / `params['#群聊']`：名称、简介、工作目录、步骤列表；脚本/回声可用 `#群聊` 或 `{#群聊}` |
 | **#文件夹** | 群聊工作目录路径：`context_json.groupFolder` / `params['#文件夹']`（会话 primary → 群模板 work_folder）；脚本可用 `#文件夹` 或 `{#文件夹}` |
@@ -245,7 +245,7 @@ data/journals/sessions/{sessionId}/README.md
 | **群报告** | 自动/手动刷新 → `ANNOUNCEMENT.md`（# 参数 + 节点入出）；PUT 手改 |
 | 归档 | 会话状态；写会话 `README.md` 索引；可杀进程等 |
 | 删除会话 | 删 SQL 中 session 及级联消息/节点；**MD 文件当前未必自动删**（磁盘可能残留） |
-| 快捷指令设置 | `server/config/slash-commands.json`（及关联成员） |
+| 快捷指令设置 | `server/config/slash-commands.json`；shell 执行 cwd 优先 **脚本基准目录**（见 [script-guide.md](./script-guide.md) §4） |
 | 是否展示脚本弹窗 | 设置页全局；成员 / 快捷指令可覆盖 |
 
 ---

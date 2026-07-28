@@ -77,3 +77,4 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 - 包内是 **前端 dist + 后端 bundle + 内置 node_modules**，不是完整源码树
 - 请用与系统匹配的 zip（`better-sqlite3` 为平台原生模块；Node 22+ 可回退内置 sqlite）
 - 请用 `127.0.0.1`，少用 `localhost`（避免 IPv6 问题）
+- **成员脚本 / 快捷指令 shell**：相对路径以「脚本基准目录」为准；详见仓库 [script-guide.md](https://github.com/371684029/apple-co-work/blob/main/docs/script-guide.md) §4（运行包内无此 md 时可看 GitHub）
