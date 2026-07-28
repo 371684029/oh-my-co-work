@@ -118,22 +118,11 @@
                   >{{ item.label }}</span
                 >
                 <span
-                  v-if="item.archiveOutcome === 'success'"
-                  class="conv-badge conv-badge--ok"
-                  title="归档成功"
-                  >成</span
-                >
-                <span
-                  v-else-if="item.archiveOutcome === 'involved'"
-                  class="conv-badge conv-badge--involved"
-                  title="介入归档（曾有人工放行或含失败步骤）"
-                  >介</span
-                >
-                <span
-                  v-else-if="item.archiveOutcome === 'failed'"
-                  class="conv-badge conv-badge--fail"
-                  title="归档失败"
-                  >败</span
+                  v-if="item.archiveOutcome"
+                  class="conv-badge conv-badge--archive"
+                  :class="archiveConvBadgeClass(item.archiveOutcome)"
+                  :title="archiveConvBadgeTitle(item.archiveOutcome)"
+                  >{{ archiveConvBadgeText(item.archiveOutcome) }}</span
                 >
               </span>
             </el-tooltip>
@@ -1851,8 +1840,30 @@ const archiveOutcomeTag = computed(() => {
   if (o === 'involved') {
     return { label: '介入归档', type: 'warning', outcomeClass: 'is-involved', ok: false }
   }
-  return { label: '成功', type: 'success', outcomeClass: 'is-ok', ok: true }
+  return { label: '正常归档', type: 'success', outcomeClass: 'is-ok', ok: true }
 })
+
+/** 侧栏已归档会话角标（强调「归档」，不用易误解的「成」） */
+function archiveConvBadgeText(outcome) {
+  if (outcome === 'failed') return '失败'
+  if (outcome === 'involved') return '介入'
+  if (outcome === 'success') return '归档'
+  return ''
+}
+
+function archiveConvBadgeTitle(outcome) {
+  if (outcome === 'failed') return '已归档 · 归档失败'
+  if (outcome === 'involved') return '已归档 · 介入归档（含失败步骤或人工放行）'
+  if (outcome === 'success') return '已归档 · 正常结束'
+  return ''
+}
+
+function archiveConvBadgeClass(outcome) {
+  if (outcome === 'failed') return 'conv-badge--fail'
+  if (outcome === 'involved') return 'conv-badge--involved'
+  if (outcome === 'success') return 'conv-badge--ok'
+  return ''
+}
 
 /** 群报告：启动说明 */
 const announceKickoff = computed(() => {
@@ -3449,16 +3460,23 @@ loadLists().then(() => {
 }
 .conv-badge {
   flex-shrink: 0;
-  width: 16px;
+  box-sizing: border-box;
+  min-width: 16px;
   height: 16px;
+  padding: 0 4px;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
   letter-spacing: 0;
   color: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.conv-badge--archive {
+  max-width: 36px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 .conv-badge--ok {
   background: linear-gradient(145deg, #85ce61, #67c23a);
