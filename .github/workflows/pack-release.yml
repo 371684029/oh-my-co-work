@@ -35,14 +35,14 @@ jobs:
         run: npm run pack
 
       - name: Upload artifact
+        if: false
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: apple-co-work-${{ matrix.os }}
-          path: |
-            release/*.zip
-            packages/apple-co-work-v*.zip
-          if-no-files-found: error
-          retention-days: 14
+          path: packages/apple-co-work-v*.zip
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: Commit packages zip to git (main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -97,11 +97,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Download all pack artifacts
-        uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          fetch-depth: 0
+
+      - name: Sync packages from main
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5 6 7 8; do
+            git pull origin main
+            COUNT=$(ls -1 packages/apple-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
+            echo "[release] zip count=$COUNT"
+            if [ "$COUNT" -ge 1 ]; then
+              break
+            fi
+            sleep 15
+          done
+          ls -la packages/*.zip
 
       - name: Publish GitHub Release
         env:
@@ -109,11 +120,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p upload
-          find artifacts -name 'apple-co-work-v*.zip' -exec cp -f {} upload/ \;
+          cp -f packages/apple-co-work-v*.zip upload/
           ls -la upload
           SHORT=$(git rev-parse --short HEAD)
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           NOTES=$(cat <<EOF
-          ## 运行包（打包产物，非源码）
+          ## 运行包（打包产物，非源码）· v${VER}
 
           解压后双击 \`start.bat\` / 运行 \`./start.sh\`。
           **不需要 npm install**（依赖已打进包内；仍需本机 Node.js ≥ 18）。
