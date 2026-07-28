@@ -92,7 +92,7 @@ apple-co-work/
 | **#群聊** | 整份群模板名片（开聊即生成，不依赖用户输入） |
 | **#文件夹** | 群聊工作文件夹绝对/配置路径（开聊即写入） |
 | **群报告 ANNOUNCEMENT.md** | **# 参数全集**（`#群聊` / `#文件夹` / `#1`…）+ **各子节点输入/输出**；人工可 PUT 编辑；手改后 `announcementManual=true`，自动汇总不覆盖除非 force；路径仍为 `journals/sessions/{sessionId}/ANNOUNCEMENT.md`（文件名兼容） |
-| **归档确认** | 完成/失败/拒绝后进入 `pendingArchive`（**不立刻归档**）；待确认时只杀非 `detach` 进程（Cursor CLI 等仅唤起窗口保留）；手工「归档」/闸门同意，或超时（默认 **3h**，`autoArchiveHours`）→ `archiveSession`：**必杀本会话全部进程**（含 detach）；`archive_reason` 区分结果（`failed`/`rejected`→失败，其余→成功） |
+| **归档确认** | 完成/失败/拒绝后进入 `pendingArchive`（**不立刻归档**）；待确认时只杀非 `detach` 进程（Cursor CLI 等仅唤起窗口保留）；手工「归档」/闸门同意，或超时（默认 **3h**，`autoArchiveHours`）→ `archiveSession`：**必杀本会话全部进程**（含 detach）；`archive_reason` 区分会话级结果（`failed`/`rejected` 等→顶栏「失败」）；若已确认归档但时间轴仍有 `failed` 步骤（如闸门放行）→ 顶栏「介入归档」 |
 | **审核三态** | 节点 `output.humanAction`：`pending` / `approve` / `reject`；脚本产出或输入框消息保持 `pending`；仅闸门「同意/拒绝」改态并推进 |
 | **归档 / 解档 / 再发** | **已决**：归档只释资源；再发仍在本会话、不新开群聊；可无限归档；续跑=本会话追加克隆节点。详见 [mvp.md §1.0](./mvp.md) 与 `SESSION_ARCHIVE_RULES`。 |
 | **从节点重开** | `POST /sessions/:id/restart-from-node`：本会话线性追加克隆并开跑（场外无此操作）；已归档则先解档 |
