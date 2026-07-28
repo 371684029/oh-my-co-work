@@ -12,7 +12,8 @@
   "sponsorSubHint": "若你愿意，期待一点点小惊喜 ✨",
   "sponsorQrPaths": [
     "/support/wechat-collect.png",
+    "/support/wechat-pay.png",
     "/support/alipay-pay.png"
   ],
-  "sponsorQrLabels": ["微信零钱收款", "支付宝"]
+  "sponsorQrLabels": ["微信零钱收款", "微信支付", "支付宝"]
 }

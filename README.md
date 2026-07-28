@@ -341,7 +341,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 
 | 文件 | 用途 |
 |------|------|
-| `wechat-pay.png` | 技术交流区「微信扫码」 |
+| `wechat-pay.png` | 技术交流区「微信扫码」；点赞支持 · 微信支付 |
 | `wechat-collect.png` | 点赞支持 · 微信零钱收款 |
 | `alipay-pay.png` | 点赞支持 · 支付宝 |
 
