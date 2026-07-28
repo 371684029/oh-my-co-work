@@ -29,6 +29,10 @@
         <span>{{ data.wechat || '—' }}</span>
         <el-button v-if="data.wechat" link type="primary" @click="copy(data.wechat)">复制</el-button>
       </div>
+      <div v-if="data.wechatQrPath" class="wechat-qr-block">
+        <p class="qr-caption">{{ data.wechatQrLabel || '微信扫码' }}</p>
+        <img :src="data.wechatQrPath" class="qr-img qr-img--contact" alt="微信二维码" />
+      </div>
     </el-card>
 
     <el-card shadow="never" class="support-card support-card--like">
@@ -42,14 +46,11 @@
         {{ data.sponsorSubHint || '若你愿意，期待一点点小惊喜 ✨' }}
       </p>
 
-      <div v-if="data.sponsorQrPaths?.length" class="qr-list">
-        <img
-          v-for="(src, i) in data.sponsorQrPaths"
-          :key="i"
-          :src="src"
-          class="qr-img"
-          alt="支持码"
-        />
+      <div v-if="sponsorQrItems.length" class="qr-list">
+        <div v-for="(item, i) in sponsorQrItems" :key="i" class="qr-item">
+          <p v-if="item.label" class="qr-caption">{{ item.label }}</p>
+          <img :src="item.src" class="qr-img" :alt="item.label || '收款码'" />
+        </div>
       </div>
       <p v-else class="like-placeholder">
         心意通道稍后再开 · 先聊技术也完全 OK
@@ -59,11 +60,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 
 const data = ref({})
+
+const sponsorQrItems = computed(() => {
+  const paths = data.value.sponsorQrPaths
+  if (!Array.isArray(paths) || !paths.length) return []
+  const labels = data.value.sponsorQrLabels
+  return paths.map((src, i) => ({
+    src,
+    label: Array.isArray(labels) && labels[i] ? String(labels[i]) : '',
+  }))
+})
 
 function copy(t) {
   navigator.clipboard.writeText(t || '')
@@ -158,19 +169,39 @@ onMounted(async () => {
   line-height: 1.5;
 }
 
+.wechat-qr-block {
+  margin-top: 14px;
+}
+
+.qr-caption {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .qr-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
   margin-top: 14px;
+}
+
+.qr-item {
+  flex: 0 0 auto;
 }
 
 .qr-img {
   width: 148px;
-  height: 148px;
+  max-width: 100%;
+  height: auto;
+  max-height: 200px;
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--el-border-color-lighter);
   background: #fff;
+}
+
+.qr-img--contact {
+  max-height: 220px;
 }
 </style>

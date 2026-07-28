@@ -337,6 +337,20 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 | 手机 | 17312678391 |
 | 微信 | 默认同手机号（可在 `server/config/support.json` 修改） |
 
+收款码与微信二维码图片放在 **`web/public/support/`**（构建后通过 `/support/…` 访问），配置见 `server/config/support.json` 的 `wechatQrPath`、`sponsorQrPaths`。
+
+| 文件 | 用途 |
+|------|------|
+| `wechat-pay.png` | 技术交流区「微信扫码」 |
+| `wechat-collect.png` | 点赞支持 · 微信零钱收款 |
+| `alipay-pay.png` | 点赞支持 · 支付宝 |
+
+<p align="center">
+  <img src="web/public/support/wechat-pay.png" alt="微信支付" width="200" />
+  <img src="web/public/support/wechat-collect.png" alt="微信收款" width="200" />
+  <img src="web/public/support/alipay-pay.png" alt="支付宝" width="200" />
+</p>
+
 ---
 
 ## License
