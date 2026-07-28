@@ -127,6 +127,19 @@
             >
           </el-form-item>
 
+          <el-form-item label="超时（毫秒）">
+            <el-input-number
+              v-model="form.script.timeoutMs"
+              :min="1000"
+              :step="60000"
+              :max="3600000"
+              style="width: 100%"
+            />
+            <div class="field-hint">
+              默认 600000（10 分钟）。交互式脚本（需人在黑窗里输入）请酌情调大，避免未到「待确认」就被引擎杀掉。
+            </div>
+          </el-form-item>
+
           <el-collapse class="member-advanced">
             <el-collapse-item title="高级" name="adv">
               <el-form-item label="运行时 / 解释器">
@@ -154,16 +167,6 @@
                   placeholder="KEY=value 每行一个；留空则继承本机环境（含系统代理）"
                 />
                 <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
-              </el-form-item>
-
-              <el-form-item label="超时（毫秒）">
-                <el-input-number
-                  v-model="form.script.timeoutMs"
-                  :min="1000"
-                  :step="60000"
-                  :max="3600000"
-                />
-                <div class="field-hint">默认 600000（10 分钟）；可按成员单独改</div>
               </el-form-item>
 
               <el-form-item label="打开后不等待结束">
