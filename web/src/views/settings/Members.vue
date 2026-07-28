@@ -52,8 +52,8 @@
           <PathPicker
             v-model="form.workFolder"
             mode="folder"
-            placeholder="脚本优先在此目录运行"
-            hint="可手填，或点「浏览」在本机选择文件夹"
+            placeholder="流程、#文件夹、开编辑器等"
+            hint="与「脚本工作目录」无关；脚本相对路径只认脚本工作目录"
           />
         </el-form-item>
         <el-form-item label="类型" required>
@@ -77,7 +77,7 @@
               mode="file"
               placeholder="选择 .bat / .ps1 / .py / .js …"
               :extensions="scriptExts"
-              hint="可手填，或点「浏览」选择本机脚本；相对路径以脚本所在目录为基准（非工作目录、非快捷指令目录）"
+              hint="可手填，或点「浏览」选择本机脚本；相对路径以「脚本工作目录」为基准"
               @update:model-value="onScriptAnchorPathChange"
             />
           </el-form-item>
@@ -87,7 +87,7 @@
               v-model="form.script.command"
               type="textarea"
               :rows="3"
-              placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本基准目录）"
+              placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本工作目录）"
             />
             <div class="field-hint">
               <strong>完全由你配置</strong>，产品不内置任何工具名。走 PATH；占位符
@@ -103,10 +103,19 @@
             <PathPicker
               v-model="form.script.scriptPath"
               mode="file"
-              placeholder="选 index.mjs 等，自动写入脚本基准目录"
+              placeholder="选 index.mjs 等，自动写入脚本工作目录"
               :extensions="scriptExts"
-              hint="不必手填「高级」里的文件夹：浏览选中脚本即可；与命令里 node index.mjs 二选一或同时用"
+              hint="浏览选中脚本即可；与命令里 node index.mjs 二选一或同时用"
               @update:model-value="onScriptAnchorPathChange"
+            />
+          </el-form-item>
+
+          <el-form-item label="脚本工作目录">
+            <PathPicker
+              v-model="form.script.scriptWorkDir"
+              mode="folder"
+              placeholder="选脚本后一般会自动填写；命令如 node index.mjs 时保存也会推断"
+              hint="运行脚本时的 cwd，与会话/成员工作文件夹无关"
             />
           </el-form-item>
 
@@ -123,14 +132,6 @@
 
           <el-collapse class="member-advanced">
             <el-collapse-item title="高级" name="adv">
-              <el-form-item label="脚本基准目录">
-                <PathPicker
-                  v-model="form.script.scriptDir"
-                  mode="folder"
-                  placeholder="一般由「选脚本」自动填写，仅目录与脚本不在一处时手改"
-                  hint="选文件路径或锚点脚本后会自动写入；保存时也会从 node index.mjs 等命令推断"
-                />
-              </el-form-item>
               <el-form-item label="运行时 / 解释器">
                 <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
                   <el-option label="自动（按扩展名 / 系统）" value="auto" />
@@ -250,6 +251,7 @@ function emptyForm() {
       mode: 'file',
       filePath: '',
       scriptPath: '',
+      scriptWorkDir: '',
       scriptDir: '',
       command: 'echo ECW-OK',
       runtime: 'auto',
@@ -335,15 +337,18 @@ function dirnameOfFilePath(p) {
   return norm.slice(0, i) || norm
 }
 
-/** 浏览选脚本后写入 scriptDir（文件路径 / 命令锚点脚本共用） */
+/** 浏览选脚本后写入 scriptWorkDir（文件路径 / 命令锚点脚本共用） */
 function onScriptAnchorPathChange(v) {
   const raw = (v ?? '').trim()
   if (!raw) {
+    form.value.script.scriptWorkDir = ''
     form.value.script.scriptDir = ''
     return
   }
   if (/^[a-zA-Z]:[\\/]|^\\\\|^\//.test(raw)) {
-    form.value.script.scriptDir = dirnameOfFilePath(raw)
+    const d = dirnameOfFilePath(raw)
+    form.value.script.scriptWorkDir = d
+    form.value.script.scriptDir = d
   }
 }
 
@@ -362,7 +367,8 @@ function fillFromRow(row, { asClone = false } = {}) {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
       scriptPath: s.scriptPath || '',
-      scriptDir: s.scriptDir || '',
+      scriptWorkDir: s.scriptWorkDir || s.scriptDir || '',
+      scriptDir: s.scriptWorkDir || s.scriptDir || '',
       command: s.command || 'echo ECW-OK',
       runtime: s.runtime || 'auto',
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
@@ -436,7 +442,8 @@ async function save() {
                 mode: s.mode,
                 filePath: s.mode === 'file' ? s.filePath : undefined,
                 scriptPath: s.mode === 'command' ? s.scriptPath || undefined : undefined,
-                scriptDir: s.scriptDir || undefined,
+                scriptWorkDir: s.scriptWorkDir || s.scriptDir || undefined,
+                scriptDir: s.scriptWorkDir || s.scriptDir || undefined,
                 command: s.mode === 'command' ? s.command : undefined,
                 runtime: s.runtime || 'auto',
                 args: s.mode === 'file' ? parseArgs(s.argsText) : undefined,

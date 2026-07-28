@@ -7,6 +7,7 @@ import { MEMBER_KIND, applyParamPlaceholders, SYSTEM_PARAM_KEYS } from '@acw/sha
 import { resolveShowScriptPopup } from './appSettings.js'
 import {
   enrichScriptConfig,
+  getScriptWorkDir,
   resolveScriptFilePath,
   extractScriptPathFromCommand,
 } from './runners.js'
@@ -156,85 +157,73 @@ function normalizeCommand(c) {
     memberKey: String(c.memberKey || '').trim(),
     prompt: String(c.prompt || '').trim(),
     scriptPath: String(c.scriptPath || c.scriptFile || '').trim(),
-    scriptDir: String(c.scriptDir || '').trim(),
+    scriptWorkDir: String(c.scriptWorkDir || c.scriptDir || '').trim(),
+    scriptDir: String(c.scriptWorkDir || c.scriptDir || '').trim(),
     anchorMemberId: String(c.anchorMemberId || '').trim(),
   }
 }
 
-/** 保存时补全 scriptDir；相对 scriptPath 以脚本目录为基准 */
+/** 保存时补全 scriptWorkDir（与会话/成员工作文件夹无关） */
 function enrichSlashCommand(cmd) {
   if (!cmd || cmd.kind !== 'shell') return cmd
   const next = { ...cmd }
-  const workFolder =
-    next.openTarget === 'custom' && next.customPath ? next.customPath : null
-  const anchor =
-    next.scriptPath ||
-    extractScriptPathFromCommand(next.command)
-  if (anchor) {
-    if (!next.scriptPath) next.scriptPath = anchor
-    const enriched = enrichScriptConfig(
-      { filePath: anchor, scriptDir: next.scriptDir, command: next.command },
-      workFolder,
-    )
-    next.scriptDir = enriched.scriptDir || next.scriptDir
-    if (enriched.scriptPath && !cmd.scriptPath) next.scriptPath = enriched.scriptPath
-  } else if (next.command) {
-    const enriched = enrichScriptConfig(
-      { scriptDir: next.scriptDir, command: next.command },
-      workFolder,
-    )
-    next.scriptDir = enriched.scriptDir || next.scriptDir
+  const anchor = next.scriptPath || extractScriptPathFromCommand(next.command)
+  if (anchor && !next.scriptPath) next.scriptPath = anchor
+  const enriched = enrichScriptConfig({
+    filePath: anchor,
+    scriptPath: next.scriptPath,
+    scriptWorkDir: next.scriptWorkDir || next.scriptDir,
+    scriptDir: next.scriptDir,
+    command: next.command,
+  })
+  const sw = getScriptWorkDir(enriched)
+  if (sw) {
+    next.scriptWorkDir = sw
+    next.scriptDir = sw
   }
+  if (enriched.scriptPath && !cmd.scriptPath) next.scriptPath = enriched.scriptPath
   return next
 }
 
-function folderCandidatesForSlash(cmd, sessionId) {
-  const sessionFolder = resolveFolder(cmd, sessionId)
-  const list = []
-  const push = (p) => {
-    if (p && String(p).trim() && !list.includes(p)) list.push(String(p).trim())
+function slashHasScriptAnchor(cmd) {
+  if (!cmd || cmd.kind !== 'shell') return false
+  if (String(cmd.scriptPath || '').trim()) return true
+  if (String(cmd.scriptWorkDir || cmd.scriptDir || '').trim()) return true
+  if (cmd.anchorMemberId) return true
+  return !!extractScriptPathFromCommand(cmd.command)
+}
+
+function getSlashScriptWorkDir(cmd) {
+  let w = getScriptWorkDir(cmd)
+  if (!w && cmd.anchorMemberId) {
+    const m = listMembers().find((x) => x.id === cmd.anchorMemberId)
+    const sc = enrichScriptConfig({ ...(m?.config?.script || {}) })
+    w = getScriptWorkDir(sc)
   }
-  if (cmd.openTarget === 'custom' && cmd.customPath) push(path.resolve(cmd.customPath))
-  push(sessionFolder)
-  push(process.cwd())
-  return list
+  return w ? path.resolve(String(w)) : ''
 }
 
 /**
- * 快捷指令运行 cwd：脚本基准目录优先，其次继承成员 scriptDir，最后会话/自定义工作目录
+ * shell 子进程 cwd：有脚本锚点时仅用 scriptWorkDir / scriptPath；否则用会话工作目录目标
  */
-function resolveSlashCwd(cmd, sessionId) {
+function resolveSlashSpawnCwd(cmd, sessionId) {
   const sessionFolder = resolveFolder(cmd, sessionId)
-  const candidates = folderCandidatesForSlash(cmd, sessionId)
+  if (!slashHasScriptAnchor(cmd)) return sessionFolder
 
-  if (cmd.scriptDir && String(cmd.scriptDir).trim()) {
-    const sd = path.resolve(String(cmd.scriptDir).trim())
-    if (fs.existsSync(sd)) return sd
-  }
+  const scriptWorkDir = getSlashScriptWorkDir(cmd)
+  if (scriptWorkDir && fs.existsSync(scriptWorkDir)) return scriptWorkDir
 
-  if (cmd.scriptPath && String(cmd.scriptPath).trim()) {
-    const abs = resolveScriptFilePath(String(cmd.scriptPath).trim(), candidates, {
-      scriptDir: cmd.scriptDir,
+  const sp =
+    String(cmd.scriptPath || '').trim() || extractScriptPathFromCommand(cmd.command) || ''
+  if (sp) {
+    const abs = resolveScriptFilePath(sp, {
+      scriptWorkDir,
+      scriptDir: scriptWorkDir,
     })
     if (abs && fs.existsSync(abs)) return path.dirname(path.resolve(abs))
   }
 
-  if (cmd.anchorMemberId) {
-    const m = listMembers().find((x) => x.id === cmd.anchorMemberId)
-    const sc = m?.config?.script
-    if (sc?.scriptDir && fs.existsSync(String(sc.scriptDir))) {
-      return path.resolve(String(sc.scriptDir))
-    }
-    if (sc && (sc.filePath || sc.path)) {
-      const memCandidates = [m.work_folder, ...candidates].filter(Boolean)
-      const abs = resolveScriptFilePath(String(sc.filePath || sc.path), memCandidates, {
-        scriptDir: sc.scriptDir,
-      })
-      if (abs && fs.existsSync(abs)) return path.dirname(path.resolve(abs))
-    }
-  }
-
-  return sessionFolder
+  return ''
 }
 
 export function saveSlashCommands(commands) {
@@ -287,7 +276,7 @@ function applyTemplate(tpl, ctx) {
   return applyParamPlaceholders(String(tpl || ''), map, {
     input: ctx.args != null ? String(ctx.args) : '',
     folder: ctx.folder,
-    cwd: ctx.folder,
+    cwd: ctx.cwd != null ? ctx.cwd : ctx.folder,
     sessionId: ctx.sessionId || '',
   })
     .replaceAll('{path}', ctx.folder || '')
@@ -327,8 +316,14 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   if (!cmd.enabled) throw new Error('指令已禁用')
   if (cmd.kind === 'shell') cmd = enrichSlashCommand(cmd)
 
-  const folder = resolveFolder(cmd, sessionId)
-  const execFolder = resolveSlashCwd(cmd, sessionId)
+  const sessionFolder = resolveFolder(cmd, sessionId)
+  const scriptWorkDir = getSlashScriptWorkDir(cmd)
+  const spawnCwd = resolveSlashSpawnCwd(cmd, sessionId)
+  if (cmd.kind === 'shell' && slashHasScriptAnchor(cmd) && !spawnCwd) {
+    throw new Error(
+      '请配置脚本工作目录，或选择脚本文件以自动填写（与会话/成员工作文件夹无关）',
+    )
+  }
   const callArgs = args != null ? String(args) : ''
   let title = ''
   try {
@@ -345,7 +340,8 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
     const agentName = member.display_name || cmd.memberName || '统一管理员'
     const insertText =
       applyTemplate(cmd.prompt || `请【{agent}】协助处理：`, {
-        folder,
+        folder: sessionFolder,
+        cwd: sessionFolder,
         sessionId: sessionId || '',
         title,
         url: '',
@@ -367,7 +363,8 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   }
 
   const ctx = {
-    folder: execFolder,
+    folder: sessionFolder,
+    cwd: slashHasScriptAnchor(cmd) && scriptWorkDir ? scriptWorkDir : sessionFolder,
     sessionId: sessionId || '',
     title,
     url: url || cmd.url || '',
@@ -396,13 +393,14 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   if (!line.trim()) throw new Error('命令为空')
   // 弹窗优先级：本指令 showScriptPopup > 全局
   const showPopup = resolveShowScriptPopup(cmd)
-  await spawnDetached(line, execFolder, { showPopup })
+  await spawnDetached(line, spawnCwd || sessionFolder, { showPopup })
   return {
     ok: true,
     kind: 'shell',
     command: line,
-    folder: execFolder,
-    sessionFolder: folder,
+    folder: spawnCwd || sessionFolder,
+    sessionFolder,
+    scriptWorkDir: scriptWorkDir || undefined,
     args: callArgs,
     showScriptPopup: showPopup,
     message: `已执行：${line}`,

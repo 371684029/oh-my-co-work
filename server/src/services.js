@@ -117,10 +117,7 @@ export function createMember(body) {
   const t = nowIso()
   const config = body.config || {}
   if (body.kind === MEMBER_KIND.SCRIPT && body.script) {
-    config.script = enrichScriptConfig(
-      body.script,
-      body.workFolder || body.work_folder || null,
-    )
+    config.script = enrichScriptConfig(body.script)
   }
   getDb()
     .prepare(
@@ -166,13 +163,7 @@ export function updateMember(id, body = {}) {
     config = body.config || {}
   } else if (body.kind === MEMBER_KIND.SCRIPT || src.kind === MEMBER_KIND.SCRIPT) {
     if (body.script) {
-      const wf =
-        body.workFolder !== undefined
-          ? body.workFolder || null
-          : body.work_folder !== undefined
-            ? body.work_folder || null
-            : src.work_folder
-      config = { ...config, script: enrichScriptConfig(body.script, wf) }
+      config = { ...config, script: enrichScriptConfig(body.script) }
     }
   }
   const kind = body.kind || src.kind

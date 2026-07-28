@@ -41,23 +41,55 @@ export function resolveWorkFolderCandidates({ member, group, sessionContext, scr
 }
 
 /**
- * 解析脚本运行 cwd
- * 优先级：
- * 1. 显式 script.cwd
- * 2. **脚本文件所在目录**（file 模式，以脚本路径为基准，等同双击 bat）
- * 3. 成员/会话/群工作目录
- * 4. process.cwd()
- *
- * @param {{ member?, group?, sessionContext?, scriptCfg?, filePath? }} opts
- *   filePath 须为已解析的绝对路径（若有）
+ * 脚本工作目录（与成员/会话「工作文件夹」无关）
+ * 兼容旧字段 scriptDir
+ */
+export function getScriptWorkDir(script) {
+  if (!script || typeof script !== 'object') return ''
+  const w = script.scriptWorkDir || script.scriptDir || ''
+  return String(w).trim()
+}
+
+function mirrorScriptWorkDirFields(script) {
+  if (!script || typeof script !== 'object') return script
+  const w = getScriptWorkDir(script)
+  if (w) {
+    script.scriptWorkDir = w
+    script.scriptDir = w
+  }
+  return script
+}
+
+/**
+ * 解析脚本运行 cwd（不用成员/群/会话工作文件夹）
+ */
+export function resolveCwdForScript(scriptCfg, filePath) {
+  if (!scriptCfg || typeof scriptCfg !== 'object') return null
+  if (scriptCfg.cwd) return String(scriptCfg.cwd)
+
+  const sw = getScriptWorkDir(scriptCfg)
+  if (sw && fs.existsSync(sw)) return path.resolve(sw)
+
+  if (filePath) {
+    try {
+      const dir = path.dirname(path.resolve(String(filePath)))
+      if (fs.existsSync(dir)) return dir
+    } catch {
+      /* ignore */
+    }
+  }
+  return null
+}
+
+/**
+ * 解析脚本运行 cwd（非 script 场景遗留；script 请用 resolveCwdForScript）
  */
 export function resolveCwd({ member, group, sessionContext, scriptCfg, filePath }) {
-  if (scriptCfg?.cwd) return scriptCfg.cwd
-
-  if (scriptCfg?.scriptDir && String(scriptCfg.scriptDir).trim()) {
-    const sd = path.resolve(String(scriptCfg.scriptDir).trim())
-    if (fs.existsSync(sd)) return sd
+  if (scriptCfg) {
+    const sw = resolveCwdForScript(scriptCfg, filePath)
+    if (sw) return sw
   }
+  if (scriptCfg?.cwd) return scriptCfg.cwd
 
   const workCandidates = [
     member?.work_folder,
@@ -88,32 +120,16 @@ export function resolveCwd({ member, group, sessionContext, scriptCfg, filePath 
 }
 
 /**
- * 将配置中的脚本路径解析为绝对路径（存在则返回）
- * @param {string} rawPath
- * @param {string[]} folderCandidates 成员/会话工作目录等
- * @param {{ scriptDir?: string }} [opts] scriptDir：脚本基准目录（优先于工作目录、快捷指令目录）
+ * 将配置中的脚本路径解析为绝对路径
+ * 相对路径**仅**相对 scriptWorkDir（与成员/会话工作文件夹无关）
  */
-export function resolveScriptFilePath(rawPath, folderCandidates = [], { scriptDir } = {}) {
+export function resolveScriptFilePath(rawPath, { scriptWorkDir, scriptDir } = {}) {
   if (!rawPath || !String(rawPath).trim()) return null
-  let p = String(rawPath).trim()
-  if (path.isAbsolute(p)) {
-    return fs.existsSync(p) ? path.resolve(p) : path.resolve(p)
-  }
-  const bases = []
-  if (scriptDir && String(scriptDir).trim()) {
-    bases.push(String(scriptDir).trim())
-  }
-  for (const base of bases) {
-    const abs = path.resolve(base, p)
-    if (fs.existsSync(abs)) return abs
-  }
-  for (const base of folderCandidates) {
-    if (!base) continue
-    const abs = path.resolve(base, p)
-    if (fs.existsSync(abs)) return abs
-  }
-  if (bases.length) return path.resolve(bases[0], p)
-  return path.resolve(process.cwd(), p)
+  const p = String(rawPath).trim()
+  if (path.isAbsolute(p)) return path.resolve(p)
+  const base = getScriptWorkDir({ scriptWorkDir, scriptDir })
+  if (!base) return null
+  return path.resolve(base, p)
 }
 
 /**
@@ -135,9 +151,10 @@ export function extractScriptPathFromCommand(command) {
 }
 
 /**
- * 根据 filePath / scriptPath / 命令中的脚本名 补全 script.scriptDir（保存成员 / 快捷指令时调用）
+ * 补全 scriptWorkDir（选脚本 / 命令中的脚本名 / 绝对路径）
+ * @param {object} script
  */
-export function enrichScriptConfig(script, workFolder) {
+export function enrichScriptConfig(script) {
   if (!script || typeof script !== 'object') return script
   const next = { ...script }
   const raw =
@@ -148,26 +165,33 @@ export function enrichScriptConfig(script, workFolder) {
   if (raw && !next.scriptPath && !next.filePath && !next.path) {
     next.scriptPath = String(raw).trim()
   }
-  if (!raw || !String(raw).trim()) return next
 
-  if (next.scriptDir && String(next.scriptDir).trim() && fs.existsSync(String(next.scriptDir))) {
-    return next
+  const existing = getScriptWorkDir(next)
+  if (existing && fs.existsSync(existing)) {
+    return mirrorScriptWorkDirFields(next)
   }
 
-  const folderCandidates = resolveWorkFolderCandidates({
-    member: workFolder ? { work_folder: workFolder } : {},
-    scriptCfg: next,
-  })
-  const abs = resolveScriptFilePath(String(raw).trim(), folderCandidates, {
-    scriptDir: next.scriptDir,
-  })
-  if (abs && fs.existsSync(abs)) {
-    next.scriptDir = path.dirname(path.resolve(abs))
-  } else if (path.isAbsolute(String(raw).trim())) {
-    const d = path.dirname(path.resolve(String(raw).trim()))
-    if (fs.existsSync(d)) next.scriptDir = d
+  if (!raw || !String(raw).trim()) return mirrorScriptWorkDirFields(next)
+
+  const trimmed = String(raw).trim()
+  if (path.isAbsolute(trimmed)) {
+    if (fs.existsSync(trimmed)) {
+      next.scriptWorkDir = path.dirname(path.resolve(trimmed))
+    } else {
+      const d = path.dirname(path.resolve(trimmed))
+      if (fs.existsSync(d)) next.scriptWorkDir = d
+    }
+    return mirrorScriptWorkDirFields(next)
   }
-  return next
+
+  const sw = getScriptWorkDir(next)
+  if (sw) {
+    const abs = path.resolve(sw, trimmed)
+    if (fs.existsSync(abs)) {
+      next.scriptWorkDir = path.dirname(abs)
+    }
+  }
+  return mirrorScriptWorkDirFields(next)
 }
 
 /**
@@ -379,10 +403,7 @@ export async function runMember(
   }
 
   if (kind === 'script') {
-    const script = enrichScriptConfig(
-      { ...(config.script || config) },
-      member.work_folder || member.workFolder,
-    )
+    const script = enrichScriptConfig({ ...(config.script || config) })
     const mode = script.mode || (script.filePath || script.path ? 'file' : 'command')
     const timeoutMs =
       Number(script.timeoutMs) > 0 ? Number(script.timeoutMs) : DEFAULT_SCRIPT_TIMEOUT_MS
@@ -403,17 +424,9 @@ export async function runMember(
       script.stdin === true ||
       (humanInput != null && script.passHumanInput !== false && script.useHumanAsStdin === true)
 
-    // 先解析脚本绝对路径，再定 cwd（以脚本目录为基准）
-    const folderCandidates = resolveWorkFolderCandidates({
-      member,
-      group,
-      sessionContext,
-      scriptCfg: script,
-    })
-    const pathAnchor =
-      (script.scriptDir && String(script.scriptDir).trim()) || folderCandidates[0] || ''
-    phExtra.folder = pathAnchor
-    phExtra.cwd = pathAnchor
+    const scriptWorkDir = getScriptWorkDir(script)
+    phExtra.folder = scriptWorkDir || ''
+    phExtra.cwd = scriptWorkDir || ''
 
     let filePath = null
     let command = null
@@ -424,13 +437,16 @@ export async function runMember(
       const raw = script.filePath || script.path
       if (!raw) return { ok: false, summary: '未配置脚本文件路径', error: { code: 'NO_FILE' } }
       const expanded = applyParamPlaceholders(String(raw), paramsMap, phExtra)
-      filePath = resolveScriptFilePath(expanded, folderCandidates, {
-        scriptDir: script.scriptDir,
+      filePath = resolveScriptFilePath(expanded, {
+        scriptWorkDir: getScriptWorkDir(script),
       })
       if (!filePath || !fs.existsSync(filePath)) {
+        const hint = getScriptWorkDir(script)
+          ? ''
+          : '（请先配置脚本工作目录，或选择脚本文件以自动填写）'
         return {
           ok: false,
-          summary: `脚本不存在: ${expanded}`,
+          summary: `脚本不存在: ${expanded}${hint}`,
           error: { code: 'FILE_MISSING', path: expanded },
         }
       }
@@ -455,16 +471,17 @@ export async function runMember(
       }
     }
 
-    // file / command：cwd 优先 scriptDir → 脚本文件目录 → 工作目录
-    const cwd = resolveCwd({
-      member,
-      group,
-      sessionContext,
-      scriptCfg: script,
-      filePath: mode === 'file' ? filePath : null,
-    })
-    phExtra.folder = cwd || ''
-    phExtra.cwd = cwd || ''
+    const cwd = resolveCwdForScript(script, mode === 'file' ? filePath : null)
+    if (!cwd) {
+      return {
+        ok: false,
+        summary:
+          '未配置脚本工作目录：请在成员里填写「脚本工作目录」，或选择脚本/锚点脚本自动填写（与会话工作文件夹无关）',
+        error: { code: 'NO_SCRIPT_WORK_DIR' },
+      }
+    }
+    phExtra.folder = cwd
+    phExtra.cwd = cwd
 
     const env = consoleChildEnv({
       ...process.env,

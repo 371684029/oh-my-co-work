@@ -116,29 +116,29 @@
               placeholder='node index.mjs  或  code "{folder}"'
             />
           </el-form-item>
-          <el-form-item label="脚本文件（相对路径基准，可选）">
+          <el-form-item label="脚本文件（可选）">
             <PathPicker
               v-model="form.scriptPath"
               mode="file"
-              placeholder="选本机脚本后相对路径以该文件所在目录为准"
-              hint="选文件后自动填 scriptDir；仅写 node index.mjs 时保存后也会从命令推断脚本目录"
+              placeholder="选本机脚本；相对路径以「脚本工作目录」为基准"
+              hint="选文件后自动填脚本工作目录；仅写 node index.mjs 时保存也会从命令推断"
               @update:model-value="onSlashScriptPathChange"
             />
           </el-form-item>
-          <el-form-item label="脚本基准目录（可选）">
+          <el-form-item label="脚本工作目录">
             <PathPicker
-              v-model="form.scriptDir"
+              v-model="form.scriptWorkDir"
               mode="folder"
               placeholder="命令如 node index.mjs 时填 index.mjs 所在文件夹"
-              hint="选脚本文件后会自动写入；也可手填或从成员继承"
+              hint="运行脚本的 cwd，与会话工作文件夹无关；{folder} 仍指会话工作目录"
             />
           </el-form-item>
-          <el-form-item label="继承成员脚本目录（可选）">
+          <el-form-item label="继承成员脚本工作目录（可选）">
             <el-select
               v-model="form.anchorMemberId"
               filterable
               clearable
-              placeholder="与某成员的 scriptDir / 脚本文件对齐"
+              placeholder="与某成员的脚本工作目录 / 脚本文件对齐"
               style="width: 100%"
             >
               <el-option
@@ -224,6 +224,7 @@ function emptyForm() {
     /** inherit | yes | no — 仅 shell 有效 */
     showScriptPopupMode: 'inherit',
     scriptPath: '',
+    scriptWorkDir: '',
     scriptDir: '',
     anchorMemberId: '',
   }
@@ -242,7 +243,9 @@ function onSlashScriptPathChange(v) {
   const raw = (v ?? '').trim()
   if (!raw) return
   if (/^[a-zA-Z]:[\\/]|^\\\\|^\//.test(raw)) {
-    form.value.scriptDir = dirnameOfFilePath(raw)
+    const d = dirnameOfFilePath(raw)
+    form.value.scriptWorkDir = d
+    form.value.scriptDir = d
   }
 }
 
@@ -324,6 +327,8 @@ function openEdit(row, index) {
   form.value = {
     ...emptyForm(),
     ...row,
+    scriptWorkDir: row.scriptWorkDir || row.scriptDir || '',
+    scriptDir: row.scriptWorkDir || row.scriptDir || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
   drawerTitle.value = '编辑指令'
@@ -345,6 +350,8 @@ function openClone(row) {
     id: `cmd_${Date.now().toString(36)}`,
     name: `${row.name || baseSlash} 副本`,
     slash,
+    scriptWorkDir: row.scriptWorkDir || row.scriptDir || '',
+    scriptDir: row.scriptWorkDir || row.scriptDir || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
   drawerTitle.value = '克隆指令'
@@ -361,6 +368,11 @@ async function saveForm() {
     return
   }
   f = applyPopupModeToCmd(f)
+  const sw = String(f.scriptWorkDir || f.scriptDir || '').trim()
+  if (sw) {
+    f.scriptWorkDir = sw
+    f.scriptDir = sw
+  }
   if (editIndex.value >= 0) {
     commands.value[editIndex.value] = f
   } else {
