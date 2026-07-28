@@ -160,15 +160,23 @@ function normalizeCommand(c) {
     scriptWorkDir: String(c.scriptWorkDir || c.scriptDir || '').trim(),
     scriptDir: String(c.scriptWorkDir || c.scriptDir || '').trim(),
     anchorMemberId: String(c.anchorMemberId || '').trim(),
-    /** 桌面快捷键脚本：scriptWorkDir 仅用户手填，保存/运行时不自动推断 */
-    desktopHotkey: c.desktopHotkey === true,
+    /** 快捷键触发跑脚本（页内/桌面/任意绑定同一规则）：scriptWorkDir 仅用户手填 */
+    hotkeyScript:
+      c.hotkeyScript === true || c.desktopHotkey === true,
+    /** @deprecated 使用 hotkeyScript */
+    desktopHotkey: c.hotkeyScript === true || c.desktopHotkey === true,
     hotkey: String(c.hotkey || '').trim(),
   }
 }
 
-/** 桌面快捷键（非聊天 / 斜杠） */
+/** 快捷键触发脚本（非聊天 / 斜杠）；任意位置绑键共用此规则 */
+export function isHotkeyScriptCommand(cmd) {
+  return !!(cmd && (cmd.hotkeyScript === true || cmd.desktopHotkey === true))
+}
+
+/** @deprecated */
 export function isDesktopHotkeyCommand(cmd) {
-  return !!(cmd && cmd.desktopHotkey === true)
+  return isHotkeyScriptCommand(cmd)
 }
 
 function mirrorSlashScriptWorkDir(next) {
@@ -187,7 +195,7 @@ function enrichSlashCommand(cmd, { persist = false } = {}) {
   const anchor = next.scriptPath || extractScriptPathFromCommand(next.command)
   if (anchor && !next.scriptPath) next.scriptPath = anchor
 
-  if (isDesktopHotkeyCommand(next)) {
+  if (isHotkeyScriptCommand(next)) {
     return mirrorSlashScriptWorkDir(next)
   }
 
@@ -217,7 +225,7 @@ function slashHasScriptAnchor(cmd) {
 
 function getSlashScriptWorkDir(cmd) {
   let w = getScriptWorkDir(cmd)
-  if (!isDesktopHotkeyCommand(cmd) && !w && cmd.anchorMemberId) {
+  if (!isHotkeyScriptCommand(cmd) && !w && cmd.anchorMemberId) {
     const m = listMembers().find((x) => x.id === cmd.anchorMemberId)
     const sc = enrichScriptConfig({ ...(m?.config?.script || {}) })
     w = getScriptWorkDir(sc)
@@ -232,7 +240,7 @@ function resolveSlashSpawnCwd(cmd, sessionId) {
   const sessionFolder = resolveFolder(cmd, sessionId)
   if (!slashHasScriptAnchor(cmd)) return sessionFolder
 
-  if (isDesktopHotkeyCommand(cmd)) {
+  if (isHotkeyScriptCommand(cmd)) {
     const scriptWorkDir = getSlashScriptWorkDir(cmd)
     return scriptWorkDir && fs.existsSync(scriptWorkDir) ? scriptWorkDir : ''
   }
@@ -270,11 +278,11 @@ export function saveSlashCommands(commands) {
     }
     if (
       c.kind === 'shell' &&
-      isDesktopHotkeyCommand(c) &&
+      isHotkeyScriptCommand(c) &&
       slashHasScriptAnchor(c) &&
       !getScriptWorkDir(c)
     ) {
-      throw new Error(`「${c.name}」为桌面快捷键脚本，须手填脚本工作目录`)
+      throw new Error(`「${c.name}」为快捷键脚本，须手填脚本工作目录`)
     }
   }
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true })
@@ -350,7 +358,7 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   if (!cmd) throw new Error('指令不存在')
   if (!cmd.enabled) throw new Error('指令已禁用')
   if (cmd.kind === 'shell') {
-    cmd = isDesktopHotkeyCommand(cmd)
+    cmd = isHotkeyScriptCommand(cmd)
       ? mirrorSlashScriptWorkDir({ ...cmd })
       : enrichSlashCommand(cmd, { persist: true })
   }
@@ -360,8 +368,8 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   const spawnCwd = resolveSlashSpawnCwd(cmd, sessionId)
   if (cmd.kind === 'shell' && slashHasScriptAnchor(cmd) && !spawnCwd) {
     throw new Error(
-      isDesktopHotkeyCommand(cmd)
-        ? '桌面快捷键跑脚本须在设置里手填脚本工作目录（不会自动用脚本所在目录）'
+      isHotkeyScriptCommand(cmd)
+        ? '快捷键跑脚本须在设置里手填脚本工作目录（不会自动用脚本所在目录）'
         : '请配置脚本工作目录，或选择脚本文件以自动填写（与会话/成员工作文件夹无关）',
     )
   }
