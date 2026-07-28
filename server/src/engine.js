@@ -1663,7 +1663,19 @@ export async function advance(sessionId) {
       return
     }
 
-    // CI01：需要 #1 的成员步，缺参则拦截，不 spawn
+    if (member.kind === 'script') {
+      try {
+        const released = killSessionProcesses(sessionId, { includeDetach: true })
+        if (released.killed > 0) {
+          console.log(
+            `[acw] step start: closed ${released.killed} script window(s) before ${member.display_name}`,
+          )
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     if (memberNeedsProjectParams(member) && !hasProjectParam1(ctx)) {
       persistNodeIo(sessionId, node.id, {
         input: {
@@ -1757,8 +1769,8 @@ export async function advance(sessionId) {
       finished: true,
     })
 
-    // 节点完成：释放该成员 bat/进程。仅唤起（detach）的 Cursor CLI 等要保留窗口
-    if (!result?.detached) {
+    // 节点完成：弹窗脚本默认保留黑窗；detach 同理。下一成员步开始时会统一释放。
+    if (!result?.detached && !result?.preserveConsole) {
       try {
         const killed = killMemberProcesses(sessionId, member.id)
         if (killed.killed > 0) {
@@ -1899,9 +1911,9 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     status: NODE_STATUS.WAITING_HUMAN,
   })
 
-  // 待确认归档：只清非 detach 进程；Cursor CLI 等「仅唤起」窗口保留到真正归档
+  // 待确认归档：结束全部脚本窗口（含弹窗保留的黑窗）
   try {
-    killSessionProcesses(sessionId, { includeDetach: false })
+    killSessionProcesses(sessionId, { includeDetach: true })
   } catch {
     /* ignore */
   }

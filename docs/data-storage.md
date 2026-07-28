@@ -261,7 +261,7 @@ data/journals/sessions/{sessionId}/README.md
 | 命令 / 文件 | 按成员 `script` 配置启动；**不写死机器路径**（命令走 PATH；文件可手填绝对路径）；**不包 ECW 壳** |
 | 环境变量 | 可选 `script.env`；未配则**完整继承本机 `process.env`**（代理、TOKEN 等由系统/用户自管） |
 | cwd | **`script.cwd`（显式）→ 脚本文件所在目录（file 模式基准）→ 成员/会话/群工作目录 → process.cwd**。`node index.mjs` 等相对路径以脚本目录为准 |
-| 弹窗开 | Windows：`Start-Process` 启动 `cmd`；**`.bat` 先 `chcp 65001` 再 `call`**。**默认不弹 HTA「释放资源」小窗**（仅 `showControlWindow===true` 才开）；杀进程靠归档 / 节点结束 / API |
+| 弹窗开 | Windows：`Start-Process` 启动；**`.bat` 先 `chcp 65001` 再 `call`**。脚本退出后**默认不关黑窗**，直至你手动关、流程进入**下一成员步**，或进入**待确认归档**时统一释放 |
 | 弹窗关 | `spawn` + `windowsHide`，静默跑 |
 | 打开 Cursor 等 GUI | **不模拟**；真开应用，聊天短状态即可 |
 | 输出解码 | 日志/摘要尽量 UTF-8/GBK 择优（`decodeConsoleBytes`），减少气泡乱码 |

@@ -679,6 +679,8 @@ function runProcess({
     const displayLabel = label || filePath || command || 'script'
     const targetPidFile =
       sessionId && showConsole && isWin ? getRunPidFilePath(sessionId, runId) : null
+    /** Windows 弹窗脚本：默认保留黑窗，直至用户手动关或流程进入下一成员步/归档 */
+    const preserveConsole = !!(showConsole && isWin && !detach)
 
     // 同一会话 + 同一成员：只保留一个脚本进程；新开前连旧的 detach 窗口一并清掉
     if (sessionId && memberId) {
@@ -741,10 +743,10 @@ function runProcess({
                   kind: 'script-window',
                   label: `${displayLabel} (window)`,
                   memberId: memberId || null,
-                  detach: !!detach,
+                  detach: !!detach || preserveConsole,
                 })
                 console.log(
-                  `[acw] tracked script window pid=${tpid} for ${runId} detach=${!!detach}`,
+                  `[acw] tracked script window pid=${tpid} for ${runId} detach=${!!detach || preserveConsole}`,
                 )
                 clearInterval(poll)
                 return
@@ -814,7 +816,7 @@ function runProcess({
       if (sessionId) {
         // 外层 launcher 可卸；detach 的真实窗口 PID 要保留，供归档杀、且避免节点结束误杀
         unregisterProcess(sessionId, runId)
-        if (!detach) unregisterProcess(sessionId, `${runId}_target`)
+        if (!detach && !preserveConsole) unregisterProcess(sessionId, `${runId}_target`)
         unregisterProcess(sessionId, `${runId}_hta`)
       }
       resolve(result)
@@ -880,7 +882,9 @@ function runProcess({
             stdout = `【${displayLabel}】已打开独立控制台（不等待结束）`
           } else {
             stdout = successCodes.includes(ec)
-              ? `【${displayLabel}】已在独立控制台完成（exit ${ec}）`
+              ? `【${displayLabel}】已在独立控制台完成（exit ${ec}）${
+                  preserveConsole ? '；窗口将保留至您关闭或流程进入下一步' : ''
+                }`
               : `【${displayLabel}】控制台已结束（exit ${ec}），详见弹窗输出`
           }
         }
@@ -914,6 +918,7 @@ function runProcess({
         ok,
         summary,
         detached: !!detach,
+        preserveConsole,
         data: {
           code: exitCode,
           pid,
@@ -926,6 +931,7 @@ function runProcess({
           cmd: launch.cmd,
           args: launch.args,
           detach: !!detach,
+          preserveConsole,
         },
         error: ok
           ? undefined
