@@ -4703,11 +4703,12 @@ loadLists().then(() => {
 .wb-right-tabs {
   display: flex;
   gap: 4px;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   padding: 3px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.05);
   box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
 .wb-right-tab {
@@ -4752,17 +4753,23 @@ loadLists().then(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
 }
 .resources-note {
   margin: 0;
   font-size: 11.5px;
   line-height: 1.45;
   color: var(--ecw-text-3, #8b8f9a);
+  flex-shrink: 0;
 }
 .resources-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .resources-block-title {
   display: flex;
@@ -4815,7 +4822,17 @@ loadLists().then(() => {
 }
 
 .wb-right-pane {
+  flex: 1;
   min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.wb-right-pane.announce-pane,
+.wb-right-pane.resources-pane {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .announce-pane {
