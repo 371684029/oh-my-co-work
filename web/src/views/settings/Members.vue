@@ -93,20 +93,6 @@
             </div>
           </el-form-item>
 
-          <el-form-item
-            v-if="form.script.mode === 'command'"
-            label="锚点脚本（可选）"
-          >
-            <PathPicker
-              v-model="form.script.scriptPath"
-              mode="file"
-              placeholder="选 index.mjs 等，自动写入脚本工作目录"
-              :extensions="scriptExts"
-              hint="浏览选中脚本即可；与命令里 node index.mjs 二选一或同时用"
-              @update:model-value="onScriptAnchorPathChange"
-            />
-          </el-form-item>
-
           <el-form-item label="脚本工作目录">
             <PathPicker
               v-model="form.script.scriptWorkDir"
@@ -248,7 +234,6 @@ function emptyForm() {
     script: {
       mode: 'file',
       filePath: '',
-      scriptPath: '',
       scriptWorkDir: '',
       scriptDir: '',
       command: 'echo ECW-OK',
@@ -335,7 +320,7 @@ function dirnameOfFilePath(p) {
   return norm.slice(0, i) || norm
 }
 
-/** 浏览选脚本后写入 scriptWorkDir（文件路径 / 命令锚点脚本共用） */
+/** 浏览选脚本后写入 scriptWorkDir（文件路径） */
 function onScriptAnchorPathChange(v) {
   const raw = (v ?? '').trim()
   if (!raw) {
@@ -363,7 +348,6 @@ function fillFromRow(row, { asClone = false } = {}) {
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
-      scriptPath: s.scriptPath || '',
       scriptWorkDir: s.scriptWorkDir || s.scriptDir || '',
       scriptDir: s.scriptWorkDir || s.scriptDir || '',
       command: s.command || 'echo ECW-OK',
@@ -437,7 +421,6 @@ async function save() {
               script: {
                 mode: s.mode,
                 filePath: s.mode === 'file' ? s.filePath : undefined,
-                scriptPath: s.mode === 'command' ? s.scriptPath || undefined : undefined,
                 scriptWorkDir: s.scriptWorkDir || s.scriptDir || undefined,
                 scriptDir: s.scriptWorkDir || s.scriptDir || undefined,
                 command: s.mode === 'command' ? s.command : undefined,
