@@ -93,12 +93,12 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="脚本工作目录">
+          <el-form-item label="脚本工作目录" required>
             <PathPicker
               v-model="form.script.scriptWorkDir"
               mode="folder"
-              placeholder="选脚本后一般会自动填写；命令如 node index.mjs 时保存也会推断"
-              hint="运行脚本时的 cwd，与会话/成员工作文件夹无关"
+              placeholder="必填：脚本运行时的 cwd"
+              hint="必填。选脚本文件可自动填写；命令如 node index.mjs 时保存也会尝试推断"
             />
           </el-form-item>
 
@@ -399,6 +399,21 @@ async function save() {
       return
     }
     const s = form.value.script
+    if (form.value.kind === 'script') {
+      const sw = String(s.scriptWorkDir || s.scriptDir || '').trim()
+      if (!sw) {
+        ElMessage.warning('请填写脚本工作目录')
+        return
+      }
+      if (s.mode === 'file' && !String(s.filePath || '').trim()) {
+        ElMessage.warning('请填写脚本文件路径')
+        return
+      }
+      if (s.mode === 'command' && !String(s.command || '').trim()) {
+        ElMessage.warning('请填写要执行的命令')
+        return
+      }
+    }
     const desc = (form.value.description || '').trim()
     const baseConfig = {}
     if (desc) baseConfig.description = desc

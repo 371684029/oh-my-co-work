@@ -1,5 +1,5 @@
 import { getDb, parseJson } from './db.js'
-import { enrichScriptConfig } from './runners.js'
+import { enrichScriptConfig, assertScriptWorkDirConfigured } from './runners.js'
 import {
   nowIso,
   uid,
@@ -112,12 +112,21 @@ export function getMember(id) {
   return memberRow(getDb().prepare('SELECT * FROM members WHERE id = ?').get(id))
 }
 
+function finalizeMemberScript(script) {
+  const enriched = enrichScriptConfig(script || {})
+  assertScriptWorkDirConfigured(enriched)
+  return enriched
+}
+
 export function createMember(body) {
   const id = uid('mem')
   const t = nowIso()
   const config = body.config || {}
-  if (body.kind === MEMBER_KIND.SCRIPT && body.script) {
-    config.script = enrichScriptConfig(body.script)
+  const kind = body.kind || MEMBER_KIND.ECHO
+  if (kind === MEMBER_KIND.SCRIPT) {
+    const raw = body.script || config.script
+    if (!raw) throw new Error('脚本成员须配置运行方式')
+    config.script = finalizeMemberScript(raw)
   }
   getDb()
     .prepare(
@@ -161,9 +170,13 @@ export function updateMember(id, body = {}) {
   let config = src.config || {}
   if (body.config !== undefined) {
     config = body.config || {}
+    const kindPre = body.kind || src.kind
+    if (kindPre === MEMBER_KIND.SCRIPT && config.script) {
+      config.script = finalizeMemberScript(config.script)
+    }
   } else if (body.kind === MEMBER_KIND.SCRIPT || src.kind === MEMBER_KIND.SCRIPT) {
     if (body.script) {
-      config = { ...config, script: enrichScriptConfig(body.script) }
+      config = { ...config, script: finalizeMemberScript(body.script) }
     }
   }
   const kind = body.kind || src.kind

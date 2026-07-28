@@ -146,8 +146,9 @@
             />
           </el-form-item>
           <el-form-item
+            v-if="form.kind === 'shell'"
             label="脚本工作目录"
-            :required="form.hotkeyScript && shellHasScriptAnchor(form)"
+            :required="shellHasScriptAnchor(form)"
           >
             <PathPicker
               v-model="form.scriptWorkDir"
@@ -423,10 +424,10 @@ async function saveForm() {
     ElMessage.warning('请填写名称与触发词')
     return
   }
-  if (f.kind === 'shell' && (f.hotkeyScript || f.desktopHotkey) && shellHasScriptAnchor(f)) {
+  if (f.kind === 'shell' && shellHasScriptAnchor(f)) {
     const sw = String(f.scriptWorkDir || f.scriptDir || '').trim()
     if (!sw) {
-      ElMessage.warning('快捷键跑脚本须手填脚本工作目录')
+      ElMessage.warning('跑脚本须填写脚本工作目录')
       return
     }
   }

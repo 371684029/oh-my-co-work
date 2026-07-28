@@ -278,11 +278,10 @@ export function saveSlashCommands(commands) {
     }
     if (
       c.kind === 'shell' &&
-      isHotkeyScriptCommand(c) &&
       slashHasScriptAnchor(c) &&
       !getScriptWorkDir(c)
     ) {
-      throw new Error(`「${c.name}」为快捷键脚本，须手填脚本工作目录`)
+      throw new Error(`「${c.name}」跑脚本须填写脚本工作目录`)
     }
   }
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true })

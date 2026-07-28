@@ -50,6 +50,17 @@ export function getScriptWorkDir(script) {
   return String(w).trim()
 }
 
+/** 保存成员/指令时校验 */
+export function assertScriptWorkDirConfigured(script) {
+  const w = getScriptWorkDir(script)
+  if (!w) {
+    const err = new Error('请填写脚本工作目录')
+    err.code = 'NO_SCRIPT_WORK_DIR'
+    throw err
+  }
+  return w
+}
+
 function mirrorScriptWorkDirFields(script) {
   if (!script || typeof script !== 'object') return script
   const w = getScriptWorkDir(script)
