@@ -309,8 +309,8 @@
                             ? '请输入'
                             : pendingGate.content?.mode === 'interrupted'
                               ? '崩溃恢复'
-                              : pendingGate.content?.mode === 'archive_confirm'
-                                ? '确认归档'
+                              : isLastStepBeforeArchiveGate(pendingGate)
+                                ? '最后一步'
                                 : pendingGate.content?.requireHuman
                                   ? '须人工同意'
                                   : '待你处理'
@@ -319,19 +319,7 @@
                   <!-- 说明 + 操作；文字统一走下方消息输入框 -->
                   <div class="gate-scroll">
                     <div class="gate-title">{{ pendingGate.content?.text }}</div>
-                    <p
-                      v-if="
-                        pendingGate.content?.mode === 'archive_confirm' &&
-                        pendingGate.content?.dueAt
-                      "
-                      class="gate-policy"
-                    >
-                      截止：{{ formatDueAt(pendingGate.content.dueAt) }}（{{
-                        pendingGate.content.hours || autoArchiveHours
-                      }}
-                      小时内未确认将自动归档）
-                    </p>
-                    <p v-else-if="pendingGate.content?.policy" class="gate-policy">
+                    <p v-if="pendingGate.content?.policy" class="gate-policy">
                       {{ pendingGate.content.policy }}
                     </p>
                     <p
@@ -557,14 +545,6 @@
                             提交
                           </el-button>
                         </template>
-                        <template v-else-if="pendingGate.content?.mode === 'archive_confirm'">
-                          <el-button type="danger" @click="gate(pendingGate, 'approve_archive')">
-                            同意归档
-                          </el-button>
-                          <el-button plain @click="gate(pendingGate, 'defer_archive')">
-                            暂不归档
-                          </el-button>
-                        </template>
                         <template v-else-if="pendingGate.content?.mode === 'interrupted'">
                           <el-button type="danger" @click="gate(pendingGate, 'resume_interrupted')">
                             继续
@@ -577,8 +557,18 @@
                           </el-button>
                         </template>
                         <template v-else>
-                          <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                            同意
+                          <el-button
+                            type="primary"
+                            @click="gate(pendingGate, 'approve')"
+                          >
+                            {{ isLastStepBeforeArchiveGate(pendingGate) ? '确认' : '同意' }}
+                          </el-button>
+                          <el-button
+                            v-if="isLastStepBeforeArchiveGate(pendingGate)"
+                            plain
+                            @click="gate(pendingGate, 'approve_and_archive')"
+                          >
+                            确认并归档
                           </el-button>
                           <el-button plain @click="gate(pendingGate, 'reject')">
                             拒绝
@@ -692,6 +682,19 @@
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           临时协助进行中
         </p>
+        <div v-else-if="pendingArchiveUi" class="flow-pending-archive">
+          <el-tooltip :content="archiveCountdownTooltip" placement="bottom">
+            <span class="flow-pending-archive-countdown">{{ archiveCountdownLabel }}</span>
+          </el-tooltip>
+          <div class="flow-pending-archive-actions">
+            <el-button size="small" type="primary" @click="flowArchiveAction('approve_archive')">
+              确认并归档
+            </el-button>
+            <el-button size="small" plain @click="flowArchiveAction('defer_archive')">
+              确认
+            </el-button>
+          </div>
+        </div>
         <template v-if="detail?.nodes?.length">
           <div
             v-for="n in detail.nodes"
@@ -833,8 +836,20 @@
                 </div>
               </button>
               <div class="flow-step-actions">
-                <template v-if="n.step_type === 'offsite' || n.step_type === 'archive'">
-                  <!-- 说明集中在输入区归档提示；此处不重复上课 -->
+                <template v-if="n.step_type === 'archive' && pendingArchiveUi">
+                  <el-button
+                    size="small"
+                    type="primary"
+                    @click.stop="flowArchiveAction('approve_archive')"
+                  >
+                    确认并归档
+                  </el-button>
+                  <el-button size="small" plain @click.stop="flowArchiveAction('defer_archive')">
+                    确认
+                  </el-button>
+                </template>
+                <template v-else-if="n.step_type === 'offsite' || n.step_type === 'archive'">
+                  <!-- 归档操作见上方待归档条 / 末步闸门 -->
                 </template>
                 <el-button
                   v-else
@@ -872,18 +887,29 @@
                 ? offsiteMode === 'planned'
                   ? '临时协助'
                   : '临时协助'
-                : needsHuman
-                  ? '待确认'
-                  : '当前节点'
+                : pendingArchiveUi
+                  ? '待归档'
+                  : needsHuman
+                    ? '待确认'
+                    : '当前节点'
             }}</span>
             <strong>
               {{
                 offsiteActive
                   ? activeOffsiteNode?.title || '临时协助'
-                  : detail.nodes.find((n) => isCurrent(n))?.title ||
-                    (detail.session.status === 'archived' ? '已归档（可重开）' : '—')
+                  : pendingArchiveUi
+                    ? '归档'
+                    : detail.nodes.find((n) => isCurrent(n))?.title ||
+                      (detail.session.status === 'archived' ? '已归档（可重开）' : '—')
               }}
             </strong>
+            <el-tooltip
+              v-if="pendingArchiveUi"
+              :content="archiveCountdownTooltip"
+              placement="top"
+            >
+              <span class="flow-current-archive-hint">{{ archiveCountdownLabel }}</span>
+            </el-tooltip>
           </div>
         </template>
         <div v-else class="flow-empty">
@@ -1580,24 +1606,7 @@ const pendingGate = computed(() => {
     const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
     if (ig) return ig
   }
-  // 归档确认闸门（绑定末尾归档节点）
-  const pendingArch = detail.value.session.context?.pendingArchive
-  if (pendingArch && detail.value.session.status !== 'interrupted') {
-    const archGate = msgs.find(
-      (m) => m.type === 'gate' && m.content?.mode === 'archive_confirm',
-    )
-    if (archGate) {
-      return {
-        ...archGate,
-        node_instance_id: archGate.node_instance_id || pendingArch.nodeInstanceId || null,
-        content: {
-          ...archGate.content,
-          dueAt: archGate.content.dueAt || pendingArch.dueAt,
-          hours: archGate.content.hours || pendingArch.hours,
-        },
-      }
-    }
-  }
+  // 待归档改在流程轨操作，不再占用输入区闸门
   // 优先当前游标节点上的待确认闸门，避免旧「待确认」抢交互
   if (curNode?.status === 'waiting_human') {
     const curGate = msgs.find(
@@ -1621,9 +1630,75 @@ const pendingGate = computed(() => {
 })
 
 const autoArchiveHours = computed(() => {
-  // 从最近 gate 或默认 3
-  return pendingGate.value?.content?.hours || 3
+  return pendingArchiveUi.value?.hours || sessionCtx()?.pendingArchive?.hours || 3
 })
+
+/** 轻量待归档（流程轨展示倒计时与按钮） */
+const pendingArchiveUi = computed(() => {
+  const s = detail.value?.session
+  if (!s || s.status === 'archived') return null
+  const pa = sessionCtx()?.pendingArchive
+  if (!pa?.dueAt) return null
+  return pa
+})
+
+const archiveNow = ref(Date.now())
+let archiveTickTimer = null
+
+watch(
+  pendingArchiveUi,
+  (pa) => {
+    if (archiveTickTimer) {
+      clearInterval(archiveTickTimer)
+      archiveTickTimer = null
+    }
+    if (pa) {
+      archiveNow.value = Date.now()
+      archiveTickTimer = setInterval(() => {
+        archiveNow.value = Date.now()
+      }, 30000)
+    }
+  },
+  { immediate: true },
+)
+
+const archiveCountdownLabel = computed(() => {
+  const due = pendingArchiveUi.value?.dueAt
+  if (!due) return ''
+  const ms = Math.max(0, new Date(due).getTime() - archiveNow.value)
+  if (ms <= 0) return '即将自动归档'
+  const h = Math.floor(ms / 3600000)
+  const m = Math.ceil((ms % 3600000) / 60000)
+  if (h > 0) return `约 ${h} 小时 ${m} 分后自动归档`
+  return `约 ${m} 分钟后自动归档`
+})
+
+const archiveCountdownTooltip = computed(() => {
+  const pa = pendingArchiveUi.value
+  if (!pa) return ''
+  const due = pa.dueAt ? formatDueAt(pa.dueAt) : '—'
+  const h = pa.hours ?? autoArchiveHours.value
+  return `未点「确认并归档」时，至 ${due} 将自动归档并释放进程（默认 ${h} 小时，可在设置 → 偏好修改）。「确认」= 暂不立即归档，会话可继续续聊。`
+})
+
+function isLastStepBeforeArchiveGate(m) {
+  if (!m?.node_instance_id || !detail.value?.nodes) return false
+  const node = detail.value.nodes.find((n) => n.id === m.node_instance_id)
+  if (!node || node.step_type === 'archive') return false
+  const nodes = [...detail.value.nodes].sort((a, b) => a.step_index - b.step_index)
+  const i = nodes.findIndex((n) => n.id === node.id)
+  if (i < 0) return false
+  return nodes[i + 1]?.step_type === 'archive'
+}
+
+async function flowArchiveAction(action) {
+  const pa = pendingArchiveUi.value
+  if (!pa || gating.value) return
+  await gate(
+    { node_instance_id: pa.nodeInstanceId, content: { mode: 'archive_confirm' } },
+    action,
+  )
+}
 
 function formatDueAt(iso) {
   if (!iso) return '—'
@@ -1969,7 +2044,9 @@ const composerPlaceholder = computed(() => {
   if (mode === 'interrupted') {
     return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
   }
-  if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
+  if (isLastStepBeforeArchiveGate(g)) {
+    return '可先写附言；点「确认」或「确认并归档」…'
+  }
   return '可先写意见，再点「同意」或「拒绝」…'
 })
 
@@ -3220,7 +3297,8 @@ async function gate(m, action) {
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     if (action === 'approve_archive') ElMessage.success('已归档')
-    else if (action === 'defer_archive') ElMessage.info('已暂不归档，超时仍将自动归档')
+    else if (action === 'defer_archive') ElMessage.info('已确认，会话可继续；超时仍将自动归档')
+    else if (action === 'approve_and_archive') ElMessage.success('已确认并归档')
     else if (action === 'approve_start') ElMessage.success('已通过，开始执行')
     else if (action === 'cancel_start') ElMessage.info('已取消，任务关闭')
     else if (action === 'resume_interrupted') ElMessage.success('已继续')
@@ -3310,6 +3388,7 @@ async function doDelete(targetId) {
 
 onUnmounted(() => {
   window.clearTimeout(flowScrollTimer)
+  if (archiveTickTimer) clearInterval(archiveTickTimer)
   if (ws) ws.close()
 })
 
@@ -5162,6 +5241,39 @@ loadLists().then(() => {
   font-size: 11.5px;
   color: #9a6414;
   line-height: 1.45;
+}
+.flow-pending-archive {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(230, 162, 60, 0.1);
+  border: 0.5px solid rgba(230, 162, 60, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.flow-pending-archive-countdown {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9a6414;
+  cursor: help;
+  line-height: 1.45;
+}
+.flow-pending-archive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.flow-current-bar .flow-current-archive-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 550;
+  color: #9a6414;
+  cursor: help;
+  white-space: nowrap;
+  max-width: 48%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .flow-offsite-action-tip {
   font-size: 11px;
