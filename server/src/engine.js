@@ -180,6 +180,22 @@ export function ensureArchiveTailNode(sessionId, { title } = {}) {
   return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
 }
 
+function getNextNodeInstance(sessionId, node) {
+  if (!sessionId || !node) return null
+  const nextIdx = Number(node.step_index) + 1
+  if (!Number.isFinite(nextIdx)) return null
+  return getDb()
+    .prepare(
+      `SELECT * FROM node_instances WHERE session_id = ? AND step_index = ? LIMIT 1`,
+    )
+    .get(sessionId, nextIdx)
+}
+
+function isNodeBeforeArchiveTail(sessionId, node) {
+  const next = getNextNodeInstance(sessionId, node)
+  return next?.step_type === STEP_TYPE.ARCHIVE
+}
+
 function markArchiveNodeDone(sessionId, { reason, note } = {}) {
   const node = getDb()
     .prepare(
@@ -1887,8 +1903,9 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     hours,
     nodeInstanceId: archNode.id,
   }
+  // 轻量待归档：会话保持 active，操作集中在流程轨末步，不再弹 chat 归档闸门
   updateSession(sessionId, {
-    status: SESSION_STATUS.WAITING_HUMAN,
+    status: SESSION_STATUS.ACTIVE,
     current_step_index: Number(archNode.step_index),
     context_json: JSON.stringify(ctx),
   })
@@ -1907,6 +1924,7 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
       reason,
       hours,
       dueAt: dueAt.toISOString(),
+      lightArchive: true,
     },
     status: NODE_STATUS.WAITING_HUMAN,
   })
@@ -1932,38 +1950,15 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
     type: 'status',
     node_instance_id: archNode.id,
     content: {
-      text: `${reasonLabel}。请在右侧「归档」节点确认；也可手动归档。${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。超时可在设置里改。`,
-    },
-  })
-  addMessage(sessionId, {
-    role: 'system',
-    type: 'gate',
-    node_instance_id: archNode.id,
-    content: {
-      mode: 'archive_confirm',
-      text: `${reasonLabel}。是否确认归档？`,
-      reason,
-      dueAt: dueAt.toISOString(),
-      hours,
-      actions: ['approve_archive', 'defer_archive'],
-      policy: `同意=立即归档；暂不归档=仍保留任务，但满 ${hours} 小时后仍会自动归档（设置 → 偏好可改）。`,
-    },
-  })
-  emitSession(sessionId, {
-    type: 'gate.request',
-    payload: {
-      mode: 'archive_confirm',
-      dueAt: dueAt.toISOString(),
-      hours,
-      reason,
-      nodeInstanceId: archNode.id,
+      text: `${reasonLabel}。请在右侧流程「归档」处点「确认并归档」或「确认」；顶栏亦可手动归档。约 ${hours} 小时后自动归档（设置 → 偏好可改）。`,
+      pendingArchive: ctx.pendingArchive,
     },
   })
   emitSession(sessionId, {
     type: 'session.status',
     payload: {
       sessionId,
-      status: SESSION_STATUS.WAITING_HUMAN,
+      status: SESSION_STATUS.ACTIVE,
       pendingArchive: ctx.pendingArchive,
       currentStepIndex: Number(archNode.step_index),
     },
@@ -1977,8 +1972,8 @@ export function requestArchiveConsent(sessionId, reason = 'completed') {
  */
 export function processDueArchives() {
   const rows = getDb()
-    .prepare(`SELECT * FROM sessions WHERE status = ?`)
-    .all(SESSION_STATUS.WAITING_HUMAN)
+    .prepare(`SELECT * FROM sessions WHERE status != ?`)
+    .all(SESSION_STATUS.ARCHIVED)
   const archived = []
   const now = Date.now()
   for (const row of rows) {
@@ -2454,13 +2449,13 @@ export async function resolveInterruptedSession(sessionId, action) {
 
   if (ctx.pendingArchive) {
     updateSession(sessionId, {
-      status: SESSION_STATUS.WAITING_HUMAN,
+      status: SESSION_STATUS.ACTIVE,
       context_json: JSON.stringify(ctx),
     })
     addMessage(sessionId, {
       role: 'system',
       type: 'status',
-      content: { text: '已恢复到归档确认，请继续操作。' },
+      content: { text: '已恢复；待归档请在右侧流程轨操作。' },
     })
     return { ok: true, resumed: true, pendingArchive: true }
   }
@@ -2750,7 +2745,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
           role: 'user',
           type: 'gate',
           content: {
-            text: archNote ? `暂不归档：${archNote}` : '暂不归档',
+            text: archNote ? `确认（暂不立即归档）：${archNote}` : '确认（暂不立即归档）',
             action: 'defer_archive',
             mode: 'archive_confirm',
             note: archNote || undefined,
@@ -2762,7 +2757,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
           c.userNotes.push({
             at: nowIso(),
             action: 'defer_archive',
-            actionLabel: '暂不归档',
+            actionLabel: '确认',
             text: archNote,
           })
           updateSession(sessionId, { context_json: JSON.stringify(c) })
@@ -3030,7 +3025,8 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     return { ok: true, submitted: true }
   }
 
-  if (action === 'approve' || action === 'admin_approve') {
+  if (action === 'approve' || action === 'admin_approve' || action === 'approve_and_archive') {
+    const archiveAfterPass = action === 'approve_and_archive'
     const out = parseJson(node.output_json, {})
     // 兼容旧会话遗留的 path_busy 闸门：同意 = 直接重试执行（已不再互斥拦截）
     if (out.code === 'PATH_BUSY' || out.pathBusy) {
@@ -3076,8 +3072,8 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     const flow = normalizeStepFlow(out.flow, node.gate)
     const { note } = bindGateHumanInput(sessionId, {
       text,
-      action: 'approve',
-      actionLabel: '同意',
+      action: archiveAfterPass ? 'approve_and_archive' : 'approve',
+      actionLabel: archiveAfterPass ? '确认并归档' : '同意',
       nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
       nodeInstanceId: node.id,
     })
@@ -3101,14 +3097,20 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
       ? !!votes.human
       : !!(votes.human || votes.admin)
 
-    const baseLabel = action === 'admin_approve' ? '管理员已同意' : '已同意'
+    const baseLabel = archiveAfterPass
+      ? '确认并归档'
+      : action === 'admin_approve'
+        ? '管理员已同意'
+        : isNodeBeforeArchiveTail(sessionId, node)
+          ? '确认'
+          : '已同意'
     addMessage(sessionId, {
       role: 'user',
       type: 'gate',
       node_instance_id: node.id,
       content: {
         text: note ? `${baseLabel}：${note}` : baseLabel,
-        action: 'approve',
+        action: archiveAfterPass ? 'approve_and_archive' : 'approve',
         note: note || undefined,
         votes,
       },
@@ -3155,6 +3157,24 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
       status: SESSION_STATUS.ACTIVE,
       current_step_index: node.step_index + 1,
     })
+    if (archiveAfterPass && isNodeBeforeArchiveTail(sessionId, node)) {
+      setImmediate(async () => {
+        try {
+          await advance(sessionId)
+          const live = getSession(sessionId)
+          if (!live || live.status === SESSION_STATUS.ARCHIVED) return
+          const ctxA = parseJson(live.context_json, {})
+          const r = ctxA.pendingArchive?.reason || 'completed'
+          archiveSession(
+            sessionId,
+            r === 'completed' ? 'completed_confirmed' : r,
+          )
+        } catch (e) {
+          console.error('[acw] approve_and_archive failed', e?.message || e)
+        }
+      })
+      return { ok: true, passed: true, archivedAfterPass: true }
+    }
     setImmediate(() => advance(sessionId).catch(console.error))
     return { ok: true, passed: true }
   }
