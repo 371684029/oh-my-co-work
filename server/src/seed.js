@@ -28,6 +28,8 @@ const scriptCmd = createMember({
       mode: 'command',
       command: process.platform === 'win32' ? 'echo ECW-OK & cd' : 'echo ECW-OK && pwd',
       shell: 'cmd',
+      // 脚本工作目录为必填项（见 assertScriptWorkDirConfigured）
+      scriptWorkDir: process.cwd(),
       timeoutMs: 600_000,
     },
   },
