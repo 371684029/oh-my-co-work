@@ -26,7 +26,7 @@ function stamp() {
 }
 
 function resolveLiveDbPath() {
-  const preferred = path.join(DATA_ROOT, 'apple-co-work.sqlite')
+  const preferred = path.join(DATA_ROOT, 'oh-my-co-work.sqlite')
   const legacy = path.join(DATA_ROOT, 'element-co-work.sqlite')
   if (fs.existsSync(preferred)) return preferred
   if (fs.existsSync(legacy)) return legacy
@@ -60,7 +60,7 @@ export function createBackup(opts = {}) {
   fs.mkdirSync(work, { recursive: true })
 
   const liveDb = resolveLiveDbPath()
-  const dbCopy = path.join(work, 'apple-co-work.sqlite')
+  const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
   if (!fs.existsSync(liveDb)) {
     throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
   }
@@ -91,7 +91,7 @@ export function createBackup(opts = {}) {
 
   const meta = {
     createdAt: new Date().toISOString(),
-    product: 'apple-co-work',
+    product: 'oh-my-co-work',
     dataRoot: DATA_ROOT,
     repoRoot: ROOT,
     integrity: integrity.detail,

@@ -152,18 +152,18 @@ function renameDbBundle(from, to) {
 }
 
 /**
- * 优先 apple-co-work.sqlite；
+ * 优先 oh-my-co-work.sqlite；
  * 若新库不存在/为空壳，而旧库 element-co-work.sqlite 有数据，则迁入新名。
  */
 function resolveDbPath() {
-  const preferred = path.join(DATA_ROOT, 'apple-co-work.sqlite')
+  const preferred = path.join(DATA_ROOT, 'oh-my-co-work.sqlite')
   const legacy = path.join(DATA_ROOT, 'element-co-work.sqlite')
   const prefSize = dbFileSize(preferred)
   const legSize = dbFileSize(legacy)
 
   if (legSize > 0 && (prefSize === 0 || legSize > prefSize)) {
     if (renameDbBundle(legacy, preferred)) {
-      console.log('[acw] migrated sqlite: element-co-work.sqlite → apple-co-work.sqlite')
+      console.log('[acw] migrated sqlite: element-co-work.sqlite → oh-my-co-work.sqlite')
       return preferred
     }
     // 改名失败（文件占用等）：仍打开有数据的旧库，避免空白库

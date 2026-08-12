@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const dbPath = path.join(__dirname, '../data/apple-co-work.sqlite')
+const dbPath = path.join(__dirname, '../data/oh-my-co-work.sqlite')
 const db = new Database(dbPath)
 const now = new Date().toISOString()
 

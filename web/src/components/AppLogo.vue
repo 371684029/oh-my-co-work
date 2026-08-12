@@ -54,7 +54,7 @@
 defineProps({
   size: { type: String, default: 'md' },
   glow: { type: Boolean, default: true },
-  title: { type: String, default: 'apple-co-work · 人机协同' },
+  title: { type: String, default: 'oh-my-co-work · 人机协同' },
 })
 
 const uid = Math.random().toString(36).slice(2, 8)

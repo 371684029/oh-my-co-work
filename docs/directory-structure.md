@@ -1,11 +1,11 @@
-# apple-co-work 目录约定
+# oh-my-co-work 目录约定
 
 > 与 **当前 MVP 代码** 对齐。设计阶段设想见历史版本；以仓库实际目录为准。
 
 ## 仓库结构（现状）
 
 ```
-apple-co-work/
+oh-my-co-work/
 ├── README.md
 ├── package.json                 # npm workspaces 根
 ├── package-lock.json
@@ -59,7 +59,7 @@ apple-co-work/
 │               └── Support.vue
 │
 ├── data/                        # 运行时（gitignore，勿提交）
-│   ├── apple-co-work.sqlite
+│   ├── oh-my-co-work.sqlite
 │   ├── logs/
 │   └── journals/
 │

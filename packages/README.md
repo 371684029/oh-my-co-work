@@ -1,4 +1,4 @@
-# apple-co-work 运行包（提交在 git）
+# oh-my-co-work 运行包（提交在 git）
 
 这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。
 解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。
@@ -13,9 +13,9 @@
 
 | 平台 | 文件 | 大小 |
 |------|------|------|
-| darwin-arm64 | [`apple-co-work-v1-darwin-arm64.zip`](./apple-co-work-v1-darwin-arm64.zip) | 5146303 |
-| linux-x64 | [`apple-co-work-v1-linux-x64.zip`](./apple-co-work-v1-linux-x64.zip) | 5277764 |
-| win32-x64 | [`apple-co-work-v1-win32-x64.zip`](./apple-co-work-v1-win32-x64.zip) | 5079794 |
+| darwin-arm64 | [`oh-my-co-work-v1-darwin-arm64.zip`](./oh-my-co-work-v1-darwin-arm64.zip) | 5146303 |
+| linux-x64 | [`oh-my-co-work-v1-linux-x64.zip`](./oh-my-co-work-v1-linux-x64.zip) | 5277764 |
+| win32-x64 | [`oh-my-co-work-v1-win32-x64.zip`](./oh-my-co-work-v1-win32-x64.zip) | 5079794 |
 
 版本：`1.5.5`（大版本 v1）
 

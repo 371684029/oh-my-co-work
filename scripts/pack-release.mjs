@@ -6,7 +6,7 @@
  * - 在包内预装 better-sqlite3 等运行依赖（用户不必再 npm install）
  *
  * 产物（提交进 git）：
- *   packages/apple-co-work-v{MAJOR}-{platform}-{arch}.zip
+ *   packages/oh-my-co-work-v{MAJOR}-{platform}-{arch}.zip
  *   · 同大版本 + 同平台：覆盖替换（小版本即最新）
  *   · 仓库只保留当前大版本：打新大版本时删除旧大版本全部 zip
  *   · 多平台：linux / win32 / darwin 各留一份（当前大版本内）
@@ -89,7 +89,7 @@ function writeStartBat(dest) {
       '  pause',
       '  exit /b 1',
       ')',
-      'echo [acw] 正在启动 apple-co-work（运行包，无需 npm install）…',
+      'echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
       'echo [acw] 提示：关闭本窗口即可结束服务（关浏览器不会停）',
       'node start.mjs',
       'if errorlevel 1 pause',
@@ -110,7 +110,7 @@ function writeStartSh(dest) {
       '  echo "[acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org"',
       '  exit 1',
       'fi',
-      'echo "[acw] 正在启动 apple-co-work（运行包，无需 npm install）…"',
+      'echo "[acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…"',
       'echo "[acw] 提示：关闭本窗口或 Ctrl+C 即可结束服务（关浏览器不会停）"',
       'exec node start.mjs',
       '',
@@ -386,13 +386,13 @@ function parseCurrentTxt(raw) {
 }
 
 function platformFromZipName(name) {
-  // apple-co-work-v1-linux-x64.zip → linux-x64
-  const m = String(name).match(/^apple-co-work-v\d+-(.+)\.zip$/i)
+  // oh-my-co-work-v1-linux-x64.zip → linux-x64
+  const m = String(name).match(/^oh-my-co-work-v\d+-(.+)\.zip$/i)
   return m ? m[1] : null
 }
 
 function majorFromZipName(name) {
-  const m = String(name).match(/^apple-co-work-v(\d+)-/i)
+  const m = String(name).match(/^oh-my-co-work-v(\d+)-/i)
   return m ? Number(m[1]) : null
 }
 
@@ -447,7 +447,7 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
   })
 
   const lines = [
-    '# apple-co-work 运行包（提交在 git）',
+    '# oh-my-co-work 运行包（提交在 git）',
     '',
     '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
     '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
@@ -531,7 +531,7 @@ async function mainAsync() {
   const major = majorOf(ver)
   const sha = gitShort()
   const plat = platformTag()
-  const folderName = `apple-co-work-v${major}-${plat}`
+  const folderName = `oh-my-co-work-v${major}-${plat}`
   const stage = path.join(OUT_ROOT, folderName)
   const gitZipName = `${folderName}.zip`
   const gitZipPath = path.join(PACKAGES_DIR, gitZipName)
@@ -561,11 +561,11 @@ async function mainAsync() {
 
   // 最小 package.json：仅声明运行时 native 依赖（已预装，用户不用装）
   const distPkg = {
-    name: 'apple-co-work',
+    name: 'oh-my-co-work',
     version: ver,
     private: true,
     type: 'module',
-    description: 'apple-co-work 运行包（打包产物，非源码）',
+    description: 'oh-my-co-work 运行包（打包产物，非源码）',
     engines: { node: '>=18' },
     dependencies: {
       'better-sqlite3':
@@ -588,7 +588,7 @@ async function mainAsync() {
   writeStartSh(path.join(stage, 'start.sh'))
 
   const userReadme = [
-    '# apple-co-work 运行包',
+    '# oh-my-co-work 运行包',
     '',
     `版本：${ver} · 平台：${plat} · 提交：${sha}`,
     '',
@@ -617,7 +617,7 @@ async function mainAsync() {
   fs.writeFileSync(
     path.join(stage, 'VERSION.txt'),
     [
-      `name=apple-co-work`,
+      `name=oh-my-co-work`,
       `kind=runtime-bundle`,
       `version=${ver}`,
       `major=${major}`,
@@ -662,7 +662,7 @@ async function mainAsync() {
 
   fs.mkdirSync(PACKAGES_DIR, { recursive: true })
   // 去掉旧的无平台后缀包名（历史遗留）
-  const legacy = path.join(PACKAGES_DIR, `apple-co-work-v${major}.zip`)
+  const legacy = path.join(PACKAGES_DIR, `oh-my-co-work-v${major}.zip`)
   if (fs.existsSync(legacy)) {
     fs.rmSync(legacy)
     console.log('[pack] removed legacy', legacy)

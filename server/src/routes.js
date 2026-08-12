@@ -612,7 +612,7 @@ router.get('/about', (_req, res) => {
     data = {}
   }
   res.json({
-    productName: data.productName || 'apple-co-work',
+    productName: data.productName || 'oh-my-co-work',
     tagline: data.tagline || '人机协同 · 万物归元 · 皆可 Workflow',
     livingLine:
       data.livingLine ||

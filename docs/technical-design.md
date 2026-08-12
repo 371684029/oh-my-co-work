@@ -1,9 +1,9 @@
-# apple-co-work 技术设计文档
+# oh-my-co-work 技术设计文档
 
 | 属性 | 内容 |
 |------|------|
-| 项目名 | **apple-co-work** |
-| 仓库 / 包名 | `apple-co-work` |
+| 项目名 | **oh-my-co-work** |
+| 仓库 / 包名 | `oh-my-co-work` |
 | 文档版本 | v3.8 |
 | 状态 | **MVP 已实现可运行**；本文保留完整愿景与后置设计 |
 | 更新日期 | 2026-07-16（UI 氛围 · 点赞支持 · 等人标红） |
@@ -42,7 +42,7 @@
 
 ### 1.1 一句话
 
-**apple-co-work** 是一个 **群聊式多智能体协同平台**：
+**oh-my-co-work** 是一个 **群聊式多智能体协同平台**：
 
 - 每个 **工作流 ≈ 一个群聊**（可新建、可配置）  
 - 每个 **Agent / 工作脚本 ≈ 一个群成员**（可配置、可修改）  
@@ -658,7 +658,7 @@ interface ConversationListItem {
 
 ### 3.5 内嵌控制台 / 终端（内核能力）
 
-**诉求**：Agent 跑 bat、PowerShell、CLI 时，输出直接出现在 apple-co-work 里，不必切到系统终端对照。
+**诉求**：Agent 跑 bat、PowerShell、CLI 时，输出直接出现在 oh-my-co-work 里，不必切到系统终端对照。
 
 #### 两档能力（建议都做，分阶段）
 
@@ -1615,7 +1615,7 @@ agent.failed
 
 ```
 data/
-  apple-co-work.sqlite
+  oh-my-co-work.sqlite
   sessions/
     <sessionId>/
       artifacts/
@@ -1932,7 +1932,7 @@ server/
 | ADR-004 | Agent 通过注册表 + Adapter 接入 | 业务与引擎解耦；**不预设**必须接哪些外部系统 |
 | ADR-005 | 单机 SQLite + 本地文件（暂定） | 个人/小团队优先；可再议 |
 | ADR-006 | Vue3 + Element Plus + **优先 Element-Plus-X** | 对话/会话用 Plus-X；表单表格用 Plus；默认主题 |
-| ADR-007 | 产品名 **apple-co-work** | 人机/多智能体协同（co-work）；仓库/包名同名 |
+| ADR-007 | 产品名 **oh-my-co-work** | 人机/多智能体协同（co-work）；仓库/包名同名 |
 | ADR-008 | 文档严格区分「内核 / 举例 / 待决」 | 避免把讨论举例写成固定范围 |
 | ADR-009 | 内嵌控制台：优先执行日志流，可选 PTY 交互终端 | 避免用户切到外部 bat/PS 窗口看 Agent 输出；对话与原始日志分工 |
 | ADR-010 | **进程守护台账用 Markdown（目录 + 明细）** 落盘 | 人可读、可 Git、可续作；与运行时 DB 互补，不互相替代 |
@@ -1984,7 +1984,7 @@ server/
 | 页面主题色 | **Element-Plus-X 默认** | ADR-020 / §6.1.1 |
 | **Web + GUI 双轨** | **已决** | ADR-015 / §3.0 |
 | GUI 壳（Tauri / Electron） | 待决 | 倾向 Tauri 轻量，Electron 备选 |
-| 产品名 apple-co-work | 已决 | ADR-007 |
+| 产品名 oh-my-co-work | 已决 | ADR-007 |
 | **首要垂直场景是什么？** | **待决** | 研发交付只是举例之一 |
 | **首批 Agent / Tool 清单** | **待决** | 决定 MVP 之后接什么 |
 | **第一个正式工作流模板** | **待决** | 节点、表单字段、闸门位置 |

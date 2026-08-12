@@ -394,7 +394,7 @@ export function launchArchiveControlWindow({ sessionId, runId, title, apiBase })
 <title>ECW 释放资源 · ${safeTitle}</title>
 <HTA:APPLICATION
   ID="ecwCtl"
-  APPLICATIONNAME="apple-co-work-console"
+  APPLICATIONNAME="oh-my-co-work-console"
   BORDER="thin"
   BORDERSTYLE="normal"
   CAPTION="yes"

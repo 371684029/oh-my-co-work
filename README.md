@@ -1,7 +1,7 @@
-# apple-co-work
+# oh-my-co-work
 
 <p align="left">
-  <img src="./docs/assets/logo-mark.jpg" alt="apple-co-work logo" width="88" height="88" />
+  <img src="./docs/assets/logo-mark.jpg" alt="oh-my-co-work logo" width="88" height="88" />
 </p>
 
 ## 项目核心（宗旨）
@@ -23,10 +23,10 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 
 | 项 | 内容 |
 |----|------|
-| 版本 | `1.5.5` **当前**（见 [mvp.md §2.16](./docs/mvp.md)；关于页 changelog） |
+| 版本 | `1.7.0` **当前 · 最终封板**（见 [mvp.md §2.17](./docs/mvp.md)；关于页 changelog） |
 | 形态 | 三栏工作台 + 设置 · **完全本机** |
 | UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
-| 仓库名 | `apple-co-work`（原 `element-co-work`） |
+| 仓库名 | `oh-my-co-work`（原 `element-co-work`） |
 
 ---
 
@@ -111,7 +111,7 @@ GUI 桌面壳 · 重启任务 · 掩码 · 完整进程守护 MD · 打开编辑
 ### 安装与启动
 
 ```bash
-cd apple-co-work
+cd oh-my-co-work
 npm install
 
 # 终端 1 — API（默认端口 3780，空库自动 seed）
@@ -141,7 +141,7 @@ curl http://127.0.0.1:3780/api/health
 | `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
 | `npm run start` | 生产方式启动 API（无 watch） |
 | `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
-| `npm run pack` | **打运行包 zip** → `packages/apple-co-work-v{N}-{平台}-{架构}.zip`（同大版本覆盖；新大版本删旧大版本包；用户无需 npm install） |
+| `npm run pack` | **打运行包 zip** → `packages/oh-my-co-work-v{N}-{平台}-{架构}.zip`（同大版本覆盖；新大版本删旧大版本包；用户无需 npm install） |
 | `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；关启动窗口或 Ctrl+C 结束服务） |
 | `ACW_HEADLESS_BROWSER=1 node start.mjs` | **无头**加载首页（无窗口）；结束 start 即关浏览器并停服务（需 `playwright` + `npx playwright install chromium`） |
 | `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
@@ -224,7 +224,7 @@ npm run dev:server
 ## 项目结构
 
 ```
-apple-co-work/
+oh-my-co-work/
 ├── README.md                 # 本文件
 ├── package.json              # npm workspaces 根
 ├── packages/                 # 运行包 zip（打包产物+内置依赖，非源码；按平台）
@@ -244,7 +244,7 @@ apple-co-work/
 │       └── …
 ├── web/                      # Vue3 + Element Plus / Plus-X
 └── data/                     # 运行时（gitignore）
-    ├── apple-co-work.sqlite
+    ├── oh-my-co-work.sqlite
     ├── logs/ · journals/ · uploads/ · console/
 ```
 
@@ -286,7 +286,7 @@ WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
 
 | 路径 | 说明 |
 |------|------|
-| `data/apple-co-work.sqlite` | 主库（成员/群/会话/消息） |
+| `data/oh-my-co-work.sqlite` | 主库（成员/群/会话/消息） |
 | `data/logs/` | script 运行日志 |
 | `data/journals/` | 进程台账目录（预留） |
 | `server/config/support.json` | 支持与交流文案、收款码路径 |

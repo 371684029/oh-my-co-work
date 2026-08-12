@@ -14,9 +14,9 @@
 ## 1. 总览
 
 ```
-apple-co-work/
+oh-my-co-work/
 ├── data/                              ← 运行时数据根（可用 ACW_DATA_ROOT 改）
-│   ├── apple-co-work.sqlite         ← 主库（WAL 模式，可能还有 -wal/-shm）
+│   ├── oh-my-co-work.sqlite         ← 主库（WAL 模式，可能还有 -wal/-shm）
 │   ├── journals/sessions/.../*.md     ← 节点台账 + 会话索引（给人读）
 │   ├── uploads/                       ← 聊天附件
 │   └── logs/                          ← 脚本运行日志等
@@ -25,7 +25,7 @@ apple-co-work/
 
 | 层 | 载体 | 谁读 | 职责 |
 |----|------|------|------|
-| **A. 调度真相** | `data/apple-co-work.sqlite` | 引擎 / API / 前端 | 会话、节点状态、消息、成员、群模板、节点 input/output JSON |
+| **A. 调度真相** | `data/oh-my-co-work.sqlite` | 引擎 / API / 前端 | 会话、节点状态、消息、成员、群模板、节点 input/output JSON |
 | **B. 可读台账** | `data/journals/**/*.md` | 人 / Git | 每节点输入输出的 Markdown 副本；归档时会话 README 索引 |
 | **C. 大文件** | `data/uploads/`、`data/logs/` | 人 / 进程 | 附件、stdout 日志；库里只记路径或摘要 |
 | **D. 配置文件** | `server/config/*.json` | 服务启动时读 | 快捷指令、关于页、支持信息、是否显示演示数据等 |
@@ -40,7 +40,7 @@ apple-co-work/
 
 ## 2. SQLite（主库）
 
-- **路径**：`data/apple-co-work.sqlite`（`server/src/db.js`）  
+- **路径**：`data/oh-my-co-work.sqlite`（`server/src/db.js`）  
 - **迁移**：若仅有旧库 `element-co-work.sqlite`，启动时自动改名为新文件名  
 - **模式**：`journal_mode = WAL`，`foreign_keys = ON`  
 - **驱动**：`better-sqlite3`（同步、本地单机）
@@ -111,9 +111,9 @@ apple-co-work/
 
 WAL 下可能存在：
 
-- `apple-co-work.sqlite`  
-- `apple-co-work.sqlite-wal`  
-- `apple-co-work.sqlite-shm`  
+- `oh-my-co-work.sqlite`  
+- `oh-my-co-work.sqlite-wal`  
+- `oh-my-co-work.sqlite-shm`  
 
 **完整备份建议停服后拷贝三件，或使用 SQLite backup API。** 只拷贝主文件可能丢未 checkpoint 的数据。
 

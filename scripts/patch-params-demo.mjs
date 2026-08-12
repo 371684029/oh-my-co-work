@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const db = new Database(path.join(root, 'data/apple-co-work.sqlite'))
+const db = new Database(path.join(root, 'data/oh-my-co-work.sqlite'))
 const now = new Date().toISOString()
 
 const g = db.prepare('SELECT id, steps_json FROM groups LIMIT 1').get()

@@ -39,8 +39,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: apple-co-work-${{ matrix.os }}
-          path: packages/apple-co-work-v*.zip
+          name: oh-my-co-work-${{ matrix.os }}
+          path: packages/oh-my-co-work-v*.zip
           if-no-files-found: warn
           retention-days: 3
 
@@ -54,7 +54,7 @@ jobs:
           git config user.name "wll"
           git config user.email "371684029@qq.com"
           PLAT="$(node -p "process.platform+'-'+process.arch")"
-          FILE="apple-co-work-v1-${PLAT}.zip"
+          FILE="oh-my-co-work-v1-${PLAT}.zip"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           # 多平台并行：rebase 后若 README/CURRENT 冲突，按目录内 zip 重写清单再继续
           for i in 1 2 3 4 5 6; do
@@ -105,7 +105,7 @@ jobs:
           set -euo pipefail
           for i in 1 2 3 4 5 6 7 8; do
             git pull origin main
-            COUNT=$(ls -1 packages/apple-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
+            COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
             echo "[release] zip count=$COUNT"
             if [ "$COUNT" -ge 1 ]; then
               break
@@ -120,7 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p upload
-          cp -f packages/apple-co-work-v*.zip upload/
+          cp -f packages/oh-my-co-work-v*.zip upload/
           ls -la upload
           SHORT=$(git rev-parse --short HEAD)
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"

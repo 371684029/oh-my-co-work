@@ -10,7 +10,7 @@
         </div>
         <AppLogo size="md" class="brand-logo" />
         <div class="brand-block">
-          <span class="brand">apple-co-work</span>
+          <span class="brand">oh-my-co-work</span>
           <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow"
             >人机协同 · 万物归元 · 皆可 Workflow</span
           >
