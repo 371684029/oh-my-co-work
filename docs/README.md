@@ -8,6 +8,8 @@
 | [demo.md](./demo.md) | **怎么看演示效果**（启动、演示流点选、排障） |
 | [RELEASE-USER.md](./RELEASE-USER.md) | **压缩包用户说明**（一键启动；默认关浏览器不停服务） |
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
+| [tui-2x.md](./tui-2x.md) | **2.x 内嵌 TUI 设计**：真实 PTY、终端卡、工作区、适配器与安全边界 |
+| [tui-2x-plan.md](./tui-2x-plan.md) | **2.x 实施计划**：2.0～2.3 阶段、任务、测试、风险与完成定义 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
 | [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |
