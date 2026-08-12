@@ -693,172 +693,197 @@
           临时协助进行中
         </p>
         <template v-if="detail?.nodes?.length">
-          <div
-            v-for="n in detail.nodes"
-            :key="n.id"
-            :data-flow-node-id="n.id"
-            class="flow-step"
-            :class="[
-              flowClass(n),
-              {
-                open: expandedNodeId === n.id,
-                'is-extra': n.step_type === 'offsite',
-                'is-offsite-current': isCurrentOffsiteSegment(n),
-                'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
-                'is-flow-history': isFlowHistoryNode(n),
-                'is-cloned': isClonedNode(n),
-                'is-flow-anchor': n.id === flowAnchorNodeId,
-              },
-            ]"
-          >
-            <div class="flow-dot" aria-hidden="true" />
-            <div class="flow-step-body">
-              <button type="button" class="flow-step-head" @click="toggleNodeExpand(n)">
-                <div class="flow-step-title">
-                  <span
-                    class="flow-idx"
-                    :class="{ 'flow-idx--extra': n.step_type === 'offsite' }"
-                    >{{ n.step_index + 1 }}</span
-                  >
-                  <span class="flow-step-name">{{ n.title }}</span>
-                  <el-tag
-                    v-if="n.step_type === 'offsite'"
-                    size="small"
-                    type="warning"
-                    effect="plain"
-                    round
-                  >
-                    临时
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type === 'archive'"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    round
-                  >
-                    归档
-                  </el-tag>
-                  <el-tag
-                    v-else-if="isClonedNode(n)"
-                    size="small"
-                    type="success"
-                    effect="plain"
-                    round
-                  >
-                    克隆
-                  </el-tag>
-                  <el-tag
-                    v-if="isCurrentOffsiteSegment(n)"
-                    size="small"
-                    type="warning"
-                    effect="dark"
-                    round
-                  >
-                    当前段
-                  </el-tag>
-                  <el-tag
-                    v-if="n.step_type === 'offsite' && n.output?.archived"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    round
-                  >
-                    已归档
-                  </el-tag>
-                  <el-tag
-                    v-else-if="offsiteEntryLabel(n)"
-                    size="small"
-                    type="warning"
-                    effect="plain"
-                    round
-                  >
-                    {{ offsiteEntryLabel(n) }}
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type !== 'offsite' && n.status === 'skipped'"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    round
-                  >
-                    {{ nodeBypassed(n) ? '已绕过' : '跳过' }}
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human' && isCurrent(n)"
-                    size="small"
-                    type="danger"
-                    effect="dark"
-                    round
-                  >
-                    待确认
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    round
-                  >
-                    已挂起
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type !== 'offsite' && isCurrent(n) && n.status === 'pending'"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    round
-                  >
-                    待跑
-                  </el-tag>
-                  <el-tag
-                    v-else-if="n.step_type !== 'offsite' && isCurrent(n)"
-                    size="small"
-                    type="primary"
-                    effect="light"
-                    round
-                  >
-                    当前
-                  </el-tag>
-                </div>
-                <div class="flow-step-meta">
-                  {{ stepTypeLabel(n.step_type) }} · {{ statusLabel(n.status) || n.status }}
-                  <span v-if="reviewLabel(n)" class="meta-review" :class="'is-' + reviewAction(n)">
-                    · {{ reviewLabel(n) }}
-                  </span>
-                  <span v-if="n.gate" class="meta-gate"> · 待确认</span>
-                  <span class="flow-expand-caret">{{
-                    expandedNodeId === n.id ? '收起' : '展开'
-                  }}</span>
-                </div>
+          <template v-for="entry in flowEntries" :key="entry.key">
+            <div
+              v-if="entry.type === 'skipped'"
+              class="flow-skipped-group"
+              :class="{ open: isSkippedFlowGroupExpanded(entry) }"
+            >
+              <button
+                type="button"
+                class="flow-skipped-toggle"
+                :aria-expanded="isSkippedFlowGroupExpanded(entry)"
+                @click="toggleSkippedFlowGroup(entry)"
+              >
+                <span class="flow-skipped-toggle-icon" aria-hidden="true">{{
+                  isSkippedFlowGroupExpanded(entry) ? '⌄' : '›'
+                }}</span>
+                <span>{{
+                  isSkippedFlowGroupExpanded(entry)
+                    ? `收起 ${entry.nodes.length} 个跳过的未执行步骤`
+                    : `${entry.nodes.length} 个跳过的未执行步骤已折叠`
+                }}</span>
               </button>
-              <div class="flow-step-actions">
-                <template v-if="n.step_type === 'offsite' || n.step_type === 'archive'">
-                  <!-- 说明集中在输入区归档提示；此处不重复上课 -->
-                </template>
-                <el-button
-                  v-else
-                  size="small"
-                  text
-                  type="primary"
-                  @click.stop="restartFromNode(n)"
-                >
-                  从这里继续
-                </el-button>
-              </div>
-              <div v-if="expandedNodeId === n.id" class="flow-io">
-                <div class="flow-io-block">
-                  <div class="flow-io-label">输入（用户说了啥）</div>
-                  <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
-                </div>
-                <div class="flow-io-block">
-                  <div class="flow-io-label">输出（做了啥）</div>
-                  <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
-                </div>
-                <div v-if="n.journalPath" class="flow-io-path">台账：{{ n.journalPath }}</div>
-              </div>
             </div>
-          </div>
+            <template v-if="entry.type !== 'skipped' || isSkippedFlowGroupExpanded(entry)">
+              <div
+                v-for="n in entry.nodes"
+                :key="n.id"
+                :data-flow-node-id="n.id"
+                class="flow-step"
+                :class="[
+                  flowClass(n),
+                  {
+                    open: expandedNodeId === n.id,
+                    'is-extra': n.step_type === 'offsite',
+                    'is-offsite-current': isCurrentOffsiteSegment(n),
+                    'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
+                    'is-flow-history': isFlowHistoryNode(n),
+                    'is-cloned': isClonedNode(n),
+                    'is-flow-anchor': n.id === flowAnchorNodeId,
+                  },
+                ]"
+              >
+                <div class="flow-dot" aria-hidden="true" />
+                <div class="flow-step-body">
+                  <button type="button" class="flow-step-head" @click="toggleNodeExpand(n)">
+                    <div class="flow-step-title">
+                      <span
+                        class="flow-idx"
+                        :class="{ 'flow-idx--extra': n.step_type === 'offsite' }"
+                        >{{ n.step_index + 1 }}</span
+                      >
+                      <span class="flow-step-name">{{ n.title }}</span>
+                      <el-tag
+                        v-if="n.step_type === 'offsite'"
+                        size="small"
+                        type="warning"
+                        effect="plain"
+                        round
+                      >
+                        临时
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type === 'archive'"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                        round
+                      >
+                        归档
+                      </el-tag>
+                      <el-tag
+                        v-else-if="isClonedNode(n)"
+                        size="small"
+                        type="success"
+                        effect="plain"
+                        round
+                      >
+                        克隆
+                      </el-tag>
+                      <el-tag
+                        v-if="isCurrentOffsiteSegment(n)"
+                        size="small"
+                        type="warning"
+                        effect="dark"
+                        round
+                      >
+                        当前段
+                      </el-tag>
+                      <el-tag
+                        v-if="n.step_type === 'offsite' && n.output?.archived"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                        round
+                      >
+                        已归档
+                      </el-tag>
+                      <el-tag
+                        v-else-if="offsiteEntryLabel(n)"
+                        size="small"
+                        type="warning"
+                        effect="plain"
+                        round
+                      >
+                        {{ offsiteEntryLabel(n) }}
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type !== 'offsite' && n.status === 'skipped'"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                        round
+                      >
+                        {{ nodeBypassed(n) ? '已绕过' : '跳过' }}
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human' && isCurrent(n)"
+                        size="small"
+                        type="danger"
+                        effect="dark"
+                        round
+                      >
+                        待确认
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                        round
+                      >
+                        已挂起
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type !== 'offsite' && isCurrent(n) && n.status === 'pending'"
+                        size="small"
+                        type="info"
+                        effect="plain"
+                        round
+                      >
+                        待跑
+                      </el-tag>
+                      <el-tag
+                        v-else-if="n.step_type !== 'offsite' && isCurrent(n)"
+                        size="small"
+                        type="primary"
+                        effect="light"
+                        round
+                      >
+                        当前
+                      </el-tag>
+                    </div>
+                    <div class="flow-step-meta">
+                      {{ stepTypeLabel(n.step_type) }} · {{ statusLabel(n.status) || n.status }}
+                      <span v-if="reviewLabel(n)" class="meta-review" :class="'is-' + reviewAction(n)">
+                        · {{ reviewLabel(n) }}
+                      </span>
+                      <span v-if="n.gate" class="meta-gate"> · 待确认</span>
+                      <span class="flow-expand-caret">{{
+                        expandedNodeId === n.id ? '收起' : '展开'
+                      }}</span>
+                    </div>
+                  </button>
+                  <div class="flow-step-actions">
+                    <template v-if="n.step_type === 'offsite' || n.step_type === 'archive'">
+                      <!-- 说明集中在输入区归档提示；此处不重复上课 -->
+                    </template>
+                    <el-button
+                      v-else
+                      size="small"
+                      text
+                      type="primary"
+                      @click.stop="restartFromNode(n)"
+                    >
+                      从这里继续
+                    </el-button>
+                  </div>
+                  <div v-if="expandedNodeId === n.id" class="flow-io">
+                    <div class="flow-io-block">
+                      <div class="flow-io-label">输入（用户说了啥）</div>
+                      <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
+                    </div>
+                    <div class="flow-io-block">
+                      <div class="flow-io-label">输出（做了啥）</div>
+                      <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
+                    </div>
+                    <div v-if="n.journalPath" class="flow-io-path">台账：{{ n.journalPath }}</div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </template>
 
           <div
             class="flow-current-bar"
@@ -1229,6 +1254,8 @@ const uploading = ref(false)
 const fileInputRef = ref(null)
 /** 流程轨展开的节点 id */
 const expandedNodeId = ref(null)
+/** 默认折叠的连续跳过步骤；按当前会话的步骤分组 key 记录展开状态 */
+const expandedSkippedFlowGroups = ref({})
 /** 右侧：流程 | 群报告 */
 const rightTab = ref('flow')
 const sessionResources = ref(null)
@@ -2313,6 +2340,7 @@ async function selectSession(id) {
   activeId.value = id
   router.replace(`/workbench/${id}`)
   rightTab.value = 'flow' // 默认展示流程 Tab
+  expandedSkippedFlowGroups.value = {}
   await loadDetail(id)
   bindWs(id)
 }
@@ -2901,6 +2929,41 @@ async function insertHashItem(h) {
     return
   }
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
+}
+
+function isSkippedUnexecutedNode(n) {
+  return n?.step_type !== 'offsite' && n?.status === 'skipped'
+}
+
+/**
+ * 将相邻的跳过节点归为一段。每段默认收起，避免跨越多个未执行步骤时流程轨过长；
+ * 非相邻节点保持原位置，仍能反映实际流程分支。
+ */
+const flowEntries = computed(() => {
+  const entries = []
+  for (const node of detail.value?.nodes || []) {
+    const previous = entries.at(-1)
+    if (isSkippedUnexecutedNode(node) && previous?.type === 'skipped') {
+      previous.nodes.push(node)
+      previous.key = `skipped-${previous.nodes[0].id}-${node.id}`
+    } else if (isSkippedUnexecutedNode(node)) {
+      entries.push({ type: 'skipped', key: `skipped-${node.id}-${node.id}`, nodes: [node] })
+    } else {
+      entries.push({ type: 'node', key: `node-${node.id}`, nodes: [node] })
+    }
+  }
+  return entries
+})
+
+function isSkippedFlowGroupExpanded(entry) {
+  return !!expandedSkippedFlowGroups.value[entry.key]
+}
+
+function toggleSkippedFlowGroup(entry) {
+  expandedSkippedFlowGroups.value = {
+    ...expandedSkippedFlowGroups.value,
+    [entry.key]: !isSkippedFlowGroupExpanded(entry),
+  }
 }
 
 function isClonedNode(n) {
@@ -4645,6 +4708,49 @@ loadLists().then(() => {
 }
 
 /* —— 流程轨细节 —— */
+.flow-skipped-group {
+  position: relative;
+  margin: 2px 0 10px 7px;
+  padding: 0 0 0 16px;
+  border-left: 2px dashed rgba(0, 0, 0, 0.1);
+}
+
+.flow-skipped-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.025);
+  color: var(--ecw-text-3, #8e8ea0);
+  font-size: 11.5px;
+  line-height: 1.35;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.flow-skipped-toggle:hover {
+  border-color: rgba(0, 122, 255, 0.2);
+  background: rgba(0, 122, 255, 0.05);
+  color: var(--ecw-accent, #007aff);
+}
+
+.flow-skipped-toggle-icon {
+  flex-shrink: 0;
+  font-size: 15px;
+  line-height: 11px;
+  transition: transform 0.15s ease;
+}
+
+.flow-skipped-group.open .flow-skipped-toggle-icon {
+  transform: rotate(90deg);
+}
+
 .flow-step-body {
   min-width: 0;
 }
