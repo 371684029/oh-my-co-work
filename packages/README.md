@@ -13,7 +13,7 @@
 
 | 平台 | 文件 | 大小 |
 |------|------|------|
-| darwin-arm64 | [`oh-my-co-work-v1-darwin-arm64.zip`](./oh-my-co-work-v1-darwin-arm64.zip) | 5143835 |
+| darwin-arm64 | [`oh-my-co-work-v1-darwin-arm64.zip`](./oh-my-co-work-v1-darwin-arm64.zip) | 5147093 |
 | linux-x64 | [`oh-my-co-work-v1-linux-x64.zip`](./oh-my-co-work-v1-linux-x64.zip) | 5278686 |
 | win32-x64 | [`oh-my-co-work-v1-win32-x64.zip`](./oh-my-co-work-v1-win32-x64.zip) | 5079813 |
 
