@@ -23,7 +23,7 @@ Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
 
 | 项 | 内容 |
 |----|------|
-| 版本 | `1.7.0` **当前 · 最终封板**（见 [mvp.md §2.17](./docs/mvp.md)；关于页 changelog） |
+| 版本 | `1.8.0` **当前 · 1.x 最终封板**（见 [mvp.md §2.18](./docs/mvp.md)；关于页 changelog） |
 | 形态 | 三栏工作台 + 设置 · **完全本机** |
 | UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
 | 仓库名 | `oh-my-co-work`（原 `element-co-work`） |

@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,12 +13,20 @@
   ],
   "changelog": [
     {
+      "version": "1.8.0",
+      "date": "2026-08-12",
+      "title": "1.8.0 最终封板：跳过流程默认折叠",
+      "items": [
+        "右侧流程轨默认折叠连续的跳过未执行步骤，可按需展开查看。",
+        "1.x 大版本封板。"
+      ]
+    },
+    {
       "version": "1.7.0",
       "date": "2026-08-12",
-      "title": "1.7.0 最终封板：更名 oh-my-co-work",
+      "title": "1.7.0：更名 oh-my-co-work",
       "items": [
-        "产品、运行包、数据库和更新地址统一更名为 oh-my-co-work。",
-        "本版本为 1.7.0 封板版本。"
+        "产品、运行包、数据库和更新地址统一更名为 oh-my-co-work。"
       ]
     },
     {
