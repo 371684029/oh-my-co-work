@@ -67,6 +67,8 @@ if (nonAdmin.length === 0) {
           process.platform === 'win32'
             ? 'echo ECW-OK #1'
             : 'echo ECW-OK #1',
+        // 脚本工作目录为必填项（见 assertScriptWorkDirConfigured）
+        scriptWorkDir: process.cwd(),
         timeoutMs: 600_000,
       },
     },

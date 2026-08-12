@@ -46,6 +46,7 @@ async function main() {
         script: {
           mode: 'command',
           command: process.platform === 'win32' ? 'echo CI01-#1' : 'echo CI01-#1',
+          scriptWorkDir: process.cwd(),
           timeoutMs: 30_000,
           showScriptPopup: false,
         },
