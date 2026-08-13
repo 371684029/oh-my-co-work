@@ -30,14 +30,26 @@ oh-my-co-work/
 | **C. 大文件** | `data/uploads/`、`data/logs/` | 人 / 进程 | 附件、stdout 日志；库里只记路径或摘要 |
 | **D. 配置文件** | `server/config/*.json` | 服务启动时读 | 快捷指令、关于页、支持信息、是否显示演示数据等 |
 
-### 1.1 内嵌终端（2.0）
+### 1.1 内嵌终端（2.0 / 2.0.1）
 
 - 运行中的终端会话由 `server/src/terminal/terminalService.js` 在内存管理，并绑定会话、节点、成员、runId 与 PID。
-- 有限回放缓冲用于页面刷新后重新附着；不会把持续增长的终端流写入 Vue 消息数组或 SQLite。
-- 完整原始输出追加写入 `data/logs/terminal_{terminalId}.log`。
+- 有限回放缓冲（约 256 KB）用于页面刷新后重新附着；前端按 `seq` 写入 xterm，避免缓冲封顶后停更。
+- attach 先 flush 尚未发出的 pending 输出，再发 snapshot，避免重复字符。
+- 完整原始输出异步追加写入 `data/logs/terminal_{terminalId}.log`，单文件约 10 MiB 上限（超出标记 `logTruncated`）。
 - 节点结束后，`output_json` 保存 terminalId、退出码、runtime、cwd 与日志文件名，不复制完整终端输出。
+- 用户停止或超时：`ok` 仅在进程真正退出且退出码属于成功码时为真；同时清理进程树与 PID 登记。
 - 服务重启后旧 PTY 不承诺恢复；现有中断恢复机制负责把运行中节点转为待处理。
 - 会话归档、手工释放、从节点续跑及同成员重新执行均通过 `processRegistry` 回收终端进程树。
+
+### 1.2 本机访问令牌（2.0.1）
+
+本机 API 默认只服务本机页面，避免任意网页跨站驱动 `/api` 或终端：
+
+- 启动时生成随机 `ACW_API_TOKEN`（也可用环境变量固定）。
+- `GET /api/bootstrap` 在可信 Origin 下下发令牌；前端 `web/src/api.js` 缓存后用于 REST 与 WebSocket。
+- CORS / Origin 仅允许 `127.0.0.1`、`localhost`、`::1`。
+- `/api/health` 免令牌；其余 `/api` 需要 `X-ACW-Token`、`Authorization: Bearer` 或 query `token`。
+- WebSocket `verifyClient` 同样校验 Origin 与 URL 中的 `token`。
 
 **原则（写死）：**
 
@@ -304,6 +316,7 @@ data/journals/sessions/{sessionId}/README.md
 |------|------|------|
 | `ACW_DATA_ROOT` | 数据根目录（兼容旧名 `ECW_DATA_ROOT`） | 仓库下 `data/` |
 | `ACW_PORT` | API 端口（兼容旧名 `ECW_PORT`） | `3780` |
+| `ACW_API_TOKEN` | 固定本机访问令牌；不设则每次启动随机生成 | 随机 |
 | `ACW_AUTO_EXIT` | `1` 时尝试在浏览器全部离开后退出服务（实验性，易误杀） | 关 |
 | `ACW_HEADLESS_BROWSER` | `1` 时 `start.mjs` 用 Playwright **无头**加载首页；**结束 start（Ctrl+C）会 `browser.close()` 并停 API**（仅源码树 + dev 依赖 `playwright`） | 关 |
 

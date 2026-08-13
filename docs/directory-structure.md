@@ -30,9 +30,12 @@ oh-my-co-work/
 │   │   └── about.json           # 关于与更新（版本/日志/本地说明）
 │   └── src/
 │       ├── index.js             # Express + WS 入口，自动 seed
+│       ├── localAccess.js       # 本机 Origin / 访问令牌（2.0.1）
 │       ├── db.js                # SQLite + DATA_ROOT
 │       ├── engine.js            # Session 推进 / 闸门 / 归档
 │       ├── runners.js           # echo / script 执行
+│       ├── processRegistry.js   # PID / 进程树
+│       ├── terminal/            # PTY 终端会话
 │       ├── services.js          # 成员/群/会话业务
 │       ├── routes.js            # REST /api/*
 │       ├── bus.js               # WebSocket 广播

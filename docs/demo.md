@@ -3,8 +3,8 @@
 | 属性 | 内容 |
 |------|------|
 | 关联 | 根目录 [README.md](../README.md)；压缩包说明 [RELEASE-USER.md](./RELEASE-USER.md) |
-| 版本 | `1.8.0`（1.x 最终封板） |
-| 更新日期 | 2026-07-23 |
+| 版本 | `2.0.1` |
+| 更新日期 | 2026-08-13 |
 
 ---
 
@@ -38,7 +38,8 @@ npm run dev:web
 
 ```bash
 curl http://127.0.0.1:3780/api/health
-# 期望：ok=true，integrity.ok=true，version 含 1.0.0-dev
+# 期望：ok=true，integrity.ok=true，version 为当前 about.json（如 2.0.1）
+# 其它 /api 需要本机令牌；请用工作台页面，不要从任意网页跨站调用
 ```
 
 ---

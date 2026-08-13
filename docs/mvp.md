@@ -355,4 +355,7 @@
 
 ### 2.20 版本 2.0.1（2026-08-13 · **安全加固**）
 
-本地访问令牌与 Origin 防护；修复 PID、停止语义、长输出、重新附着和断线恢复问题。
+- 本机 REST/WebSocket：回环 Origin + 随机 `ACW_API_TOKEN`（`/api/bootstrap` 发令牌；`/api/health` 免鉴权）。
+- 停止/超时仅在真实退出码属于成功码时记 `ok`；注销会话清理 PID 与 PTY。
+- 长输出按 seq 写入；attach 先 flush pending；日志异步、约 10 MiB 上限。
+- WebSocket 断线重连；设置页可退出全屏；已知漏洞依赖升级。
