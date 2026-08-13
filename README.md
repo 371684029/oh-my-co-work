@@ -1,346 +1,182 @@
 # oh-my-co-work
 
-<p align="left">
-  <img src="./docs/assets/logo-mark.jpg" alt="oh-my-co-work logo" width="88" height="88" />
+<p align="center">
+  <img src="./docs/assets/logo-mark.jpg" alt="oh-my-co-work logo" width="104" height="104" />
 </p>
 
-## 项目核心（宗旨）
+<h3 align="center">把人、Agent、脚本和 TUI 放进同一条 Workflow</h3>
 
-> **人机协同 · 万物归元 · 皆可 Workflow**  
-> **节点是死的，人是活的** — 流动的 Workflow，人可随时绕行、插队、场外办事再回来。  
-> 只做 MVP，不做花里胡哨。
+<p align="center">
+  群聊式多智能体协同工作台 · 本地优先 · 可视化流程 · 人工闸门 · 内嵌真实终端
+</p>
 
-| 主张 | 内涵 |
+<p align="center">
+  <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
+  <img src="https://img.shields.io/badge/version-2.0.0-409eff?style=flat-square" alt="version 2.0.0" />
+  <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
+  <img src="https://img.shields.io/badge/data-local--first-67c23a?style=flat-square" alt="local first" />
+</p>
+
+> **节点是死的，人是活的。**
+> Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
+
+<img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台" width="100%" />
+
+## 为什么做它
+
+很多自动化工具仍然散落在 BAT、PowerShell、CLI、TUI 和不同 Agent 里：执行在终端，决策在聊天，进度靠人脑记，出错后很难复盘。
+
+`oh-my-co-work` 把这些能力收进一个本地工作台：
+
+- **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
+- **关键决定交给人**：启动、参数、审核、归档都可以设置人工闸门。
+- **过程始终可见**：左边看会话，中间对话和执行，右边看流程、报告与资源。
+- **终端不再跳出去**：真实 PTY 内嵌 TUI，ANSI、方向键、Tab、Ctrl+C 和 resize 都保留。
+- **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
+
+## 2.0：真实 TUI，不是终端模拟
+
+<img src="./docs/assets/screenshots/embedded-tui-fullscreen.webp" alt="oh-my-co-work 内嵌 TUI 全屏工作区" width="100%" />
+
+服务端使用 `node-pty`，前端使用 `xterm.js`。普通命令继续走原有 pipe 模式；交互式 CLI 可选择内嵌终端：
+
+- 对话中出现实时终端卡，保留任务时序。
+- 点击进入中栏终端工作区，右侧流程仍然可见。
+- 支持键盘输入、窗口缩放、重新附着、停止进程与日志。
+- 工作台和终端都可以独立全屏。
+- 会话归档或续跑时统一回收进程树。
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./docs/assets/screenshots/chat-terminal-collaboration.webp" alt="终端卡融入协同对话" />
+      <p align="center"><b>终端融入对话时序</b></p>
+    </td>
+    <td width="50%">
+      <img src="./docs/assets/screenshots/terminal-member-settings.webp" alt="可配置的内嵌终端成员" />
+      <p align="center"><b>脚本成员按需启用 TUI</b></p>
+    </td>
+  </tr>
+</table>
+
+## 已实现
+
+| 能力 | 说明 |
 |------|------|
-| **人机协同** | 人做决策与闸门，机做执行与回传；同台可见、可打断、可接力 |
-| **万物归元** | 一个脚本、一个 Agent，都是**元节点**；Agent 与工作室**解耦**，渐进接入 |
-| **皆可 Workflow** | Workflow 串起节点与人；**节点是锚点，人是活水**——可中途场外办事（如点外卖），再流回主线 |
-| **简洁桥梁** | **聊天框 + 流程图**——最克制的信息界面，拒绝堆砌 |
-
-**一句话**：人机交互的聚合可视化平台——用流动的工作流把人、脚本与 Agent 编在同一张台上。
-
-Logo 与品牌细节见 [docs/brand-logo.md](./docs/brand-logo.md)。
-
-| 项 | 内容 |
-|----|------|
-| 版本 | `2.0.0` **当前 · 内嵌 TUI**（见 [tui-2x.md](./docs/tui-2x.md)；关于页 changelog） |
-| 形态 | 三栏工作台 + 设置 · **完全本机** |
-| UI | **优先 [Element-Plus-X](https://v2.element-plus-x.com)** + Element Plus 默认主题 |
-| 仓库名 | `oh-my-co-work`（原 `element-co-work`） |
-
----
-
-## 目录
-
-- [项目核心（宗旨）](#项目核心宗旨)
-- [功能现状](#功能现状)
-- [快速开始](#快速开始)
-- [怎么看演示效果](#怎么看演示效果)
-- [使用说明](#使用说明)
-- [项目结构](#项目结构)
-- [API 摘要](#api-摘要)
-- [配置与数据](#配置与数据)
-- [文档索引](#文档索引)
-- [路线图](#路线图)
-- [支持与交流](#支持与交流)
-
----
-
-## 产品原则（由核心推导）
-
-| 原则 | 含义 |
-|------|------|
-| 闸门在人 | 关键步骤同意 / 拒绝 / 输入，不能 silently 滑过 |
-| 元节点可插拔 | 成员（脚本 / Agent）与群模板解耦；配置**克隆**不改写 |
-| 会话有边界 | **归档只释资源**；同一会话可无限归档/解档；再发仍在本会话；只有左栏「开聊」才新建会话 |
-| 本机优先 | 无夹带后台；数据与进程都在本地 |
-
-**Session** = 一局任务运行实例（可改名、删除、归档），不是群模板本身。
-
----
-
-## 功能现状
-
-### 已实现（MVP）
-
-| 模块 | 说明 |
-|------|------|
-| 工作台三栏 | 左会话 · 中对话/闸门 · 右流程；**浮层圆角分栏** + 氛围光（Codex 气质） |
-| 会话 UI | **Element-Plus-X**：`Conversations` / `BubbleList` / `XSender` / `Welcome` |
-| 发送 | **Enter 发送** · Shift+Enter 换行（XSender ref 取文） |
-| 等人强调 | 运行时闸门/等人 **标红**；设置里人工步骤保持中性 |
-| 成员 | 新建 / **编辑** / **克隆** / 删除；`echo` / `script`（多语言脚本或命令） |
-| 内嵌终端 | 脚本成员可选真实 PTY；对话显示终端卡，可进入中栏 TUI 工作区交互、缩放和停止 |
-| 全屏 | 工作台与内嵌终端均可独立全屏；设置中“默认全屏”默认开启，首次点击时进入 |
-| 群模板 | 新建 / **编辑** / **克隆** / 删除；线性步骤 + 闸门 |
-| 开聊 | 左栏选**群模板或成员** → 开聊；成员单聊走临时模板 |
-| 会话名 | 默认 `#1 · 模板缩写`；hover 看群模板全称；可手改 |
-| 快捷指令 | 新建 / **编辑** / **克隆** / 删除；`/` 唤起 |
-| 工作文件夹 | 成员 / 群可选；script 执行 cwd 回落链 |
-| 任务引擎 | 线性推进、人工输入节点、闸门、script 子进程 |
-| 归档 | 只释放进程与目录；**同一会话可无限归档**；再发/解档仍在本会话，**不会新开群聊** |
-| 场外协助 | `@` 成员插队：按**当前时序**插入（开场则第一位）；回主线点右侧正常节点「从这里继续」；同会话 `@` 串行排队 |
-| 续跑 | 本会话右侧「从这里继续」→ **往前跳直达不克隆** / **往回再跑追加克隆**；途经待确认标已绕过（场外不可作目标） |
-| 本机资源 | 右侧 Tab「资源」：进程 PID / orphanRisk / 目录占用提示；再杀一次与归档对方 |
-| 新会话 | **仅**左栏选模板/成员 →「开聊」 |
-| 聊天 | **名称可编辑**、**可删除** |
-| 支持与交流 | 侧栏浅灰「其它」分区；含蓄 **点赞支持** 文案 |
-| 关于与更新 | 版本号、版本日志、更新地址；**完全本地、无后台夹带** 说明 |
-| 设置 | 默认全屏；演示示例开关；**是否展示脚本弹窗**（全局）；归档超时；全局管理员；一键删演示数据 |
-| 脚本弹窗 | 全局默认开；**成员 / 快捷指令可覆盖**（跟随/是/否）；执行**以脚本配置为准** |
-| 群报告 | 右侧 Tab：**# 参数** + **各节点输入/输出**；刷新写 MD；流程轨仍可展开明细 |
-| 会话附件 | 选择或 **Ctrl+V 粘贴** 上传；气泡内附件卡片；本机 `data/uploads` |
-| 快捷指令 | 输入 `/` 唤起；设置里自配 N 条；本机 shell/url/agent；shell 可配是否弹窗 |
-| 文本快捷 `#` | `#群聊` / `#文件夹` / `#1`…（输入空格换行分段）/ `#出n`（输出整段）；工具栏 `#` |
-| 闸门操作 | 说明在卡片；**通过/取消/提交…** 在输入区右侧 |
-| 数据 | SQLite + journals MD + 自动 seed「演示流」 |
-
-### 未做 / 后置（见设计文档）
-
-GUI 桌面壳 · 重启任务 · 掩码 · 完整进程守护 MD · 打开编辑器按钮 · LLM 推断工作目录 · 终检越界卡片 · 断点续跑 · 云端多用户  
-
-完整清单：[docs/mvp.md](./docs/mvp.md) · [docs/data-and-ops.md](./docs/data-and-ops.md)
-
----
+| 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
+| 人工闸门 | 启动确认、参数输入、同意/拒绝、归档确认 |
+| 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放和停止 |
+| 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
+| 场外协助 | `@成员` 临时插队，完成后回到主流程 |
+| 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
+| 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown |
+| 本机资源 | 查看进程、PID、目录占用并主动释放 |
+| 会话治理 | 置顶、改名、归档、解档、删除、续跑 |
+| 本地数据 | SQLite + Markdown + 本地附件和日志 |
 
 ## 快速开始
 
-### 环境
+### 直接使用运行包
 
-- **Node.js ≥ 18**
-- Windows / macOS / Linux（script 默认按 Windows 演示 seed）
+在 [`packages/`](./packages/) 或 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台压缩包：
 
-### 安装与启动
+```text
+Windows  → 解压后双击 start.bat
+macOS    → 解压后运行 ./start.sh
+Linux    → 解压后运行 ./start.sh
+```
+
+运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。
+
+### 从源码启动
 
 ```bash
+git clone https://github.com/371684029/oh-my-co-work.git
 cd oh-my-co-work
 npm install
 
-# 终端 1 — API（默认端口 3780，空库自动 seed）
+# 终端 1：API / Workflow 引擎
 npm run dev:server
 
-# 终端 2 — 前端（5173，显式绑 127.0.0.1；代理 /api 与 /ws）
+# 终端 2：Vue 工作台
 npm run dev:web
 ```
 
-浏览器打开：**http://127.0.0.1:5173**（勿只用 `localhost` 若本机优先解析到 IPv6 而服务只绑 IPv4）
+打开 <http://127.0.0.1:5173>，选择内置的「演示流」并点击开聊。
 
-更细的点选路径与排障见 **[怎么看演示效果](./docs/demo.md)**。
+### 配置一个内嵌 TUI 成员
 
-健康检查：
+在 **设置 → 成员管理** 中选择“内嵌终端”，或直接使用以下配置：
 
-```bash
-curl http://127.0.0.1:3780/api/health
-# 或 PowerShell: Invoke-RestMethod http://127.0.0.1:3780/api/health
+```json
+{
+  "kind": "script",
+  "script": {
+    "mode": "command",
+    "command": "your-cli",
+    "scriptWorkDir": "/your/workspace",
+    "executionMode": "terminal",
+    "timeoutMs": 3600000
+  }
+}
 ```
 
-### 常用脚本
+普通脚本不需要迁移；未设置 `executionMode` 时保持原有执行行为。
 
-| 命令 | 说明 |
-|------|------|
-| `npm run dev:server` | 启动 API（`--watch`） |
-| `npm run dev:web` | 启动 Vite 前端 |
-| `npm run seed` | 仅在空库时写入演示数据（已有数据会跳过） |
-| `npm run start` | 生产方式启动 API（无 watch） |
-| `npm run backup` | **备份** sqlite+journals+uploads → `data/backups/*.tar.gz` |
-| `npm run pack` | **打运行包 zip** → `packages/oh-my-co-work-v{N}-{平台}-{架构}.zip`（同大版本覆盖；新大版本删旧大版本包；用户无需 npm install） |
-| `npm start` / `start.bat` | **一键启动**（起服务、开浏览器；关启动窗口或 Ctrl+C 结束服务） |
-| `ACW_HEADLESS_BROWSER=1 node start.mjs` | **无头**加载首页（无窗口）；结束 start 即关浏览器并停服务（需 `playwright` + `npx playwright install chromium`） |
-| `npm run build -w web` | 构建前端到 `web/dist`（可由 server 静态托管） |
+## 技术栈
 
-### 重置数据
+```text
+Vue 3 + Element Plus + Element-Plus-X
+                  │ WebSocket
+Node.js + Express + Workflow Engine
+                  │
+        node-pty / ConPTY / PTY
+                  │
+      BAT · PowerShell · CLI · TUI
 
-删除数据目录后重启 server 即可重新 seed：
-
-```bash
-# 请先停掉 server
-rm -rf ./data                 # Linux / macOS
-# Windows: Remove-Item -Recurse -Force .\data
-npm run dev:server
+SQLite ── 调度真相
+Markdown ── 可读台账
+Local Files ── 附件与日志
 ```
 
----
+这是一个 npm workspaces 项目：
 
-## 怎么看演示效果
-
-### 方式 A：下载运行包（推荐给使用者）
-
-1. 打开仓库 **[`packages/`](./packages/)**，下载与本机系统匹配的 zip（如 Windows 用 `*-win32-x64.zip`）  
-2. 解压后双击 **`start.bat`**（Windows）或运行 **`./start.sh`** / `node start.mjs`  
-3. **通常不需要**再 `npm install`（若本机 Node 版本与打包不一致，启动会自动适配原生模块）；浏览器会自动打开；**关掉浏览器不会停服务**（启动窗口 Ctrl+C 结束）  
-4. 工作台 → 开聊 **「演示流」**  
-
-> 包内是打包产物（前端 dist + 后端 bundle + 内置依赖），**不是源码**。  
-> 同大版本同平台覆盖最新；仓库只保留当前大版本包。说明见 [docs/RELEASE-USER.md](./docs/RELEASE-USER.md)。
-
-### 方式 B：开发模式（两个终端）
-
-1. 按上文启动 **server + web**，浏览器打开 **http://127.0.0.1:5173**  
-2. 顶栏 **工作台** → 开聊下拉选 **「演示流」** → **开聊**  
-3. 若看不到「演示流」：进 **设置 → 设置（偏好）**，打开 **显示演示示例**  
-4. 按闸门点：**通过**（开始）→ **提交**（项目参数，如 `demo 需求一`）→ **同意**（回声）→ **同意**（命令）→ **同意归档**  
-5. 右栏看流程轨与群报告；归档只释放资源，可解档或从节点重开  
-
-逐步说明与排障：**[docs/demo.md](./docs/demo.md)**。
-
----
-
-## 使用说明
-
-### 第一次演示（推荐路径）
-
-1. 打开 **工作台**  
-2. 上方选择群模板 **「演示流」**（或某个**成员**）→ **开聊**  
-3. 中栏按闸门提示：**通过**启动 → **提交**项目参数 → **同意**回声 → **同意**命令  
-4. 右栏观察节点状态；全部完成后进入 **确认归档**（默认 3 小时超时也会自动归档）  
-5. 归档后再发 → **仍在本会话**（解档）；续跑点「从这里继续」（前进跳或追加克隆）；可再归档  
-
-### 设置
-
-| 菜单 | 说明 |
-|------|------|
-| **设置（偏好）** | 演示数据；**是否展示脚本弹窗**；归档超时小时；全局管理员与默认流转 |
-| **成员管理** | 新建 / **编辑** / 克隆 / 删除。`script` 文件或命令；可选**内嵌终端**或兼容现有执行；工作文件夹 |
-| **群聊模板** | 新建 / **编辑** / 克隆；线性步骤 + 闸门；工作文件夹 |
-| **快捷指令** | `/` 唤起；shell/url/agent；shell 可配是否弹窗 |
-| **文本快捷 `#`** | `#群聊` / `#文件夹` / `#1`… 插入会话参数正文 |
-| **支持与交流** | 技术交流；点赞支持（自愿） |
-
-> 聊天（Session）：**可改名、可删除、可置顶**（不删群模板）。
-
-### 工作文件夹（cwd）
-
-优先级（从高到低）：
-
-1. 成员 script 上显式 `cwd`（可选）  
-2. **脚本文件所在目录**（file 模式：与双击 bat 一致，`node index.mjs` 才能找到）  
-3. 成员 · 工作文件夹  
-4. 本局 Session 约定目录（增强项）  
-5. 群 · 工作文件夹  
-6. 进程默认目录  
-
-群/成员「工作文件夹」仍写入会话 `#文件夹` 等参数；**跑 bat 时默认 cwd 以脚本路径为基准**。
-
----
-
-## 项目结构
-
-```
-oh-my-co-work/
-├── README.md                 # 本文件
-├── package.json              # npm workspaces 根
-├── packages/                 # 运行包 zip（打包产物+内置依赖，非源码；按平台）
-├── start.bat / start.sh / start.mjs  # 源码树一键启动（开发用）
-├── docs/                     # 设计与约定（以文档为准演进）
-│   ├── mvp.md / technical-design.md
-│   ├── data-storage.md       # SQLite / MD / 脚本约定 / 群报告（实现说明）
-│   ├── data-and-ops.md       # P0–P4 + §9 待改进 backlog
-│   └── …
-├── shared/                   # @acw/shared
-├── server/                   # Node API + 引擎
-│   ├── config/               # app-settings / slash-commands / about / support
-│   └── src/
-│       ├── engine.js / runners.js / journal.js
-│       ├── appSettings.js    # 含 resolveShowScriptPopup
-│       ├── consoleEncoding.js
-│       └── …
-├── web/                      # Vue3 + Element Plus / Plus-X
-└── data/                     # 运行时（gitignore）
-    ├── oh-my-co-work.sqlite
-    ├── logs/ · journals/ · uploads/ · console/
+```text
+web/       Vue 工作台与 xterm 终端
+server/    API、Workflow 引擎、PTY 与进程治理
+shared/    状态、参数和格式化约定
+docs/      产品、架构、存储与实施文档
+packages/  可直接运行的三平台压缩包
 ```
 
----
+## 文档
 
-## API 摘要
-
-Base：`http://127.0.0.1:3780/api`  
-WebSocket：`ws://127.0.0.1:3780/ws?sessionId=<id>`
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/health` | 健康检查 |
-| GET/POST | `/members` | 列表 / 新建 |
-| POST | `/members/:id/clone` | 克隆成员 |
-| DELETE | `/members/:id` | 删除成员 |
-| GET/POST | `/groups` | 列表 / 新建群模板 |
-| POST | `/groups/:id/clone` | 克隆群模板 |
-| DELETE | `/groups/:id` | 删除群模板 |
-| POST | `/groups/:id/sessions` | 用群模板开聊 |
-| POST | `/members/:id/sessions` | 与成员单聊开聊（临时单聊模板） |
-| GET | `/sessions` | 会话列表（`?status=`） |
-| GET | `/sessions/:id` | 详情（session + nodes + messages） |
-| PATCH | `/sessions/:id` | 重命名 `{ "title" }` |
-| DELETE | `/sessions/:id` | 删除聊天 |
-| POST | `/sessions/:id/archive` | 归档（释放资源） |
-| POST | `/sessions/:id/unarchive` | 解档（仍同一会话） |
-| GET | `/sessions/:id/resources` | 进程登记 + 工作目录占用提示 |
-| POST | `/sessions/:id/kill-processes` | 再杀本会话进程（尽力） |
-| POST | `/sessions/:id/restart-from-node` | 从节点线性追加克隆并开跑 |
-| POST | `/sessions/:id/gate` | 闸门 `{ action, nodeInstanceId, text? }` |
-| GET | `/support` | 支持与交流配置 |
-
-更细的领域模型与分期见 [docs/technical-design.md](./docs/technical-design.md)。
-
----
-
-## 配置与数据
-
-| 路径 | 说明 |
+| 文档 | 内容 |
 |------|------|
-| `data/oh-my-co-work.sqlite` | 主库（成员/群/会话/消息） |
-| `data/logs/` | script 运行日志 |
-| `data/journals/` | 进程台账目录（预留） |
-| `server/config/support.json` | 支持与交流文案、收款码路径 |
-| `server/config/about.json` | 版本、更新日志、更新地址、本地说明 |
-| 环境变量 `ACW_PORT` | API 端口，默认 `3780` |
-| 环境变量 `ACW_DATA_ROOT` | 数据根目录，默认 `./data` |
-| 环境变量 `ACW_AUTO_EXIT` | `1` 实验性：浏览器全关后尝试退出服务（易误杀） |
-| 环境变量 `ACW_HEADLESS_BROWSER` | `1` 时用 Playwright 无头加载首页（无界面）；**结束 `start.mjs`（Ctrl+C）会同时关闭无头浏览器并停服务**。需 `npm install` 与 `npx playwright install chromium`；运行包 zip 不支持 |
-
----
-
-## 文档索引
-
-| 文档 | 说明 |
-|------|------|
-| [docs/mvp.md](./docs/mvp.md) | 宗旨、MVP 范围与验收、配置交互约定 |
-| [docs/demo.md](./docs/demo.md) | **怎么看演示效果**（启动与点选路径） |
-| [docs/technical-design.md](./docs/technical-design.md) | 完整架构、Session/归档/克隆/文件夹/快捷键等 |
-| [docs/data-storage.md](./docs/data-storage.md) | **当前实现**：SQLite/MD、参数、**脚本约定**、**群报告**、弹窗优先级 |
-| [docs/data-and-ops.md](./docs/data-and-ops.md) | 数据分层、P0–P4、**§9 待改进 backlog** |
-| [docs/script-guide.md](./docs/script-guide.md) | **写脚本指南**（占位符 / env / 缺参） |
-| [docs/frontend-components.md](./docs/frontend-components.md) | **优先 Element-Plus-X** 组件映射 |
-| [docs/directory-structure.md](./docs/directory-structure.md) | 目录与模块边界 |
-| [docs/author-contact.example.json](./docs/author-contact.example.json) | 支持与交流配置示例 |
-
-**文档维护约定**：改行为时**同步改文档**（至少 README + `data-storage` / `mvp` 对照）。MVP 范围以 `mvp.md` 为准；愿景与后置以 `technical-design.md` 为准；**现状以 `data-storage.md` 为准**。
-
----
+| [2.x TUI 设计](./docs/tui-2x.md) | 产品形态、PTY 架构、协议、安全与平台兼容 |
+| [2.x 实施计划](./docs/tui-2x-plan.md) | 2.0～2.3 阶段、测试、风险与完成定义 |
+| [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
+| [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
+| [技术设计](./docs/technical-design.md) | Workflow、会话、节点、闸门与扩展设计 |
+| [演示指南](./docs/demo.md) | 从启动到跑通演示流 |
 
 ## 路线图
 
-```
-✅ MVP 0.1～0.4 已封板
-   → 1.0.0-dev：CI01/03/04 · X07 · R02/R03/R04 · M01/M07（已落地）
-   → 其余 P2（R06/M03…）与 CI02
-   → LLM 工作目录推断 + 终检越界暴露
-   → GUI 桌面壳（复用 web）
-```
+- [x] 1.x：群聊工作台、流程引擎、闸门、归档与续跑
+- [x] 2.0：真实 PTY、终端卡、中栏 TUI 工作区与全屏
+- [ ] 2.1：终端偏好、配额、脱敏与更完整的重连体验
+- [ ] 2.2：结构化 Adapter，把子工具提问和结果转换成对话与闸门
+- [ ] 2.3：多终端治理、更多 CLI Adapter、三平台稳定性封板
+- [ ] 桌面壳、托盘与系统通知
 
----
+## 参与项目
 
-## 支持与交流
+欢迎提交 [Issue](https://github.com/371684029/oh-my-co-work/issues) 或 Pull Request：
 
-产品内：**设置 → 支持与交流**（技术交流 / 反馈；点赞支持自愿，不挡功能）。
+1. 先描述使用场景和希望解决的问题。
+2. 行为变化同步更新文档。
+3. 新执行体优先保持可插拔，不把具体工具写死在 Workflow 内核。
 
-| 方式 | 内容 |
-|------|------|
-| 手机 | 17312678391 |
-| 微信 | 默认同手机号（可在 `server/config/support.json` 修改） |
-
----
-
-## License
-
-私有项目 / 以仓库所有者约定为准。
+如果这个项目让你的脚本、Agent 或 TUI 更容易协作，欢迎点一个 **Star**。
+它会帮助更多正在解决同类问题的人看到这个项目。
