@@ -13,6 +13,7 @@
 
 | 平台 | 文件 | 大小 |
 |------|------|------|
+| darwin-arm64 | [`oh-my-co-work-v2-darwin-arm64.zip`](./oh-my-co-work-v2-darwin-arm64.zip) | 20840792 |
 | linux-x64 | [`oh-my-co-work-v2-linux-x64.zip`](./oh-my-co-work-v2-linux-x64.zip) | 21013210 |
 
 版本：`2.0.0`（大版本 v2）
