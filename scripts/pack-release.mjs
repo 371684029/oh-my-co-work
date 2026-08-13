@@ -501,7 +501,7 @@ function runEsbuild(args) {
     platform: 'node',
     format: 'cjs',
     outfile: args.outfile,
-    external: ['better-sqlite3'],
+    external: ['better-sqlite3', 'node-pty'],
     logLevel: 'warning',
     banner: {
       js: "const __import_meta_url=require('url').pathToFileURL(__filename).href;",
@@ -572,6 +572,10 @@ async function mainAsync() {
         readJson(path.join(ROOT, 'server/package.json')).dependencies[
           'better-sqlite3'
         ] || '^11.7.0',
+      'node-pty':
+        readJson(path.join(ROOT, 'server/package.json')).dependencies[
+          'node-pty'
+        ] || '^1.1.0',
     },
   }
   fs.writeFileSync(

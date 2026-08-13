@@ -62,6 +62,11 @@ import {
   MAX_FILES,
 } from './uploads.js'
 import { listRoots, listDir, pathExists, openLocalPath } from './fsBrowser.js'
+import {
+  getTerminal,
+  killTerminal,
+  listSessionTerminals,
+} from './terminal/terminalService.js'
 
 const router = Router()
 
@@ -466,6 +471,17 @@ router.get('/sessions/:id/processes', (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
+})
+router.get('/sessions/:id/terminals', (req, res) => {
+  if (!getSessionDetail(req.params.id)) return res.status(404).json({ error: '会话不存在' })
+  res.json({ terminals: listSessionTerminals(req.params.id) })
+})
+router.post('/sessions/:id/terminals/:terminalId/kill', (req, res) => {
+  const terminal = getTerminal(req.params.terminalId)
+  if (!terminal || terminal.sessionId !== req.params.id) {
+    return res.status(404).json({ error: '终端不存在' })
+  }
+  res.json({ ok: killTerminal(req.params.terminalId, 'user') })
 })
 /** 会话资源：进程 + 工作目录占用提示 */
 router.get('/sessions/:id/resources', (req, res) => {

@@ -41,6 +41,8 @@ app.use(ElementPlusX)
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
+| 终端消息 | `TerminalSessionCard` | 深灰玻璃终端卡；有限输出预览、运行态、进入终端与停止 |
+| 终端工作区 | `TerminalWorkspace` + `TerminalView` | 中栏占满；`xterm.js` 延迟加载，保留右侧流程轨；返回对话不停止进程 |
 | 中栏输入 | `XSender` | **`ref` 取文** + `@submit`；`@paste-file` 粘贴上传；`submit-type="enter"`；工具栏 `/` `@` `#` · 附件 · **复制** |
 | 附件 | 自研 chip + 气泡 file-card | 先 `POST /sessions/:id/files`，再随消息 `attachments[]` |
 | Composer 面板 | 自研 slash / at / hash | `/` 指令；`@` 成员/节点；`#` → `#群聊`/`#文件夹`/`#1`…/`#出n` |
@@ -119,6 +121,14 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 3. 新增 AI 交互前先查 [Plus-X 组件文档](https://v2.element-plus-x.com)。  
 4. 改布局/氛围时同步更新本文与 [mvp.md](./mvp.md) 修订记录。  
 5. 构建产物较大属正常（全量注册）；后续可按需引入优化。
+
+### 5.1 终端视觉与交互
+
+1. 项目负责终端外壳、标题栏、状态、按钮和 ANSI 调色板，不重绘 TUI 自身结构。
+2. 终端默认深灰背景、等宽字体；与普通聊天气泡明确分层，但圆角、阴影和强调色保持一致。
+3. `TerminalWorkspace` 使用异步组件加载，普通会话不必加载 `xterm.js`。
+4. 终端获得焦点后键盘直接写入 PTY；多行粘贴需要确认。
+5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。
 
 ### Composer 三快捷（已实现）
 

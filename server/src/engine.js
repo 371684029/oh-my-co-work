@@ -1754,6 +1754,7 @@ export async function advance(sessionId) {
         params: paramsMap,
       },
       sessionId,
+      nodeInstanceId: node.id,
       humanInput: ctx.lastHumanInput || paramsMap[SYSTEM_PARAM_KEYS.CALL_ARGS] || null,
       params: paramsMap,
     })
@@ -3370,6 +3371,7 @@ async function runMentionedMembers(sessionId, text) {
           params: paramsMap,
         },
         sessionId,
+        nodeInstanceId: offsite.id,
         humanInput: callArgs,
         params: paramsMap,
       })

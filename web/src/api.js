@@ -45,6 +45,12 @@ export const api = {
     unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),
     /** 会话资源：进程登记 + 目录占用提示 */
     resources: (id) => req(`/sessions/${id}/resources`),
+    terminals: (id) => req(`/sessions/${id}/terminals`),
+    killTerminal: (id, terminalId) =>
+      req(`/sessions/${id}/terminals/${terminalId}/kill`, {
+        method: 'POST',
+        body: '{}',
+      }),
     /** 再杀本会话进程；body: { runId?, includeDetach? } */
     killProcesses: (id, body) =>
       req(`/sessions/${id}/kill-processes`, {

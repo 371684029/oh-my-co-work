@@ -18,7 +18,28 @@
 | `file` | `script.filePath` / `path` | 跑本机脚本文件（bat/cmd/ps1/sh/py/js…） |
 | `command` | `script.command` | 一段本机命令（走 PATH） |
 
-可选：`runtime`、`args`、`env`、`timeoutMs`（默认 10 分钟）、`cwd`、`detach`、`showScriptPopup`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
+可选：`runtime`、`args`、`env`、`timeoutMs`（默认 10 分钟）、`cwd`、`detach`、`showScriptPopup`、`executionMode`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
+
+### 1.1 内嵌终端模式（2.0）
+
+成员脚本设置 `executionMode: "terminal"` 后通过真实 PTY 运行，适合 TUI、REPL 和需要方向键/Tab/Ctrl+C 的 CLI：
+
+```json
+{
+  "script": {
+    "mode": "command",
+    "command": "your-cli",
+    "scriptWorkDir": "D:\\work",
+    "executionMode": "terminal",
+    "timeoutMs": 3600000
+  }
+}
+```
+
+- `pipe` 或未配置：保持原有普通执行/弹窗行为。
+- `terminal`：不再打开独立黑窗；在对话终端卡中进入中栏工作区交互。
+- TUI 必须在当前进程前台运行；脚本内调用 `Start-Process` / `start` 强制新窗口会脱离内嵌 PTY。
+- 终端输入不会自动成为聊天消息；工具要输出结构化业务事件时应使用 2.x Adapter，而不是要求主项目解析屏幕字符。
 
 ---
 
