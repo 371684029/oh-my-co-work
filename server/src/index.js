@@ -7,6 +7,7 @@ import { WebSocketServer } from 'ws'
 import { initDb, getDb, DATA_ROOT, ROOT } from './db.js'
 import routes from './routes.js'
 import { subscribe, unsubscribe } from './bus.js'
+import { handleTerminalClientMessage } from './terminal/terminalService.js'
 import { listMembers, listGroups, createMember, createGroup } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
@@ -62,6 +63,8 @@ if (nonAdmin.length === 0) {
       demo: true,
       script: {
         mode: 'command',
+        scriptWorkDir: process.cwd(),
+        scriptDir: process.cwd(),
         // 演示：命令里可用 #1 #2 与 {folder}
         command:
           process.platform === 'win32'
@@ -108,6 +111,9 @@ wss.on('connection', (ws, req) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`)
   const sessionId = url.searchParams.get('sessionId')
   if (sessionId) subscribe(sessionId, ws)
+  ws.on('message', (data) => {
+    if (sessionId) handleTerminalClientMessage(ws, sessionId, data)
+  })
   ws.on('close', () => unsubscribe(ws))
   ws.send(JSON.stringify({ type: 'hello', payload: { ok: true } }))
 })

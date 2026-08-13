@@ -21,6 +21,7 @@ import {
 } from '@acw/shared'
 import { resolveShowScriptPopup } from './appSettings.js'
 import { decodeConsoleBytes, consoleChildEnv } from './consoleEncoding.js'
+import { runTerminal } from './terminal/terminalService.js'
 
 /**
  * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
@@ -377,11 +378,11 @@ export function resolveLaunchSpec({ filePath, command, shell, runtime, args = []
 
 /**
  * @param member
- * @param {{ group, sessionContext, humanInput, sessionId?: string }} opts
+ * @param {{ group, sessionContext, humanInput, sessionId?: string, nodeInstanceId?: string }} opts
  */
 export async function runMember(
   member,
-  { group, sessionContext, humanInput, sessionId, params } = {},
+  { group, sessionContext, humanInput, sessionId, nodeInstanceId, params } = {},
 ) {
   const kind = member.kind
   const config =
@@ -547,8 +548,25 @@ export async function runMember(
     })
 
     console.log(
-      `[acw] script run label=${label} file=${filePath || '-'} cwd=${cwd} popup=${showConsole}`,
+      `[acw] script run label=${label} file=${filePath || '-'} cwd=${cwd} mode=${script.executionMode || 'pipe'} popup=${showConsole}`,
     )
+
+    if (script.executionMode === 'terminal') {
+      return runTerminal({
+        launch,
+        cwd,
+        timeoutMs,
+        env,
+        sessionId,
+        nodeInstanceId,
+        memberId: member.id,
+        label,
+        successCodes,
+        stdinText: passStdin && humanInput != null ? String(humanInput) : script.stdinText || null,
+        cols: script.terminal?.cols,
+        rows: script.terminal?.rows,
+      })
+    }
 
     return runProcess({
       launch,

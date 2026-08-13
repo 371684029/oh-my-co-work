@@ -54,7 +54,8 @@ jobs:
           git config user.name "wll"
           git config user.email "371684029@qq.com"
           PLAT="$(node -p "process.platform+'-'+process.arch")"
-          FILE="oh-my-co-work-v1-${PLAT}.zip"
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          FILE="oh-my-co-work-v${MAJOR}-${PLAT}.zip"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           # 多平台并行：rebase 后若 README/CURRENT 冲突，按目录内 zip 重写清单再继续
           for i in 1 2 3 4 5 6; do

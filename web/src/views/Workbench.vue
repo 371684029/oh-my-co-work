@@ -195,8 +195,17 @@
           </div>
         </div>
 
+        <TerminalWorkspace
+          v-if="activeTerminal"
+          :terminal="activeTerminal"
+          @close="activeTerminalId = null"
+          @kill="killTerminal"
+          @input="sendTerminalInput"
+          @resize="resizeTerminal"
+        />
+
         <!-- 经典布局：上消息滚动 · 下闸门+输入固定 -->
-        <div class="wb-chat-main">
+        <div v-else class="wb-chat-main">
           <div class="wb-chat-scroll">
             <div class="wb-chat-col">
               <BubbleList
@@ -234,7 +243,14 @@
                   </div>
                 </template>
                 <template #content="{ item }">
+                  <TerminalSessionCard
+                    v-if="item._kind === 'terminal'"
+                    :terminal="item.terminal"
+                    @open="openTerminal"
+                    @kill="killTerminal"
+                  />
                   <div
+                    v-else
                     class="bubble-rich"
                     :class="[
                       `kind-${item._kind || 'agent'}`,
@@ -1199,7 +1215,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -1215,6 +1231,11 @@ import {
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
+import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
+
+const TerminalWorkspace = defineAsyncComponent(
+  () => import('../components/terminal/TerminalWorkspace.vue'),
+)
 
 const route = useRoute()
 const router = useRouter()
@@ -1224,6 +1245,8 @@ const groups = ref([])
 const members = ref([])
 const detail = ref(null)
 const activeId = ref(null)
+const terminalSessions = ref([])
+const activeTerminalId = ref(null)
 const editTitle = ref('')
 const startTarget = ref('')
 const listFilter = ref('all')
@@ -1549,7 +1572,7 @@ function isArchiveMessage(m) {
 /** Element-Plus-X BubbleList — 大气气泡 + 发送人简称 */
 const bubbleList = computed(() => {
   if (!detail.value?.messages) return []
-  return detail.value.messages.map((m) => {
+  const messages = detail.value.messages.map((m) => {
     const isUser = m.role === 'user'
     const isSystem = m.role === 'system'
     const isGate = m.type === 'gate'
@@ -1581,9 +1604,30 @@ const bubbleList = computed(() => {
       senderInitial: short.slice(0, 1),
       _kind: kind,
       _raw: m,
+      _time: m.created_at || '',
     }
   })
+  const terminals = terminalSessions.value.map((terminal) => ({
+    id: `terminal:${terminal.id}`,
+    content: '',
+    placement: 'start',
+    noStyle: true,
+    shape: 'round',
+    maxWidth: '90%',
+    avatarGap: 12,
+    senderFull: terminal.label || '内嵌终端',
+    senderShort: '终端',
+    senderInitial: 'T',
+    _kind: 'terminal',
+    terminal,
+    _time: terminal.startedAt || '',
+  }))
+  return [...messages, ...terminals].sort((a, b) => String(a._time).localeCompare(String(b._time)))
 })
+
+const activeTerminal = computed(
+  () => terminalSessions.value.find((terminal) => terminal.id === activeTerminalId.value) || null,
+)
 
 const pendingGate = computed(() => {
   if (!detail.value) return null
@@ -2338,11 +2382,13 @@ async function loadLists() {
 async function selectSession(id) {
   if (!id) return
   activeId.value = id
+  activeTerminalId.value = null
+  terminalSessions.value = []
   router.replace(`/workbench/${id}`)
   rightTab.value = 'flow' // 默认展示流程 Tab
   expandedSkippedFlowGroups.value = {}
-  await loadDetail(id)
   bindWs(id)
+  await Promise.all([loadDetail(id), loadTerminals(id)])
 }
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
@@ -2415,6 +2461,73 @@ async function loadDetail(id) {
   detail.value = await api.sessions.get(id)
   editTitle.value = detail.value.session.title
   sessionNotesDraft.value = detail.value.session?.context?.notes || ''
+}
+
+async function loadTerminals(id) {
+  try {
+    const result = await api.sessions.terminals(id)
+    if (activeId.value === id) terminalSessions.value = result.terminals || []
+  } catch {
+    if (activeId.value === id) terminalSessions.value = []
+  }
+}
+
+function upsertTerminal(next) {
+  if (!next?.id) return
+  const index = terminalSessions.value.findIndex((item) => item.id === next.id)
+  if (index < 0) {
+    terminalSessions.value = [...terminalSessions.value, next]
+    return
+  }
+  const current = terminalSessions.value[index]
+  const merged = {
+    ...current,
+    ...next,
+    replay: next.replay ?? current.replay ?? '',
+  }
+  terminalSessions.value = terminalSessions.value.map((item, i) => (i === index ? merged : item))
+}
+
+function sendTerminalMessage(message) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    ElMessage.warning('终端连接尚未就绪')
+    return false
+  }
+  ws.send(JSON.stringify(message))
+  return true
+}
+
+function openTerminal(terminalId) {
+  activeTerminalId.value = terminalId
+  sendTerminalMessage({ type: 'terminal.attach', terminalId })
+}
+
+function sendTerminalInput(data) {
+  if (!activeTerminalId.value) return
+  sendTerminalMessage({
+    type: 'terminal.input',
+    terminalId: activeTerminalId.value,
+    data,
+  })
+}
+
+function resizeTerminal({ cols, rows }) {
+  if (!activeTerminalId.value) return
+  sendTerminalMessage({
+    type: 'terminal.resize',
+    terminalId: activeTerminalId.value,
+    cols,
+    rows,
+  })
+}
+
+async function killTerminal(terminalId) {
+  if (!activeId.value || !terminalId) return
+  try {
+    await api.sessions.killTerminal(activeId.value, terminalId)
+  } catch (e) {
+    ElMessage.error(e.message || '停止终端失败')
+  }
 }
 
 function onConvChange(item) {
@@ -2585,6 +2698,41 @@ function bindWs(sessionId) {
     ws = null
   }
   ws = connectSessionWs(sessionId, async (ev) => {
+    if (activeId.value !== sessionId) return
+    if (ev.type === 'terminal.opened') {
+      upsertTerminal(ev.payload?.terminal)
+      return
+    }
+    if (ev.type === 'terminal.output') {
+      const terminalId = ev.payload?.terminalId
+      const current = terminalSessions.value.find((item) => item.id === terminalId)
+      if (current && Number(ev.payload?.seq) > Number(current.seq || 0)) {
+        upsertTerminal({
+          ...current,
+          seq: ev.payload.seq,
+          replay: `${current.replay || ''}${ev.payload.data || ''}`.slice(-256_000),
+        })
+      }
+      return
+    }
+    if (ev.type === 'terminal.snapshot') {
+      upsertTerminal({
+        ...(ev.payload?.terminal || {}),
+        id: ev.payload?.terminalId,
+        seq: ev.payload?.seq || 0,
+        replay: ev.payload?.data || '',
+        replayTruncated: !!ev.payload?.truncated,
+      })
+      return
+    }
+    if (ev.type === 'terminal.exited') {
+      upsertTerminal(ev.payload?.terminal)
+      return
+    }
+    if (ev.type === 'terminal.error') {
+      ElMessage.warning(ev.payload?.message || '终端连接异常')
+      return
+    }
     if (
       [
         'message',
@@ -2596,13 +2744,11 @@ function bindWs(sessionId) {
         'announcement.updated',
       ].includes(ev.type)
     ) {
-      if (activeId.value === sessionId) {
-        await loadDetail(sessionId)
-        // 默认保持「流程」Tab，不自动跳群报告
-        // 群报告由节点 detail / # 参数驱动；备注在 context.notes
-        if (ev.type === 'session.archived' || ev.type === 'session.restart') {
-          rightTab.value = 'flow'
-        }
+      await loadDetail(sessionId)
+      // 默认保持「流程」Tab，不自动跳群报告
+      // 群报告由节点 detail / # 参数驱动；备注在 context.notes
+      if (ev.type === 'session.archived' || ev.type === 'session.restart') {
+        rightTab.value = 'flow'
       }
       sessions.value = await api.sessions.list()
     }
@@ -3878,6 +4024,13 @@ loadLists().then(() => {
 .bubble-avatar.kind-agent {
   background: linear-gradient(145deg, #a0cfff 0%, #79bbff 55%, #5cadff 100%);
   color: #1f5f99;
+}
+.bubble-avatar.kind-terminal {
+  background: linear-gradient(145deg, #343944 0%, #20232b 100%);
+  color: #8fc5ff;
+  border-color: rgba(64, 158, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(23, 25, 31, 0.16);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
 }
 .bubble-avatar.kind-system {
   background: linear-gradient(145deg, #e4e7ed 0%, #c0c4cc 100%);

@@ -29,6 +29,26 @@
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
+          <div class="prefs-title">工作台默认全屏</div>
+          <p class="prefs-hint">
+            默认开启。受浏览器安全限制，进入工作台后会在你的<strong>首次点击</strong>时进入全屏；
+            也可随时使用右上角全屏按钮切换。
+          </p>
+        </div>
+        <el-switch
+          v-model="defaultFullscreen"
+          :loading="savingFullscreen"
+          inline-prompt
+          active-text="开启"
+          inactive-text="关闭"
+          @change="onToggleFullscreen"
+        />
+      </div>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-row">
+        <div class="prefs-text">
           <div class="prefs-title">是否展示脚本弹窗</div>
           <p class="prefs-hint">
             全局默认。开启后脚本执行可弹出<strong>脚本自身控制台</strong>（bat 黑窗）。
@@ -128,8 +148,10 @@ import { api } from '../../api'
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
+const defaultFullscreen = ref(true)
 const saving = ref(false)
 const savingPopup = ref(false)
+const savingFullscreen = ref(false)
 const savingAdmin = ref(false)
 const savingArchive = ref(false)
 const purging = ref(false)
@@ -151,6 +173,7 @@ async function load() {
     const [s, m] = await Promise.all([api.appSettings.get(), api.members.list()])
     showDemo.value = s.showDemo !== false
     showScriptPopup.value = s.showScriptPopup !== false
+    defaultFullscreen.value = s.defaultFullscreen !== false
     members.value = m || []
     resolvedAdmin.value = s.resolvedAdmin || null
     autoArchiveHours.value =
@@ -210,6 +233,20 @@ async function onToggleScriptPopup(val) {
     ElMessage.error(e.message)
   } finally {
     savingPopup.value = false
+  }
+}
+
+async function onToggleFullscreen(val) {
+  savingFullscreen.value = true
+  try {
+    const s = await api.appSettings.update({ defaultFullscreen: !!val })
+    defaultFullscreen.value = s.defaultFullscreen !== false
+    ElMessage.success(defaultFullscreen.value ? '已开启工作台默认全屏' : '已关闭工作台默认全屏')
+  } catch (e) {
+    defaultFullscreen.value = !val
+    ElMessage.error(e.message)
+  } finally {
+    savingFullscreen.value = false
   }
 }
 

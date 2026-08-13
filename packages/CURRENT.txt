@@ -1,18 +1,10 @@
-version=1.8.0
-major=1
+version=2.0.0
+major=2
 kind=runtime-bundle
 needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
-file.darwin-arm64=oh-my-co-work-v1-darwin-arm64.zip
-size.darwin-arm64=5147093
-commit.darwin-arm64=ae4f6f7
-built.darwin-arm64=2026-08-12T10:16:18.118Z
-file.linux-x64=oh-my-co-work-v1-linux-x64.zip
-size.linux-x64=5278686
-commit.linux-x64=1f7aca2
-built.linux-x64=2026-08-12T10:16:13.000Z
-file.win32-x64=oh-my-co-work-v1-win32-x64.zip
-size.win32-x64=5080525
-commit.win32-x64=94b6581
-built.win32-x64=2026-08-12T10:16:50.928Z
+file.linux-x64=oh-my-co-work-v2-linux-x64.zip
+size.linux-x64=21013210
+commit.linux-x64=34af779
+built.linux-x64=2026-08-13T01:47:37.682Z

@@ -8,6 +8,8 @@
 | [demo.md](./demo.md) | **怎么看演示效果**（启动、演示流点选、排障） |
 | [RELEASE-USER.md](./RELEASE-USER.md) | **压缩包用户说明**（一键启动；默认关浏览器不停服务） |
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
+| [tui-2x.md](./tui-2x.md) | **2.x 内嵌 TUI 设计**：真实 PTY、终端卡、工作区、适配器与安全边界 |
+| [tui-2x-plan.md](./tui-2x-plan.md) | **2.x 实施计划**：2.0～2.3 阶段、任务、测试、风险与完成定义 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
 | [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |
@@ -26,7 +28,8 @@
 6. 改代码导致行为变化时，至少更新 README + data-storage（或 mvp 对照）；涉及架构再改 technical-design。  
 7. 改工作台布局 / 视觉氛围 / 组件用法时，同步 [frontend-components.md](./frontend-components.md)。  
 8. **及时维护**：合并功能当天补文档修订记录，避免实现与文档漂移。  
-9. **版本纪律**：`0.4.0` 已最终封板；当前发布线 **`1.5.x`**（先改 mvp / data-and-ops 再写代码）。  
+9. **版本纪律**：`1.x` 已最终封板；当前发布线 **`2.x` 内嵌 TUI**（设计与计划见上）。
 
 | 1.7.0 | 产品统一更名为 `oh-my-co-work`。 |
 | 1.8.0 | **1.x 最终封板**：跳过未执行流程默认折叠，可展开查看。 |
+| 2.0.0 | **最终封板**：真实 PTY、终端卡、中栏交互、工作台/终端全屏与发布文档。 |

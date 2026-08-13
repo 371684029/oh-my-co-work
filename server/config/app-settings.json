@@ -10,5 +10,6 @@
     }
   },
   "autoArchiveHours": 3,
-  "showScriptPopup": true
+  "showScriptPopup": true,
+  "defaultFullscreen": true
 }

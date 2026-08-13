@@ -4,7 +4,7 @@
 |------|------|
 | 状态 | 与代码一致（MVP） |
 | 关联 | [data-and-ops.md](./data-and-ops.md)（原则与演进清单）、[technical-design.md](./technical-design.md) |
-| 更新日期 | 2026-07-28 |
+| 更新日期 | 2026-08-13 |
 
 一句话：**业务调度真相在 SQLite；节点 I/O 另有一份 Markdown 给人读；附件/日志/部分配置是文件。**  
 不是「只存 MD」，也不是「只存 SQL」——**双轨，职责分开**。
@@ -19,7 +19,7 @@ oh-my-co-work/
 │   ├── oh-my-co-work.sqlite         ← 主库（WAL 模式，可能还有 -wal/-shm）
 │   ├── journals/sessions/.../*.md     ← 节点台账 + 会话索引（给人读）
 │   ├── uploads/                       ← 聊天附件
-│   └── logs/                          ← 脚本运行日志等
+│   └── logs/                          ← 脚本及 terminal_{id}.log 终端日志
 └── server/config/*.json               ← 应用级配置（快捷指令、关于、支持、偏好）
 ```
 
@@ -29,6 +29,15 @@ oh-my-co-work/
 | **B. 可读台账** | `data/journals/**/*.md` | 人 / Git | 每节点输入输出的 Markdown 副本；归档时会话 README 索引 |
 | **C. 大文件** | `data/uploads/`、`data/logs/` | 人 / 进程 | 附件、stdout 日志；库里只记路径或摘要 |
 | **D. 配置文件** | `server/config/*.json` | 服务启动时读 | 快捷指令、关于页、支持信息、是否显示演示数据等 |
+
+### 1.1 内嵌终端（2.0）
+
+- 运行中的终端会话由 `server/src/terminal/terminalService.js` 在内存管理，并绑定会话、节点、成员、runId 与 PID。
+- 有限回放缓冲用于页面刷新后重新附着；不会把持续增长的终端流写入 Vue 消息数组或 SQLite。
+- 完整原始输出追加写入 `data/logs/terminal_{terminalId}.log`。
+- 节点结束后，`output_json` 保存 terminalId、退出码、runtime、cwd 与日志文件名，不复制完整终端输出。
+- 服务重启后旧 PTY 不承诺恢复；现有中断恢复机制负责把运行中节点转为待处理。
+- 会话归档、手工释放、从节点续跑及同成员重新执行均通过 `processRegistry` 回收终端进程树。
 
 **原则（写死）：**
 

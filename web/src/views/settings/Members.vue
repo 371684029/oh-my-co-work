@@ -102,7 +102,17 @@
             />
           </el-form-item>
 
-          <el-form-item label="是否展示脚本弹窗">
+          <el-form-item label="执行界面">
+            <el-select v-model="form.script.executionMode" style="width: 100%">
+              <el-option label="普通执行（兼容现有脚本）" value="pipe" />
+              <el-option label="内嵌终端（TUI / 交互式 CLI）" value="terminal" />
+            </el-select>
+            <div class="field-hint">
+              内嵌终端使用真实 PTY，可在对话中打开并直接交互；普通执行保留现有静默/独立弹窗行为。
+            </div>
+          </el-form-item>
+
+          <el-form-item v-if="form.script.executionMode !== 'terminal'" label="是否展示脚本弹窗">
             <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
               <el-option label="跟随全局设置" value="inherit" />
               <el-option label="是（始终弹窗）" value="yes" />
@@ -155,7 +165,7 @@
                 <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
               </el-form-item>
 
-              <el-form-item label="打开后不等待结束">
+              <el-form-item v-if="form.script.executionMode !== 'terminal'" label="打开后不等待结束">
                 <el-switch v-model="form.script.detach" />
                 <span class="switch-hint"
                   >适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。</span
@@ -241,6 +251,7 @@ function emptyForm() {
       argsText: '',
       envText: '',
       timeoutMs: DEFAULT_SCRIPT_TIMEOUT_MS,
+      executionMode: 'pipe',
       /** inherit | yes | no */
       showScriptPopupMode: 'inherit',
       detach: false,
@@ -290,13 +301,14 @@ function popupFieldsFromMode(mode) {
 function runSummary(row) {
   if (row.kind !== 'script') return row.kind
   const s = row.config?.script || row.config || {}
+  const prefix = s.executionMode === 'terminal' ? 'TUI · ' : ''
   if (s.mode === 'file' || s.filePath) {
     const p = s.filePath || s.path || ''
     const base = p.split(/[/\\]/).pop() || p
-    return `file · ${base}${s.runtime && s.runtime !== 'auto' ? ` (${s.runtime})` : ''}`
+    return `${prefix}file · ${base}${s.runtime && s.runtime !== 'auto' ? ` (${s.runtime})` : ''}`
   }
   const cmd = (s.command || '').slice(0, 40)
-  return `cmd · ${cmd}${(s.command || '').length > 40 ? '…' : ''}`
+  return `${prefix}cmd · ${cmd}${(s.command || '').length > 40 ? '…' : ''}`
 }
 
 function parseArgs(text) {
@@ -355,6 +367,7 @@ function fillFromRow(row, { asClone = false } = {}) {
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
       timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
+      executionMode: s.executionMode === 'terminal' ? 'terminal' : 'pipe',
       showScriptPopupMode: popupModeFromScript(s),
       detach: !!(s.detach || s.waitForExit === false),
       useHumanAsStdin: !!(s.useHumanAsStdin || s.passHumanInput || s.stdin),
@@ -445,6 +458,7 @@ async function save() {
                   ? { env: parseEnvText(s.envText) }
                   : {}),
                 timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
+                executionMode: s.executionMode === 'terminal' ? 'terminal' : 'pipe',
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,
                 useHumanAsStdin: !!s.useHumanAsStdin,

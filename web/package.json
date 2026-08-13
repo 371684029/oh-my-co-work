@@ -1,6 +1,6 @@
 {
   "name": "@acw/web",
-  "version": "1.8.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,6 +11,8 @@
   "dependencies": {
     "@acw/shared": "*",
     "@element-plus/icons-vue": "^2.3.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "element-plus": "^2.9.7",
     "vue": "^3.5.13",
     "vue-element-plus-x": "^2.0.3",
