@@ -22,7 +22,7 @@
 
 ### 1.1 内嵌终端模式（2.0）
 
-成员脚本设置 `executionMode: "terminal"` 后通过真实 PTY 运行，适合 TUI、REPL 和需要方向键/Tab/Ctrl+C 的 CLI：
+成员脚本默认 `executionMode: "terminal"`（内嵌真实 PTY）。仅非交互脚本才设 `"pipe"`：
 
 ```json
 {
@@ -36,8 +36,8 @@
 }
 ```
 
-- `pipe` 或未配置：保持原有普通执行/弹窗行为。
-- `terminal`：不再打开独立黑窗；在对话终端卡中进入中栏工作区交互。
+- `terminal` 或未配置：对话终端卡 + 中栏工作区。
+- `pipe`：保持原有普通执行/弹窗行为。
 - TUI 必须在当前进程前台运行；脚本内调用 `Start-Process` / `start` 强制新窗口会脱离内嵌 PTY。
 - 终端输入不会自动成为聊天消息；工具要输出结构化业务事件时应使用 2.x Adapter，而不是要求主项目解析屏幕字符。
 

@@ -4,7 +4,7 @@
       <div>
         <h2 class="page-title">成员管理</h2>
         <p class="page-desc">
-          脚本成员支持 bat / PowerShell / Python / Node / Shell 等。支持<strong>编辑</strong>与<strong>克隆</strong>。
+          脚本成员支持 bat / PowerShell / Python / Node / Shell 等。默认走<strong>内嵌终端</strong>。支持<strong>编辑</strong>与<strong>克隆</strong>。
         </p>
       </div>
       <el-button type="primary" @click="openCreate()">新建成员</el-button>
@@ -104,11 +104,11 @@
 
           <el-form-item label="执行界面">
             <el-select v-model="form.script.executionMode" style="width: 100%">
-              <el-option label="普通执行（兼容现有脚本）" value="pipe" />
               <el-option label="内嵌终端（TUI / 交互式 CLI）" value="terminal" />
+              <el-option label="普通执行（兼容现有脚本）" value="pipe" />
             </el-select>
             <div class="field-hint">
-              内嵌终端使用真实 PTY，可在对话中打开并直接交互；普通执行保留现有静默/独立弹窗行为。
+              默认内嵌终端：对话中出现终端卡，可进入中栏交互。仅非交互脚本才改回普通执行。
             </div>
           </el-form-item>
 
@@ -251,7 +251,7 @@ function emptyForm() {
       argsText: '',
       envText: '',
       timeoutMs: DEFAULT_SCRIPT_TIMEOUT_MS,
-      executionMode: 'pipe',
+      executionMode: 'terminal',
       /** inherit | yes | no */
       showScriptPopupMode: 'inherit',
       detach: false,
@@ -301,7 +301,7 @@ function popupFieldsFromMode(mode) {
 function runSummary(row) {
   if (row.kind !== 'script') return row.kind
   const s = row.config?.script || row.config || {}
-  const prefix = s.executionMode === 'terminal' ? 'TUI · ' : ''
+  const prefix = s.executionMode === 'pipe' ? '' : 'TUI · '
   if (s.mode === 'file' || s.filePath) {
     const p = s.filePath || s.path || ''
     const base = p.split(/[/\\]/).pop() || p
@@ -367,7 +367,7 @@ function fillFromRow(row, { asClone = false } = {}) {
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
       timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
-      executionMode: s.executionMode === 'terminal' ? 'terminal' : 'pipe',
+      executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
       showScriptPopupMode: popupModeFromScript(s),
       detach: !!(s.detach || s.waitForExit === false),
       useHumanAsStdin: !!(s.useHumanAsStdin || s.passHumanInput || s.stdin),
@@ -458,7 +458,7 @@ async function save() {
                   ? { env: parseEnvText(s.envText) }
                   : {}),
                 timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
-                executionMode: s.executionMode === 'terminal' ? 'terminal' : 'pipe',
+                executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,
                 useHumanAsStdin: !!s.useHumanAsStdin,

@@ -162,6 +162,10 @@ export function extractScriptPathFromCommand(command) {
   return null
 }
 
+export function usesTerminalExecution(script) {
+  return script?.executionMode !== 'pipe'
+}
+
 /**
  * 补全 scriptWorkDir（选脚本 / 命令中的脚本名 / 绝对路径）
  * @param {object} script
@@ -169,6 +173,9 @@ export function extractScriptPathFromCommand(command) {
 export function enrichScriptConfig(script) {
   if (!script || typeof script !== 'object') return script
   const next = { ...script }
+  if (next.executionMode !== 'pipe' && next.executionMode !== 'terminal') {
+    next.executionMode = 'terminal'
+  }
   const raw =
     next.filePath ||
     next.path ||
@@ -548,10 +555,10 @@ export async function runMember(
     })
 
     console.log(
-      `[acw] script run label=${label} file=${filePath || '-'} cwd=${cwd} mode=${script.executionMode || 'pipe'} popup=${showConsole}`,
+      `[acw] script run label=${label} file=${filePath || '-'} cwd=${cwd} mode=${script.executionMode || 'terminal'} popup=${showConsole}`,
     )
 
-    if (script.executionMode === 'terminal') {
+    if (usesTerminalExecution(script)) {
       return runTerminal({
         launch,
         cwd,

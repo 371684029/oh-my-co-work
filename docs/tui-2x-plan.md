@@ -197,7 +197,7 @@
 
 ### 8.2 配置迁移
 
-- 未设置 `executionMode` 的成员继续使用当前行为。
+- 未设置 `executionMode` 的脚本成员默认走内嵌终端；显式 `pipe` 才用普通执行。
 - 原 `showConsole: true` 不直接等同 terminal；提供明确迁移提示。
 - `detach: true` 保持独立窗口语义，除非用户主动改为 terminal。
 - 设置保存时校验 terminal 配置，不支持的平台给出可理解提示。

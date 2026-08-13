@@ -28,6 +28,7 @@ const scriptCmd = createMember({
       mode: 'command',
       command: process.platform === 'win32' ? 'echo ECW-OK & cd' : 'echo ECW-OK && pwd',
       shell: 'cmd',
+      executionMode: 'terminal',
       timeoutMs: 600_000,
     },
   },
