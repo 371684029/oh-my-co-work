@@ -14,9 +14,9 @@
 
 按本机系统选：
 
-- Windows：`oh-my-co-work-v1-win32-x64.zip`
-- Linux：`oh-my-co-work-v1-linux-x64.zip`
-- macOS：`oh-my-co-work-v1-darwin-arm64.zip` 或 `darwin-x64`
+- Windows：`oh-my-co-work-v2-win32-x64.zip`
+- Linux：`oh-my-co-work-v2-linux-x64.zip`
+- macOS：`oh-my-co-work-v2-darwin-arm64.zip` 或 `darwin-x64`
 
 目录：https://github.com/371684029/oh-my-co-work/tree/main/packages  
 备选：[Releases · latest](https://github.com/371684029/oh-my-co-work/releases/tag/latest)

@@ -386,7 +386,7 @@ function parseCurrentTxt(raw) {
 }
 
 function platformFromZipName(name) {
-  // oh-my-co-work-v1-linux-x64.zip → linux-x64
+  // oh-my-co-work-v2-linux-x64.zip → linux-x64
   const m = String(name).match(/^oh-my-co-work-v\d+-(.+)\.zip$/i)
   return m ? m[1] : null
 }
