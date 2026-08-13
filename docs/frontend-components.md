@@ -129,6 +129,7 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 3. `TerminalWorkspace` 使用异步组件加载，普通会话不必加载 `xterm.js`。
 4. 终端获得焦点后键盘直接写入 PTY；多行粘贴需要确认。
 5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。
+6. 顶栏可切换整个工作台全屏；终端工具栏可切换终端独立全屏。默认全屏受浏览器约束，在首次用户点击时触发。
 
 ### Composer 三快捷（已实现）
 

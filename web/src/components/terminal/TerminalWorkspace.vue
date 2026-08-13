@@ -1,5 +1,5 @@
 <template>
-  <section class="terminal-workspace">
+  <section ref="workspaceRoot" class="terminal-workspace">
     <header class="terminal-workspace-head">
       <div class="terminal-workspace-leading">
         <button type="button" class="terminal-back" @click="$emit('close')">
@@ -17,6 +17,16 @@
         </div>
       </div>
       <div class="terminal-workspace-actions">
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          data-fullscreen-control
+          :title="isFullscreen ? '退出终端全屏' : '终端全屏'"
+          @click="toggleTerminalFullscreen"
+        >
+          <span aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+          {{ isFullscreen ? '退出全屏' : '全屏' }}
+        </button>
         <button
           v-if="isRunning"
           type="button"
@@ -47,8 +57,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import TerminalView from './TerminalView.vue'
+import {
+  exitFullscreen,
+  fullscreenElement,
+  requestFullscreen,
+} from '../../composables/fullscreen'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -56,6 +71,8 @@ const props = defineProps({
 
 defineEmits(['close', 'kill', 'input', 'resize'])
 
+const workspaceRoot = ref(null)
+const isFullscreen = ref(false)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const statusText = computed(() => {
   const map = {
@@ -67,6 +84,24 @@ const statusText = computed(() => {
     interrupted: '已中断',
   }
   return map[props.terminal.status] || props.terminal.status
+})
+
+function syncFullscreenState() {
+  isFullscreen.value = fullscreenElement() === workspaceRoot.value
+}
+
+async function toggleTerminalFullscreen() {
+  if (isFullscreen.value) await exitFullscreen()
+  else await requestFullscreen(workspaceRoot.value)
+}
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', syncFullscreenState)
+  syncFullscreenState()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreenState)
 })
 </script>
 
@@ -84,6 +119,14 @@ const statusText = computed(() => {
   box-shadow:
     0 18px 50px rgba(15, 18, 25, 0.16),
     inset 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.terminal-workspace:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
 }
 
 .terminal-workspace-head,

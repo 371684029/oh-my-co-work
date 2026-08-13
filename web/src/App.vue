@@ -1,5 +1,5 @@
 <template>
-  <div class="ecw-layout">
+  <div ref="appRoot" class="ecw-layout">
     <header class="ecw-topbar">
       <div class="top-left">
         <!-- macOS 交通灯装饰（仅视觉，不绑窗口操作） -->
@@ -35,6 +35,17 @@
         </nav>
       </div>
       <div class="top-right">
+        <button
+          v-if="nav === 'workbench'"
+          type="button"
+          class="fullscreen-button"
+          data-fullscreen-control
+          :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
+          @click="toggleWorkbenchFullscreen"
+        >
+          <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+          <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
+        </button>
         <span class="mvp-pill">MVP</span>
       </div>
     </header>
@@ -45,18 +56,70 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
+import { api } from './api'
+import {
+  exitFullscreen,
+  fullscreenElement,
+  requestFullscreen,
+} from './composables/fullscreen'
 
 const route = useRoute()
 const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
+const appRoot = ref(null)
+const isFullscreen = ref(false)
+const defaultFullscreen = ref(true)
+let defaultGestureHandler = null
+
+function syncFullscreenState() {
+  isFullscreen.value = !!fullscreenElement()
+}
+
+function disarmDefaultFullscreen() {
+  if (!defaultGestureHandler) return
+  window.removeEventListener('pointerdown', defaultGestureHandler, true)
+  defaultGestureHandler = null
+}
+
+function armDefaultFullscreen() {
+  disarmDefaultFullscreen()
+  if (!defaultFullscreen.value || nav.value !== 'workbench' || fullscreenElement()) return
+  defaultGestureHandler = async (event) => {
+    if (event.target?.closest?.('[data-fullscreen-control]')) return
+    disarmDefaultFullscreen()
+    await requestFullscreen(appRoot.value)
+  }
+  window.addEventListener('pointerdown', defaultGestureHandler, true)
+}
+
+async function loadFullscreenPreference() {
+  try {
+    const settings = await api.appSettings.get()
+    defaultFullscreen.value = settings.defaultFullscreen !== false
+  } catch {
+    defaultFullscreen.value = true
+  }
+  armDefaultFullscreen()
+}
+
+async function toggleWorkbenchFullscreen() {
+  disarmDefaultFullscreen()
+  const ok = fullscreenElement()
+    ? await exitFullscreen()
+    : await requestFullscreen(appRoot.value)
+  if (!ok) ElMessage.warning('浏览器未允许进入全屏，请检查站点权限')
+}
 
 watch(
   () => route.path,
   (p) => {
     nav.value = p.startsWith('/settings') ? 'settings' : 'workbench'
+    if (nav.value === 'workbench') loadFullscreenPreference()
+    else disarmDefaultFullscreen()
   },
 )
 
@@ -64,6 +127,17 @@ function go(v) {
   nav.value = v
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
 }
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', syncFullscreenState)
+  syncFullscreenState()
+  loadFullscreenPreference()
+})
+
+onUnmounted(() => {
+  disarmDefaultFullscreen()
+  document.removeEventListener('fullscreenchange', syncFullscreenState)
+})
 </script>
 
 <style scoped>
@@ -131,6 +205,39 @@ function go(v) {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+.fullscreen-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--ecw-text-2, #6e6e73);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.fullscreen-button:hover {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ecw-accent, #007aff);
+}
+
+.fullscreen-button:active {
+  transform: scale(0.97);
+}
+
+.fullscreen-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
 /* 分段控件：macOS segmented */

@@ -64,6 +64,8 @@ function ensureSettingsFile() {
           autoArchiveHours: 3,
           /** 脚本运行时是否弹出系统控制台 + 释放资源小窗（默认开） */
           showScriptPopup: true,
+          /** 工作台首次交互时进入浏览器全屏（浏览器要求必须由用户操作触发） */
+          defaultFullscreen: true,
         },
         null,
         2,
@@ -94,6 +96,8 @@ export function getAppSettings() {
       ),
       /** 脚本弹窗：系统控制台 +「释放资源」HTA，默认 true */
       showScriptPopup: raw.showScriptPopup !== false,
+      /** 默认全屏：默认 true；前端在首次用户操作时触发 */
+      defaultFullscreen: raw.defaultFullscreen !== false,
     }
   } catch {
     return {
@@ -101,6 +105,7 @@ export function getAppSettings() {
       admin: defaultAdminSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
+      defaultFullscreen: true,
     }
   }
 }
@@ -144,6 +149,10 @@ export function updateAppSettings(patch = {}) {
       patch.showScriptPopup !== undefined
         ? !!patch.showScriptPopup
         : cur.showScriptPopup !== false,
+    defaultFullscreen:
+      patch.defaultFullscreen !== undefined
+        ? !!patch.defaultFullscreen
+        : cur.defaultFullscreen !== false,
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')
