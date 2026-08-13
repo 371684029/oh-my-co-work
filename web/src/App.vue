@@ -15,7 +15,7 @@
             >人机协同 · 万物归元 · 皆可 Workflow</span
           >
         </div>
-        <nav class="top-nav" aria-label="主导航">
+        <nav class="top-nav" aria-label="主导航" data-fullscreen-control>
           <button
             type="button"
             class="nav-item"
@@ -36,7 +36,6 @@
       </div>
       <div class="top-right">
         <button
-          v-if="nav === 'workbench'"
           type="button"
           class="fullscreen-button"
           data-fullscreen-control
@@ -101,7 +100,7 @@ async function loadFullscreenPreference() {
     const settings = await api.appSettings.get()
     defaultFullscreen.value = settings.defaultFullscreen !== false
   } catch {
-    defaultFullscreen.value = true
+    defaultFullscreen.value = false
   }
   armDefaultFullscreen()
 }

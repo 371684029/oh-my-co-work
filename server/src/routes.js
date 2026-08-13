@@ -63,6 +63,7 @@ import {
 } from './uploads.js'
 import { listRoots, listDir, pathExists, openLocalPath } from './fsBrowser.js'
 import {
+  forgetSessionTerminals,
   getTerminal,
   killTerminal,
   listSessionTerminals,
@@ -406,6 +407,7 @@ router.post('/sessions/:id/pin', (req, res) => {
 })
 router.delete('/sessions/:id', (req, res) => {
   deleteSession(req.params.id)
+  forgetSessionTerminals(req.params.id)
   res.status(204).end()
 })
 router.post('/sessions/:id/archive', (req, res) => {

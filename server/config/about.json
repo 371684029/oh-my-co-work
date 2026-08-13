@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -12,6 +12,17 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "2.0.1",
+      "date": "2026-08-13",
+      "title": "2.0.1：TUI 安全与稳定性修复",
+      "items": [
+        "REST 与 WebSocket 增加本机来源校验和随机访问令牌，阻断跨站调用本机脚本。",
+        "修复终端停止被判成功、PID 残留、长输出停更和重新附着重复输出。",
+        "增加断线重连、日志上限、终端资源回收与自动化回归测试。",
+        "升级存在已知漏洞的依赖。"
+      ]
+    },
     {
       "version": "2.0.0",
       "date": "2026-08-13",

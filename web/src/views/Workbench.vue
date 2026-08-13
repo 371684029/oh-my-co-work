@@ -198,6 +198,7 @@
         <TerminalWorkspace
           v-if="activeTerminal"
           :terminal="activeTerminal"
+          :connection-status="terminalConnectionStatus"
           @close="activeTerminalId = null"
           @kill="killTerminal"
           @input="sendTerminalInput"
@@ -1247,6 +1248,8 @@ const detail = ref(null)
 const activeId = ref(null)
 const terminalSessions = ref([])
 const activeTerminalId = ref(null)
+const terminalConnectionStatus = ref('connecting')
+const lastTerminalSize = ref(null)
 const editTitle = ref('')
 const startTarget = ref('')
 const listFilter = ref('all')
@@ -2466,9 +2469,18 @@ async function loadDetail(id) {
 async function loadTerminals(id) {
   try {
     const result = await api.sessions.terminals(id)
-    if (activeId.value === id) terminalSessions.value = result.terminals || []
+    if (activeId.value !== id) return
+    for (const terminal of result.terminals || []) {
+      const current = terminalSessions.value.find((item) => item.id === terminal.id)
+      if (!current || Number(terminal.seq || 0) >= Number(current.seq || 0)) {
+        upsertTerminal({
+          ...terminal,
+          previewReplay: String(terminal.replay || '').slice(-12_000),
+        })
+      }
+    }
   } catch {
-    if (activeId.value === id) terminalSessions.value = []
+    /* 保留 WebSocket 已收到的较新状态 */
   }
 }
 
@@ -2484,6 +2496,7 @@ function upsertTerminal(next) {
     ...current,
     ...next,
     replay: next.replay ?? current.replay ?? '',
+    previewReplay: next.previewReplay ?? current.previewReplay ?? '',
   }
   terminalSessions.value = terminalSessions.value.map((item, i) => (i === index ? merged : item))
 }
@@ -2513,6 +2526,7 @@ function sendTerminalInput(data) {
 
 function resizeTerminal({ cols, rows }) {
   if (!activeTerminalId.value) return
+  lastTerminalSize.value = { cols, rows }
   sendTerminalMessage({
     type: 'terminal.resize',
     terminalId: activeTerminalId.value,
@@ -2697,62 +2711,95 @@ function bindWs(sessionId) {
     ws.close()
     ws = null
   }
-  ws = connectSessionWs(sessionId, async (ev) => {
-    if (activeId.value !== sessionId) return
-    if (ev.type === 'terminal.opened') {
-      upsertTerminal(ev.payload?.terminal)
-      return
-    }
-    if (ev.type === 'terminal.output') {
-      const terminalId = ev.payload?.terminalId
-      const current = terminalSessions.value.find((item) => item.id === terminalId)
-      if (current && Number(ev.payload?.seq) > Number(current.seq || 0)) {
+  ws = connectSessionWs(
+    sessionId,
+    async (ev) => {
+      if (activeId.value !== sessionId) return
+      if (ev.type === 'terminal.opened') {
+        const terminal = ev.payload?.terminal
         upsertTerminal({
-          ...current,
-          seq: ev.payload.seq,
-          replay: `${current.replay || ''}${ev.payload.data || ''}`.slice(-256_000),
+          ...terminal,
+          previewReplay: String(terminal?.replay || '').slice(-12_000),
         })
+        return
       }
-      return
-    }
-    if (ev.type === 'terminal.snapshot') {
-      upsertTerminal({
-        ...(ev.payload?.terminal || {}),
-        id: ev.payload?.terminalId,
-        seq: ev.payload?.seq || 0,
-        replay: ev.payload?.data || '',
-        replayTruncated: !!ev.payload?.truncated,
-      })
-      return
-    }
-    if (ev.type === 'terminal.exited') {
-      upsertTerminal(ev.payload?.terminal)
-      return
-    }
-    if (ev.type === 'terminal.error') {
-      ElMessage.warning(ev.payload?.message || '终端连接异常')
-      return
-    }
-    if (
-      [
-        'message',
-        'node.status',
-        'session.archived',
-        'session.restart',
-        'session.status',
-        'gate.request',
-        'announcement.updated',
-      ].includes(ev.type)
-    ) {
-      await loadDetail(sessionId)
-      // 默认保持「流程」Tab，不自动跳群报告
-      // 群报告由节点 detail / # 参数驱动；备注在 context.notes
-      if (ev.type === 'session.archived' || ev.type === 'session.restart') {
-        rightTab.value = 'flow'
+      if (ev.type === 'terminal.output') {
+        const terminalId = ev.payload?.terminalId
+        const current = terminalSessions.value.find((item) => item.id === terminalId)
+        if (current && Number(ev.payload?.seq) > Number(current.seq || 0)) {
+          const data = ev.payload.data || ''
+          const replay = `${current.replay || ''}${data}`.slice(-256_000)
+          upsertTerminal({
+            ...current,
+            seq: ev.payload.seq,
+            replay,
+            previewReplay: `${current.previewReplay || ''}${data}`.slice(-12_000),
+            lastChunk: data,
+          })
+        }
+        return
       }
-      sessions.value = await api.sessions.list()
-    }
-  })
+      if (ev.type === 'terminal.snapshot') {
+        upsertTerminal({
+          ...(ev.payload?.terminal || {}),
+          id: ev.payload?.terminalId,
+          seq: ev.payload?.seq || 0,
+          replay: ev.payload?.data || '',
+          previewReplay: String(ev.payload?.data || '').slice(-12_000),
+          snapshotKey: `${ev.payload?.seq || 0}:${Date.now()}`,
+          lastChunk: '',
+          replayTruncated: !!ev.payload?.truncated,
+        })
+        return
+      }
+      if (ev.type === 'terminal.exited') {
+        upsertTerminal(ev.payload?.terminal)
+        return
+      }
+      if (ev.type === 'terminal.error') {
+        ElMessage.warning(ev.payload?.message || '终端连接异常')
+        return
+      }
+      if (
+        [
+          'message',
+          'node.status',
+          'session.archived',
+          'session.restart',
+          'session.status',
+          'gate.request',
+          'announcement.updated',
+        ].includes(ev.type)
+      ) {
+        await loadDetail(sessionId)
+        // 默认保持「流程」Tab，不自动跳群报告
+        // 群报告由节点 detail / # 参数驱动；备注在 context.notes
+        if (ev.type === 'session.archived' || ev.type === 'session.restart') {
+          rightTab.value = 'flow'
+        }
+        sessions.value = await api.sessions.list()
+      }
+    },
+    {
+      async onOpen() {
+        if (activeId.value !== sessionId) return
+        await loadTerminals(sessionId)
+        if (activeTerminalId.value) {
+          sendTerminalMessage({ type: 'terminal.attach', terminalId: activeTerminalId.value })
+          if (lastTerminalSize.value) {
+            sendTerminalMessage({
+              type: 'terminal.resize',
+              terminalId: activeTerminalId.value,
+              ...lastTerminalSize.value,
+            })
+          }
+        }
+      },
+      onStatus(status) {
+        if (activeId.value === sessionId) terminalConnectionStatus.value = status
+      },
+    },
+  )
 }
 
 async function startChat() {

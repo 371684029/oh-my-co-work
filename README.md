@@ -12,8 +12,8 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-2.0.0-409eff?style=flat-square" alt="version 2.0.0" />
-  <img src="https://img.shields.io/badge/2.0-final%20sealed-67c23a?style=flat-square" alt="2.0 final sealed" />
+  <img src="https://img.shields.io/badge/version-2.0.1-409eff?style=flat-square" alt="version 2.0.1" />
+  <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
   <img src="https://img.shields.io/badge/data-local--first-67c23a?style=flat-square" alt="local first" />

@@ -1,9 +1,31 @@
 const BASE = '/api'
+let accessTokenPromise = null
+
+async function accessToken({ refresh = false } = {}) {
+  if (refresh || !accessTokenPromise) {
+    accessTokenPromise = fetch(`${BASE}/bootstrap`, { cache: 'no-store' })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.token) throw new Error(data.error || '无法建立本地安全连接')
+        return data.token
+      })
+      .catch((error) => {
+        accessTokenPromise = null
+        throw error
+      })
+  }
+  return accessTokenPromise
+}
 
 async function req(path, options = {}) {
+  const token = await accessToken()
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-ACW-Token': token,
+      ...(options.headers || {}),
+    },
   })
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
@@ -90,7 +112,12 @@ export const api = {
     uploadFiles: async (id, fileList) => {
       const fd = new FormData()
       for (const f of fileList) fd.append('files', f)
-      const res = await fetch(`${BASE}/sessions/${id}/files`, { method: 'POST', body: fd })
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${id}/files`, {
+        method: 'POST',
+        headers: { 'X-ACW-Token': token },
+        body: fd,
+      })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || res.statusText)
       return data
@@ -132,16 +159,66 @@ export const api = {
   },
 }
 
-export function connectSessionWs(sessionId, onEvent) {
+export function connectSessionWs(sessionId, onEvent, { onOpen, onStatus } = {}) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-  const url = `${proto}://${location.host}/ws?sessionId=${encodeURIComponent(sessionId)}`
-  const ws = new WebSocket(url)
-  ws.onmessage = (ev) => {
+  let socket = null
+  let reconnectTimer = null
+  let stopped = false
+  let attempt = 0
+
+  const client = {
+    get readyState() {
+      return socket?.readyState ?? WebSocket.CONNECTING
+    },
+    send(data) {
+      if (socket?.readyState !== WebSocket.OPEN) return false
+      socket.send(data)
+      return true
+    },
+    close() {
+      stopped = true
+      window.clearTimeout(reconnectTimer)
+      reconnectTimer = null
+      socket?.close()
+      socket = null
+    },
+  }
+
+  async function connect() {
     try {
-      onEvent(JSON.parse(ev.data))
+      const token = await accessToken({ refresh: attempt > 0 })
+      if (stopped) return
+      const query = new URLSearchParams({ sessionId, token })
+      socket = new WebSocket(`${proto}://${location.host}/ws?${query}`)
+      onStatus?.('connecting')
+      socket.onopen = () => {
+        attempt = 0
+        onStatus?.('open')
+        onOpen?.(client)
+      }
+      socket.onmessage = (ev) => {
+        try {
+          onEvent(JSON.parse(ev.data))
+        } catch {
+          /* ignore malformed server event */
+        }
+      }
+      socket.onerror = () => onStatus?.('error')
+      socket.onclose = () => {
+        socket = null
+        if (stopped) return
+        onStatus?.('closed')
+        const delay = Math.min(5000, 300 * 2 ** Math.min(attempt++, 4))
+        reconnectTimer = window.setTimeout(connect, delay)
+      }
     } catch {
-      /* ignore */
+      if (stopped) return
+      onStatus?.('error')
+      const delay = Math.min(5000, 300 * 2 ** Math.min(attempt++, 4))
+      reconnectTimer = window.setTimeout(connect, delay)
     }
   }
-  return ws
+
+  connect()
+  return client
 }

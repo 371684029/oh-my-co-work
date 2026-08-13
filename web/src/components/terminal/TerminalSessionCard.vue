@@ -51,6 +51,7 @@ const statusText = computed(() => {
     exited: '已完成',
     failed: '启动失败',
     killed: '已停止',
+    timed_out: '已超时',
     interrupted: '已中断',
   }
   return map[props.terminal.status] || props.terminal.status || '未知'
@@ -64,7 +65,7 @@ function stripAnsi(value) {
 }
 
 const preview = computed(() => {
-  const lines = stripAnsi(props.terminal.replay)
+  const lines = stripAnsi(props.terminal.previewReplay || props.terminal.replay)
     .split('\n')
     .filter((line) => line.trim())
   return lines.slice(-7).join('\n') || '终端已就绪，等待输出…'

@@ -17,7 +17,7 @@ const host = ref(null)
 let xterm = null
 let fitAddon = null
 let resizeObserver = null
-let writtenLength = 0
+let lastSeq = 0
 
 function fit() {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
@@ -29,16 +29,12 @@ function fit() {
   }
 }
 
-function writeReplay(value) {
+function resetToReplay(value) {
   if (!xterm) return
   const text = String(value || '')
-  if (text.length < writtenLength) {
-    xterm.reset()
-    writtenLength = 0
-  }
-  const chunk = text.slice(writtenLength)
-  if (chunk) xterm.write(chunk)
-  writtenLength = text.length
+  xterm.reset()
+  if (text) xterm.write(text)
+  lastSeq = Number(props.terminal.seq || 0)
 }
 
 onMounted(async () => {
@@ -86,7 +82,7 @@ onMounted(async () => {
     }
     emit('input', data)
   })
-  writeReplay(props.terminal.replay)
+  resetToReplay(props.terminal.replay)
   resizeObserver = new ResizeObserver(() => fit())
   resizeObserver.observe(host.value)
   await nextTick()
@@ -95,8 +91,18 @@ onMounted(async () => {
 })
 
 watch(
-  () => props.terminal.replay,
-  (value) => writeReplay(value),
+  () => props.terminal.seq,
+  (seq) => {
+    const nextSeq = Number(seq || 0)
+    if (!xterm || nextSeq <= lastSeq) return
+    if (props.terminal.lastChunk) xterm.write(props.terminal.lastChunk)
+    lastSeq = nextSeq
+  },
+)
+
+watch(
+  () => props.terminal.snapshotKey,
+  () => resetToReplay(props.terminal.replay),
 )
 
 onBeforeUnmount(() => {

@@ -67,6 +67,7 @@ import {
 
 const props = defineProps({
   terminal: { type: Object, required: true },
+  connectionStatus: { type: String, default: 'open' },
 })
 
 defineEmits(['close', 'kill', 'input', 'resize'])
@@ -75,12 +76,16 @@ const workspaceRoot = ref(null)
 const isFullscreen = ref(false)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const statusText = computed(() => {
+  if (props.connectionStatus !== 'open') {
+    return props.connectionStatus === 'connecting' ? '连接中' : '重连中'
+  }
   const map = {
     starting: '启动中',
     running: '交互中',
     exited: '已结束',
     failed: '启动失败',
     killed: '已停止',
+    timed_out: '已超时',
     interrupted: '已中断',
   }
   return map[props.terminal.status] || props.terminal.status

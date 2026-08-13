@@ -6,6 +6,7 @@ import { DATA_ROOT } from '../db.js'
 import { emitSession } from '../bus.js'
 import {
   killMemberProcesses,
+  killProcessTree,
   registerProcess,
   unregisterProcess,
 } from '../processRegistry.js'
@@ -15,6 +16,10 @@ const MAX_REPLAY_CHARS = 256_000
 const MAX_INPUT_CHARS = 16_384
 const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
+const RETAIN_FINISHED_GLOBAL = 200
+const MAX_LOG_BYTES = 10 * 1024 * 1024
+const MAX_INPUT_BYTES_PER_SECOND = 256 * 1024
+const MAX_INPUT_MESSAGES_PER_SECOND = 500
 
 function nowIso() {
   return new Date().toISOString()
@@ -55,6 +60,7 @@ function publicTerminal(entry, { includeReplay = false } = {}) {
     startedAt: entry.startedAt,
     finishedAt: entry.finishedAt,
     log: entry.logName,
+    logTruncated: entry.logTruncated,
     replayTruncated: entry.replayTruncated,
     ...(includeReplay ? { replay: entry.replay } : {}),
   }
@@ -88,10 +94,18 @@ function queueOutput(entry, data) {
   if (!text) return
   appendReplay(entry, text)
   entry.pendingOutput += text
-  try {
-    fs.appendFileSync(entry.logPath, text)
-  } catch {
-    /* 日志失败不应中断终端 */
+  if (entry.logStream && !entry.logTruncated) {
+    const bytes = Buffer.byteLength(text)
+    const remaining = MAX_LOG_BYTES - entry.logBytes
+    if (remaining > 0) {
+      const chunk = bytes <= remaining ? text : Buffer.from(text).subarray(0, remaining)
+      entry.logStream.write(chunk)
+      entry.logBytes += Math.min(bytes, remaining)
+    }
+    if (bytes > remaining) {
+      entry.logTruncated = true
+      entry.logStream.write('\n[oh-my-co-work] terminal log truncated at 10 MiB\n')
+    }
   }
   if (!entry.flushTimer) {
     entry.flushTimer = setTimeout(() => flushOutput(entry), OUTPUT_BATCH_MS)
@@ -119,6 +133,10 @@ function pruneFinished(sessionId) {
     .filter((t) => t.sessionId === sessionId && t.status !== 'running' && t.status !== 'starting')
     .sort((a, b) => String(b.finishedAt || '').localeCompare(String(a.finishedAt || '')))
   for (const entry of finished.slice(RETAIN_FINISHED)) terminals.delete(entry.id)
+  const allFinished = [...terminals.values()]
+    .filter((t) => t.status !== 'running' && t.status !== 'starting')
+    .sort((a, b) => String(b.finishedAt || '').localeCompare(String(a.finishedAt || '')))
+  for (const entry of allFinished.slice(RETAIN_FINISHED_GLOBAL)) terminals.delete(entry.id)
 }
 
 /**
@@ -183,11 +201,25 @@ export function runTerminal({
       finishedAt: null,
       logName,
       logPath,
+      logStream: null,
+      logBytes: 0,
+      logTruncated: false,
       process: null,
       settled: false,
       timeout: null,
+      inputWindowAt: Date.now(),
+      inputBytesInWindow: 0,
+      inputMessagesInWindow: 0,
     }
     terminals.set(id, entry)
+    try {
+      entry.logStream = fs.createWriteStream(logPath, { flags: 'a' })
+      entry.logStream.on('error', () => {
+        entry.logStream = null
+      })
+    } catch {
+      entry.logStream = null
+    }
 
     const finish = ({ exitCode = -1, signal = null, error = null } = {}) => {
       if (entry.settled) return
@@ -198,21 +230,29 @@ export function runTerminal({
         flushOutput(entry)
       }
       entry.exitCode = Number.isFinite(Number(exitCode)) ? Number(exitCode) : -1
-      entry.signal = signal || null
+      entry.signal = signal || entry.signal || null
       entry.finishedAt = nowIso()
-      entry.status = error ? 'failed' : entry.status === 'killed' ? 'killed' : 'exited'
+      entry.status = error
+        ? 'failed'
+        : entry.status === 'killed' || entry.status === 'timed_out'
+          ? entry.status
+          : 'exited'
+      entry.logStream?.end()
+      entry.logStream = null
       unregisterProcess(sessionId, runId)
       emitTerminal(entry, 'terminal.exited', { terminal: publicTerminal(entry) })
       pruneFinished(sessionId)
 
-      const ok = !error && successCodes.includes(entry.exitCode)
+      const ok = !error && entry.status === 'exited' && successCodes.includes(entry.exitCode)
       const summary = error
         ? `【${entry.label}】终端启动失败：${error.message}`
-        : entry.status === 'killed'
-          ? `【${entry.label}】终端已停止`
-          : ok
-            ? `【${entry.label}】终端执行完成（exit ${entry.exitCode}）`
-            : `【${entry.label}】终端执行失败（exit ${entry.exitCode}）`
+        : entry.status === 'timed_out'
+          ? `【${entry.label}】终端执行超时`
+          : entry.status === 'killed'
+            ? `【${entry.label}】终端已停止`
+            : ok
+              ? `【${entry.label}】终端执行完成（exit ${entry.exitCode}）`
+              : `【${entry.label}】终端执行失败（exit ${entry.exitCode}）`
       resolve({
         ok,
         summary,
@@ -230,7 +270,13 @@ export function runTerminal({
         error: ok
           ? undefined
           : {
-              code: error ? 'PTY_START_FAILED' : entry.status === 'killed' ? 'KILLED' : 'EXIT',
+              code: error
+                ? 'PTY_START_FAILED'
+                : entry.status === 'timed_out'
+                  ? 'TIMEOUT'
+                  : entry.status === 'killed'
+                    ? 'KILLED'
+                    : 'EXIT',
               message: error?.message || summary,
             },
       })
@@ -272,9 +318,11 @@ export function runTerminal({
       }
       if (Number(timeoutMs) > 0) {
         entry.timeout = setTimeout(() => {
-          entry.status = 'killed'
+          entry.status = 'timed_out'
+          entry.signal = 'timeout'
           try {
             entry.process.kill()
+            killProcessTree(entry.pid)
           } catch {
             finish({ exitCode: -1, signal: 'timeout' })
           }
@@ -287,14 +335,41 @@ export function runTerminal({
 }
 
 export function listSessionTerminals(sessionId, { includeReplay = true } = {}) {
-  return [...terminals.values()]
-    .filter((entry) => entry.sessionId === sessionId)
+  const entries = [...terminals.values()].filter((entry) => entry.sessionId === sessionId)
+  for (const entry of entries) {
+    if (entry.pendingOutput) {
+      if (entry.flushTimer) clearTimeout(entry.flushTimer)
+      flushOutput(entry)
+    }
+  }
+  return entries
     .sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt)))
     .map((entry) => publicTerminal(entry, { includeReplay }))
 }
 
 export function getTerminal(id) {
   return terminals.get(id) || null
+}
+
+export function forgetSessionTerminals(sessionId) {
+  for (const [id, entry] of [...terminals.entries()]) {
+    if (entry.sessionId !== sessionId) continue
+    if (entry.flushTimer) clearTimeout(entry.flushTimer)
+    entry.flushTimer = null
+    entry.logStream?.end()
+    entry.logStream = null
+    if (entry.status === 'running' || entry.status === 'starting') {
+      entry.status = 'killed'
+      entry.signal = 'session_deleted'
+      try {
+        entry.process?.kill()
+        killProcessTree(entry.pid)
+      } catch {
+        /* process may already have exited */
+      }
+    }
+    terminals.delete(id)
+  }
 }
 
 export function killTerminal(id, reason = 'user') {
@@ -305,6 +380,7 @@ export function killTerminal(id, reason = 'user') {
   entry.signal = reason
   try {
     entry.process?.kill()
+    killProcessTree(entry.pid)
   } catch {
     return false
   }
@@ -331,6 +407,10 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
   }
 
   if (message.type === 'terminal.attach') {
+    if (entry.pendingOutput) {
+      if (entry.flushTimer) clearTimeout(entry.flushTimer)
+      flushOutput(entry)
+    }
     send(ws, {
       type: 'terminal.snapshot',
       payload: {
@@ -352,7 +432,32 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
       })
       return true
     }
-    if (entry.status === 'running') entry.process.write(data)
+    const now = Date.now()
+    if (now - entry.inputWindowAt >= 1000) {
+      entry.inputWindowAt = now
+      entry.inputBytesInWindow = 0
+      entry.inputMessagesInWindow = 0
+    }
+    entry.inputBytesInWindow += Buffer.byteLength(data)
+    entry.inputMessagesInWindow += 1
+    if (
+      entry.inputBytesInWindow > MAX_INPUT_BYTES_PER_SECOND ||
+      entry.inputMessagesInWindow > MAX_INPUT_MESSAGES_PER_SECOND
+    ) {
+      send(ws, {
+        type: 'terminal.error',
+        payload: { terminalId, code: 'INPUT_RATE_LIMITED', message: '终端输入过于频繁' },
+      })
+      return true
+    }
+    try {
+      if (entry.status === 'running') entry.process.write(data)
+    } catch {
+      send(ws, {
+        type: 'terminal.error',
+        payload: { terminalId, code: 'TERMINAL_NOT_RUNNING', message: '终端已结束' },
+      })
+    }
     return true
   }
   if (message.type === 'terminal.resize') {
@@ -360,7 +465,14 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
     const rows = clampSize(message.rows ?? message.payload?.rows, entry.rows, 5, 120)
     entry.cols = cols
     entry.rows = rows
-    if (entry.status === 'running') entry.process.resize(cols, rows)
+    try {
+      if (entry.status === 'running') entry.process.resize(cols, rows)
+    } catch {
+      send(ws, {
+        type: 'terminal.error',
+        payload: { terminalId, code: 'RESIZE_FAILED', message: '终端尺寸同步失败' },
+      })
+    }
     return true
   }
   if (message.type === 'terminal.kill') {

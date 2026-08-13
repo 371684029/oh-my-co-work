@@ -70,6 +70,25 @@ function clearSessionPidFile(sessionId) {
   }
 }
 
+function forgetSessionPid(sessionId, pid) {
+  if (!sessionId || !pid) return
+  const file = sessionPidFile(sessionId)
+  if (!fs.existsSync(file)) return
+  try {
+    const kept = fs
+      .readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .filter((line) => {
+        if (!line.trim()) return false
+        return parseInt(String(line).split(/\s|\t/)[0], 10) !== Number(pid)
+      })
+    if (kept.length) fs.writeFileSync(file, `${kept.join('\n')}\n`, 'utf8')
+    else fs.unlinkSync(file)
+  } catch {
+    /* ignore */
+  }
+}
+
 export function registerProcess(sessionId, runId, entry) {
   if (!sessionId || !runId || !entry?.pid) return
   const map = ensureSession(sessionId)
@@ -89,7 +108,9 @@ export function registerProcess(sessionId, runId, entry) {
 export function unregisterProcess(sessionId, runId) {
   const map = bySession.get(sessionId)
   if (!map) return
+  const entry = map.get(runId)
   map.delete(runId)
+  if (entry?.pid) forgetSessionPid(sessionId, entry.pid)
   if (map.size === 0) bySession.delete(sessionId)
 }
 
@@ -177,6 +198,7 @@ export function killMemberProcesses(sessionId, memberId, opts = {}) {
     pids.push(entry.pid)
     killEntry(entry)
     map.delete(id)
+    forgetSessionPid(sessionId, entry.pid)
   }
   if (map.size === 0) bySession.delete(sessionId)
   return { killed: pids.length, pids, scope: 'member', memberId }
@@ -274,6 +296,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
         addKillPid(entry.pid)
         killEntry(entry)
         map.delete(key)
+        forgetSessionPid(sessionId, entry.pid)
       }
       if (map.size === 0) bySession.delete(sessionId)
     }

@@ -1,6 +1,6 @@
 {
   "name": "oh-my-co-work",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": true,
   "description": "群聊式多智能体协同台 MVP",
   "workspaces": [
@@ -17,7 +17,8 @@
     "start:server": "npm run start -w server",
     "backup": "node scripts/backup.mjs",
     "pack": "node scripts/pack-release.mjs",
-    "build": "npm run build -w web"
+    "build": "npm run build -w web",
+    "test": "npm run test -w server"
   },
   "engines": {
     "node": ">=18"

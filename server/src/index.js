@@ -19,6 +19,13 @@ import {
   getLifecycleStatus,
 } from './lifecycle.js'
 import { killSessionProcesses } from './processRegistry.js'
+import {
+  bootstrapLocalAccess,
+  hasValidAccessToken,
+  isTrustedOrigin,
+  rejectUntrustedOrigin,
+  requireLocalAccess,
+} from './localAccess.js'
 
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
@@ -90,8 +97,18 @@ if (nonAdmin.length === 0) {
 }
 
 const app = express()
-app.use(cors())
+app.use(rejectUntrustedOrigin)
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, origin && isTrustedOrigin(origin) ? origin : false)
+    },
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-ACW-Token'],
+  }),
+)
 app.use(express.json({ limit: '2mb' }))
+app.get('/api/bootstrap', bootstrapLocalAccess)
+app.use('/api', requireLocalAccess)
 app.use('/api', routes)
 
 // serve web dist if present
@@ -105,7 +122,15 @@ if (fs.existsSync(webDist)) {
 }
 
 const server = http.createServer(app)
-const wss = new WebSocketServer({ server, path: '/ws' })
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  verifyClient(info, done) {
+    const trustedOrigin = isTrustedOrigin(info.origin || info.req.headers.origin)
+    const authorized = hasValidAccessToken(info.req)
+    done(trustedOrigin && authorized, trustedOrigin ? 401 : 403, 'Local access denied')
+  },
+})
 
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`)
