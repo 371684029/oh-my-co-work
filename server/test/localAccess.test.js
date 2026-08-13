@@ -34,5 +34,12 @@ test('bootstrap token is required by protected requests', () => {
     hasValidAccessToken({ headers: { 'x-acw-token': `${body.token}x` }, query: {} }),
     false,
   )
+  assert.equal(
+    hasValidAccessToken({
+      headers: {},
+      url: `/ws?sessionId=test&token=${encodeURIComponent(body.token)}`,
+    }),
+    true,
+  )
 })
 

@@ -38,7 +38,13 @@ export function bootstrapLocalAccess(_req, res) {
 export function requestToken(req) {
   const authorization = String(req.headers.authorization || '')
   if (authorization.startsWith('Bearer ')) return authorization.slice(7)
-  return req.headers['x-acw-token'] || req.query?.token || ''
+  if (req.headers['x-acw-token']) return req.headers['x-acw-token']
+  if (req.query?.token) return req.query.token
+  try {
+    return new URL(req.url || '', 'http://127.0.0.1').searchParams.get('token') || ''
+  } catch {
+    return ''
+  }
 }
 
 export function hasValidAccessToken(req) {
