@@ -63,6 +63,8 @@ if (nonAdmin.length === 0) {
       demo: true,
       script: {
         mode: 'command',
+        scriptWorkDir: process.cwd(),
+        scriptDir: process.cwd(),
         // 演示：命令里可用 #1 #2 与 {folder}
         command:
           process.platform === 'win32'
