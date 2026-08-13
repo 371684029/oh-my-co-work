@@ -727,8 +727,8 @@
                 }}</span>
                 <span>{{
                   isSkippedFlowGroupExpanded(entry)
-                    ? `收起 ${entry.nodes.length} 个跳过的未执行步骤`
-                    : `${entry.nodes.length} 个跳过的未执行步骤已折叠`
+                    ? `收起 ${entry.nodes.length} 个未执行的废弃步骤`
+                    : `${entry.nodes.length} 个未执行的废弃步骤已折叠`
                 }}</span>
               </button>
             </div>
@@ -1228,6 +1228,7 @@ import {
   extractCallArgsFromSlash,
   isMentionAssistOnly,
   nodeStatusLabel,
+  isDiscardedUnexecutedFlowNode,
   stepTypeLabel as sharedStepTypeLabel,
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
@@ -3124,22 +3125,25 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-function isSkippedUnexecutedNode(n) {
-  return n?.step_type !== 'offsite' && n?.status === 'skipped'
+function isDiscardedUnexecutedNode(n) {
+  return isDiscardedUnexecutedFlowNode(n, {
+    currentStepIndex: detail.value?.session?.current_step_index,
+    isCurrent: isCurrent(n),
+  })
 }
 
 /**
- * 将相邻的跳过节点归为一段。每段默认收起，避免跨越多个未执行步骤时流程轨过长；
- * 非相邻节点保持原位置，仍能反映实际流程分支。
+ * 将相邻的「未跑过且已废弃」节点归为一段并默认收起。
+ * 已执行节点（成功/失败/执行中/场外）和当前轨将要跑的节点保持展开。
  */
 const flowEntries = computed(() => {
   const entries = []
   for (const node of detail.value?.nodes || []) {
     const previous = entries.at(-1)
-    if (isSkippedUnexecutedNode(node) && previous?.type === 'skipped') {
+    if (isDiscardedUnexecutedNode(node) && previous?.type === 'skipped') {
       previous.nodes.push(node)
       previous.key = `skipped-${previous.nodes[0].id}-${node.id}`
-    } else if (isSkippedUnexecutedNode(node)) {
+    } else if (isDiscardedUnexecutedNode(node)) {
       entries.push({ type: 'skipped', key: `skipped-${node.id}-${node.id}`, nodes: [node] })
     } else {
       entries.push({ type: 'node', key: `node-${node.id}`, nodes: [node] })
@@ -3194,7 +3198,7 @@ const flowAnchorNodeId = computed(() => {
   const off = activeOffsiteNode.value
   if (off?.id) return off.id
   const archWait = nodes.find(
-    (n) => n.step_type === 'archive' && n.status === 'waiting_human',
+    (n) => n.step_type === 'archive' && n.status === 'waiting_human' && isCurrent(n),
   )
   if (archWait) return archWait.id
   const waitingAtCur = nodes.find(

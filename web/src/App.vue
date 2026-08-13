@@ -59,7 +59,6 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
-import { api } from './api'
 import {
   exitFullscreen,
   fullscreenElement,
@@ -71,42 +70,12 @@ const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
 const isFullscreen = ref(false)
-const defaultFullscreen = ref(true)
-let defaultGestureHandler = null
 
 function syncFullscreenState() {
   isFullscreen.value = !!fullscreenElement()
 }
 
-function disarmDefaultFullscreen() {
-  if (!defaultGestureHandler) return
-  window.removeEventListener('pointerdown', defaultGestureHandler, true)
-  defaultGestureHandler = null
-}
-
-function armDefaultFullscreen() {
-  disarmDefaultFullscreen()
-  if (!defaultFullscreen.value || nav.value !== 'workbench' || fullscreenElement()) return
-  defaultGestureHandler = async (event) => {
-    if (event.target?.closest?.('[data-fullscreen-control]')) return
-    disarmDefaultFullscreen()
-    await requestFullscreen(appRoot.value)
-  }
-  window.addEventListener('pointerdown', defaultGestureHandler, true)
-}
-
-async function loadFullscreenPreference() {
-  try {
-    const settings = await api.appSettings.get()
-    defaultFullscreen.value = settings.defaultFullscreen !== false
-  } catch {
-    defaultFullscreen.value = false
-  }
-  armDefaultFullscreen()
-}
-
 async function toggleWorkbenchFullscreen() {
-  disarmDefaultFullscreen()
   const ok = fullscreenElement()
     ? await exitFullscreen()
     : await requestFullscreen(appRoot.value)
@@ -117,8 +86,6 @@ watch(
   () => route.path,
   (p) => {
     nav.value = p.startsWith('/settings') ? 'settings' : 'workbench'
-    if (nav.value === 'workbench') loadFullscreenPreference()
-    else disarmDefaultFullscreen()
   },
 )
 
@@ -130,11 +97,9 @@ function go(v) {
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   syncFullscreenState()
-  loadFullscreenPreference()
 })
 
 onUnmounted(() => {
-  disarmDefaultFullscreen()
   document.removeEventListener('fullscreenchange', syncFullscreenState)
 })
 </script>

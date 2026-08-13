@@ -38,6 +38,31 @@ export function nodeStatusLabel(status) {
   return m[status] || status || ''
 }
 
+/**
+ * 流程轨默认折叠：未跑过且已废弃（旧轨跳过/绕过、游标之前仍待跑的归档等）。
+ * 已执行节点与当前轨上将要跑的节点不折叠。
+ */
+export function isDiscardedUnexecutedFlowNode(node, { currentStepIndex, isCurrent } = {}) {
+  if (!node || node.step_type === 'offsite') return false
+  if (
+    node.status === 'succeeded' ||
+    node.status === 'failed' ||
+    node.status === 'running' ||
+    node.status === 'interrupted'
+  ) {
+    return false
+  }
+  if (isCurrent) return false
+  const cur = Number(currentStepIndex)
+  const behindCursor = Number.isFinite(cur) && Number(node.step_index) < cur
+  const bypassed = !!(node.output?.bypassed || node.input?.bypassed)
+  return (
+    node.status === 'skipped' ||
+    bypassed ||
+    ((node.status === 'pending' || node.status === 'waiting_human') && behindCursor)
+  )
+}
+
 export const MEMBER_KIND = {
   ECHO: 'echo',
   SCRIPT: 'script',

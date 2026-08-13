@@ -778,8 +778,8 @@ function nodeLooksCloned(node) {
 }
 
 /**
- * 「从这里继续」后：旧轨上仍 waiting/running（及被越过的 pending）标为跳过（已绕过），
- * 避免多处「待确认」抢交互。
+ * 「从这里继续」后：旧轨上仍 waiting/running/pending（含未跑过的归档）标为跳过（已绕过），
+ * 避免多处「待确认」抢交互，并让流程轨折叠这些废弃节点。
  * - beforeStepIndex 有值（往前跳）：只处理该下标之前的节点
  * - 无 beforeStepIndex（往回/再跑克隆）：旧轨上未完成的一并绕过
  */
@@ -796,7 +796,6 @@ function bypassAbandonedNodes(sessionId, { keepNodeIds = [], beforeStepIndex = n
   let n = 0
   for (const node of nodes) {
     if (keep.has(node.id)) continue
-    if (node.step_type === STEP_TYPE.ARCHIVE) continue
     const idx = Number(node.step_index)
     if (cut != null && idx >= cut) continue
     const abandon =
