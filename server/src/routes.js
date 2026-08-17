@@ -45,6 +45,7 @@ import {
   runSlashCommand,
 } from './slashCommands.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
+import { listOccupiedResources, releaseResources } from './resources.js'
 import {
   getAppSettings,
   updateAppSettings,
@@ -469,6 +470,26 @@ router.post('/sessions/:id/kill-processes', (req, res) => {
 router.get('/sessions/:id/processes', (req, res) => {
   try {
     res.json({ processes: listSessionProcesses(req.params.id) })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+router.get('/resources', (_req, res) => {
+  try {
+    res.json({ items: listOccupiedResources() })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+router.post('/resources/release', (req, res) => {
+  try {
+    const sessionIds = req.body?.sessionIds ?? req.body?.sessionId
+    const ids = Array.isArray(sessionIds)
+      ? sessionIds
+      : sessionIds
+        ? [sessionIds]
+        : []
+    res.json(releaseResources({ sessionIds: ids }))
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

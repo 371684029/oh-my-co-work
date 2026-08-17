@@ -152,7 +152,7 @@
               </el-collapse-item>
             </el-collapse>
             <p v-else class="flow-policy">
-              临时协助仅在 @ / 插队时插入。回主线点「从这里继续」。末尾固定归档（手动或超时）。
+              临时协助仅在 @ / 插队时插入。回主线点「从这里继续」。进程占用到设置里释放。
             </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">

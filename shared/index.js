@@ -4,7 +4,7 @@ export const SESSION_STATUS = {
   ACTIVE: 'active',
   PAUSED: 'paused',
   WAITING_HUMAN: 'waiting_human',
-  /** 进程崩溃/服务重启后待人选择：继续 / 归档 / 放弃 */
+  /** 崩溃恢复：继续 / 放弃（释放进程到设置） */
   INTERRUPTED: 'interrupted',
   ARCHIVED: 'archived',
   FAILED: 'failed',
@@ -68,8 +68,8 @@ export const MEMBER_KIND = {
   SCRIPT: 'script',
 }
 
-/** 脚本/成员节点默认超时：10 分钟 */
-export const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
+/** 脚本/成员节点默认超时：0 = 不超时 */
+export const DEFAULT_SCRIPT_TIMEOUT_MS = 0
 
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {

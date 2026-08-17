@@ -36,7 +36,7 @@ import {
   isMentionAssistOnly,
   OFFSITE_MODE,
 } from '@acw/shared'
-import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
+import { resolveGroupAdmin } from './appSettings.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -140,44 +140,65 @@ export function pruneIdleOffsitePlaceholders(sessionId) {
 }
 
 /**
- * 确保会话末尾有「归档」节点（每局固定挂尾；克隆续跑后再挂新一段）。
+ * 兼容旧会话：只返回已有归档尾节点，不再新建。
+ * 释放资源改到设置里手动操作，流程轨不再挂归档步。
  */
-export function ensureArchiveTailNode(sessionId, { title } = {}) {
-  const db = getDb()
-  const tail = db
-    .prepare(
-      `SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index DESC LIMIT 1`,
-    )
-    .get(sessionId)
-  if (tail && tail.step_type === STEP_TYPE.ARCHIVE) {
-    const out = parseJson(tail.output_json, {})
-    // 已成功归档的旧尾节点不再复用：续跑后再挂新归档段
-    if (tail.status === NODE_STATUS.SUCCEEDED && (out.archived || out.sessionArchived)) {
-      /* fall through to append */
-    } else {
-      return tail
-    }
-  }
-  const row = db
-    .prepare(`SELECT MAX(step_index) AS m FROM node_instances WHERE session_id = ?`)
-    .get(sessionId)
-  const idx = row?.m == null ? 0 : Number(row.m) + 1
-  const id = uid('node')
-  db.prepare(
-    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    id,
-    sessionId,
-    idx,
-    'archive_tail',
-    title || '归档',
-    STEP_TYPE.ARCHIVE,
-    null,
-    NODE_STATUS.PENDING,
-    1,
+export function ensureArchiveTailNode(sessionId) {
+  return (
+    getDb()
+      .prepare(
+        `SELECT * FROM node_instances WHERE session_id = ? AND step_type = ? ORDER BY step_index DESC LIMIT 1`,
+      )
+      .get(sessionId, STEP_TYPE.ARCHIVE) || null
   )
-  return db.prepare('SELECT * FROM node_instances WHERE id = ?').get(id)
+}
+
+function skipArchiveNode(sessionId, node, reason = 'completed') {
+  if (!node) return
+  if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) return
+  persistNodeIo(sessionId, node.id, {
+    input: { kind: 'archive', skipped: true, reason },
+    output: { skipped: true, skipReason: 'settings_release', reason },
+    status: NODE_STATUS.SKIPPED,
+    finished: true,
+  })
+}
+
+/**
+ * 清掉待确认归档闸门，不杀进程、不改成 archived。
+ * 旧会话打开或流程走完时调用。
+ */
+export function dismissPendingArchiveIfAny(sessionId, reason = 'completed') {
+  const session = getSession(sessionId)
+  if (!session) return null
+  if (session.status === SESSION_STATUS.ARCHIVED) return null
+  if (session.status === SESSION_STATUS.INTERRUPTED) return null
+  const db = getDb()
+  const archNodes = db
+    .prepare(`SELECT * FROM node_instances WHERE session_id = ? AND step_type = ?`)
+    .all(sessionId, STEP_TYPE.ARCHIVE)
+  for (const node of archNodes) {
+    skipArchiveNode(sessionId, node, reason)
+  }
+  const s2 = getSession(sessionId)
+  const ctx = parseJson(s2?.context_json, {})
+  const hadPending = !!ctx.pendingArchive
+  delete ctx.pendingArchive
+  const otherWait =
+    db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM node_instances WHERE session_id = ? AND status = ? AND IFNULL(step_type,'') != ?`,
+      )
+      .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.ARCHIVE)?.c || 0
+  const patch = { context_json: JSON.stringify(ctx) }
+  if (s2.status === SESSION_STATUS.WAITING_HUMAN && hadPending && otherWait === 0) {
+    patch.status =
+      reason === 'failed' || reason === 'rejected'
+        ? SESSION_STATUS.FAILED
+        : SESSION_STATUS.ACTIVE
+  }
+  updateSession(sessionId, patch)
+  return null
 }
 
 function markArchiveNodeDone(sessionId, { reason, note } = {}) {
@@ -893,11 +914,6 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
     )
     nextIdx += 1
   }
-  // 克隆续跑后仍挂一段新的归档尾节点
-  const arch = ensureArchiveTailNode(sessionId)
-  if (arch && !created.find((n) => n.id === arch.id)) {
-    /* archive is pending tail; not a clone start target */
-  }
   return { created, batchId, startTpl }
 }
 
@@ -1387,8 +1403,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     )
   })
   // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
-  // 末尾固定挂「归档」节点（手动确认或超时自动）
-  ensureArchiveTailNode(sessionId)
+  // 不再挂归档尾节点：释放资源改到设置里手动操作
 
   addMessage(sessionId, {
     role: 'system',
@@ -1513,10 +1528,12 @@ export async function advance(sessionId) {
       return
     }
 
-    // 末尾归档节点：进入确认闸门（手动 / 超时自动）
+    // 旧归档尾节点：静默跳过，不弹闸门、不杀进程
     if (node.step_type === STEP_TYPE.ARCHIVE) {
-      requestArchiveConsent(sessionId, 'completed')
-      return
+      skipArchiveNode(sessionId, node, 'completed')
+      idx += 1
+      updateSession(sessionId, { current_step_index: idx })
+      continue
     }
 
     // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
@@ -1658,7 +1675,7 @@ export async function advance(sessionId) {
         node_instance_id: node.id,
         content: { text: `步骤失败：未绑定成员或不存在` },
       })
-      requestArchiveConsent(sessionId, 'failed')
+      dismissPendingArchiveIfAny(sessionId, 'failed')
       return
     }
 
@@ -1822,7 +1839,7 @@ export async function advance(sessionId) {
         })
         return
       }
-      requestArchiveConsent(sessionId, 'failed')
+      dismissPendingArchiveIfAny(sessionId, 'failed')
       return
     }
 
@@ -1858,156 +1875,43 @@ export async function advance(sessionId) {
     updateSession(sessionId, { current_step_index: idx })
   }
 
-  // 全部步骤完成 → 待人工归档；超时（可配置，默认 3h）系统自动归档
+  // 全部步骤完成：保持会话进行中，常驻终端不回收；到设置里释放资源
   refreshSessionAnnouncement(sessionId)
-  requestArchiveConsent(sessionId, 'completed')
+  dismissPendingArchiveIfAny(sessionId, 'completed')
 }
 
 /**
- * 归档须人工同意或点「归档」；超时（默认 3h，设置可改）系统自动归档以释放资源
- * @param {string} sessionId
- * @param {string} reason completed | failed | …
+ * 兼容旧调用名：不再弹归档闸门、不杀进程。
  */
 export function requestArchiveConsent(sessionId, reason = 'completed') {
-  const session = getSession(sessionId)
-  if (!session) return null
-  if (session.status === SESSION_STATUS.ARCHIVED) return null
-  const ctx0 = parseJson(session.context_json, {})
-  if (ctx0.pendingArchive?.dueAt) return ctx0.pendingArchive
-
-  const archNode = ensureArchiveTailNode(sessionId)
-  const hours = getAppSettings().autoArchiveHours ?? 3
-  const requestedAt = new Date()
-  const dueAt = new Date(requestedAt.getTime() + hours * 3600 * 1000)
-  const ctx = parseJson(session.context_json, {})
-  ctx.pendingArchive = {
-    reason,
-    requestedAt: requestedAt.toISOString(),
-    dueAt: dueAt.toISOString(),
-    hours,
-    nodeInstanceId: archNode.id,
-  }
-  updateSession(sessionId, {
-    status: SESSION_STATUS.WAITING_HUMAN,
-    current_step_index: Number(archNode.step_index),
-    context_json: JSON.stringify(ctx),
-  })
-
-  persistNodeIo(sessionId, archNode.id, {
-    input: {
-      kind: 'archive',
-      reason,
-      at: requestedAt.toISOString(),
-      hours,
-      dueAt: dueAt.toISOString(),
-    },
-    output: {
-      waiting: true,
-      humanAction: 'pending',
-      reason,
-      hours,
-      dueAt: dueAt.toISOString(),
-    },
-    status: NODE_STATUS.WAITING_HUMAN,
-  })
-
-  // 待确认归档：结束全部脚本窗口（含弹窗保留的黑窗）
-  try {
-    killSessionProcesses(sessionId, { includeDetach: true })
-  } catch {
-    /* ignore */
-  }
-
-  const reasonLabel =
-    reason === 'completed'
-      ? '全部步骤已完成'
-      : reason === 'failed'
-        ? '任务失败，待确认归档'
-        : reason === 'rejected'
-          ? '已明确拒绝，待确认归档'
-          : `待归档（${reason}）`
-
-  addMessage(sessionId, {
-    role: 'system',
-    type: 'status',
-    node_instance_id: archNode.id,
-    content: {
-      text: `${reasonLabel}。请在右侧「归档」节点确认；也可手动归档。${hours} 小时内未确认将自动归档（尽量结束进程并放开目录）。超时可在设置里改。`,
-    },
-  })
-  addMessage(sessionId, {
-    role: 'system',
-    type: 'gate',
-    node_instance_id: archNode.id,
-    content: {
-      mode: 'archive_confirm',
-      text: `${reasonLabel}。是否确认归档？`,
-      reason,
-      dueAt: dueAt.toISOString(),
-      hours,
-      actions: ['approve_archive', 'defer_archive'],
-      policy: `同意=立即归档；暂不归档=仍保留任务，但满 ${hours} 小时后仍会自动归档（设置 → 偏好可改）。`,
-    },
-  })
-  emitSession(sessionId, {
-    type: 'gate.request',
-    payload: {
-      mode: 'archive_confirm',
-      dueAt: dueAt.toISOString(),
-      hours,
-      reason,
-      nodeInstanceId: archNode.id,
-    },
-  })
-  emitSession(sessionId, {
-    type: 'session.status',
-    payload: {
-      sessionId,
-      status: SESSION_STATUS.WAITING_HUMAN,
-      pendingArchive: ctx.pendingArchive,
-      currentStepIndex: Number(archNode.step_index),
-    },
-  })
-  return ctx.pendingArchive
+  return dismissPendingArchiveIfAny(sessionId, reason)
 }
 
 /**
- * 扫描超时未确认的归档请求，系统自动归档
- * @returns {{ archived: string[] }}
+ * 不再按超时自动归档。顺手清掉旧的待确认归档闸门。
+ * @returns {{ archived: string[], dismissed: string[] }}
  */
 export function processDueArchives() {
   const rows = getDb()
-    .prepare(`SELECT * FROM sessions WHERE status = ?`)
-    .all(SESSION_STATUS.WAITING_HUMAN)
-  const archived = []
-  const now = Date.now()
+    .prepare(`SELECT * FROM sessions WHERE status != ? AND status != ?`)
+    .all(SESSION_STATUS.ARCHIVED, SESSION_STATUS.INTERRUPTED)
+  const dismissed = []
   for (const row of rows) {
     const ctx = parseJson(row.context_json, {})
-    const due = ctx.pendingArchive?.dueAt
-    if (!due) continue
-    if (new Date(due).getTime() > now) continue
+    const waitingArch = getDb()
+      .prepare(
+        `SELECT id FROM node_instances WHERE session_id = ? AND step_type = ? AND status = ?`,
+      )
+      .get(row.id, STEP_TYPE.ARCHIVE, NODE_STATUS.WAITING_HUMAN)
+    if (!ctx.pendingArchive && !waitingArch) continue
     try {
-      addMessage(row.id, {
-        role: 'system',
-        type: 'status',
-        content: {
-          text: `超过 ${ctx.pendingArchive.hours || 3} 小时未确认归档，系统已自动归档以释放资源`,
-        },
-      })
-      archiveSession(row.id, ctx.pendingArchive.reason || 'timeout')
-      // clear flag after archive (archiveSession overwrites status)
-      const s2 = getSession(row.id)
-      if (s2) {
-        const c2 = parseJson(s2.context_json, {})
-        delete c2.pendingArchive
-        updateSession(row.id, { context_json: JSON.stringify(c2) })
-      }
-      archived.push(row.id)
+      dismissPendingArchiveIfAny(row.id, ctx.pendingArchive?.reason || 'completed')
+      dismissed.push(row.id)
     } catch (e) {
-      console.warn('[acw] auto-archive failed', row.id, e.message)
+      console.warn('[acw] dismiss pending archive failed', row.id, e.message)
     }
   }
-  return { archived }
+  return { archived: [], dismissed }
 }
 
 /**
@@ -2315,7 +2219,7 @@ export function markInterruptedOnBoot() {
       role: 'system',
       type: 'status',
       content: {
-        text: '检测到服务重启或异常退出，本任务已暂停。请选择：继续 / 归档 / 放弃。',
+        text: '检测到服务重启或异常退出，本任务已暂停。请选择：继续 / 放弃。进程可在设置里释放。',
       },
     })
     addMessage(s.id, {
@@ -2323,9 +2227,9 @@ export function markInterruptedOnBoot() {
       type: 'gate',
       content: {
         mode: 'interrupted',
-        text: `会话「${s.title || s.id}」在重启前处于「${s.status}」。继续=从中断处恢复；归档=结束并保留记录；放弃=归档（原因 interrupted_discard）。`,
-        actions: ['resume_interrupted', 'archive_interrupted', 'discard_interrupted'],
-        policy: '不会自动推进；须人工选择。继续时若有未完成 running 节点会从该步重跑。',
+        text: `会话「${s.title || s.id}」在重启前处于「${s.status}」。继续=从中断处恢复；放弃=跳过未跑完的步骤（不杀进程，可到设置释放资源）。`,
+        actions: ['resume_interrupted', 'discard_interrupted'],
+        policy: '不会自动推进；须人工选择。继续时若有未完成 running 节点会从该步重跑。释放进程请到设置。',
       },
     })
     emitSession(s.id, {
@@ -2374,16 +2278,57 @@ export async function resolveInterruptedSession(sessionId, action) {
       role: 'user',
       type: 'gate',
       content: {
-        text: act === 'discard' ? '已选择放弃（中断恢复）' : '已选择归档（中断恢复）',
-        action: act === 'discard' ? 'discard_interrupted' : 'archive_interrupted',
+        text: '已选择放弃（中断恢复）',
+        action: 'discard_interrupted',
         mode: 'interrupted',
       },
     })
-    archiveSession(
-      sessionId,
-      act === 'discard' ? 'interrupted_discard' : 'interrupted_archive',
-    )
-    return { ok: true, archived: true, action: act }
+    const db = getDb()
+    const nodes = db
+      .prepare(`SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index`)
+      .all(sessionId)
+    for (const n of nodes) {
+      if (n.step_type === STEP_TYPE.ARCHIVE) {
+        skipArchiveNode(sessionId, n, 'interrupted_discard')
+        continue
+      }
+      if (
+        n.status === NODE_STATUS.PENDING ||
+        n.status === NODE_STATUS.RUNNING ||
+        n.status === NODE_STATUS.WAITING_HUMAN
+      ) {
+        persistNodeIo(sessionId, n.id, {
+          input: parseJson(n.input_json, {}),
+          output: {
+            ...parseJson(n.output_json, {}),
+            skipped: true,
+            skipReason: 'interrupted_discard',
+          },
+          status: NODE_STATUS.SKIPPED,
+          finished: true,
+        })
+      }
+    }
+    const ctx = parseJson(session.context_json, {})
+    ctx.interrupted = {
+      ...(ctx.interrupted || {}),
+      pendingResume: false,
+      resolvedAt: nowIso(),
+      resolution: 'discard',
+    }
+    delete ctx.pendingArchive
+    updateSession(sessionId, {
+      status: SESSION_STATUS.FAILED,
+      context_json: JSON.stringify(ctx),
+    })
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: {
+        text: '已放弃未完成步骤。占用的进程不会自动结束，请到设置里释放资源。',
+      },
+    })
+    return { ok: true, archived: false, discarded: true, action: 'discard' }
   }
 
   if (act !== 'resume') {
@@ -2453,16 +2398,7 @@ export async function resolveInterruptedSession(sessionId, action) {
   }
 
   if (ctx.pendingArchive) {
-    updateSession(sessionId, {
-      status: SESSION_STATUS.WAITING_HUMAN,
-      context_json: JSON.stringify(ctx),
-    })
-    addMessage(sessionId, {
-      role: 'system',
-      type: 'status',
-      content: { text: '已恢复到归档确认，请继续操作。' },
-    })
-    return { ok: true, resumed: true, pendingArchive: true }
+    delete ctx.pendingArchive
   }
 
   const waiting = nodes.find((n) => n.status === NODE_STATUS.WAITING_HUMAN)
@@ -2508,7 +2444,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     action === 'discard'
   if (session.status === SESSION_STATUS.INTERRUPTED || isInterruptAction) {
     if (session.status !== SESSION_STATUS.INTERRUPTED && !isInterruptAction) {
-      throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+      throw Object.assign(new Error('会话已中断，请先选择继续或放弃'), {
         code: 'INTERRUPTED',
       })
     }
@@ -2523,7 +2459,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
         action === 'discard'
       )
     ) {
-      throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+      throw Object.assign(new Error('会话已中断，请先选择继续或放弃'), {
         code: 'INTERRUPTED',
       })
     }
@@ -2567,7 +2503,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId })
     throw Object.assign(new Error('任务已归档'), { code: 'ARCHIVED' })
   }
   if (session.status === SESSION_STATUS.INTERRUPTED) {
-    throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+    throw Object.assign(new Error('会话已中断，请先选择继续或放弃'), {
       code: 'INTERRUPTED',
     })
   }
@@ -3544,7 +3480,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.INTERRUPTED) {
-    throw Object.assign(new Error('会话已中断，请先选择继续/归档/放弃'), {
+    throw Object.assign(new Error('会话已中断，请先选择继续或放弃'), {
       code: 'INTERRUPTED',
     })
   }

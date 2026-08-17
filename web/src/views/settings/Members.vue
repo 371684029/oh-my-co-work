@@ -119,19 +119,6 @@
                   >优先级：本成员 &gt; 全局「设置 → 是否展示脚本弹窗」。</span
                 >
               </el-form-item>
-
-              <el-form-item label="超时（毫秒）">
-                <el-input-number
-                  v-model="form.script.timeoutMs"
-                  :min="1000"
-                  :step="60000"
-                  :max="3600000"
-                  style="width: 100%"
-                />
-                <div class="field-hint">
-                  默认 600000（10 分钟）。交互式脚本（需人在黑窗里输入）请酌情调大，避免未到「待确认」就被引擎杀掉。
-                </div>
-              </el-form-item>
             </el-tab-pane>
 
             <el-tab-pane label="高级" name="advanced">
@@ -169,11 +156,24 @@
                 <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
               </el-form-item>
 
+              <el-form-item label="超时（毫秒，可选）">
+                <el-input-number
+                  v-model="form.script.timeoutMs"
+                  :min="0"
+                  :step="60000"
+                  :max="86400000"
+                  style="width: 100%"
+                />
+                <div class="field-hint">
+                  0 = 不超时（默认）。仅普通执行且需要限时杀进程时才填写。
+                </div>
+              </el-form-item>
+
               <el-form-item label="进程常驻（不等待退出）">
                 <el-switch v-model="form.script.detach" />
                 <span class="switch-hint">
                   <template v-if="form.script.executionMode === 'terminal'">
-                    内嵌终端默认开启：启动成功即推进节点，grok / CLI 可继续输入，归档时回收。关掉则等进程退出（或超时）。
+                    内嵌终端默认开启：启动成功即推进节点，grok / CLI 可继续输入。关掉则等进程退出。回收请到设置「释放资源」。
                   </template>
                   <template v-else>
                     适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。
@@ -218,8 +218,8 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-// 与 @acw/shared DEFAULT_SCRIPT_TIMEOUT_MS 一致：10 分钟
-const DEFAULT_SCRIPT_TIMEOUT_MS = 600_000
+// 0 = 不超时
+const DEFAULT_SCRIPT_TIMEOUT_MS = 0
 
 const scriptExts = [
   '.bat',
@@ -416,7 +416,7 @@ function fillFromRow(row, { asClone = false } = {}) {
       runtime: s.runtime || defaultRuntime(),
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
-      timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
+      timeoutMs: Number(s.timeoutMs) > 0 ? Number(s.timeoutMs) : 0,
       executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
       showScriptPopupMode: popupModeFromScript(s),
       detach: scriptKeepAlive(s),
@@ -515,7 +515,7 @@ async function save() {
                 ...(Object.keys(parseEnvText(s.envText)).length
                   ? { env: parseEnvText(s.envText) }
                   : {}),
-                timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
+                timeoutMs: Number(s.timeoutMs) > 0 ? Number(s.timeoutMs) : 0,
                 executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,

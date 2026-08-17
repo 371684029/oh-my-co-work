@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-2.2.1-409eff?style=flat-square" alt="version 2.2.1" />
+  <img src="https://img.shields.io/badge/version-2.2.2-409eff?style=flat-square" alt="version 2.2.2" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -31,7 +31,7 @@
 `oh-my-co-work` 把这些能力收进一个本地工作台：
 
 - **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
-- **关键决定交给人**：启动、参数、审核、归档都可以设置人工闸门。
+- **关键决定交给人**：启动、参数、审核都可以设置人工闸门。
 - **过程始终可见**：左边看会话，中间对话和执行，右边看流程与报告。
 - **终端不再跳出去**：真实 PTY 内嵌 TUI，ANSI、方向键、Tab、Ctrl+C 和 resize 都保留。
 - **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
@@ -46,7 +46,7 @@
 - 点击进入中栏终端工作区，右侧流程仍然可见。
 - 支持键盘输入、窗口缩放、重新附着、停止进程与日志。
 - 工作台和终端都可以独立全屏。
-- 会话归档或续跑时统一回收进程树。
+- 占用的进程在设置里选择释放；会话归档 API 仍保留给旧数据。
 - **2.0.1**：本机 REST/WebSocket 使用随机访问令牌与回环 Origin 校验；停止、PID、长输出与断线重连已加固。
 
 <table>
@@ -67,13 +67,13 @@
 | 能力 | 说明 |
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
-| 人工闸门 | 启动确认、参数输入、同意/拒绝、归档确认 |
+| 人工闸门 | 启动确认、参数输入、同意/拒绝 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放和停止 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown |
-| 会话治理 | 置顶、改名、归档、解档、删除、续跑 |
+| 会话治理 | 置顶、改名、删除、续跑；设置里释放资源 |
 | 本地数据 | SQLite + Markdown + 本地附件和日志 |
 
 ## 快速开始

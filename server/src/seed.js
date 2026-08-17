@@ -34,7 +34,7 @@ const scriptCmd = createMember({
           : 'echo ECW-OK #1; exec bash',
       // 命令末尾保留交互式 shell，需声明不等待退出，否则节点会挂到超时
       waitForExit: false,
-      timeoutMs: 600_000,
+      timeoutMs: 0,
     },
   },
 })

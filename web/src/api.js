@@ -127,6 +127,14 @@ export const api = {
       req('/settings/app', { method: 'PATCH', body: JSON.stringify(body || {}) }),
     purgeDemo: () => req('/settings/purge-demo', { method: 'POST', body: '{}' }),
   },
+  resources: {
+    list: () => req('/resources'),
+    release: (sessionIds = []) =>
+      req('/resources/release', {
+        method: 'POST',
+        body: JSON.stringify({ sessionIds }),
+      }),
+  },
   slashCommands: {
     list: () => req('/slash-commands'),
     save: (commands) =>

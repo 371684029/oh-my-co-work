@@ -32,7 +32,7 @@
           <div class="prefs-title">是否展示脚本弹窗</div>
           <p class="prefs-hint">
             全局默认。开启后脚本执行可弹出<strong>脚本自身控制台</strong>（bat 黑窗）。
-            不再弹出角落「释放资源」小窗；归档/节点结束会自动杀进程。
+            不再弹出角落「释放资源」小窗。进程占用请到下方「释放资源」选择会话后结束。
             <strong>优先级</strong>：成员 / 快捷指令 &gt; 全局。
           </p>
         </div>
@@ -48,27 +48,58 @@
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">归档策略</div>
+      <div class="prefs-title">释放资源</div>
       <p class="prefs-hint">
-        流程末尾固定「归档」：可手工归档或点「同意归档」；
-        超时未确认则按下方小时数<strong>自动归档</strong>并释放进程。
-        默认 <strong>3 小时</strong>一般够用，可按需自改。
+        流程走完<strong>不再自动归档</strong>，常驻终端会一直占着。
+        在此选择会话结束进程 / 内嵌终端，或一次性全部释放。
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="自动归档超时（小时）">
-          <el-input-number
-            v-model="autoArchiveHours"
-            :min="0.1"
-            :max="720"
-            :step="1"
-            :precision="1"
-          />
-          <span class="prefs-unit">小时（默认 3）</span>
+        <el-form-item label="占用中的会话">
+          <el-select
+            v-model="selectedSessionIds"
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择要释放的会话"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in occupied"
+              :key="item.sessionId"
+              :label="resourceLabel(item)"
+              :value="item.sessionId"
+            />
+          </el-select>
+          <p v-if="!occupied.length" class="prefs-resolved">当前没有占用中的会话</p>
         </el-form-item>
       </el-form>
-      <el-button type="primary" plain size="small" :loading="savingArchive" @click="saveArchive">
-        保存归档设置
-      </el-button>
+      <div class="prefs-actions">
+        <el-button
+          type="primary"
+          plain
+          size="small"
+          :disabled="!selectedSessionIds.length"
+          :loading="releasing"
+          @click="releaseSelected"
+        >
+          释放选中
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          size="small"
+          :disabled="!occupied.length"
+          :loading="releasing"
+          @click="releaseAll"
+        >
+          全部释放资源
+        </el-button>
+        <el-button size="small" text :loading="loadingResources" @click="loadResources">
+          刷新列表
+        </el-button>
+      </div>
     </section>
 
     <section class="prefs-card">
@@ -131,13 +162,15 @@ const showScriptPopup = ref(true)
 const saving = ref(false)
 const savingPopup = ref(false)
 const savingAdmin = ref(false)
-const savingArchive = ref(false)
 const purging = ref(false)
 const members = ref([])
 const adminMemberId = ref(null)
 const defaultFlowKeys = ref(['admin', 'auto', 'human'])
 const resolvedAdmin = ref(null)
-const autoArchiveHours = ref(3)
+const occupied = ref([])
+const selectedSessionIds = ref([])
+const releasing = ref(false)
+const loadingResources = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -153,8 +186,6 @@ async function load() {
     showScriptPopup.value = s.showScriptPopup !== false
     members.value = m || []
     resolvedAdmin.value = s.resolvedAdmin || null
-    autoArchiveHours.value =
-      s.autoArchiveHours != null ? Number(s.autoArchiveHours) : 3
     const a = s.admin || {}
     adminMemberId.value = a.memberId || s.resolvedAdmin?.id || null
     const f = a.defaultFlow || { admin: true, auto: true, human: true }
@@ -163,23 +194,71 @@ async function load() {
     if (f.auto !== false) keys.push('auto')
     if (f.human !== false) keys.push('human')
     defaultFlowKeys.value = keys.length ? keys : ['auto']
+    await loadResources()
   } catch (e) {
     ElMessage.error(e.message)
   }
 }
 
-async function saveArchive() {
-  savingArchive.value = true
+function resourceLabel(item) {
+  const bits = []
+  if (item.processCount) bits.push(`${item.processCount} 进程`)
+  if (item.terminalCount) bits.push(`${item.terminalCount} 终端`)
+  return `${item.title}（${bits.join(' · ') || '占用'}）`
+}
+
+async function loadResources() {
+  loadingResources.value = true
   try {
-    const s = await api.appSettings.update({
-      autoArchiveHours: autoArchiveHours.value,
-    })
-    autoArchiveHours.value = s.autoArchiveHours ?? 3
-    ElMessage.success(`已保存：${autoArchiveHours.value} 小时未确认将自动归档`)
+    const r = await api.resources.list()
+    occupied.value = r.items || []
+    const live = new Set(occupied.value.map((i) => i.sessionId))
+    selectedSessionIds.value = selectedSessionIds.value.filter((id) => live.has(id))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
-    savingArchive.value = false
+    loadingResources.value = false
+  }
+}
+
+async function releaseSelected() {
+  if (!selectedSessionIds.value.length) {
+    ElMessage.warning('请先选中要释放的会话')
+    return
+  }
+  releasing.value = true
+  try {
+    const r = await api.resources.release(selectedSessionIds.value)
+    ElMessage.success(`已请求释放 ${r.released || selectedSessionIds.value.length} 个会话`)
+    selectedSessionIds.value = []
+    await loadResources()
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    releasing.value = false
+  }
+}
+
+async function releaseAll() {
+  try {
+    await ElMessageBox.confirm(
+      '将结束当前所有占用会话的进程和内嵌终端。外部窗口若还在请手关。是否继续？',
+      '全部释放资源',
+      { type: 'warning', confirmButtonText: '全部释放', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  releasing.value = true
+  try {
+    const r = await api.resources.release([])
+    ElMessage.success(`已请求释放 ${r.released || 0} 个会话`)
+    selectedSessionIds.value = []
+    await loadResources()
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    releasing.value = false
   }
 }
 
@@ -326,9 +405,9 @@ onMounted(load)
 .admin-form {
   margin-bottom: 8px;
 }
-.prefs-unit {
-  margin-left: 10px;
-  font-size: 12.5px;
-  color: var(--el-text-color-secondary);
+.prefs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

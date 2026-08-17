@@ -1,6 +1,6 @@
 {
   "name": "oh-my-co-work",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "private": true,
   "description": "群聊式多智能体协同台 MVP",
   "workspaces": [

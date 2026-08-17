@@ -44,8 +44,8 @@
 
 #### 常驻可交互终端：`waitForExit: false`（内嵌终端默认）
 
-内嵌终端默认**不等待进程退出**，避免 grok / CLI / TUI 撞上 `timeoutMs` 被判超时。
-需要「跑完再推进」时再关掉常驻或写 `waitForExit: true`。
+内嵌终端默认**不等待进程退出**，避免 grok / CLI / TUI 被判超时。
+需要「跑完再推进」时再关掉常驻或写 `waitForExit: true`。默认 **不超时**；只有显式 `timeoutMs > 0` 才会到点杀进程。回收请到设置「释放资源」。
 
 普通执行默认仍等退出；弹窗保活继续用 `waitForExit: false` / `detach: true`。
 

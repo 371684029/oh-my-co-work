@@ -2,10 +2,10 @@
 
 | 属性 | 内容 |
 |------|------|
-| 状态 | **2.2.1**（TUI 常驻默认）；`2.2.0` 已封；`1.x` 已封 |
+| 状态 | **2.2.2**；`2.2.0` 已封；`1.x` 已封 |
 | 代码 | `server/` + `web/` + `shared/` |
 | 关联 | [technical-design.md](./technical-design.md)、[data-and-ops.md](./data-and-ops.md)、[frontend-components.md](./frontend-components.md) |
-| 更新日期 | 2026-08-17（`2.2.1`） |
+| 更新日期 | 2026-08-17（`2.2.2`） |
 
 ---
 
@@ -88,7 +88,7 @@
 | 快捷指令新建/编辑/克隆/删除 | `Shortcuts.vue` | ✅ |
 | script：file 或 command | `runners.js` | ✅ |
 | 工作文件夹（成员/群可选） | DB + 表单 + cwd 链 | ✅ |
-| 完成待确认归档 / 手动归档 / 超时自动（可配置，默认 3h） | 末尾固定 **归档节点** + `autoArchiveHours` | ✅ |
+| 完成待确认归档 / 手动归档 / 超时自动（可配置，默认 3h） | 2.2.2 起：对话与流程图不再展示；设置里手动释放资源 | 简化 |
 | **审核三态** pending / 通过 / 拒绝 | `output.humanAction`；输入与跑脚本不默认通过 | ✅ |
 | 开聊下拉缩写 / kind 标签 | `Workbench` 开聊 `el-select` | ✅ |
 | script `detach` 仅唤起；待确认归档不杀 detach | `runners` + `processRegistry` | ✅ |
@@ -99,7 +99,7 @@
 | 归档后再发 = 仍在本会话（解档） | `postUserMessage` + `unarchiveSession` | ✅ |
 | 可无限归档 / 本会话追加克隆续跑 | `archiveSession` / `restartFromNode` | ✅ |
 | **场外协助** `offsite` | 按时序游标插入；开场 @ 第一位；`@` 串行；回主线克隆正常节点 | ✅ |
-| ~~**本机资源**面板~~ | 2.2 移除右栏「资源」Tab；进程回收改由归档/停止统一负责 | 移除 |
+| ~~**本机资源**面板~~ | 2.2 移除右栏「资源」Tab；2.2.2 起在设置里选择释放 | 移除 / 迁设置 |
 | 聊天改名 / 删除 | PATCH/DELETE sessions | ✅ |
 | WS 推送 | `bus.js` + 前端 connect | ✅ |
 | 支持与交流 | `Support.vue` + `support.json` | ✅ |
@@ -385,3 +385,10 @@
 - 新建成员运行时：Windows 默认 cmd，其它系统默认自动。
 - 下一脚本步不再 `includeDetach` 杀掉常驻终端；归档仍回收。
 - `/api/bootstrap` 必须带可信 Origin 才发令牌。
+
+### 2.24 版本 2.2.2（2026-08-17）
+
+- 对话面板与流程图不再展示归档确认、归档节点、超时自动归档。
+- 设置「释放资源」：选择会话释放，或全部释放进程 / 内嵌终端。
+- 流程走完不杀常驻终端；脚本默认不超时（高级里可填毫秒）。
+- 中断恢复只保留继续 / 放弃。

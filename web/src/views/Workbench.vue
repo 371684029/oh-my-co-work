@@ -185,15 +185,6 @@
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button
-              v-if="detail.session.status !== 'archived'"
-              size="default"
-              text
-              bg
-              @click="doArchive"
-            >
-              归档
-            </el-button>
             <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
           </div>
         </div>
@@ -322,7 +313,7 @@
                     type="info"
                     :closable="false"
                     show-icon
-                    title="已归档（只释资源）。再发即可恢复；续跑点「从这里继续」。"
+                    title="已归档。再发即可恢复；续跑点「从这里继续」。"
                     class="composer-alert composer-alert--archived"
                   />
                   <div class="composer-shell" @keydown.capture="onComposerKeydown">
@@ -525,20 +516,9 @@
                             提交
                           </el-button>
                         </template>
-                        <template v-else-if="pendingGate.content?.mode === 'archive_confirm'">
-                          <el-button type="danger" @click="gate(pendingGate, 'approve_archive')">
-                            同意归档
-                          </el-button>
-                          <el-button plain @click="gate(pendingGate, 'defer_archive')">
-                            暂不归档
-                          </el-button>
-                        </template>
                         <template v-else-if="pendingGate.content?.mode === 'interrupted'">
                           <el-button type="danger" @click="gate(pendingGate, 'resume_interrupted')">
                             继续
-                          </el-button>
-                          <el-button plain @click="gate(pendingGate, 'archive_interrupted')">
-                            归档
                           </el-button>
                           <el-button plain @click="gate(pendingGate, 'discard_interrupted')">
                             放弃
@@ -1439,7 +1419,13 @@ function isArchiveMessage(m) {
 /** Element-Plus-X BubbleList — 大气气泡 + 发送人简称 */
 const bubbleList = computed(() => {
   if (!detail.value?.messages) return []
-  const messages = detail.value.messages.map((m) => {
+  const messages = detail.value.messages
+    .filter((m) => {
+      if (m.type === 'gate' && m.content?.mode === 'archive_confirm') return false
+      if (isArchiveMessage(m)) return false
+      return true
+    })
+    .map((m) => {
     const isUser = m.role === 'user'
     const isSystem = m.role === 'system'
     const isGate = m.type === 'gate'
@@ -1518,24 +1504,6 @@ const pendingGate = computed(() => {
     const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
     if (ig) return ig
   }
-  // 归档确认闸门（绑定末尾归档节点）
-  const pendingArch = detail.value.session.context?.pendingArchive
-  if (pendingArch && detail.value.session.status !== 'interrupted') {
-    const archGate = msgs.find(
-      (m) => m.type === 'gate' && m.content?.mode === 'archive_confirm',
-    )
-    if (archGate) {
-      return {
-        ...archGate,
-        node_instance_id: archGate.node_instance_id || pendingArch.nodeInstanceId || null,
-        content: {
-          ...archGate.content,
-          dueAt: archGate.content.dueAt || pendingArch.dueAt,
-          hours: archGate.content.hours || pendingArch.hours,
-        },
-      }
-    }
-  }
   // 优先当前游标节点上的待确认闸门，避免旧「待确认」抢交互
   if (curNode?.status === 'waiting_human') {
     const curGate = msgs.find(
@@ -1557,20 +1525,6 @@ const pendingGate = computed(() => {
     }) || null
   )
 })
-
-const autoArchiveHours = computed(() => {
-  // 从最近 gate 或默认 3
-  return pendingGate.value?.content?.hours || 3
-})
-
-function formatDueAt(iso) {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
 
 function sessionCtx() {
   const ctx = detail.value?.session?.context || detail.value?.session?.context_json
@@ -1905,9 +1859,8 @@ const composerPlaceholder = computed(() => {
       : '在此输入内容，Enter 或点「提交」'
   }
   if (mode === 'interrupted') {
-    return '服务曾中断：继续=从中断处恢复 · 归档=结束并保留记录 · 放弃=归档（原因 interrupted_discard）'
+    return '服务曾中断：继续=从中断处恢复 · 放弃=跳过未完成步骤（进程到设置里释放）'
   }
-  if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
   // 通用审核（产出审核/节点审核等）：把闸门标题放进 placeholder
   const gateTitle = g.content?.text || g.content?.title
   return gateTitle ? `${gateTitle} · 可先写意见，再点「同意」或「拒绝」` : '可先写意见，再点「同意」或「拒绝」…'
@@ -1918,7 +1871,7 @@ const composerToolbarHint = computed(() => {
     const mode = pendingGate.value.content?.mode
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
-    if (mode === 'interrupted') return ''
+    if (mode === 'interrupted') return '点「继续」或「放弃」'
     return 'Enter=附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -2094,6 +2047,7 @@ function onPasteFile(firstFile, fileList) {
 
 function isPendingGate(m) {
   if (m.type !== 'gate' || !detail.value) return false
+  if (m.content?.mode === 'archive_confirm') return false
   const node = detail.value.nodes.find((n) => n.id === m.node_instance_id)
   return node?.status === 'waiting_human'
 }
@@ -2922,6 +2876,7 @@ function isDiscardedUnexecutedNode(n) {
 const flowEntries = computed(() => {
   const entries = []
   for (const node of detail.value?.nodes || []) {
+    if (node.step_type === 'archive') continue
     const previous = entries.at(-1)
     if (isDiscardedUnexecutedNode(node) && previous?.type === 'skipped') {
       previous.nodes.push(node)
@@ -3262,13 +3217,11 @@ async function gate(m, action) {
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
-    if (action === 'approve_archive') ElMessage.success('已归档')
-    else if (action === 'defer_archive') ElMessage.info('已暂不归档，超时仍将自动归档')
-    else if (action === 'approve_start') ElMessage.success('已通过，开始执行')
+    if (action === 'approve_start') ElMessage.success('已通过，开始执行')
     else if (action === 'cancel_start') ElMessage.info('已取消，任务关闭')
     else if (action === 'resume_interrupted') ElMessage.success('已继续')
-    else if (action === 'archive_interrupted') ElMessage.success('已归档（中断恢复）')
-    else if (action === 'discard_interrupted') ElMessage.info('已放弃并归档')
+    else if (action === 'discard_interrupted' || action === 'archive_interrupted')
+      ElMessage.info('已放弃；进程请到设置里释放')
     else if (action === 'approve' || action === 'admin_approve')
       ElMessage.success(text?.trim() ? '已同意并记录附言' : '已同意')
     else if (action === 'reject' || action === 'admin_reject')
@@ -3287,28 +3240,6 @@ async function rename() {
     sessions.value = await api.sessions.list()
   } catch (e) {
     ElMessage.error(e.message)
-  }
-}
-
-async function doArchive() {
-  const id = activeId.value
-  if (!id) return
-  try {
-    await ElMessageBox.confirm(
-      '确认归档？将尽量结束本会话进程。本会话仍在，之后可恢复或「从这里继续」。',
-      '归档',
-      { type: 'warning', confirmButtonText: '同意归档', cancelButtonText: '取消' },
-    )
-  } catch {
-    return
-  }
-  try {
-    await api.sessions.archive(id)
-    await loadDetail(id)
-    sessions.value = await api.sessions.list()
-    ElMessage.success('已归档（已请求释放进程）')
-  } catch (e) {
-    // 业务异常不 toast Error
   }
 }
 

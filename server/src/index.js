@@ -94,7 +94,7 @@ if (nonAdmin.length === 0) {
         // 演示命令末尾留了一个交互式 shell，方便直接在内嵌终端里敲命令。
         // 因此必须声明「不等待退出」，否则节点会一直等到 timeoutMs 被判超时。
         waitForExit: false,
-        timeoutMs: 600_000,
+        timeoutMs: 0,
       },
     },
   })
@@ -196,13 +196,13 @@ setExitHandler((reason) => {
   setTimeout(() => process.exit(0), 1500)
 })
 
-// 超时未确认归档 → 自动归档（默认 24h，设置可改）
+// 清掉旧的待确认归档闸门（不再按超时自动归档）
 const ARCHIVE_TICK_MS = 60 * 1000
 setInterval(() => {
   try {
     const r = processDueArchives()
-    if (r.archived?.length) {
-      console.log(`[acw] auto-archived ${r.archived.length} session(s):`, r.archived.join(', '))
+    if (r.dismissed?.length) {
+      console.log(`[acw] dismissed stale archive gates:`, r.dismissed.join(', '))
     }
   } catch (e) {
     console.warn('[acw] processDueArchives error', e.message)

@@ -15,7 +15,6 @@ import {
   uid,
   applyParamPlaceholders,
   getParamsMap,
-  DEFAULT_SCRIPT_TIMEOUT_MS,
   formatScriptUserSummary,
   injectCallArgsParam,
 } from '@acw/shared'
@@ -164,6 +163,14 @@ export function extractScriptPathFromCommand(command) {
 
 export function usesTerminalExecution(script) {
   return script?.executionMode !== 'pipe'
+}
+
+/**
+ * 脚本超时：>0 才限时；0 / 未填 = 不超时（常驻 TUI 也不应靠超时回收）。
+ */
+export function resolveScriptTimeoutMs(script) {
+  const n = Number(script?.timeoutMs)
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
 }
 
 /**
@@ -435,8 +442,7 @@ export async function runMember(
   if (kind === 'script') {
     const script = enrichScriptConfig({ ...(config.script || config) })
     const mode = script.mode || (script.filePath || script.path ? 'file' : 'command')
-    const timeoutMs =
-      Number(script.timeoutMs) > 0 ? Number(script.timeoutMs) : DEFAULT_SCRIPT_TIMEOUT_MS
+    const timeoutMs = resolveScriptTimeoutMs(script)
     // 弹窗优先级：成员 script.showScriptPopup > 遗留 showConsole/hideWindow > 全局
     const showConsole = resolveShowScriptPopup(script)
     // HTA「释放资源」小窗：默认永不弹（占地方、几乎无用）
@@ -872,25 +878,28 @@ function runProcess({
       resolve(result)
     }
 
-    const timer = setTimeout(() => {
-      try {
-        if (pid) killProcessTree(pid)
-        else child.kill()
-      } catch {
-        /* ignore */
-      }
-      finish({
-        ok: false,
-        summary: `【${displayLabel}】超时 (${timeoutMs}ms)`,
-        error: { code: 'TIMEOUT' },
-        data: {
-          stdout: decodeConsoleBytes(Buffer.concat(chunks)),
-          cwd,
-          pid,
-          runtime: launch.label,
-        },
-      })
-    }, timeoutMs)
+    let timer = null
+    if (timeoutMs > 0) {
+      timer = setTimeout(() => {
+        try {
+          if (pid) killProcessTree(pid)
+          else child.kill()
+        } catch {
+          /* ignore */
+        }
+        finish({
+          ok: false,
+          summary: `【${displayLabel}】超时 (${timeoutMs}ms)`,
+          error: { code: 'TIMEOUT' },
+          data: {
+            stdout: decodeConsoleBytes(Buffer.concat(chunks)),
+            cwd,
+            pid,
+            runtime: launch.label,
+          },
+        })
+      }, timeoutMs)
+    }
 
     child.stdout?.on('data', (d) => chunks.push(d))
     child.stderr?.on('data', (d) => errChunks.push(d))

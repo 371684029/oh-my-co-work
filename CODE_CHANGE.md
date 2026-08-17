@@ -22,6 +22,17 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | server/src/engine.js | 流程走完不再弹归档确认、不自动归档、不杀常驻进程；旧归档尾节点静默跳过
+2026-08-17 | A | server/src/resources.js | 列出占用会话并释放选中/全部进程与终端
+2026-08-17 | M | server/src/routes.js | GET /resources、POST /resources/release
+2026-08-17 | M | server/src/runners.js | timeoutMs 默认 0（不超时）；>0 才挂定时器
+2026-08-17 | M | web/src/views/settings/Prefs.vue | 归档小时数改为释放资源选择框
+2026-08-17 | M | web/src/views/Workbench.vue | 去掉对话/流程轨/顶栏的归档确认与操作
+2026-08-17 | M | web/src/views/settings/Members.vue | 超时挪到高级且默认 0
+2026-08-17 | A | server/test/archiveSkip.test.js | 覆盖不自动归档与资源列表
+2026-08-17 | M | package.json / workspaces / about.json | 版本 2.2.2
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | server/src/runners.js | 新增 usesKeepAlive：内嵌终端默认常驻，显式 waitForExit:true / detach:false 才等待退出
 2026-08-17 | M | web/src/views/settings/Members.vue | 终端模式也显示「进程常驻」且默认开；运行时 Windows 默认 cmd、其它系统 auto
 2026-08-17 | M | server/src/engine.js | 脚本步开始只杀非 detach 进程，避免掐掉上一常驻 TUI
