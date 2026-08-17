@@ -99,7 +99,7 @@
 | 归档后再发 = 仍在本会话（解档） | `postUserMessage` + `unarchiveSession` | ✅ |
 | 可无限归档 / 本会话追加克隆续跑 | `archiveSession` / `restartFromNode` | ✅ |
 | **场外协助** `offsite` | 按时序游标插入；开场 @ 第一位；`@` 串行；回主线克隆正常节点 | ✅ |
-| **本机资源**面板 | 进程 / 目录占用提示（不互斥）；再杀 / 归档对方 | ✅ |
+| ~~**本机资源**面板~~ | 2.2 移除右栏「资源」Tab；进程回收改由归档/停止统一负责 | 移除 |
 | 聊天改名 / 删除 | PATCH/DELETE sessions | ✅ |
 | WS 推送 | `bus.js` + 前端 connect | ✅ |
 | 支持与交流 | `Support.vue` + `support.json` | ✅ |

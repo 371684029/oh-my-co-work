@@ -29,7 +29,6 @@ import {
   refreshSessionAnnouncement,
   saveSessionAnnouncement,
   restartFromNode,
-  getSessionResources,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { createBackup, runIntegrityCheck } from './backup.js'
@@ -484,14 +483,6 @@ router.post('/sessions/:id/terminals/:terminalId/kill', (req, res) => {
     return res.status(404).json({ error: '终端不存在' })
   }
   res.json({ ok: killTerminal(req.params.terminalId, 'user') })
-})
-/** 会话资源：进程 + 工作目录占用提示 */
-router.get('/sessions/:id/resources', (req, res) => {
-  try {
-    res.json(getSessionResources(req.params.id))
-  } catch (e) {
-    res.status(404).json({ error: e.message })
-  }
 })
 router.post('/sessions/:id/messages', async (req, res) => {
   try {

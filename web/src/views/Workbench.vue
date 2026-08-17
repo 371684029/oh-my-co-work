@@ -644,15 +644,6 @@
         >
           群报告
         </button>
-        <button
-          type="button"
-          class="wb-right-tab"
-          :class="{ active: rightTab === 'resources' }"
-          @click="openResourcesTab"
-        >
-          资源
-          <span v-if="resourceBadge" class="wb-right-tab-badge">{{ resourceBadge }}</span>
-        </button>
       </div>
 
       <!-- Tab：流程 -->
@@ -1068,111 +1059,6 @@
         </div>
       </div>
 
-      <!-- Tab：资源（进程 / 目录占用提示） -->
-      <div v-show="rightTab === 'resources'" class="wb-right-pane resources-pane">
-        <div class="announce-toolbar">
-          <span class="announce-title">本机资源</span>
-          <div class="announce-actions">
-            <el-button
-              size="small"
-              plain
-              :disabled="!activeId"
-              :loading="resourcesLoading"
-              @click="loadResources"
-            >
-              刷新
-            </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              :disabled="!activeId || detail?.session?.status === 'archived'"
-              :loading="resourcesKilling"
-              @click="rekillSessionProcesses"
-            >
-              结束进程
-            </el-button>
-          </div>
-        </div>
-        <p class="resources-note">
-          {{
-            sessionResources?.note ||
-            '同目录允许多会话并行；进程清理为尽力保证，外部窗口可能还需手动关窗。'
-          }}
-        </p>
-        <div v-if="sessionResources" class="resources-body">
-          <div class="resources-block">
-            <div class="resources-block-title">工作目录（占用提示）</div>
-            <div class="resources-path" :title="sessionResources.workPath || ''">
-              {{ sessionResources.workPath || '（未配置）' }}
-            </div>
-            <div
-              v-if="sessionResources.pathHolders?.length"
-              class="resources-holders"
-            >
-              <div
-                v-for="h in sessionResources.pathHolders"
-                :key="h.id"
-                class="resources-holder"
-              >
-                <span class="resources-holder-title">{{ h.title || h.id }}</span>
-                <el-tag size="small" round effect="plain">{{ statusLabel(h.status) }}</el-tag>
-                <el-button
-                  v-if="h.id !== activeId"
-                  size="small"
-                  text
-                  type="primary"
-                  @click="openHolderSession(h.id)"
-                >
-                  打开
-                </el-button>
-                <el-button
-                  v-if="h.id !== activeId && h.status !== 'archived'"
-                  size="small"
-                  text
-                  type="danger"
-                  @click="archiveHolderSession(h.id)"
-                >
-                  归档对方
-                </el-button>
-              </div>
-            </div>
-            <p v-else class="resources-empty-line">当前无其它会话使用该路径</p>
-          </div>
-          <div class="resources-block">
-            <div class="resources-block-title">
-              进程登记
-              <el-tag
-                v-if="sessionResources.orphanRisk"
-                size="small"
-                type="warning"
-                effect="plain"
-                round
-              >
-                可能还需手动关窗
-              </el-tag>
-            </div>
-            <div v-if="sessionResources.processes?.length" class="resources-procs">
-              <div
-                v-for="(p, i) in sessionResources.processes"
-                :key="(p.runId || '') + ':' + p.pid + ':' + i"
-                class="resources-proc"
-              >
-                <code class="resources-pid">PID {{ p.pid }}</code>
-                <span class="resources-proc-label">{{ p.label || p.kind || 'process' }}</span>
-                <el-tag v-if="p.detach || p.orphanRisk" size="small" type="warning" effect="plain" round>
-                  可能需手关
-                </el-tag>
-                <el-tag v-if="p.source === 'disk'" size="small" effect="plain" round>磁盘</el-tag>
-              </div>
-            </div>
-            <p v-else class="resources-empty-line">暂无登记中的进程</p>
-          </div>
-        </div>
-        <div v-else class="announce-empty">
-          <p>{{ resourcesLoading ? '加载中…' : '选择会话后查看资源' }}</p>
-        </div>
-      </div>
     </aside>
   </div>
 </template>
@@ -1247,9 +1133,6 @@ const expandedNodeId = ref(null)
 const expandedSkippedFlowGroups = ref({})
 /** 右侧：流程 | 群报告 */
 const rightTab = ref('flow')
-const sessionResources = ref(null)
-const resourcesLoading = ref(false)
-const resourcesKilling = ref(false)
 const announceLoading = ref(false)
 const announceOpenLoading = ref(false)
 const sessionNotesDraft = ref('')
@@ -2533,92 +2416,10 @@ function onConvChange(item) {
 }
 
 watch(activeId, (id, prev) => {
-  if (id && id !== prev) {
-    sessionResources.value = null
-  }
   if (id && id !== prev && (!detail.value || detail.value.session.id !== id)) {
     selectSession(id)
   }
 })
-
-watch(
-  () => rightTab.value,
-  (tab) => {
-    if (tab === 'resources' && activeId.value) loadResources()
-  },
-)
-
-const resourceBadge = computed(() => {
-  const n = sessionResources.value?.processes?.length || 0
-  if (sessionResources.value?.orphanRisk) return '!'
-  return n > 0 ? String(n) : ''
-})
-
-async function loadResources() {
-  if (!activeId.value) {
-    sessionResources.value = null
-    return
-  }
-  resourcesLoading.value = true
-  try {
-    sessionResources.value = await api.sessions.resources(activeId.value)
-  } catch {
-    sessionResources.value = null
-  } finally {
-    resourcesLoading.value = false
-  }
-}
-
-function openResourcesTab() {
-  rightTab.value = 'resources'
-  loadResources()
-}
-
-async function rekillSessionProcesses() {
-  if (!activeId.value || resourcesKilling.value) return
-  resourcesKilling.value = true
-  try {
-    const r = await api.sessions.killProcesses(activeId.value, { includeDetach: true })
-    await loadResources()
-    ElMessage.success(
-      r.killed
-        ? `已请求结束 ${r.killed} 个进程；外部窗口若仍在请手关`
-        : '当前无登记进程可杀',
-    )
-  } catch {
-    /* 业务异常不 toast Error */
-  } finally {
-    resourcesKilling.value = false
-  }
-}
-
-async function openHolderSession(id) {
-  if (!id) return
-  await selectSession(id)
-  rightTab.value = 'resources'
-  await loadResources()
-}
-
-async function archiveHolderSession(id) {
-  if (!id) return
-  try {
-    await ElMessageBox.confirm(
-      '归档对方会话？会尽量结束对方进程；外部窗口或需手关。同目录本就不互斥，归档仅为释放对方资源。',
-      '归档对方',
-      { type: 'warning', confirmButtonText: '归档对方', cancelButtonText: '取消' },
-    )
-  } catch {
-    return
-  }
-  try {
-    await api.sessions.archive(id)
-    if (activeId.value) await loadResources()
-    sessions.value = await api.sessions.list()
-    ElMessage.success('已请求归档占用方')
-  } catch {
-    /* ignore */
-  }
-}
 
 function normalizeMenuCommand(command) {
   if (command == null) return ''
@@ -3506,7 +3307,6 @@ async function doArchive() {
     await loadDetail(id)
     sessions.value = await api.sessions.list()
     ElMessage.success('已归档（已请求释放进程）')
-    if (rightTab.value === 'resources') await loadResources()
   } catch (e) {
     // 业务异常不 toast Error
   }
@@ -5125,72 +4925,6 @@ loadLists().then(() => {
   line-height: 14px;
   background: rgba(230, 162, 60, 0.25);
   color: #9a6414;
-}
-
-.resources-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.resources-note {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--ecw-text-3, #8b8f9a);
-}
-.resources-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.resources-block-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--ecw-text-2, #5c5f66);
-}
-.resources-path {
-  font-size: 12px;
-  word-break: break-all;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-}
-.resources-holders,
-.resources-procs {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.resources-holder,
-.resources-proc {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-}
-.resources-holder-title,
-.resources-proc-label {
-  font-size: 12px;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-.resources-pid {
-  font-size: 11px;
-  color: var(--ecw-accent, #007aff);
-}
-.resources-empty-line {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--ecw-text-3, #8b8f9a);
 }
 
 .wb-right-pane {
