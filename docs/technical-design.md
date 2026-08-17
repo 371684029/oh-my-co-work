@@ -1438,7 +1438,6 @@ interface AgentDefinition {
     /** 最高优先级 cwd；一般留空 */
     cwd?: string
     shell?: 'cmd' | 'powershell' | 'pwsh' | 'bash' | 'auto'
-    timeoutMs?: number
     env?: Record<string, string>
   }
 }
