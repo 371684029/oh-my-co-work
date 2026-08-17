@@ -140,13 +140,16 @@ function pruneFinished(sessionId) {
 }
 
 /**
- * 在真实 PTY 内运行脚本。Promise 在终端退出后完成，因此现有流程引擎仍可按节点推进。
+ * 在真实 PTY 内运行脚本。
+ * 默认在终端退出后完成 Promise，因此现有流程引擎仍可按节点推进。
+ * keepAlive=true 时（交互式常驻终端）在 PTY 启动成功后立即完成，进程继续存活供用户输入。
  */
 export function runTerminal({
   launch,
   cwd,
   env,
   timeoutMs,
+  keepAlive = false,
   sessionId,
   nodeInstanceId,
   memberId,
@@ -157,8 +160,17 @@ export function runTerminal({
   rows = 30,
 }) {
   return new Promise((resolve) => {
+    // 常驻终端（keepAlive）会在启动成功后先行 resolve，让流程节点推进；
+    // 之后 PTY 真正退出时仍要走完整清理，但不能重复 resolve。
+    let resolved = false
+    const settle = (payload) => {
+      if (resolved) return
+      resolved = true
+      resolve(payload)
+    }
+
     if (!sessionId) {
-      resolve({
+      settle({
         ok: false,
         summary: '内嵌终端必须绑定会话',
         error: { code: 'TERMINAL_SESSION_REQUIRED' },
@@ -253,7 +265,7 @@ export function runTerminal({
             : ok
               ? `【${entry.label}】终端执行完成（exit ${entry.exitCode}）`
               : `【${entry.label}】终端执行失败（exit ${entry.exitCode}）`
-      resolve({
+      settle({
         ok,
         summary,
         terminalId: id,
@@ -303,6 +315,8 @@ export function runTerminal({
         kind: 'terminal',
         label: entry.label,
         memberId,
+        // 常驻终端：节点推进后不随「释放进程」被回收，留给用户继续输入
+        detach: !!keepAlive,
         child: entry.process,
       })
       entry.process.onData((data) => queueOutput(entry, data))
@@ -316,6 +330,31 @@ export function runTerminal({
           if (entry.status === 'running') entry.process.write(String(stdinText))
         }, 30)
       }
+
+      if (keepAlive) {
+        // 交互式常驻终端：启动成功即视为本节点成功，进程留在会话里供用户继续输入。
+        // 不挂超时定时器，否则一个可交互的 shell 会在 timeoutMs 后被判为「执行超时」。
+        settle({
+          ok: true,
+          summary: `【${entry.label}】终端已就绪（pid ${entry.pid}），可直接输入；进程将保留至您停止或会话归档`,
+          terminalId: id,
+          detached: true,
+          keepAlive: true,
+          data: {
+            terminalId: id,
+            code: null,
+            signal: null,
+            cwd,
+            runtime: entry.runtime,
+            label: entry.label,
+            log: logName,
+            executionMode: 'terminal',
+            keepAlive: true,
+          },
+        })
+        return
+      }
+
       if (Number(timeoutMs) > 0) {
         entry.timeout = setTimeout(() => {
           entry.status = 'timed_out'

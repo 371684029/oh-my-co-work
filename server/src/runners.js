@@ -563,6 +563,9 @@ export async function runMember(
         launch,
         cwd,
         timeoutMs,
+        // 交互式常驻终端（如 cmd / bash / TUI 工具）：进程留着可继续输入，
+        // 但节点不等它退出，否则必然挂到超时。复用弹窗模式的 detach/waitForExit 语义。
+        keepAlive: detach,
         env,
         sessionId,
         nodeInstanceId,

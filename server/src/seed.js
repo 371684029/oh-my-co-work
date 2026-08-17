@@ -26,9 +26,14 @@ const scriptCmd = createMember({
     demo: true,
     script: {
       mode: 'command',
-      command: process.platform === 'win32' ? 'echo ECW-OK & cd' : 'echo ECW-OK && pwd',
-      shell: 'cmd',
-      executionMode: 'terminal',
+      scriptWorkDir: process.cwd(),
+      scriptDir: process.cwd(),
+      command:
+        process.platform === 'win32'
+          ? 'echo ECW-OK #1 & cmd'
+          : 'echo ECW-OK #1; exec bash',
+      // 命令末尾保留交互式 shell，需声明不等待退出，否则节点会挂到超时
+      waitForExit: false,
       timeoutMs: 600_000,
     },
   },

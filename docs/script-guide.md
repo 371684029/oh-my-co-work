@@ -18,7 +18,7 @@
 | `file` | `script.filePath` / `path` | 跑本机脚本文件（bat/cmd/ps1/sh/py/js…） |
 | `command` | `script.command` | 一段本机命令（走 PATH） |
 
-可选：`runtime`、`args`、`env`、`timeoutMs`（默认 10 分钟）、`cwd`、`detach`、`showScriptPopup`、`executionMode`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
+可选：`runtime`、`args`、`env`、`timeoutMs`（默认 10 分钟）、`cwd`、`detach` / `waitForExit`、`showScriptPopup`、`executionMode`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
 
 ### 1.1 内嵌终端模式（2.0）
 
@@ -40,6 +40,37 @@
 - `pipe`：保持原有普通执行/弹窗行为。
 - TUI 必须在当前进程前台运行；脚本内调用 `Start-Process` / `start` 强制新窗口会脱离内嵌 PTY。
 - 终端输入不会自动成为聊天消息；工具要输出结构化业务事件时应使用 2.x Adapter，而不是要求主项目解析屏幕字符。
+
+#### 常驻可交互终端：`waitForExit: false`
+
+内嵌终端默认**等进程退出**才判定节点成败（退出码决定成功/失败）。
+但交互式 shell、REPL、长驻 TUI **本来就不会自己退出**，这类命令若按默认等待，
+节点必然一直 `running` 直到撞上 `timeoutMs`，最后被判「执行超时」。
+
+给这类成员显式声明 `waitForExit: false`（等价于 `detach: true`）：
+
+```json
+{
+  "script": {
+    "mode": "command",
+    "command": "echo ready & cmd",
+    "waitForExit": false,
+    "timeoutMs": 600000
+  }
+}
+```
+
+行为差异：
+
+| | 默认（等待退出） | `waitForExit: false` |
+| --- | --- | --- |
+| 节点何时推进 | 进程退出后 | PTY 启动成功后立即推进 |
+| 成败判定 | 退出码 ∈ `successCodes` | 启动成功即成功 |
+| `timeoutMs` | 到点杀进程并判超时 | **不挂超时定时器** |
+| 节点结束后进程 | 被 `killMemberProcesses` 回收 | 保留，用户可继续输入 |
+| 何时释放 | 自动 | 用户点「停止」或会话归档 |
+
+演示成员「示例命令」就是这么配的：命令尾部留一个 `cmd`，终端可交互，节点照常推进。
 
 ---
 
