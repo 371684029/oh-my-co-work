@@ -506,3 +506,11 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
   return true
 }
 
+export function openTerminalLog(id, sessionId) {
+  const entry = terminals.get(id)
+  if (!entry || entry.sessionId !== sessionId) return { error: 'NOT_FOUND' }
+  const logName = entry.logName || 'terminal.log'
+  if (!entry.logPath || !fs.existsSync(entry.logPath)) return { error: 'NO_LOG', logName }
+  return { logName, path: entry.logPath }
+}
+

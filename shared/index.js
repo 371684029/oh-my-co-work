@@ -1,5 +1,7 @@
 /** @acw/shared — DTO helpers & constants */
 
+export { PASTE_POLICY, countPasteLines, inspectTerminalPaste } from './terminalPaste.js'
+
 export const SESSION_STATUS = {
   ACTIVE: 'active',
   PAUSED: 'paused',

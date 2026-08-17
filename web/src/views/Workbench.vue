@@ -197,6 +197,8 @@
           @kill="killTerminal"
           @input="sendTerminalInput"
           @resize="resizeTerminal"
+          @reconnect="openTerminal"
+          @download-log="downloadTerminalLog"
         />
 
         <!-- 经典布局：上消息滚动 · 下闸门+输入固定 -->
@@ -243,6 +245,7 @@
                     :terminal="item.terminal"
                     @open="openTerminal"
                     @kill="killTerminal"
+                    @download-log="downloadTerminalLog"
                   />
                   <div
                     v-else
@@ -2357,6 +2360,21 @@ async function killTerminal(terminalId) {
     await api.sessions.killTerminal(activeId.value, terminalId)
   } catch (e) {
     ElMessage.error(e.message || '停止终端失败')
+  }
+}
+
+async function downloadTerminalLog(terminalId) {
+  if (!activeId.value || !terminalId) return
+  try {
+    const { blob, filename } = await api.sessions.terminalLog(activeId.value, terminalId)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    ElMessage.error(e.message || '下载日志失败')
   }
 }
 

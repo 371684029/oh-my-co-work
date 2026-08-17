@@ -67,6 +67,7 @@ import {
   getTerminal,
   killTerminal,
   listSessionTerminals,
+  openTerminalLog,
 } from './terminal/terminalService.js'
 
 const router = Router()
@@ -504,6 +505,15 @@ router.post('/sessions/:id/terminals/:terminalId/kill', (req, res) => {
     return res.status(404).json({ error: '终端不存在' })
   }
   res.json({ ok: killTerminal(req.params.terminalId, 'user') })
+})
+router.get('/sessions/:id/terminals/:terminalId/log', (req, res) => {
+  const result = openTerminalLog(req.params.terminalId, req.params.id)
+  if (result.error === 'NOT_FOUND') return res.status(404).json({ error: '终端不存在' })
+  if (result.error === 'NO_LOG') return res.status(404).json({ error: '暂无日志文件' })
+  const safeName = String(result.logName || 'terminal.log').replace(/[^\w.-]+/g, '_')
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`)
+  fs.createReadStream(result.path).pipe(res)
 })
 router.post('/sessions/:id/messages', async (req, res) => {
   try {

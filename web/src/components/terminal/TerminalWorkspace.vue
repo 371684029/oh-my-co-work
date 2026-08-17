@@ -1,5 +1,5 @@
 <template>
-  <section ref="workspaceRoot" class="terminal-workspace">
+  <section ref="workspaceRoot" class="terminal-workspace" :style="{ background: theme.background }">
     <header class="terminal-workspace-head">
       <div class="terminal-workspace-leading">
         <button type="button" class="terminal-back" @click="$emit('close')">
@@ -12,11 +12,60 @@
             <span class="terminal-live-dot" :class="{ active: isRunning }" aria-hidden="true" />
             <strong>{{ terminal.label || '内嵌终端' }}</strong>
             <span class="terminal-state">{{ statusText }}</span>
+            <span v-if="focused && isRunning" class="terminal-focus-badge">终端输入中</span>
           </div>
           <span class="terminal-cwd" :title="terminal.cwd">{{ terminal.cwd || '—' }}</span>
         </div>
       </div>
       <div class="terminal-workspace-actions">
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="搜索输出"
+          @click="toggleSearch"
+        >
+          搜索
+        </button>
+        <button type="button" class="terminal-toolbar-button" title="复制选区" @click="copySel">
+          复制
+        </button>
+        <button type="button" class="terminal-toolbar-button" title="清屏（仅本地视图）" @click="clearView">
+          清屏
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="重新附着并回放缓冲"
+          @click="$emit('reconnect', terminal.id)"
+        >
+          重连
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="下载终端日志"
+          @click="$emit('download-log', terminal.id)"
+        >
+          日志
+        </button>
+        <button
+          v-if="focused && isRunning"
+          type="button"
+          class="terminal-toolbar-button"
+          title="退出输入焦点，不再把按键发给终端"
+          @click="blurView"
+        >
+          退出焦点
+        </button>
+        <button
+          v-else-if="isRunning"
+          type="button"
+          class="terminal-toolbar-button"
+          title="点此后键盘输入发给终端"
+          @click="focusView"
+        >
+          进入输入
+        </button>
         <button
           type="button"
           class="terminal-toolbar-button"
@@ -38,12 +87,33 @@
       </div>
     </header>
 
+    <div v-if="searchOpen" class="terminal-search">
+      <input
+        ref="searchInput"
+        v-model="searchQuery"
+        class="terminal-search-input"
+        type="search"
+        placeholder="在输出中查找"
+        @keydown.enter.prevent="find(false)"
+        @keydown.escape.prevent="searchOpen = false"
+      />
+      <button type="button" class="terminal-toolbar-button" @click="find(true)">上一个</button>
+      <button type="button" class="terminal-toolbar-button" @click="find(false)">下一个</button>
+    </div>
+
+    <p v-if="terminal.replayTruncated" class="terminal-gap-hint">
+      回放缓冲有截断，部分较早输出未显示。完整内容请下载日志。
+    </p>
+
     <div class="terminal-stage">
       <TerminalView
+        ref="viewRef"
         :key="terminal.id"
         :terminal="terminal"
         @input="$emit('input', $event)"
         @resize="$emit('resize', $event)"
+        @focus-change="onFocusChange"
+        @search="toggleSearch"
       />
     </div>
 
@@ -57,27 +127,37 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
   fullscreenElement,
   requestFullscreen,
 } from '../../composables/fullscreen'
+import { themeFromPrefs, useTerminalPrefs } from '../../composables/terminalPrefs'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
   connectionStatus: { type: String, default: 'open' },
 })
 
-defineEmits(['close', 'kill', 'input', 'resize'])
+const emit = defineEmits(['close', 'kill', 'input', 'resize', 'reconnect', 'download-log'])
 
+const { prefs } = useTerminalPrefs()
+const theme = computed(() => themeFromPrefs(prefs.value))
 const workspaceRoot = ref(null)
+const viewRef = ref(null)
+const searchInput = ref(null)
 const isFullscreen = ref(false)
+const focused = ref(false)
+const searchOpen = ref(false)
+const searchQuery = ref('')
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
-  return '键盘输入将直接发送到终端 · 返回对话不会停止进程'
+  if (props.connectionStatus !== 'open') return '连接中断时进程仍在跑 · 点重连重新附着'
+  if (focused.value) return '终端输入中 · Esc 或「退出焦点」后按键不再发给 PTY'
+  return '未处于输入焦点 · 点终端或「进入输入」后键盘才会发给进程'
 })
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
@@ -95,6 +175,43 @@ const statusText = computed(() => {
   return map[props.terminal.status] || props.terminal.status
 })
 
+function onFocusChange(value) {
+  focused.value = !!value
+}
+
+function focusView() {
+  viewRef.value?.focusTerminal?.()
+}
+
+function blurView() {
+  viewRef.value?.blurTerminal?.()
+}
+
+function clearView() {
+  viewRef.value?.clearScreen?.()
+}
+
+function copySel() {
+  viewRef.value?.copySelection?.()
+}
+
+async function toggleSearch() {
+  searchOpen.value = !searchOpen.value
+  if (searchOpen.value) {
+    await nextTick()
+    searchInput.value?.focus()
+  }
+}
+
+function find(previous) {
+  const q = searchQuery.value.trim()
+  if (!q) return
+  const ok = previous ? viewRef.value?.findPrevious?.(q) : viewRef.value?.findNext?.(q)
+  if (!ok) {
+    /* 找不到时保持安静，避免刷屏 */
+  }
+}
+
 function syncFullscreenState() {
   isFullscreen.value = fullscreenElement() === workspaceRoot.value
 }
@@ -103,6 +220,16 @@ async function toggleTerminalFullscreen() {
   if (isFullscreen.value) await exitFullscreen()
   else await requestFullscreen(workspaceRoot.value)
 }
+
+watch(
+  () => props.terminal.status,
+  (status, prev) => {
+    if (!prefs.value.collapseOnExit) return
+    if (['starting', 'running'].includes(prev) && !['starting', 'running'].includes(status)) {
+      emit('close')
+    }
+  },
+)
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
@@ -124,7 +251,6 @@ onUnmounted(() => {
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 18px;
-  background: #17191f;
   box-shadow:
     0 18px 50px rgba(15, 18, 25, 0.16),
     inset 0 1px rgba(255, 255, 255, 0.05);
@@ -165,6 +291,12 @@ onUnmounted(() => {
 
 .terminal-workspace-leading {
   gap: 12px;
+}
+
+.terminal-workspace-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .terminal-back,
@@ -241,6 +373,14 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.terminal-focus-badge {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(95, 217, 142, 0.16);
+  color: #8ee7b0;
+  font-size: 10.5px;
+}
+
 .terminal-cwd {
   display: block;
   max-width: min(52vw, 580px);
@@ -249,6 +389,34 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+.terminal-search,
+.terminal-gap-hint {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  color: #cfd4de;
+  background: #1b1e25;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+}
+
+.terminal-gap-hint {
+  margin: 0;
+  color: #e6c07b;
+}
+
+.terminal-search-input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #e7e9ee;
 }
 
 .terminal-stage {

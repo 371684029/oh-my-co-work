@@ -71,6 +71,20 @@ export const api = {
         method: 'POST',
         body: '{}',
       }),
+    terminalLog: async (id, terminalId) => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${id}/terminals/${terminalId}/log`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || res.statusText)
+      }
+      const blob = await res.blob()
+      const header = res.headers.get('content-disposition') || ''
+      const matched = header.match(/filename="([^"]+)"/)
+      return { blob, filename: matched?.[1] || `terminal-${terminalId}.log` }
+    },
     /** 从节点重开：统一追加克隆；{ nodeInstanceId } 或 { stepIndex } */
     restartFromNode: (id, body) =>
       req(`/sessions/${id}/restart-from-node`, {

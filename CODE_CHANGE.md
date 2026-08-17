@@ -22,6 +22,18 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | A | web/src/views/settings/TerminalPrefs.vue | 本机终端主题、字体、粘贴策略、退出后收起
+2026-08-17 | A | web/src/composables/terminalPrefs.js | localStorage 终端偏好
+2026-08-17 | A | shared/terminalPaste.js | 多行/过长粘贴 confirm/allow/reject
+2026-08-17 | M | web/src/components/terminal/TerminalView.vue | Esc 退出焦点、粘贴确认、外观跟随偏好、搜索插件
+2026-08-17 | M | web/src/components/terminal/TerminalWorkspace.vue | 输入中徽章、搜索复制清屏重连日志、截断提示
+2026-08-17 | M | web/src/components/terminal/TerminalSessionCard.vue | 卡片可下载日志
+2026-08-17 | M | server/src/terminal/terminalService.js | openTerminalLog
+2026-08-17 | M | server/src/routes.js | GET 终端日志
+2026-08-17 | M | web/src/api.js / Workbench.vue | 下载日志与重连
+2026-08-17 | A | server/test/terminalPaste.test.js | 粘贴策略单测
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | packages/oh-my-co-work-v2-linux-x64.zip | 覆盖 2.3.0 运行包
 2026-08-17 | M | packages/CURRENT.txt / README.md | 版本 2.3.0；linux-x64 产物元数据
 

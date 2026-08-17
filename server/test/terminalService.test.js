@@ -104,3 +104,13 @@ test('keepAlive terminals resolve immediately and stay running', async () => {
   assert.equal(terminalService.killTerminal(terminal.id), true)
 })
 
+test('openTerminalLog points at the session log file', async () => {
+  const sessionId = 'log-download'
+  await terminalService.runTerminal(terminalOptions(sessionId, 'printf LOGTOKEN'))
+  const terminal = terminalService.listSessionTerminals(sessionId)[0]
+  const opened = terminalService.openTerminalLog(terminal.id, sessionId)
+  assert.ok(!opened.error, opened.error)
+  const text = fs.readFileSync(opened.path, 'utf8')
+  assert.match(text, /LOGTOKEN/)
+})
+

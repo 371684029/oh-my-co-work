@@ -28,6 +28,9 @@
         <button type="button" class="terminal-action primary" @click="$emit('open', terminal.id)">
           {{ isRunning ? '进入终端' : '查看终端' }}
         </button>
+        <button type="button" class="terminal-action" @click="$emit('download-log', terminal.id)">
+          日志
+        </button>
         <button
           v-if="isRunning"
           type="button"
@@ -48,7 +51,7 @@ const props = defineProps({
   terminal: { type: Object, required: true },
 })
 
-defineEmits(['open', 'kill'])
+defineEmits(['open', 'kill', 'download-log'])
 
 // 预览保留的最大行数：足够铺满放大后的卡片，超出部分进全屏终端看
 const PREVIEW_LINES = 40

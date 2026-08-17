@@ -42,7 +42,7 @@ app.use(ElementPlusX)
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
 | 终端消息 | `TerminalSessionCard` | 深灰玻璃终端卡；有限输出预览、运行态、进入终端与停止 |
-| 终端工作区 | `TerminalWorkspace` + `TerminalView` | 中栏占满；`xterm.js` 延迟加载，保留右侧流程轨；返回对话不停止进程 |
+| 终端工作区 | `TerminalWorkspace` + `TerminalView` | 中栏占满；xterm 延迟加载；焦点徽章；搜索/复制/清屏/重连/日志；设置「终端」页调外观与粘贴策略 |
 | 中栏输入 | `XSender` | **`ref` 取文** + `@submit`；`@paste-file` 粘贴上传；`submit-type="enter"`；工具栏 `/` `@` `#` · 附件 · **复制** |
 | 附件 | 自研 chip + 气泡 file-card | 先 `POST /sessions/:id/files`，再随消息 `attachments[]` |
 | Composer 面板 | 自研 slash / at / hash | `/` 指令；`@` 成员/节点；`#` → `#群聊`/`#文件夹`/`#1`…/`#出n` |
