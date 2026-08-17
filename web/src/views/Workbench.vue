@@ -138,7 +138,7 @@
         </Conversations>
         <div v-else class="conv-empty">
           <p class="conv-empty-title">还没有会话</p>
-          <p class="conv-empty-desc">选择上方群模板或成员，点击「开聊」</p>
+            <p class="conv-empty-desc">群模板点「开聊」新建；成员会打开已有单聊</p>
         </div>
       </div>
     </aside>
@@ -620,7 +620,7 @@
             >
               一键开聊：演示流
             </el-button>
-            <p class="welcome-cta">或左侧自选群/成员后点「开聊」</p>
+            <p class="welcome-cta">或左侧自选群模板后点「开聊」；成员会回到已有单聊</p>
           </div>
         </div>
       </div>
@@ -1079,6 +1079,7 @@ import {
   nodeStatusLabel,
   isDiscardedUnexecutedFlowNode,
   stepTypeLabel as sharedStepTypeLabel,
+  MAX_PROJECT_PARAMS,
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
@@ -1578,12 +1579,16 @@ function sessionCtx() {
 /** 会话项目参数 #1 #2…（不含系统 #群聊） */
 const sessionParamsList = computed(() => {
   const c = sessionCtx()
-  if (Array.isArray(c?.paramsList) && c.paramsList.length) return c.paramsList
+  if (Array.isArray(c?.paramsList) && c.paramsList.length) {
+    return c.paramsList.slice(0, MAX_PROJECT_PARAMS)
+  }
   if (c?.params && typeof c.params === 'object') {
     const keys = Object.keys(c.params)
       .filter((k) => /^#\d+$/.test(k))
-      .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)))
-    if (keys.length) return keys.map((k) => c.params[k])
+      .map((k) => Number(k.slice(1)))
+      .filter((n) => n >= 1 && n <= MAX_PROJECT_PARAMS)
+      .sort((a, b) => a - b)
+    if (keys.length) return keys.map((n) => c.params[`#${n}`])
   }
   return []
 })
@@ -1635,29 +1640,18 @@ const hashItems = computed(() => {
     emptyHint: '未配置工作目录',
   })
 
-  // 用户输入：空格/换行切成第 1、2… 段（新开聊各自一套）
-  const list = sessionParamsList.value
-  if (list.length) {
-    list.forEach((v, i) => {
-      const n = i + 1
-      const text = v == null ? '' : String(v)
-      items.push({
-        key: String(n),
-        label: String(n),
-        name: `输入·第${n}段`,
-        value: text,
-        preview: previewHashValue(text),
-        emptyHint: '空',
-      })
-    })
-  } else {
+  // 用户输入：空格/换行切成第 1…99 段
+  const list = sessionParamsList.value.slice(0, MAX_PROJECT_PARAMS)
+  const shown = Math.min(MAX_PROJECT_PARAMS, Math.max(list.length, 1))
+  for (let n = 1; n <= shown; n++) {
+    const text = list[n - 1] == null ? '' : String(list[n - 1])
     items.push({
-      key: '1',
-      label: '1',
-      name: '输入·第1段',
-      value: '',
-      preview: '',
-      emptyHint: '空格/换行分隔录入；提交后写入',
+      key: String(n),
+      label: String(n),
+      name: `输入·第${n}段`,
+      value: text,
+      preview: previewHashValue(text),
+      emptyHint: n === 1 && !list.length ? '空格/换行分隔录入；最多 #99' : '空',
     })
   }
 
@@ -1685,16 +1679,35 @@ const hashItems = computed(() => {
 const filteredHashItems = computed(() => {
   const q = (hashQuery.value || '').toLowerCase().trim().replace(/^#/, '')
   const list = hashItems.value
-  if (!q) return list
-  return list.filter(
-    (h) =>
-      h.key.toLowerCase().includes(q) ||
-      h.label.toLowerCase().includes(q) ||
-      h.name.toLowerCase().includes(q) ||
-      String(h.value || '')
-        .toLowerCase()
-        .includes(q),
-  )
+  const filtered = !q
+    ? list
+    : list.filter(
+        (h) =>
+          h.key.toLowerCase().includes(q) ||
+          h.label.toLowerCase().includes(q) ||
+          h.name.toLowerCase().includes(q) ||
+          String(h.value || '')
+            .toLowerCase()
+            .includes(q),
+      )
+  const n = Number(q)
+  if (Number.isInteger(n) && n >= 1 && n <= MAX_PROJECT_PARAMS) {
+    if (!filtered.some((h) => h.key === String(n))) {
+      const text = sessionParamsList.value[n - 1] == null ? '' : String(sessionParamsList.value[n - 1])
+      return [
+        ...filtered,
+        {
+          key: String(n),
+          label: String(n),
+          name: `输入·第${n}段`,
+          value: text,
+          preview: previewHashValue(text),
+          emptyHint: '尚未写入',
+        },
+      ]
+    }
+  }
+  return filtered
 })
 
 function previewHashValue(v) {
@@ -2663,7 +2676,13 @@ async function startChat() {
         : await api.groups.startSession(id, {})
     await loadLists()
     await selectSession(s.id)
-    ElMessage.success(kind === 'm:' ? '已与成员开聊' : '已开聊')
+    ElMessage.success(
+      kind === 'm:'
+        ? s.reused
+          ? '已回到与该成员的会话'
+          : '已与成员开聊'
+        : '已开聊',
+    )
   } catch (e) {
     // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」
     ElMessage.warning(e?.message || '开聊失败，请稍后重试')

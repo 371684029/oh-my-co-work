@@ -1559,13 +1559,14 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       memberId: adminResolved.memberId,
       memberName: adminResolved.member?.display_name || null,
     },
-    // 开聊后先等人确认再跑流程；成员单聊不采 #1…，用 #a
-    pendingStart: {
+  }
+  if (!isAdhoc) {
+    ctx.pendingStart = {
       at: t,
       groupTitle,
-      captureParams: !isAdhoc,
-      callArgs: isAdhoc,
-    },
+      captureParams: true,
+      callArgs: false,
+    }
   }
 
   getDb()
@@ -1577,7 +1578,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       sessionId,
       groupId,
       sessionTitle,
-      SESSION_STATUS.WAITING_HUMAN,
+      isAdhoc ? SESSION_STATUS.ACTIVE : SESSION_STATUS.WAITING_HUMAN,
       JSON.stringify(ctx),
       t,
       t,
@@ -1607,6 +1608,23 @@ export function createSessionFromGroup(groupId, { title } = {}) {
   })
   // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
   // 不再挂归档尾节点：释放资源改到设置里手动操作
+
+  if (isAdhoc) {
+    addMessage(sessionId, {
+      role: 'system',
+      type: 'status',
+      content: { text: `已与「${group.title}」开聊。发消息继续；@ 其他成员可临时协助。` },
+    })
+    emitAll({ type: 'session.created', payload: { sessionId, groupId } })
+    emitSession(sessionId, {
+      type: 'session.status',
+      payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
+    })
+    setTimeout(() => {
+      advance(sessionId).catch((e) => console.warn('[acw] adhoc start', e?.message || e))
+    }, 0)
+    return getSession(sessionId)
+  }
 
   addMessage(sessionId, {
     role: 'system',
@@ -1644,13 +1662,63 @@ export function createSessionFromGroup(groupId, { title } = {}) {
   return getSession(sessionId)
 }
 
+function findAdhocSessionForMember(memberId) {
+  if (!memberId) return null
+  const groups = getDb().prepare('SELECT id, config_json FROM groups').all()
+  const groupIds = groups
+    .filter((g) => {
+      const cfg = parseJson(g.config_json, {})
+      return cfg?.adhoc === true && cfg?.fromMemberId === memberId
+    })
+    .map((g) => g.id)
+  if (!groupIds.length) return null
+  const placeholders = groupIds.map(() => '?').join(',')
+  return (
+    getDb()
+      .prepare(
+        `SELECT * FROM sessions WHERE group_id IN (${placeholders})
+         ORDER BY CASE WHEN status = 'archived' THEN 1 ELSE 0 END, updated_at DESC
+         LIMIT 1`,
+      )
+      .get(...groupIds) || null
+  )
+}
+
+function resumeAdhocIfStillPendingStart(sessionId) {
+  const session = getSession(sessionId)
+  if (!session) return
+  const ctx = parseJson(session.context_json, {})
+  if (!ctx.pendingStart) return
+  delete ctx.pendingStart
+  const nextStatus =
+    session.status === SESSION_STATUS.ARCHIVED ? SESSION_STATUS.ACTIVE : SESSION_STATUS.ACTIVE
+  updateSession(sessionId, {
+    status: nextStatus,
+    context_json: JSON.stringify(ctx),
+  })
+  setTimeout(() => {
+    advance(sessionId).catch((e) => console.warn('[acw] adhoc resume', e?.message || e))
+  }, 0)
+}
+
 /**
- * 从单个成员开聊：生成临时「单聊」群模板（config.adhoc），再走标准建会话。
- * 流程：仅该成员一步（无需「说明/参数」人工步；调用参数用 #a）。
+ * 从单个成员开聊：已有一对一会话则打开它（不新建）。
+ * 新会话生成临时「单聊」群模板（config.adhoc），无启动确认闸门。
  */
 export function createSessionFromMember(memberId, { title } = {}) {
   const raw = getMember(memberId)
   if (!raw || !raw.enabled) throw new Error('成员不存在或未启用')
+
+  const existing = findAdhocSessionForMember(raw.id)
+  if (existing) {
+    if (existing.status === SESSION_STATUS.ARCHIVED) {
+      unarchiveSession(existing.id, { silent: true, reason: 'member_reuse' })
+    }
+    resumeAdhocIfStillPendingStart(existing.id)
+    const row = getSession(existing.id)
+    return row ? { ...row, reused: true } : row
+  }
+
   const name = raw.display_name || raw.name || '成员'
   const t = nowIso()
   const groupId = uid('grp')

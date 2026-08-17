@@ -213,10 +213,16 @@ export function formatSessionAutoTitle(opts = {}) {
 }
 
 /**
+ * 项目参数编号上限：#1 … #99
+ */
+export const MAX_PROJECT_PARAMS = 99
+
+/**
  * 项目信息 → 节点参数 #1 #2 …
  * **仅用于用户输入**：空格或换行均可分隔多段；空段丢弃。
  * 节点/成员**输出**不要走本函数（输出整段使用，不切分）。
  * 另：新开聊（新会话）各自独立一套 #1…；**同会话内多次采集为递增追加，不覆盖**。
+ * 最多 #99，超出丢弃。
  * @param {string} text
  * @returns {{ list: string[], map: Record<string,string>, raw: string }}
  */
@@ -228,7 +234,7 @@ export function parseProjectParams(text) {
   }
   // 空格、换行、tab 均一视同仁作分隔
   const parts = trimmed.split(/\s+/).filter(Boolean)
-  const list = dedupeProjectParamsList(parts)
+  const list = dedupeProjectParamsList(parts).slice(0, MAX_PROJECT_PARAMS)
 
   const map = {}
   list.forEach((v, i) => {
@@ -275,7 +281,7 @@ export function listToParamMap(list) {
 export function existingProjectParamsList(sessionContext) {
   const ctx = sessionContext || {}
   if (Array.isArray(ctx.paramsList) && ctx.paramsList.length) {
-    return ctx.paramsList.map((v) => String(v))
+    return ctx.paramsList.map((v) => String(v)).slice(0, MAX_PROJECT_PARAMS)
   }
   const p = ctx.params && typeof ctx.params === 'object' ? ctx.params : {}
   const out = []
@@ -301,14 +307,16 @@ export function appendProjectParams(existingListOrCtx, text) {
   )
   const parsed = parseProjectParams(text)
   const seen = new Set(base.map((v) => v.trim()))
+  const room = Math.max(0, MAX_PROJECT_PARAMS - base.length)
   const added = []
   for (const p of parsed.list) {
+    if (added.length >= room) break
     const t = String(p).trim()
     if (!t || seen.has(t)) continue
     seen.add(t)
     added.push(t)
   }
-  const list = [...base, ...added]
+  const list = [...base.slice(0, MAX_PROJECT_PARAMS), ...added].slice(0, MAX_PROJECT_PARAMS)
   const startIndex = base.length + 1
   return {
     list,
