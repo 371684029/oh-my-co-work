@@ -13,11 +13,11 @@
 
 | 平台 | 文件 | 大小 |
 |------|------|------|
-| darwin-arm64 | [`oh-my-co-work-v2-darwin-arm64.zip`](./oh-my-co-work-v2-darwin-arm64.zip) | 20843651 |
+| darwin-arm64 | [`oh-my-co-work-v2-darwin-arm64.zip`](./oh-my-co-work-v2-darwin-arm64.zip) | 20852722 |
 | linux-x64 | [`oh-my-co-work-v2-linux-x64.zip`](./oh-my-co-work-v2-linux-x64.zip) | 21017121 |
 | win32-x64 | [`oh-my-co-work-v2-win32-x64.zip`](./oh-my-co-work-v2-win32-x64.zip) | 21362000 |
 
-版本：`2.3.0`（大版本 v2）
+版本：`2.4.0`（大版本 v2）
 
 ## 启动
 
