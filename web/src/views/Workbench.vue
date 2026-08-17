@@ -92,13 +92,14 @@
           @menu-command="onConvMenu"
         >
           <template #label="{ item }">
-            <el-tooltip
-              :content="item.hoverTitle || item.label"
-              placement="right"
-              :disabled="!(item.hoverTitle || item.label)"
-              :show-after="200"
-            >
-              <span class="conv-label-wrap">
+            <div class="conv-row">
+              <el-tooltip
+                :content="item.hoverTitle || item.label"
+                placement="right"
+                :disabled="!(item.hoverTitle || item.label)"
+                :show-after="200"
+              >
+                <span class="conv-label-wrap">
                 <span v-if="item.pinned" class="conv-pin" aria-hidden="true">📌</span>
                 <span v-if="item.labelPrefix" class="conv-label-text">{{ item.labelPrefix }}</span>
                 <el-tag
@@ -131,6 +132,8 @@
                 >
               </span>
             </el-tooltip>
+            <span v-if="item.timeLabel" class="conv-time">{{ item.timeLabel }}</span>
+            </div>
           </template>
         </Conversations>
         <div v-else class="conv-empty">
@@ -208,7 +211,7 @@
         <!-- 经典布局：上消息滚动 · 下闸门+输入固定 -->
         <div v-else class="wb-chat-main">
           <div class="wb-chat-scroll">
-            <div class="wb-chat-col">
+            <div class="wb-chat-col" :class="{ 'is-wide': terminalSessions.length > 0 }">
               <BubbleList
                 :list="bubbleList"
                 max-height="100%"
@@ -311,59 +314,7 @@
               </div>
 
               <div v-show="!footerCollapsed" class="footer-body">
-                <div
-                  v-if="pendingGate"
-                  class="gate-card gate-float gate-card--attention"
-                >
-                  <div class="gate-kicker">
-                    <span class="gate-pulse" aria-hidden="true" />
-                    {{
-                      pendingGate.content?.mode === 'session_start'
-                        ? '确认开始'
-                        : pendingGate.content?.mode === 'human_input'
-                          ? '请输入'
-                          : pendingGate.content?.mode === 'need_params'
-                            ? '请输入'
-                            : pendingGate.content?.mode === 'interrupted'
-                              ? '崩溃恢复'
-                              : pendingGate.content?.mode === 'archive_confirm'
-                                ? '确认归档'
-                                : pendingGate.content?.requireHuman
-                                  ? '须人工同意'
-                                  : '待你处理'
-                    }}
-                  </div>
-                  <!-- 说明 + 操作；文字统一走下方消息输入框 -->
-                  <div class="gate-scroll">
-                    <div class="gate-title">{{ pendingGate.content?.text }}</div>
-                    <p
-                      v-if="
-                        pendingGate.content?.mode === 'archive_confirm' &&
-                        pendingGate.content?.dueAt
-                      "
-                      class="gate-policy"
-                    >
-                      截止：{{ formatDueAt(pendingGate.content.dueAt) }}（{{
-                        pendingGate.content.hours || autoArchiveHours
-                      }}
-                      小时内未确认将自动归档）
-                    </p>
-                    <p v-else-if="pendingGate.content?.policy" class="gate-policy">
-                      {{ pendingGate.content.policy }}
-                    </p>
-                    <p
-                      v-if="
-                        pendingGate.content?.captureParams &&
-                        (pendingGate.content?.mode === 'human_input' ||
-                          pendingGate.content?.mode === 'session_start')
-                      "
-                      class="gate-params-hint"
-                    >
-                      示例：<code>demo-app v1 D:\work</code> → #1=demo-app · #2=v1 · #3=D:\work（空格/换行均可；同会话递增追加，新开聊另起一套）
-                    </p>
-                  </div>
-                  <!-- 操作按钮下沉到输入区，见 composer-toolbar -->
-                </div>
+                <!-- 待确认说明统一走下方输入框 placeholder + 按钮，不再单独显示顶部大卡片 -->
 
                 <div class="composer" :class="{ 'composer--gate': !!pendingGate }">
                   <el-alert
@@ -594,6 +545,13 @@
                           </el-button>
                         </template>
                         <template v-else>
+                          <el-tooltip
+                            placement="top"
+                            :show-after="200"
+                            :content="pendingGate.content?.text || ''"
+                          >
+                            <span class="gate-info-dot" title="查看详情">i</span>
+                          </el-tooltip>
                           <el-button type="danger" @click="gate(pendingGate, 'approve')">
                             同意
                           </el-button>
@@ -639,6 +597,10 @@
             <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来</span>
           </p>
           <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
+          <p class="core-terminal">
+            <span class="terminal-badge">CLI</span>
+            内置终端守护者 · 进程常驻 · 崩溃可恢复
+          </p>
           <p class="welcome-journey" aria-label="上手三步">
             <span>开聊</span>
             <i aria-hidden="true" />
@@ -1544,6 +1506,23 @@ function sessionListParts(s) {
   }
 }
 
+/** 相对时间：最小 h，最大 w；已归档返回空 */
+function relativeTime(isoOrTs) {
+  if (!isoOrTs) return ''
+  const t = new Date(isoOrTs).getTime()
+  if (!t || Number.isNaN(t)) return ''
+  const diffMs = Date.now() - t
+  if (diffMs < 0) return ''
+  const mins = Math.floor(diffMs / 60000)
+  const hours = Math.floor(mins / 60)
+  const days = Math.floor(hours / 24)
+  const weeks = Math.floor(days / 7)
+  if (hours < 1) return '刚刚'
+  if (hours < 24) return `${hours}h`
+  if (days < 7) return `${days}d`
+  return `${weeks}w`
+}
+
 /** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
 const conversationItems = computed(() =>
   filteredSessions.value.map((s) => {
@@ -1562,6 +1541,7 @@ const conversationItems = computed(() =>
       pinned: !!s.pinned,
       archiveOutcome: outcome,
       adhoc: !!s.adhoc,
+      timeLabel: ['archived'].includes(s.status) ? '' : relativeTime(s.updated_at),
     }
   }),
 )
@@ -2042,10 +2022,12 @@ const composerPlaceholder = computed(() => {
       : '在此输入内容，Enter 或点「提交」'
   }
   if (mode === 'interrupted') {
-    return '服务曾中断：点右侧「继续 / 归档 / 放弃」（输入框可选附言）'
+    return '服务曾中断：继续=从中断处恢复 · 归档=结束并保留记录 · 放弃=归档（原因 interrupted_discard）'
   }
   if (mode === 'archive_confirm') return '在此写归档说明（可空），再点右侧按钮…'
-  return '可先写意见，再点「同意」或「拒绝」…'
+  // 通用审核（产出审核/节点审核等）：把闸门标题放进 placeholder
+  const gateTitle = g.content?.text || g.content?.title
+  return gateTitle ? `${gateTitle} · 可先写意见，再点「同意」或「拒绝」` : '可先写意见，再点「同意」或「拒绝」…'
 })
 
 const composerToolbarHint = computed(() => {
@@ -2053,7 +2035,7 @@ const composerToolbarHint = computed(() => {
     const mode = pendingGate.value.content?.mode
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
-    if (mode === 'interrupted') return '点继续/归档/放弃'
+    if (mode === 'interrupted') return ''
     return 'Enter=附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -3609,6 +3591,20 @@ loadLists().then(() => {
 }
 
 /* 会话列表：#1 正文 + 群缩写标签；整行 hover 看全称 */
+.conv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+
+.conv-row .el-tooltip {
+  flex: 1;
+  min-width: 0;
+}
+
 .conv-label-wrap {
   display: inline-flex;
   align-items: center;
@@ -3619,6 +3615,13 @@ loadLists().then(() => {
   padding-right: 2px;
   vertical-align: middle;
   cursor: default;
+}
+.conv-time {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--ecw-text-3, #8e8ea0);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
 }
 .conv-pin {
   flex-shrink: 0;
@@ -3925,6 +3928,12 @@ loadLists().then(() => {
   min-height: 0;
 }
 
+/* 有内嵌终端时放宽消息列，给终端卡片更多空间。
+   只作用于消息区：输入框保持原有阅读宽度，避免整屏排版跳动 */
+.wb-chat-col.is-wide {
+  max-width: var(--ecw-stage-max-wide, 1180px);
+}
+
 .wb-chat-footer .wb-chat-col {
   height: auto;
 }
@@ -3962,6 +3971,17 @@ loadLists().then(() => {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+/* 终端气泡：撑满可用宽度，不留富文本气泡的窄边距 */
+.wb-chat-scroll :deep(.elx-bubble:has(.terminal-card)) {
+  gap: 8px !important;
+}
+
+.wb-chat-scroll :deep(.elx-bubble:has(.terminal-card) .elx-bubble__content-wrapper) {
+  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .wb-chat-scroll :deep(.elx-bubble__header) {
@@ -4288,6 +4308,29 @@ loadLists().then(() => {
   border-radius: 10px;
 }
 
+.gate-info-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ecw-text-3, #8e8ea0);
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  font-family: Georgia, 'Times New Roman', serif;
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.gate-info-dot:hover {
+  opacity: 1;
+  color: var(--ecw-text-2, #5a5a66);
+}
+
 .meta-gate {
   color: var(--ecw-text-3, #8e8ea0);
 }
@@ -4449,6 +4492,32 @@ loadLists().then(() => {
   color: var(--ecw-accent, #007aff);
   letter-spacing: 0.04em;
   animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.core-terminal {
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: var(--ecw-text-2, #5a5a66);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: welcome-rise 0.75s 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.terminal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  color: #5fd98e;
+  background: rgba(95, 217, 142, 0.1);
+  border: 1px solid rgba(95, 217, 142, 0.25);
+  border-radius: 5px;
+  letter-spacing: 0.05em;
 }
 
 .welcome-journey {
