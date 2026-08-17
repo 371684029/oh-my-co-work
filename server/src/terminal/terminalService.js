@@ -148,7 +148,6 @@ export function runTerminal({
   launch,
   cwd,
   env,
-  timeoutMs,
   keepAlive = false,
   sessionId,
   nodeInstanceId,
@@ -333,10 +332,9 @@ export function runTerminal({
 
       if (keepAlive) {
         // 交互式常驻终端：启动成功即视为本节点成功，进程留在会话里供用户继续输入。
-        // 不挂超时定时器，否则一个可交互的 shell 会在 timeoutMs 后被判为「执行超时」。
         settle({
           ok: true,
-          summary: `【${entry.label}】终端已就绪（pid ${entry.pid}），可直接输入；进程将保留至您停止或会话归档`,
+          summary: `【${entry.label}】终端已就绪（pid ${entry.pid}），可直接输入；进程将保留至您停止或到设置释放资源`,
           terminalId: id,
           detached: true,
           keepAlive: true,
@@ -353,19 +351,6 @@ export function runTerminal({
           },
         })
         return
-      }
-
-      if (Number(timeoutMs) > 0) {
-        entry.timeout = setTimeout(() => {
-          entry.status = 'timed_out'
-          entry.signal = 'timeout'
-          try {
-            entry.process.kill()
-            killProcessTree(entry.pid)
-          } catch {
-            finish({ exitCode: -1, signal: 'timeout' })
-          }
-        }, Number(timeoutMs))
       }
     } catch (error) {
       finish({ error })

@@ -119,8 +119,7 @@ npm run dev:web
     "mode": "command",
     "command": "your-cli",
     "scriptWorkDir": "/your/workspace",
-    "executionMode": "terminal",
-    "timeoutMs": 3600000
+    "executionMode": "terminal"
   }
 }
 ```

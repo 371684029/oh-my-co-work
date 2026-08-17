@@ -68,9 +68,6 @@ export const MEMBER_KIND = {
   SCRIPT: 'script',
 }
 
-/** 脚本/成员节点默认超时：0 = 不超时 */
-export const DEFAULT_SCRIPT_TIMEOUT_MS = 0
-
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',

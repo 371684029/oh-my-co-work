@@ -153,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 
@@ -207,17 +207,17 @@ function resourceLabel(item) {
   return `${item.title}（${bits.join(' · ') || '占用'}）`
 }
 
-async function loadResources() {
-  loadingResources.value = true
+async function loadResources({ quiet = false } = {}) {
+  if (!quiet) loadingResources.value = true
   try {
     const r = await api.resources.list()
     occupied.value = r.items || []
     const live = new Set(occupied.value.map((i) => i.sessionId))
     selectedSessionIds.value = selectedSessionIds.value.filter((id) => live.has(id))
   } catch (e) {
-    ElMessage.error(e.message)
+    if (!quiet) ElMessage.error(e.message)
   } finally {
-    loadingResources.value = false
+    if (!quiet) loadingResources.value = false
   }
 }
 
@@ -347,7 +347,23 @@ async function onPurge() {
   }
 }
 
-onMounted(load)
+let resourcePoll = 0
+function onResourcePageVisible() {
+  if (document.visibilityState === 'visible') loadResources({ quiet: true })
+}
+
+onMounted(() => {
+  load()
+  resourcePoll = window.setInterval(() => loadResources({ quiet: true }), 3000)
+  document.addEventListener('visibilitychange', onResourcePageVisible)
+  window.addEventListener('focus', onResourcePageVisible)
+})
+
+onUnmounted(() => {
+  window.clearInterval(resourcePoll)
+  document.removeEventListener('visibilitychange', onResourcePageVisible)
+  window.removeEventListener('focus', onResourcePageVisible)
+})
 </script>
 
 <style scoped>

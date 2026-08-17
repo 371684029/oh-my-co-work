@@ -22,6 +22,15 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | web/src/views/Workbench.vue | 欢迎页「流动的 Workflow」后加终端守护者，去掉下方重复 CLI 徽章行
+2026-08-17 | M | web/src/views/settings/Members.vue | 删除 timeoutMs 表单字段，保存时不再写入
+2026-08-17 | M | web/src/views/settings/Prefs.vue | 设置页占用列表 3s 轮询 + 切回前台刷新
+2026-08-17 | M | server/src/runners.js | 删除脚本超时定时器与 timeoutMs 字段
+2026-08-17 | M | server/src/terminal/terminalService.js | 删除 PTY timeoutMs 定时器
+2026-08-17 | M | server/src/demoRepair.js | 启动时剥离成员配置里遗留的 timeoutMs
+2026-08-17 | M | shared/index.js | 删除 DEFAULT_SCRIPT_TIMEOUT_MS
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | server/src/engine.js | 流程走完不再弹归档确认、不自动归档、不杀常驻进程；旧归档尾节点静默跳过
 2026-08-17 | A | server/src/resources.js | 列出占用会话并释放选中/全部进程与终端
 2026-08-17 | M | server/src/routes.js | GET /resources、POST /resources/release

@@ -7,7 +7,7 @@ import test from 'node:test'
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-archive-skip-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
-const { resolveScriptTimeoutMs } = await import('../src/runners.js')
+const { enrichScriptConfig } = await import('../src/runners.js')
 const { initDb, getDb } = await import('../src/db.js')
 initDb()
 const { createMember, createGroup, createSessionFromGroup, getSessionDetail } = await import(
@@ -19,12 +19,15 @@ const { requestArchiveConsent, processDueArchives, dismissPendingArchiveIfAny } 
 const { listOccupiedResources, releaseResources } = await import('../src/resources.js')
 const { MEMBER_KIND, SESSION_STATUS } = await import('@acw/shared')
 
-test('script timeout is off unless timeoutMs is a positive number', () => {
-  assert.equal(resolveScriptTimeoutMs({}), 0)
-  assert.equal(resolveScriptTimeoutMs({ timeoutMs: 0 }), 0)
-  assert.equal(resolveScriptTimeoutMs({ timeoutMs: -1 }), 0)
-  assert.equal(resolveScriptTimeoutMs({ timeoutMs: 'nope' }), 0)
-  assert.equal(resolveScriptTimeoutMs({ timeoutMs: 600_000 }), 600_000)
+test('enrichScriptConfig drops retired timeoutMs', () => {
+  const next = enrichScriptConfig({
+    command: 'echo',
+    timeoutMs: 600_000,
+    executionMode: 'pipe',
+  })
+  assert.equal(next.timeoutMs, undefined)
+  assert.equal(next.command, 'echo')
+  assert.equal(next.executionMode, 'pipe')
 })
 
 function makeSession() {

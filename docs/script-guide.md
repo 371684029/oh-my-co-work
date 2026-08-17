@@ -18,7 +18,7 @@
 | `file` | `script.filePath` / `path` | 跑本机脚本文件（bat/cmd/ps1/sh/py/js…） |
 | `command` | `script.command` | 一段本机命令（走 PATH） |
 
-可选：`runtime`、`args`、`env`、`timeoutMs`（默认 10 分钟）、`cwd`、`detach` / `waitForExit`、`showScriptPopup`、`executionMode`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
+可选：`runtime`、`args`、`env`、`cwd`、`detach` / `waitForExit`、`showScriptPopup`、`executionMode`、`useHumanAsStdin` / `passHumanInput`、`successCodes`。
 
 ### 1.1 内嵌终端模式（2.0）
 
@@ -30,8 +30,7 @@
     "mode": "command",
     "command": "your-cli",
     "scriptWorkDir": "D:\\work",
-    "executionMode": "terminal",
-    "timeoutMs": 3600000
+    "executionMode": "terminal"
   }
 }
 ```
@@ -45,7 +44,7 @@
 #### 常驻可交互终端：`waitForExit: false`（内嵌终端默认）
 
 内嵌终端默认**不等待进程退出**，避免 grok / CLI / TUI 被判超时。
-需要「跑完再推进」时再关掉常驻或写 `waitForExit: true`。默认 **不超时**；只有显式 `timeoutMs > 0` 才会到点杀进程。回收请到设置「释放资源」。
+需要「跑完再推进」时再关掉常驻或写 `waitForExit: true`。进程回收请到设置「释放资源」。
 
 普通执行默认仍等退出；弹窗保活继续用 `waitForExit: false` / `detach: true`。
 
@@ -54,8 +53,7 @@
   "script": {
     "mode": "command",
     "command": "echo ready & cmd",
-    "waitForExit": false,
-    "timeoutMs": 600000
+    "waitForExit": false
   }
 }
 ```
@@ -66,9 +64,8 @@
 | --- | --- | --- |
 | 节点何时推进 | 进程退出后 | PTY 启动成功后立即推进 |
 | 成败判定 | 退出码 ∈ `successCodes` | 启动成功即成功 |
-| `timeoutMs` | 到点杀进程并判超时 | **不挂超时定时器** |
 | 节点结束后进程 | 被 `killMemberProcesses` 回收 | 保留，用户可继续输入 |
-| 何时释放 | 自动 | 用户点「停止」或会话归档 |
+| 何时释放 | 下一脚本步（非常驻）或设置「释放资源」 | 用户点「停止」或设置「释放资源」 |
 
 演示成员「示例命令」就是这么配的：命令尾部留一个 `cmd`，终端可交互，节点照常推进。
 

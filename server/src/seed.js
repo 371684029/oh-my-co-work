@@ -32,9 +32,8 @@ const scriptCmd = createMember({
         process.platform === 'win32'
           ? 'echo ECW-OK #1 & cmd'
           : 'echo ECW-OK #1; exec bash',
-      // 命令末尾保留交互式 shell，需声明不等待退出，否则节点会挂到超时
+      // 命令末尾保留交互式 shell，需声明不等待退出
       waitForExit: false,
-      timeoutMs: 0,
     },
   },
 })

@@ -7,10 +7,10 @@ import test from 'node:test'
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-demo-repair-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
-const { initDb } = await import('../src/db.js')
+const { initDb, getDb } = await import('../src/db.js')
 initDb()
 const { createMember, getMember } = await import('../src/services.js')
-const { repairDemoKeepAliveMembers } = await import('../src/demoRepair.js')
+const { repairDemoKeepAliveMembers, stripScriptTimeoutMs } = await import('../src/demoRepair.js')
 const { MEMBER_KIND } = await import('@acw/shared')
 
 function makeScriptMember(name, script, extraConfig = {}) {
@@ -29,7 +29,7 @@ function makeScriptMember(name, script, extraConfig = {}) {
 test('repairs demo members whose command leaves an interactive shell alive', () => {
   const member = makeScriptMember(
     'demo-keepalive',
-    { command: 'echo ECW-OK #1 & cmd', timeoutMs: 600_000 },
+    { command: 'echo ECW-OK #1 & cmd' },
     { demo: true },
   )
   assert.equal(getMember(member.id).config.script.waitForExit, undefined)
@@ -39,7 +39,7 @@ test('repairs demo members whose command leaves an interactive shell alive', () 
   assert.equal(getMember(member.id).config.script.waitForExit, false)
   // 其余配置不能被改坏
   assert.equal(getMember(member.id).config.script.command, 'echo ECW-OK #1 & cmd')
-  assert.equal(getMember(member.id).config.script.timeoutMs, 600_000)
+  assert.equal(getMember(member.id).config.script.timeoutMs, undefined)
 })
 
 test('repair is idempotent and leaves already-fixed members untouched', () => {
@@ -80,4 +80,19 @@ test('linux-style keep-alive commands are recognised too', () => {
   const repaired = repairDemoKeepAliveMembers()
   assert.ok(repaired.includes(member.id))
   assert.equal(getMember(member.id).config.script.waitForExit, false)
+})
+
+test('stripScriptTimeoutMs removes leftover timeoutMs from stored members', () => {
+  const member = makeScriptMember('demo-timeout-field', { command: 'echo hi' }, { demo: true })
+  const cfg = getMember(member.id).config
+  cfg.script.timeoutMs = 600_000
+  getDb()
+    .prepare('UPDATE members SET config_json = ? WHERE id = ?')
+    .run(JSON.stringify(cfg), member.id)
+  assert.equal(getMember(member.id).config.script.timeoutMs, 600_000)
+
+  const stripped = stripScriptTimeoutMs()
+  assert.ok(stripped.includes(member.id))
+  assert.equal(getMember(member.id).config.script.timeoutMs, undefined)
+  assert.equal(stripScriptTimeoutMs().length, 0)
 })

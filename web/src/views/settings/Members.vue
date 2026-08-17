@@ -156,19 +156,6 @@
                 <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
               </el-form-item>
 
-              <el-form-item label="超时（毫秒，可选）">
-                <el-input-number
-                  v-model="form.script.timeoutMs"
-                  :min="0"
-                  :step="60000"
-                  :max="86400000"
-                  style="width: 100%"
-                />
-                <div class="field-hint">
-                  0 = 不超时（默认）。仅普通执行且需要限时杀进程时才填写。
-                </div>
-              </el-form-item>
-
               <el-form-item label="进程常驻（不等待退出）">
                 <el-switch v-model="form.script.detach" />
                 <span class="switch-hint">
@@ -218,8 +205,6 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-// 0 = 不超时
-const DEFAULT_SCRIPT_TIMEOUT_MS = 0
 
 const scriptExts = [
   '.bat',
@@ -288,7 +273,6 @@ function emptyForm() {
       runtime: defaultRuntime(),
       argsText: '',
       envText: '',
-      timeoutMs: DEFAULT_SCRIPT_TIMEOUT_MS,
       executionMode: 'terminal',
       /** inherit | yes | no */
       showScriptPopupMode: 'inherit',
@@ -416,7 +400,6 @@ function fillFromRow(row, { asClone = false } = {}) {
       runtime: s.runtime || defaultRuntime(),
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
-      timeoutMs: Number(s.timeoutMs) > 0 ? Number(s.timeoutMs) : 0,
       executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
       showScriptPopupMode: popupModeFromScript(s),
       detach: scriptKeepAlive(s),
@@ -515,7 +498,6 @@ async function save() {
                 ...(Object.keys(parseEnvText(s.envText)).length
                   ? { env: parseEnvText(s.envText) }
                   : {}),
-                timeoutMs: Number(s.timeoutMs) > 0 ? Number(s.timeoutMs) : 0,
                 executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,

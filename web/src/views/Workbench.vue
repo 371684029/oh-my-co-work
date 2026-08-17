@@ -574,13 +574,9 @@
           </h1>
           <p class="core-living">
             <span class="living-lead">节点是死的，人是活的</span>
-            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来</span>
+            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来 · 终端守护者</span>
           </p>
           <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
-          <p class="core-terminal">
-            <span class="terminal-badge">CLI</span>
-            内置终端守护者 · 进程常驻 · 崩溃可恢复
-          </p>
           <p class="welcome-journey" aria-label="上手三步">
             <span>开聊</span>
             <i aria-hidden="true" />
@@ -4223,32 +4219,6 @@ loadLists().then(() => {
   color: var(--ecw-accent, #007aff);
   letter-spacing: 0.04em;
   animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.core-terminal {
-  margin: 0 0 24px;
-  font-size: 13px;
-  color: var(--ecw-text-2, #5a5a66);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  animation: welcome-rise 0.75s 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.terminal-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 8px;
-  font-size: 10.5px;
-  font-weight: 700;
-  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
-  color: #5fd98e;
-  background: rgba(95, 217, 142, 0.1);
-  border: 1px solid rgba(95, 217, 142, 0.25);
-  border-radius: 5px;
-  letter-spacing: 0.05em;
 }
 
 .welcome-journey {

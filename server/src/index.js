@@ -11,7 +11,7 @@ import { handleTerminalClientMessage } from './terminal/terminalService.js'
 import { listMembers, listGroups, createMember, createGroup } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
-import { repairDemoKeepAliveMembers } from './demoRepair.js'
+import { repairDemoKeepAliveMembers, stripScriptTimeoutMs } from './demoRepair.js'
 import { processDueArchives, markInterruptedOnBoot } from './engine.js'
 import { updateAppSettings } from './appSettings.js'
 import {
@@ -55,6 +55,15 @@ try {
   console.warn('[acw] repairDemoKeepAliveMembers failed', e?.message || e)
 }
 
+try {
+  const stripped = stripScriptTimeoutMs()
+  if (stripped.length) {
+    console.log(`[acw] stripped timeoutMs from ${stripped.length} member(s)`)
+  }
+} catch (e) {
+  console.warn('[acw] stripScriptTimeoutMs failed', e?.message || e)
+}
+
 // auto seed if empty（除管理员外无其它成员时补演示数据）
 const nonAdmin = listMembers({ includeDemo: true }).filter((m) => m.name !== 'unified_admin')
 if (nonAdmin.length === 0) {
@@ -92,9 +101,7 @@ if (nonAdmin.length === 0) {
             ? 'echo ECW-OK #1 & cmd'
             : 'echo ECW-OK #1; exec bash',
         // 演示命令末尾留了一个交互式 shell，方便直接在内嵌终端里敲命令。
-        // 因此必须声明「不等待退出」，否则节点会一直等到 timeoutMs 被判超时。
         waitForExit: false,
-        timeoutMs: 0,
       },
     },
   })

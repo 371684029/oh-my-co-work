@@ -166,14 +166,6 @@ export function usesTerminalExecution(script) {
 }
 
 /**
- * 脚本超时：>0 才限时；0 / 未填 = 不超时（常驻 TUI 也不应靠超时回收）。
- */
-export function resolveScriptTimeoutMs(script) {
-  const n = Number(script?.timeoutMs)
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
-}
-
-/**
  * 常驻进程：节点启动成功即推进，不等待退出。
  * 内嵌终端默认常驻（grok / CLI / TUI）；显式 waitForExit:true 或 detach:false 才等待退出。
  * 普通执行仅在 detach:true / waitForExit:false 时常驻。
@@ -191,6 +183,7 @@ export function usesKeepAlive(script) {
 export function enrichScriptConfig(script) {
   if (!script || typeof script !== 'object') return script
   const next = { ...script }
+  delete next.timeoutMs
   if (next.executionMode !== 'pipe' && next.executionMode !== 'terminal') {
     next.executionMode = 'terminal'
   }
@@ -442,7 +435,6 @@ export async function runMember(
   if (kind === 'script') {
     const script = enrichScriptConfig({ ...(config.script || config) })
     const mode = script.mode || (script.filePath || script.path ? 'file' : 'command')
-    const timeoutMs = resolveScriptTimeoutMs(script)
     // 弹窗优先级：成员 script.showScriptPopup > 遗留 showConsole/hideWindow > 全局
     const showConsole = resolveShowScriptPopup(script)
     // HTA「释放资源」小窗：默认永不弹（占地方、几乎无用）
@@ -579,9 +571,6 @@ export async function runMember(
       return runTerminal({
         launch,
         cwd,
-        timeoutMs,
-        // 交互式常驻终端（如 cmd / bash / TUI 工具）：进程留着可继续输入，
-        // 但节点不等它退出，否则必然挂到超时。复用弹窗模式的 detach/waitForExit 语义。
         keepAlive: detach,
         env,
         sessionId,
@@ -598,7 +587,6 @@ export async function runMember(
     return runProcess({
       launch,
       cwd,
-      timeoutMs,
       env,
       showConsole,
       controlWindow,
@@ -711,7 +699,6 @@ function buildScriptSummary({ ok, exitCode, stdout, stderr, label }) {
 function runProcess({
   launch,
   cwd,
-  timeoutMs,
   env,
   showConsole = true,
   controlWindow = false,
@@ -870,7 +857,7 @@ function runProcess({
       if (settled) return
       settled = true
       if (sessionId) {
-        // 外层 launcher 可卸；detach 的真实窗口 PID 要保留，供归档杀、且避免节点结束误杀
+        // 外层 launcher 可卸；detach 的真实窗口 PID 要保留，供设置里释放、且避免节点结束误杀
         unregisterProcess(sessionId, runId)
         if (!detach && !preserveConsole) unregisterProcess(sessionId, `${runId}_target`)
         unregisterProcess(sessionId, `${runId}_hta`)
@@ -878,34 +865,10 @@ function runProcess({
       resolve(result)
     }
 
-    let timer = null
-    if (timeoutMs > 0) {
-      timer = setTimeout(() => {
-        try {
-          if (pid) killProcessTree(pid)
-          else child.kill()
-        } catch {
-          /* ignore */
-        }
-        finish({
-          ok: false,
-          summary: `【${displayLabel}】超时 (${timeoutMs}ms)`,
-          error: { code: 'TIMEOUT' },
-          data: {
-            stdout: decodeConsoleBytes(Buffer.concat(chunks)),
-            cwd,
-            pid,
-            runtime: launch.label,
-          },
-        })
-      }, timeoutMs)
-    }
-
     child.stdout?.on('data', (d) => chunks.push(d))
     child.stderr?.on('data', (d) => errChunks.push(d))
 
     child.on('error', (e) => {
-      clearTimeout(timer)
       finish({
         ok: false,
         summary: `【${displayLabel}】${e.message}`,
@@ -914,7 +877,6 @@ function runProcess({
     })
 
     child.on('close', (code) => {
-      clearTimeout(timer)
       let stdout = decodeConsoleBytes(Buffer.concat(chunks))
       let stderr = decodeConsoleBytes(Buffer.concat(errChunks))
 

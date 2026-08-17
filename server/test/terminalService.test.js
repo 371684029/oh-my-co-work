@@ -10,12 +10,11 @@ process.env.ACW_DATA_ROOT = dataRoot
 const terminalService = await import('../src/terminal/terminalService.js')
 const bus = await import('../src/bus.js')
 
-function terminalOptions(sessionId, script, timeoutMs = 5000) {
+function terminalOptions(sessionId, script) {
   return {
     launch: { cmd: 'bash', args: ['-lc', script], label: 'bash' },
     cwd: process.cwd(),
     env: { ...process.env, npm_config_prefix: '' },
-    timeoutMs,
     sessionId,
     memberId: `member-${sessionId}`,
     label: sessionId,

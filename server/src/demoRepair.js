@@ -6,7 +6,7 @@ const KEEP_ALIVE_COMMAND = /(&\s*cmd\b|exec\s+bash\b)/i
 
 /**
  * 老库修复：早期演示成员的命令末尾留了交互式 shell（`& cmd` / `exec bash`），
- * 却没声明 waitForExit:false —— 这类节点永远等不到进程退出，只会撞 timeoutMs 判「执行超时」。
+ * 却没声明 waitForExit:false —— 这类节点永远等不到进程退出。
  *
  * 仅修满足全部条件的成员，幂等，绝不碰用户自建配置：
  * 1. kind 为 script；
@@ -31,4 +31,22 @@ export function repairDemoKeepAliveMembers() {
     repaired.push(member.id)
   }
   return repaired
+}
+
+/**
+ * 去掉已废弃的 timeoutMs（进程改由设置释放，不再按毫秒杀）。
+ * @returns {string[]} 被改写的成员 id
+ */
+export function stripScriptTimeoutMs() {
+  const stripped = []
+  for (const member of listMembers({ includeDemo: true })) {
+    if (member.kind !== MEMBER_KIND.SCRIPT) continue
+    const script = member.config?.script
+    if (!script || !Object.prototype.hasOwnProperty.call(script, 'timeoutMs')) continue
+    const next = { ...script }
+    delete next.timeoutMs
+    updateMember(member.id, { config: { ...member.config, script: next } })
+    stripped.push(member.id)
+  }
+  return stripped
 }

@@ -270,7 +270,7 @@
 | `script` + `file` | 脚本/程序文件：bat/cmd、ps1、sh、py、js/mjs、ts(tsx)、rb、php、vbs、jar、exe… |
 | `script` + `command` | 任意本机命令；占位 `{input}` `{folder}` `{sessionId}` |
 
-脚本增强字段：`runtime`、`args`、`env`、`timeoutMs`（**默认 10 分钟 / 600000ms**）、`showScriptPopup`（或遗留 `showConsole`/`hideWindow`）、`useHumanAsStdin`、`successCodes`。
+脚本增强字段：`runtime`、`args`、`env`、`showScriptPopup`（或遗留 `showConsole`/`hideWindow`）、`useHumanAsStdin`、`successCodes`。
 
 **执行原则**：一切以成员/命令配置为准；不包 ECW 壳、不擅自改 cwd。弹窗开则 Windows 直接 `Start-Process` 配置的脚本。
 
@@ -390,5 +390,5 @@
 
 - 对话面板与流程图不再展示归档确认、归档节点、超时自动归档。
 - 设置「释放资源」：选择会话释放，或全部释放进程 / 内嵌终端。
-- 流程走完不杀常驻终端；脚本默认不超时（高级里可填毫秒）。
+- 流程走完不杀常驻终端；已去掉 `timeoutMs`，占用到设置里释放。
 - 中断恢复只保留继续 / 放弃。
