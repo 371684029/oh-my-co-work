@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | docs/assets/screenshots/terminal-member-settings.webp | 命令与工作目录改为 echo demo / /demo，去掉可滚动命令里可能残留的私密内容
+2026-08-17 | M | docs/assets/screenshots/workbench-overview.webp | 去掉终端里的 npm_config_prefix 环境提示
+2026-08-17 | M | docs/assets/screenshots/embedded-tui-fullscreen.webp | 去掉 PID 与本机路径，改为 /demo
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | packages/oh-my-co-work-v2-linux-x64.zip | 覆盖 2.3.0 运行包
 2026-08-17 | M | packages/CURRENT.txt / README.md | 版本 2.3.0；linux-x64 产物元数据
 
