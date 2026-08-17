@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | packages/oh-my-co-work-v2-linux-x64.zip | 覆盖 2.3.0 运行包
+2026-08-17 | M | packages/CURRENT.txt / README.md | 版本 2.3.0；linux-x64 产物元数据
+
 2026-08-17 | M | package.json / workspaces / about.json | 版本 2.3.0 最终封板
 2026-08-17 | M | README.md / AGENT.md / docs/* | 发布线与路线图改为 2.3.0 封板
 2026-08-17 | M | CODE_CHANGE.md | 追加本轮封板条目
