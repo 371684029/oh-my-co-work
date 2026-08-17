@@ -139,6 +139,78 @@
       </el-button>
     </section>
 
+    <section class="prefs-card">
+      <div class="prefs-title">终端偏好</div>
+      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、粘贴确认、退出后是否自动回到对话。</p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="主题">
+          <el-select v-model="terminal.theme" style="width: 100%">
+            <el-option label="项目深色" value="project-dark" />
+            <el-option label="终端原色" value="native" />
+            <el-option label="高对比度" value="high-contrast" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="字号">
+          <el-input-number v-model="terminal.fontSize" :min="10" :max="22" />
+        </el-form-item>
+        <el-form-item label="光标闪烁">
+          <el-switch v-model="terminal.cursorBlink" />
+        </el-form-item>
+        <el-form-item label="多行粘贴">
+          <el-select v-model="terminal.pastePolicy" style="width: 100%">
+            <el-option label="超过一行需确认" value="confirm" />
+            <el-option label="直接粘贴" value="allow" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="进程结束后收起工作区">
+          <el-switch v-model="terminal.autoCollapseOnExit" />
+        </el-form-item>
+      </el-form>
+      <el-button type="primary" plain size="small" :loading="savingTerminal" @click="saveTerminal">
+        保存终端偏好
+      </el-button>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-title">配额与脱敏</div>
+      <p class="prefs-hint">
+        限制单会话并发终端、日志大小与回放缓冲。日志会把常见 Token 打成 [REDACTED]，也可自写正则（每行一条）。
+      </p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="单会话并发终端">
+          <el-input-number v-model="quota.maxConcurrentTerminals" :min="1" :max="32" />
+        </el-form-item>
+        <el-form-item label="单终端日志上限（MiB）">
+          <el-input-number v-model="quota.maxLogMiB" :min="1" :max="200" />
+        </el-form-item>
+        <el-form-item label="回放缓冲（KiB）">
+          <el-input-number v-model="quota.maxReplayKiB" :min="32" :max="2048" />
+        </el-form-item>
+        <el-form-item label="日志脱敏">
+          <el-switch v-model="redact.enabled" />
+        </el-form-item>
+        <el-form-item label="额外脱敏正则">
+          <el-input
+            v-model="redact.patternsText"
+            type="textarea"
+            :rows="3"
+            placeholder="每行一条正则，例如 AKIA[0-9A-Z]{16}"
+          />
+        </el-form-item>
+      </el-form>
+      <el-button type="primary" plain size="small" :loading="savingQuota" @click="saveQuota">
+        保存配额与脱敏
+      </el-button>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-title">本机备份</div>
+      <p class="prefs-hint">把 SQLite、台账、附件打成 zip，写到 data/backups。不含运行中的 PTY 进程。</p>
+      <el-button type="primary" plain size="small" :loading="backingUp" @click="onBackup">
+        立即备份
+      </el-button>
+    </section>
+
     <section class="prefs-card prefs-card--danger">
       <div class="prefs-title">删除演示数据</div>
       <p class="prefs-hint">
@@ -171,6 +243,22 @@ const occupied = ref([])
 const selectedSessionIds = ref([])
 const releasing = ref(false)
 const loadingResources = ref(false)
+const terminal = ref({
+  theme: 'project-dark',
+  fontSize: 13,
+  cursorBlink: true,
+  pastePolicy: 'confirm',
+  autoCollapseOnExit: false,
+})
+const quota = ref({
+  maxConcurrentTerminals: 8,
+  maxLogMiB: 10,
+  maxReplayKiB: 256,
+})
+const redact = ref({ enabled: true, patternsText: '' })
+const savingTerminal = ref(false)
+const savingQuota = ref(false)
+const backingUp = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -194,6 +282,28 @@ async function load() {
     if (f.auto !== false) keys.push('auto')
     if (f.human !== false) keys.push('human')
     defaultFlowKeys.value = keys.length ? keys : ['auto']
+    if (s.terminal) {
+      terminal.value = {
+        theme: s.terminal.theme || 'project-dark',
+        fontSize: s.terminal.fontSize || 13,
+        cursorBlink: s.terminal.cursorBlink !== false,
+        pastePolicy: s.terminal.pastePolicy || 'confirm',
+        autoCollapseOnExit: !!s.terminal.autoCollapseOnExit,
+      }
+    }
+    if (s.quota) {
+      quota.value = {
+        maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
+        maxLogMiB: s.quota.maxLogMiB || 10,
+        maxReplayKiB: s.quota.maxReplayKiB || 256,
+      }
+    }
+    if (s.redact) {
+      redact.value = {
+        enabled: s.redact.enabled !== false,
+        patternsText: s.redact.patternsText || '',
+      }
+    }
     await loadResources()
   } catch (e) {
     ElMessage.error(e.message)
@@ -289,6 +399,45 @@ async function onToggleScriptPopup(val) {
     ElMessage.error(e.message)
   } finally {
     savingPopup.value = false
+  }
+}
+
+async function saveTerminal() {
+  savingTerminal.value = true
+  try {
+    await api.appSettings.update({ terminal: { ...terminal.value } })
+    ElMessage.success('已保存终端偏好')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingTerminal.value = false
+  }
+}
+
+async function saveQuota() {
+  savingQuota.value = true
+  try {
+    await api.appSettings.update({
+      quota: { ...quota.value },
+      redact: { ...redact.value },
+    })
+    ElMessage.success('已保存配额与脱敏')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingQuota.value = false
+  }
+}
+
+async function onBackup() {
+  backingUp.value = true
+  try {
+    const r = await api.backup()
+    ElMessage.success(r.path ? `已备份到 ${r.path}` : r.message || '备份完成')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    backingUp.value = false
   }
 }
 

@@ -71,6 +71,23 @@ export const api = {
         method: 'POST',
         body: '{}',
       }),
+    downloadTerminalLog: async (id, terminalId) => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${id}/terminals/${terminalId}/log`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || res.statusText)
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `terminal_${terminalId}.log`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
     /** 从节点重开：统一追加克隆；{ nodeInstanceId } 或 { stepIndex } */
     restartFromNode: (id, body) =>
       req(`/sessions/${id}/restart-from-node`, {
@@ -135,6 +152,7 @@ export const api = {
         body: JSON.stringify({ sessionIds }),
       }),
   },
+  backup: () => req('/backup', { method: 'POST', body: '{}' }),
   slashCommands: {
     list: () => req('/slash-commands'),
     save: (commands) =>
