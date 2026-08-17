@@ -53,102 +53,106 @@
             clearable
           />
         </el-form-item>
-        <el-form-item label="类型" required>
-          <el-select v-model="form.kind" style="width: 100%">
-            <el-option label="echo 示例" value="echo" />
-            <el-option label="script 脚本 / 命令" value="script" />
-          </el-select>
-        </el-form-item>
+
 
         <template v-if="form.kind === 'script'">
-          <el-form-item label="运行方式">
-            <el-radio-group v-model="form.script.mode">
-              <el-radio value="file">脚本 / 程序文件</el-radio>
-              <el-radio value="command">一段命令</el-radio>
-            </el-radio-group>
-          </el-form-item>
+          <el-tabs v-model="scriptTab" class="member-script-tabs">
+            <el-tab-pane label="基础" name="basic">
+              <el-form-item label="运行方式">
+                <el-radio-group v-model="form.script.mode" @change="onScriptModeChange">
+                  <el-radio value="file">脚本 / 程序文件</el-radio>
+                  <el-radio value="command">一段命令</el-radio>
+                </el-radio-group>
+              </el-form-item>
 
-          <el-form-item v-if="form.script.mode === 'file'" label="文件路径" required>
-            <PathPicker
-              v-model="form.script.filePath"
-              mode="file"
-              placeholder="选择 .bat / .ps1 / .py / .js …"
-              :extensions="scriptExts"
-              hint="可手填，或点「浏览」选择本机脚本；相对路径以「脚本工作目录」为基准"
-              @update:model-value="onScriptAnchorPathChange"
-            />
-          </el-form-item>
+              <el-form-item v-if="form.script.mode === 'file'" label="文件路径" required>
+                <PathPicker
+                  v-model="form.script.filePath"
+                  mode="file"
+                  placeholder="选择 .bat / .ps1 / .py / .js …"
+                  :extensions="scriptExts"
+                  hint="可手填，或点「浏览」选择本机脚本；相对路径以「脚本工作目录」为基准"
+                  @update:model-value="onScriptAnchorPathChange"
+                />
+              </el-form-item>
 
-          <el-form-item v-else label="命令" required>
-            <el-input
-              v-model="form.script.command"
-              type="textarea"
-              :rows="3"
-              placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本工作目录）"
-            />
-            <div class="field-hint">
-              <strong>完全由你配置</strong>，产品不内置任何工具名。走 PATH；占位符
-              <code>#a</code> / <code>{#a}</code>（调用时输入框参数）、{#1} #群聊 #文件夹 {input}
-              {folder}（空占位自动去掉）。含 $env: 时 runtime 用 PowerShell 或 auto。
-            </div>
-          </el-form-item>
+              <el-form-item v-else label="命令" required>
+                <el-input
+                  v-model="form.script.command"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本工作目录）"
+                />
+                <div class="field-hint">
+                  <strong>完全由你配置</strong>，产品不内置任何工具名。走 PATH；占位符
+                  <code>#a</code> / <code>{#a}</code>（调用时输入框参数）、{#1} #群聊 #文件夹 {input}
+                  {folder}（空占位自动去掉）。含 $env: 时 runtime 用 PowerShell 或 auto。
+                </div>
+              </el-form-item>
 
-          <el-form-item label="脚本工作目录" required>
-            <PathPicker
-              v-model="form.script.scriptWorkDir"
-              mode="folder"
-              placeholder="必填：脚本运行时的 cwd"
-              hint="必填。选脚本文件可自动填写；命令如 node index.mjs 时保存也会尝试推断"
-            />
-          </el-form-item>
+              <el-form-item label="脚本工作目录" required>
+                <PathPicker
+                  v-model="form.script.scriptWorkDir"
+                  mode="folder"
+                  placeholder="必填：脚本运行时的 cwd"
+                  :hint="workDirHint"
+                />
+              </el-form-item>
 
-          <el-form-item label="执行界面">
-            <el-select v-model="form.script.executionMode" style="width: 100%">
-              <el-option label="内嵌终端（TUI / 交互式 CLI）" value="terminal" />
-              <el-option label="普通执行（兼容现有脚本）" value="pipe" />
-            </el-select>
-            <div class="field-hint">
-              默认内嵌终端：对话中出现终端卡，可进入中栏交互。仅非交互脚本才改回普通执行。
-            </div>
-          </el-form-item>
+              <el-form-item label="执行界面">
+                <el-select v-model="form.script.executionMode" style="width: 100%">
+                  <el-option label="内嵌终端（TUI / 交互式 CLI）" value="terminal" />
+                  <el-option label="普通执行（兼容现有脚本）" value="pipe" />
+                </el-select>
+                <div class="field-hint">
+                  默认内嵌终端：对话中出现终端卡，可进入中栏交互。仅非交互脚本才改回普通执行。
+                </div>
+              </el-form-item>
 
-          <el-form-item v-if="form.script.executionMode !== 'terminal'" label="是否展示脚本弹窗">
-            <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
-              <el-option label="跟随全局设置" value="inherit" />
-              <el-option label="是（始终弹窗）" value="yes" />
-              <el-option label="否（静默）" value="no" />
-            </el-select>
-            <span class="switch-hint"
-              >优先级：本成员 &gt; 全局「设置 → 是否展示脚本弹窗」。</span
-            >
-          </el-form-item>
+              <el-form-item v-if="form.script.executionMode !== 'terminal'" label="是否展示脚本弹窗">
+                <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
+                  <el-option label="跟随全局设置" value="inherit" />
+                  <el-option label="是（始终弹窗）" value="yes" />
+                  <el-option label="否（静默）" value="no" />
+                </el-select>
+                <span class="switch-hint"
+                  >优先级：本成员 &gt; 全局「设置 → 是否展示脚本弹窗」。</span
+                >
+              </el-form-item>
 
-          <el-form-item label="超时（毫秒）">
-            <el-input-number
-              v-model="form.script.timeoutMs"
-              :min="1000"
-              :step="60000"
-              :max="3600000"
-              style="width: 100%"
-            />
-            <div class="field-hint">
-              默认 600000（10 分钟）。交互式脚本（需人在黑窗里输入）请酌情调大，避免未到「待确认」就被引擎杀掉。
-            </div>
-          </el-form-item>
+              <el-form-item label="超时（毫秒）">
+                <el-input-number
+                  v-model="form.script.timeoutMs"
+                  :min="1000"
+                  :step="60000"
+                  :max="3600000"
+                  style="width: 100%"
+                />
+                <div class="field-hint">
+                  默认 600000（10 分钟）。交互式脚本（需人在黑窗里输入）请酌情调大，避免未到「待确认」就被引擎杀掉。
+                </div>
+              </el-form-item>
+            </el-tab-pane>
 
-          <el-collapse class="member-advanced">
-            <el-collapse-item title="高级" name="adv">
+            <el-tab-pane label="高级" name="advanced">
               <el-form-item label="运行时 / 解释器">
                 <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
-                  <el-option label="自动（按扩展名 / 系统）" value="auto" />
                   <el-option label="cmd" value="cmd" />
+                  <el-option label="自动（按扩展名 / 系统）" value="auto" />
                   <el-option label="PowerShell" value="powershell" />
                   <el-option label="pwsh" value="pwsh" />
                   <el-option label="bash" value="bash" />
                   <el-option label="python" value="python" />
                   <el-option label="node" value="node" />
                 </el-select>
-                <div class="field-hint">也可直接填解释器路径，如 C:\Python311\python.exe</div>
+                <div class="field-hint">
+                  也可直接填解释器路径，如 C:\Python311\python.exe。
+                  <template v-if="form.script.mode === 'file'">
+                    脚本文件建议用「自动」按扩展名分派（.py 走 python、.js 走 node）；
+                    选 cmd 会用 cmd /c 调起该文件，仅适合 .bat / .cmd / .exe。
+                  </template>
+                  <template v-else>默认 cmd：Windows 下最贴近你在黑窗里手敲的效果。</template>
+                </div>
               </el-form-item>
 
               <el-form-item v-if="form.script.mode === 'file'" label="附加参数（空格分隔）">
@@ -175,8 +179,8 @@
               <el-form-item label="把输入写入 stdin">
                 <el-switch v-model="form.script.useHumanAsStdin" />
               </el-form-item>
-            </el-collapse-item>
-          </el-collapse>
+            </el-tab-pane>
+          </el-tabs>
         </template>
 
         <el-button type="primary" @click="save">
@@ -205,7 +209,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
@@ -235,6 +239,24 @@ const drawerTitle = ref('')
 const readonly = ref(false)
 const viewRow = ref(null)
 const form = ref(emptyForm())
+const scriptTab = ref('basic')
+const installDir = ref('')
+
+const workDirHint = computed(() => {
+  if (form.value.script.scriptWorkDir === installDir.value && installDir.value) {
+    return '已预填软件安装目录，可按需修改'
+  }
+  return '必填。选脚本文件可自动填写；命令如 node index.mjs 时保存也会尝试推断'
+})
+
+/** 切换运行方式时重置 runtime 默认值（仅当当前值仍是 auto 时才动，避免覆盖用户显式选择） */
+function onScriptModeChange(mode) {
+  const s = form.value.script
+  // 一律默认 cmd，用户可自行改为 auto 或其他
+  if (!s.runtime || s.runtime === 'auto') {
+    s.runtime = 'cmd'
+  }
+}
 
 function emptyForm() {
   return {
@@ -247,7 +269,7 @@ function emptyForm() {
       scriptWorkDir: '',
       scriptDir: '',
       command: 'echo ECW-OK',
-      runtime: 'auto',
+      runtime: 'cmd',
       argsText: '',
       envText: '',
       timeoutMs: DEFAULT_SCRIPT_TIMEOUT_MS,
@@ -347,6 +369,18 @@ function onScriptAnchorPathChange(v) {
   }
 }
 
+async function loadInstallDir() {
+  try {
+    const roots = await api.fs.roots()
+    const cwd = roots.find((r) => r.type === 'cwd')
+    if (cwd) {
+      installDir.value = cwd.path
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
 async function load() {
   list.value = await api.members.list()
 }
@@ -379,7 +413,13 @@ function fillFromRow(row, { asClone = false } = {}) {
 
 function openCreate() {
   readonly.value = false
-  form.value = emptyForm()
+  const f = emptyForm()
+  if (installDir.value) {
+    f.script.scriptWorkDir = installDir.value
+    f.script.scriptDir = installDir.value
+  }
+  form.value = f
+  scriptTab.value = 'basic'
   drawerTitle.value = '新建成员'
   drawer.value = true
 }
@@ -387,6 +427,7 @@ function openCreate() {
 function openEdit(row) {
   readonly.value = false
   form.value = fillFromRow(row, { asClone: false })
+  scriptTab.value = 'basic'
   drawerTitle.value = '编辑成员'
   drawer.value = true
 }
@@ -394,6 +435,7 @@ function openEdit(row) {
 function openClone(row) {
   readonly.value = false
   form.value = fillFromRow(row, { asClone: true })
+  scriptTab.value = 'basic'
   drawerTitle.value = '克隆成员'
   drawer.value = true
 }
@@ -493,7 +535,10 @@ async function remove(row) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadInstallDir()
+})
 </script>
 
 <style scoped>
@@ -528,31 +573,16 @@ onMounted(load)
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
-.member-advanced {
-  margin: 8px 0 16px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-lighter);
-  background: var(--el-fill-color-blank);
+.member-script-tabs {
+  margin: 12px 0 4px;
 }
-.member-advanced :deep(.el-collapse-item__header) {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
-  padding: 12px 16px;
-  line-height: 1.4;
-  border-bottom: none;
+.member-script-tabs :deep(.el-tabs__content) {
+  padding: 8px 4px 4px;
 }
-.member-advanced :deep(.el-collapse-item__wrap) {
-  border-bottom: none;
-}
-.member-advanced :deep(.el-collapse-item__content) {
-  padding: 4px 16px 16px;
-}
-.member-advanced :deep(.el-form-item) {
+.member-script-tabs :deep(.el-form-item) {
   margin-bottom: 18px;
 }
-.member-advanced :deep(.el-form-item:last-child) {
+.member-script-tabs :deep(.el-form-item:last-child) {
   margin-bottom: 4px;
 }
 .member-settings-drawer :deep(.el-drawer__body) {
