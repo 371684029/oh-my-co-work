@@ -151,7 +151,7 @@
                     脚本文件建议用「自动」按扩展名分派（.py 走 python、.js 走 node）；
                     选 cmd 会用 cmd /c 调起该文件，仅适合 .bat / .cmd / .exe。
                   </template>
-                  <template v-else>默认 cmd：Windows 下最贴近你在黑窗里手敲的效果。</template>
+                  <template v-else>默认「自动」：Windows 一段命令走 cmd，其它系统走本机 shell。不要为了 bat 去选 bash。</template>
                 </div>
               </el-form-item>
 
@@ -169,11 +169,16 @@
                 <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
               </el-form-item>
 
-              <el-form-item v-if="form.script.executionMode !== 'terminal'" label="打开后不等待结束">
+              <el-form-item label="进程常驻（不等待退出）">
                 <el-switch v-model="form.script.detach" />
-                <span class="switch-hint"
-                  >适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。</span
-                >
+                <span class="switch-hint">
+                  <template v-if="form.script.executionMode === 'terminal'">
+                    内嵌终端默认开启：启动成功即推进节点，grok / CLI 可继续输入，归档时回收。关掉则等进程退出（或超时）。
+                  </template>
+                  <template v-else>
+                    适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。
+                  </template>
+                </span>
               </el-form-item>
 
               <el-form-item label="把输入写入 stdin">
@@ -249,13 +254,24 @@ const workDirHint = computed(() => {
   return '必填。选脚本文件可自动填写；命令如 node index.mjs 时保存也会尝试推断'
 })
 
-/** 切换运行方式时重置 runtime 默认值（仅当当前值仍是 auto 时才动，避免覆盖用户显式选择） */
-function onScriptModeChange(mode) {
+function isWindowsClient() {
+  return typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent)
+}
+
+function defaultRuntime() {
+  return isWindowsClient() ? 'cmd' : 'auto'
+}
+
+function scriptKeepAlive(s = {}) {
+  if (s.waitForExit === true || s.detach === false) return false
+  if (s.detach === true || s.waitForExit === false) return true
+  return s.executionMode !== 'pipe'
+}
+
+/** 切换运行方式时若尚未选解释器，按本机补默认值 */
+function onScriptModeChange() {
   const s = form.value.script
-  // 一律默认 cmd，用户可自行改为 auto 或其他
-  if (!s.runtime || s.runtime === 'auto') {
-    s.runtime = 'cmd'
-  }
+  if (!s.runtime) s.runtime = defaultRuntime()
 }
 
 function emptyForm() {
@@ -269,14 +285,14 @@ function emptyForm() {
       scriptWorkDir: '',
       scriptDir: '',
       command: 'echo ECW-OK',
-      runtime: 'cmd',
+      runtime: defaultRuntime(),
       argsText: '',
       envText: '',
       timeoutMs: DEFAULT_SCRIPT_TIMEOUT_MS,
       executionMode: 'terminal',
       /** inherit | yes | no */
       showScriptPopupMode: 'inherit',
-      detach: false,
+      detach: true,
       useHumanAsStdin: false,
     },
   }
@@ -397,13 +413,13 @@ function fillFromRow(row, { asClone = false } = {}) {
       scriptWorkDir: s.scriptWorkDir || s.scriptDir || '',
       scriptDir: s.scriptWorkDir || s.scriptDir || '',
       command: s.command || 'echo ECW-OK',
-      runtime: s.runtime || 'auto',
+      runtime: s.runtime || defaultRuntime(),
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
       timeoutMs: s.timeoutMs || DEFAULT_SCRIPT_TIMEOUT_MS,
       executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
       showScriptPopupMode: popupModeFromScript(s),
-      detach: !!(s.detach || s.waitForExit === false),
+      detach: scriptKeepAlive(s),
       useHumanAsStdin: !!(s.useHumanAsStdin || s.passHumanInput || s.stdin),
     },
     _editId: asClone ? undefined : row.id,
@@ -503,6 +519,7 @@ async function save() {
                 executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,
+                waitForExit: !s.detach,
                 useHumanAsStdin: !!s.useHumanAsStdin,
                 passHumanInput: !!s.useHumanAsStdin,
               },

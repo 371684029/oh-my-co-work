@@ -22,6 +22,16 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | server/src/runners.js | 新增 usesKeepAlive：内嵌终端默认常驻，显式 waitForExit:true / detach:false 才等待退出
+2026-08-17 | M | web/src/views/settings/Members.vue | 终端模式也显示「进程常驻」且默认开；运行时 Windows 默认 cmd、其它系统 auto
+2026-08-17 | M | server/src/engine.js | 脚本步开始只杀非 detach 进程，避免掐掉上一常驻 TUI
+2026-08-17 | M | server/src/localAccess.js | bootstrap 必须带可信 Origin 才发令牌
+2026-08-17 | M | server/src/routes.js | kill-processes 默认不再 includeDetach
+2026-08-17 | M | server/src/processRegistry.js | 释放资源 HTA 显式 includeDetach:true
+2026-08-17 | M | server/test/*.test.js | 覆盖 bootstrap Origin、keepAlive、usesKeepAlive、runtime=cmd
+2026-08-17 | M | package.json / workspaces / about.json | 版本 2.2.1
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | web/src/views/Workbench.vue | 移除右栏「资源」Tab 及 loadResources/openResourcesTab/rekillSessionProcesses/openHolderSession/archiveHolderSession、sessionResources 状态与 resources-* CSS（清死代码，不留无入口逻辑）
 2026-08-17 | M | web/src/api.js | 移除 sessions.resources 与已无调用方的 sessions.killProcesses
 2026-08-17 | M | server/src/routes.js | 移除 GET /sessions/:id/resources 路由与 getSessionResources 导入

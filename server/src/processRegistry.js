@@ -527,7 +527,7 @@ function freeResources() {
   busy = true;
   var btn = document.getElementById("btnFree");
   if (btn) { btn.disabled = true; btn.innerText = "释放中…"; }
-  var code = post("/api/sessions/${sessionId}/kill-processes", "{}");
+  var code = post("/api/sessions/${sessionId}/kill-processes", "{\"includeDetach\":true}");
   if (code >= 200 && code < 300) {
     if (btn) { btn.innerText = "已释放资源"; }
     setStatus("进程已结束，窗口即将关闭", true);
@@ -543,7 +543,7 @@ function archiveTask() {
   if (!confirm("将结束进程并归档本任务，确定？")) return;
   busy = true;
   // 先杀进程再归档（归档接口也会再杀一次）
-  post("/api/sessions/${sessionId}/kill-processes", "{}");
+  post("/api/sessions/${sessionId}/kill-processes", "{\"includeDetach\":true}");
   post("/api/sessions/${sessionId}/archive", "{}");
   setStatus("已归档任务", true);
   window.setTimeout(function () { try { window.close(); } catch (e3) {} }, 400);

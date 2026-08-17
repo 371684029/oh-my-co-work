@@ -444,12 +444,12 @@ router.post('/sessions/:id/restart-from-node', async (req, res) => {
 })
 /**
  * 释放资源：杀掉本会话（或指定 runId）进程，不改变会话状态
- * body: { runId?: string, includeDetach?: boolean }
+ * body: { runId?: string, includeDetach?: boolean } 默认不杀常驻/detach 进程
  */
 router.post('/sessions/:id/kill-processes', (req, res) => {
   try {
     const runId = req.body?.runId
-    const includeDetach = req.body?.includeDetach !== false
+    const includeDetach = req.body?.includeDetach === true
     const before = listSessionProcesses(req.params.id)
     const result = killSessionProcesses(
       req.params.id,

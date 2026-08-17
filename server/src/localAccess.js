@@ -30,7 +30,11 @@ export function rejectUntrustedOrigin(req, res, next) {
   next()
 }
 
-export function bootstrapLocalAccess(_req, res) {
+export function bootstrapLocalAccess(req, res) {
+  const origin = req?.headers?.origin
+  if (!origin || !isTrustedOrigin(origin)) {
+    return res.status(403).json({ error: '拒绝非本机页面访问' })
+  }
   res.setHeader('Cache-Control', 'no-store')
   res.json({ token: API_TOKEN })
 }

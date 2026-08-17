@@ -36,18 +36,18 @@
 }
 ```
 
-- `terminal` 或未配置：对话终端卡 + 中栏工作区。
-- `pipe`：保持原有普通执行/弹窗行为。
+- `terminal` 或未配置：对话终端卡 + 中栏工作区；**默认进程常驻**（`waitForExit: false`），启动成功即推进节点。
+- `pipe`：保持原有普通执行/弹窗行为；默认仍等待退出。
+- 若 bat/脚本必须跑完再往下走：设置里关掉「进程常驻」，或配置 `waitForExit: true`。
 - TUI 必须在当前进程前台运行；脚本内调用 `Start-Process` / `start` 强制新窗口会脱离内嵌 PTY。
 - 终端输入不会自动成为聊天消息；工具要输出结构化业务事件时应使用 2.x Adapter，而不是要求主项目解析屏幕字符。
 
-#### 常驻可交互终端：`waitForExit: false`
+#### 常驻可交互终端：`waitForExit: false`（内嵌终端默认）
 
-内嵌终端默认**等进程退出**才判定节点成败（退出码决定成功/失败）。
-但交互式 shell、REPL、长驻 TUI **本来就不会自己退出**，这类命令若按默认等待，
-节点必然一直 `running` 直到撞上 `timeoutMs`，最后被判「执行超时」。
+内嵌终端默认**不等待进程退出**，避免 grok / CLI / TUI 撞上 `timeoutMs` 被判超时。
+需要「跑完再推进」时再关掉常驻或写 `waitForExit: true`。
 
-给这类成员显式声明 `waitForExit: false`（等价于 `detach: true`）：
+普通执行默认仍等退出；弹窗保活继续用 `waitForExit: false` / `detach: true`。
 
 ```json
 {
@@ -62,7 +62,7 @@
 
 行为差异：
 
-| | 默认（等待退出） | `waitForExit: false` |
+| | 普通执行默认 / `waitForExit: true` | 内嵌终端默认 / `waitForExit: false` |
 | --- | --- | --- |
 | 节点何时推进 | 进程退出后 | PTY 启动成功后立即推进 |
 | 成败判定 | 退出码 ∈ `successCodes` | 启动成功即成功 |

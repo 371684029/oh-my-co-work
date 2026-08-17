@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -12,6 +12,17 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "2.2.1",
+      "date": "2026-08-17",
+      "title": "2.2.1：TUI 常驻默认与本机令牌收紧",
+      "items": [
+        "内嵌终端默认进程常驻，设置里可开关；不再把 grok 类 CLI 拖到超时。",
+        "新建成员运行时：Windows 默认 cmd，其它系统默认自动，避免 Linux 去找 cmd.exe。",
+        "下一步脚本不再杀掉上一常驻终端；归档仍统一回收。",
+        "bootstrap 必须带可信 Origin 才发本机令牌。"
+      ]
+    },
     {
       "version": "2.2.0",
       "date": "2026-08-17",

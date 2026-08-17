@@ -167,6 +167,17 @@ export function usesTerminalExecution(script) {
 }
 
 /**
+ * 常驻进程：节点启动成功即推进，不等待退出。
+ * 内嵌终端默认常驻（grok / CLI / TUI）；显式 waitForExit:true 或 detach:false 才等待退出。
+ * 普通执行仅在 detach:true / waitForExit:false 时常驻。
+ */
+export function usesKeepAlive(script) {
+  if (script?.waitForExit === true || script?.detach === false) return false
+  if (script?.detach === true || script?.waitForExit === false) return true
+  return usesTerminalExecution(script)
+}
+
+/**
  * 补全 scriptWorkDir（选脚本 / 命令中的脚本名 / 绝对路径）
  * @param {object} script
  */
@@ -433,7 +444,7 @@ export async function runMember(
     const controlWindow =
       script.showControlWindow === true && process.platform === 'win32'
     // 仅唤起：弹窗启动后不等待结束（Cursor CLI 等交互工具）
-    const detach = script.detach === true || script.waitForExit === false
+    const detach = usesKeepAlive(script)
     const label = member.display_name || member.name || 'script'
     const successCodes = Array.isArray(script.successCodes)
       ? script.successCodes.map(Number)

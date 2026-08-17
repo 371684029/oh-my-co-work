@@ -89,3 +89,19 @@ test('attach flushes pending output before sending its snapshot', async () => {
   assert.equal(duplicateAfterSnapshot, false)
 })
 
+test('keepAlive terminals resolve immediately and stay running', async () => {
+  const sessionId = 'keepalive-shell'
+  const started = Date.now()
+  const promise = terminalService.runTerminal({
+    ...terminalOptions(sessionId, 'echo READY; exec sleep 20', 800),
+    keepAlive: true,
+  })
+  const result = await promise
+  assert.ok(Date.now() - started < 2000)
+  assert.equal(result.ok, true)
+  assert.equal(result.keepAlive, true)
+  const terminal = terminalService.listSessionTerminals(sessionId)[0]
+  assert.equal(terminal.status, 'running')
+  assert.equal(terminalService.killTerminal(terminal.id), true)
+})
+

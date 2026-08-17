@@ -1664,7 +1664,7 @@ export async function advance(sessionId) {
 
     if (member.kind === 'script') {
       try {
-        const released = killSessionProcesses(sessionId, { includeDetach: true })
+        const released = killSessionProcesses(sessionId, { includeDetach: false })
         if (released.killed > 0) {
           console.log(
             `[acw] step start: closed ${released.killed} script window(s) before ${member.display_name}`,
