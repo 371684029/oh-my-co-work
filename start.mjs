@@ -123,18 +123,23 @@ async function openHeadlessBrowser(url) {
 }
 
 async function ensureInstall() {
+  const binOk = exists(path.join(ROOT, 'node_modules', '.bin'))
   const sqliteOk = exists(path.join(ROOT, 'node_modules', 'better-sqlite3'))
   const playwrightOk = exists(path.join(ROOT, 'node_modules', 'playwright'))
-  if (sqliteOk && (!HEADLESS_BROWSER || playwrightOk)) {
+  if (binOk && sqliteOk && (!HEADLESS_BROWSER || playwrightOk)) {
     log('依赖已就绪')
     return
   }
-  log('首次启动，正在 npm install …')
+  log('依赖缺失或损坏，正在 npm install …')
   await run('npm', HEADLESS_BROWSER ? ['install'] : ['install', '--omit=dev'])
 }
 
 async function main() {
   process.chdir(ROOT)
+  // 这两条提示原先写在 start.bat 里，但批处理带中文会被 cmd 按字节偏移截断，
+  // 故改由 Node 输出（UTF-8，配合 bat 里的 chcp 65001 正常显示）
+  log('正在启动 oh-my-co-work …')
+  log('提示：关闭本窗口即可结束服务（关闭浏览器不会停）')
   log('工作目录', ROOT)
   log('Node', process.version)
   if (!exists(path.join(ROOT, 'web', 'dist', 'index.html'))) {

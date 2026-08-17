@@ -1,0 +1,25 @@
+# 批处理文件必须是 CRLF：cmd.exe 无法解析纯 LF 的 .bat/.cmd
+# （会把 "if errorlevel 1" 撕成 "rlevel"，报「不是内部或外部命令」）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# shell 脚本反过来必须是 LF，否则 bash 会报 $'\r': command not found
+*.sh text eol=lf
+
+# 其余文本统一 LF，交由编辑器/工具处理
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.ts text eol=lf
+*.vue text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.sqlite binary
+*.node binary
