@@ -22,6 +22,8 @@
 > **节点是死的，人是活的。**
 > Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
 
+<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：流动的 Workflow · 终端守护者" width="100%" />
+
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台" width="100%" />
 
 ## 为什么做它

@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | A | docs/assets/screenshots/workbench-home.webp | 工作台首页截图（含终端守护者文案）
+2026-08-17 | M | README.md | 首页截图放到宗旨语录下方
 2026-08-17 | M | web/src/views/Workbench.vue | 欢迎页「流动的 Workflow」后加终端守护者，去掉下方重复 CLI 徽章行
 2026-08-17 | M | web/src/views/settings/Members.vue | 删除 timeoutMs 表单字段，保存时不再写入
 2026-08-17 | M | web/src/views/settings/Prefs.vue | 设置页占用列表 3s 轮询 + 切回前台刷新
