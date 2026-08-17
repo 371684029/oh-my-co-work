@@ -7,12 +7,12 @@ import { WebSocketServer } from 'ws'
 import { initDb, getDb, DATA_ROOT, ROOT } from './db.js'
 import routes from './routes.js'
 import { subscribe, unsubscribe } from './bus.js'
-import { handleTerminalClientMessage } from './terminal/terminalService.js'
+import { handleTerminalClientMessage, setAdapterEventHandler } from './terminal/terminalService.js'
 import { listMembers, listGroups, createMember, createGroup } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
 import { repairDemoKeepAliveMembers, stripScriptTimeoutMs } from './demoRepair.js'
-import { processDueArchives, markInterruptedOnBoot } from './engine.js'
+import { processDueArchives, markInterruptedOnBoot, applyAdapterEvent } from './engine.js'
 import { updateAppSettings } from './appSettings.js'
 import {
   startLifecycleWatch,
@@ -31,6 +31,7 @@ import {
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
 initDb()
+setAdapterEventHandler(applyAdapterEvent)
 
 // R02：未归档进行中会话 → interrupted，等人选择继续/归档/放弃
 try {

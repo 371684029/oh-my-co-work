@@ -22,6 +22,19 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | A | server/src/terminal/redact.js | 终端日志/回放脱敏
+2026-08-17 | A | server/src/terminal/adapters/jsonl.js | 通用 JSONL Adapter 解析与轮询
+2026-08-17 | A | web/src/components/terminal/terminalPrefs.js | 终端主题与偏好默认值
+2026-08-17 | A | server/test/adapterJsonl.test.js / redact.test.js / adapterEvents.test.js | Adapter 与脱敏测试
+2026-08-17 | M | server/src/appSettings.js / config/app-settings.json | 终端偏好、配额、脱敏
+2026-08-17 | M | server/src/terminal/terminalService.js | 配额、脱敏、Adapter 侧通道、元数据落库、日志删除
+2026-08-17 | M | server/src/engine.js | Adapter 事件转对话/闸门/节点结果
+2026-08-17 | M | server/src/runners.js / routes.js / index.js / db.js | 接入 Adapter 与日志下载
+2026-08-17 | M | web/src/views/settings/Prefs.vue / Members.vue | 终端偏好、配额、备份、JSONL 开关
+2026-08-17 | M | web/src/views/Workbench.vue / TerminalView.vue / TerminalWorkspace.vue / api.js | 闸门、多终端、缺口重连、日志下载
+2026-08-17 | M | README.md / AGENT.md / docs/* / about.json / package.json | 版本 2.4.0 与文档
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | packages/oh-my-co-work-v2-linux-x64.zip | 覆盖 2.3.0 运行包
 2026-08-17 | M | packages/CURRENT.txt / README.md | 版本 2.3.0；linux-x64 产物元数据
 

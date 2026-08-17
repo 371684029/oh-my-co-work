@@ -14,14 +14,16 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
+  prefs: { type: Object, default: () => ({}) },
 })
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 
-const emit = defineEmits(['input', 'resize'])
+const emit = defineEmits(['input', 'resize', 'gap', 'focus-change'])
 const host = ref(null)
 let xterm = null
 let fitAddon = null
@@ -47,39 +49,19 @@ function resetToReplay(value) {
 }
 
 onMounted(async () => {
+  const prefs = { ...defaultTerminalPrefs(), ...(props.prefs || {}) }
+  const theme = TERMINAL_THEMES[prefs.theme] || TERMINAL_THEMES['project-dark']
   xterm = new Terminal({
     allowProposedApi: false,
     convertEol: false,
-    cursorBlink: true,
+    cursorBlink: prefs.cursorBlink !== false,
     cursorStyle: 'bar',
     fontFamily: "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace",
-    fontSize: 13,
+    fontSize: Number(prefs.fontSize) || 13,
     lineHeight: 1.3,
     letterSpacing: 0,
-    scrollback: 5000,
-    theme: {
-      background: '#17191f',
-      foreground: '#e7e9ee',
-      cursor: '#67b3ff',
-      cursorAccent: '#17191f',
-      selectionBackground: '#409eff55',
-      black: '#252830',
-      red: '#ff6b6b',
-      green: '#69db8b',
-      yellow: '#ffd166',
-      blue: '#64a9ff',
-      magenta: '#c792ea',
-      cyan: '#5ccfe6',
-      white: '#d8dee9',
-      brightBlack: '#71798a',
-      brightRed: '#ff8787',
-      brightGreen: '#8ce99a',
-      brightYellow: '#ffe066',
-      brightBlue: '#91c4ff',
-      brightMagenta: '#d6a6f2',
-      brightCyan: '#89e5f3',
-      brightWhite: '#ffffff',
-    },
+    scrollback: Number(prefs.scrollback) || 5000,
+    theme,
   })
   fitAddon = new FitAddon()
   xterm.loadAddon(fitAddon)
@@ -87,17 +69,21 @@ onMounted(async () => {
   xterm.onData((data) => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
-    if (lineBreaks > 1 && !window.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`)) {
+    const confirmPaste = (props.prefs?.pastePolicy || 'confirm') !== 'allow'
+    if (confirmPaste && lineBreaks > 1 && !window.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`)) {
       return
     }
     emit('input', data)
   })
+  xterm.textarea?.addEventListener('focus', () => emit('focus-change', true))
+  xterm.textarea?.addEventListener('blur', () => emit('focus-change', false))
   resetToReplay(props.terminal.replay)
   resizeObserver = new ResizeObserver(() => fit())
   resizeObserver.observe(host.value)
   await nextTick()
   fit()
   xterm.focus()
+  emit('focus-change', true)
 })
 
 watch(
@@ -105,6 +91,7 @@ watch(
   (seq) => {
     const nextSeq = Number(seq || 0)
     if (!xterm || nextSeq <= lastSeq) return
+    if (nextSeq > lastSeq + 1) emit('gap', { from: lastSeq, to: nextSeq })
     if (props.terminal.lastChunk) xterm.write(props.terminal.lastChunk)
     lastSeq = nextSeq
   },

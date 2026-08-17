@@ -2,8 +2,15 @@ import fs from 'node:fs'
 import path from 'node:path'
 import * as pty from 'node-pty'
 import { uid } from '@acw/shared'
-import { DATA_ROOT } from '../db.js'
+import { DATA_ROOT, getDb } from '../db.js'
 import { emitSession } from '../bus.js'
+import { getAppSettings } from '../appSettings.js'
+import { redactText } from './redact.js'
+import {
+  appendAdapterReply,
+  defaultAdapterPaths,
+  watchJsonlAdapter,
+} from './adapters/jsonl.js'
 import {
   killMemberProcesses,
   killProcessTree,
@@ -12,14 +19,39 @@ import {
 } from '../processRegistry.js'
 
 const terminals = new Map()
-const MAX_REPLAY_CHARS = 256_000
 const MAX_INPUT_CHARS = 16_384
 const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
 const RETAIN_FINISHED_GLOBAL = 200
-const MAX_LOG_BYTES = 10 * 1024 * 1024
 const MAX_INPUT_BYTES_PER_SECOND = 256 * 1024
 const MAX_INPUT_MESSAGES_PER_SECOND = 500
+
+let adapterEventHandler = null
+
+export function setAdapterEventHandler(fn) {
+  adapterEventHandler = typeof fn === 'function' ? fn : null
+}
+
+function quotaLimits() {
+  const q = getAppSettings().quota || {}
+  return {
+    maxConcurrent: Number(q.maxConcurrentTerminals) || 8,
+    maxLogBytes: Math.max(1, Number(q.maxLogMiB) || 10) * 1024 * 1024,
+    maxReplayChars: Math.max(32, Number(q.maxReplayKiB) || 256) * 1024,
+  }
+}
+
+function redactOpts() {
+  const r = getAppSettings().redact || {}
+  return { enabled: r.enabled !== false, patternsText: r.patternsText || '' }
+}
+
+function countRunningTerminals(sessionId) {
+  return [...terminals.values()].filter(
+    (t) =>
+      t.sessionId === sessionId && (t.status === 'running' || t.status === 'starting'),
+  ).length
+}
 
 function nowIso() {
   return new Date().toISOString()
@@ -31,10 +63,41 @@ function clampSize(value, fallback, min, max) {
   return Math.max(min, Math.min(max, Math.floor(n)))
 }
 
+function persistTerminal(entry) {
+  try {
+    const db = getDb()
+    db.prepare(
+      `INSERT OR REPLACE INTO terminal_sessions
+        (id, session_id, node_instance_id, member_id, run_id, status, cwd, command_label, pid, cols, rows, log_path, exit_code, signal, started_at, finished_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      entry.id,
+      entry.sessionId,
+      entry.nodeInstanceId || null,
+      entry.memberId || null,
+      entry.runId || null,
+      entry.status,
+      entry.cwd || null,
+      entry.label || null,
+      entry.pid || null,
+      entry.cols || null,
+      entry.rows || null,
+      entry.logName || null,
+      entry.exitCode,
+      entry.signal || null,
+      entry.startedAt || null,
+      entry.finishedAt || null,
+    )
+  } catch {
+    /* tests may run without sqlite tables */
+  }
+}
+
 function appendReplay(entry, data) {
+  const maxChars = quotaLimits().maxReplayChars
   entry.replay += data
-  if (entry.replay.length > MAX_REPLAY_CHARS) {
-    entry.replay = entry.replay.slice(-MAX_REPLAY_CHARS)
+  if (entry.replay.length > maxChars) {
+    entry.replay = entry.replay.slice(-maxChars)
     entry.replayTruncated = true
   }
 }
@@ -62,6 +125,7 @@ function publicTerminal(entry, { includeReplay = false } = {}) {
     log: entry.logName,
     logTruncated: entry.logTruncated,
     replayTruncated: entry.replayTruncated,
+    adapter: entry.adapterType || null,
     ...(includeReplay ? { replay: entry.replay } : {}),
   }
 }
@@ -90,13 +154,14 @@ function flushOutput(entry) {
 }
 
 function queueOutput(entry, data) {
-  const text = String(data || '')
+  const text = redactText(String(data || ''), redactOpts())
   if (!text) return
   appendReplay(entry, text)
   entry.pendingOutput += text
   if (entry.logStream && !entry.logTruncated) {
+    const maxLog = quotaLimits().maxLogBytes
     const bytes = Buffer.byteLength(text)
-    const remaining = MAX_LOG_BYTES - entry.logBytes
+    const remaining = maxLog - entry.logBytes
     if (remaining > 0) {
       const chunk = bytes <= remaining ? text : Buffer.from(text).subarray(0, remaining)
       entry.logStream.write(chunk)
@@ -104,7 +169,7 @@ function queueOutput(entry, data) {
     }
     if (bytes > remaining) {
       entry.logTruncated = true
-      entry.logStream.write('\n[oh-my-co-work] terminal log truncated at 10 MiB\n')
+      entry.logStream.write('\n[oh-my-co-work] terminal log truncated\n')
     }
   }
   if (!entry.flushTimer) {
@@ -157,6 +222,7 @@ export function runTerminal({
   stdinText,
   cols = 100,
   rows = 30,
+  adapter = null,
 }) {
   return new Promise((resolve) => {
     // 常驻终端（keepAlive）会在启动成功后先行 resolve，让流程节点推进；
@@ -173,6 +239,16 @@ export function runTerminal({
         ok: false,
         summary: '内嵌终端必须绑定会话',
         error: { code: 'TERMINAL_SESSION_REQUIRED' },
+      })
+      return
+    }
+
+    const running = countRunningTerminals(sessionId)
+    if (running >= quotaLimits().maxConcurrent) {
+      settle({
+        ok: false,
+        summary: `该会话并发终端已达上限（${quotaLimits().maxConcurrent}）`,
+        error: { code: 'TERMINAL_QUOTA' },
       })
       return
     }
@@ -221,8 +297,12 @@ export function runTerminal({
       inputWindowAt: Date.now(),
       inputBytesInWindow: 0,
       inputMessagesInWindow: 0,
+      adapterType: null,
+      adapterStop: null,
+      adapterReplyPath: null,
     }
     terminals.set(id, entry)
+    persistTerminal(entry)
     try {
       entry.logStream = fs.createWriteStream(logPath, { flags: 'a' })
       entry.logStream.on('error', () => {
@@ -250,7 +330,16 @@ export function runTerminal({
           : 'exited'
       entry.logStream?.end()
       entry.logStream = null
+      if (typeof entry.adapterStop === 'function') {
+        try {
+          entry.adapterStop()
+        } catch {
+          /* ignore */
+        }
+        entry.adapterStop = null
+      }
       unregisterProcess(sessionId, runId)
+      persistTerminal(entry)
       emitTerminal(entry, 'terminal.exited', { terminal: publicTerminal(entry) })
       pruneFinished(sessionId)
 
@@ -295,20 +384,40 @@ export function runTerminal({
 
     try {
       const spec = normalizePtyLaunch(launch)
+      const adapterEnabled =
+        adapter === 'jsonl' ||
+        adapter === true ||
+        adapter?.type === 'jsonl' ||
+        adapter?.enabled === true
+      const paths = adapterEnabled
+        ? {
+            ...defaultAdapterPaths(cwd),
+            ...(adapter?.eventsPath ? { eventsPath: path.resolve(String(adapter.eventsPath)) } : {}),
+            ...(adapter?.replyPath ? { replyPath: path.resolve(String(adapter.replyPath)) } : {}),
+          }
+        : null
+      const childEnv = {
+        ...env,
+        TERM: env?.TERM || 'xterm-256color',
+        COLORTERM: env?.COLORTERM || 'truecolor',
+      }
+      if (paths) {
+        childEnv.ACW_ADAPTER_EVENTS = paths.eventsPath
+        childEnv.ACW_ADAPTER_REPLY = paths.replyPath
+        childEnv.ECW_ADAPTER_EVENTS = paths.eventsPath
+        childEnv.ECW_ADAPTER_REPLY = paths.replyPath
+      }
       entry.process = pty.spawn(spec.file, spec.args, {
         name: 'xterm-256color',
         cols: entry.cols,
         rows: entry.rows,
         cwd,
-        env: {
-          ...env,
-          TERM: env?.TERM || 'xterm-256color',
-          COLORTERM: env?.COLORTERM || 'truecolor',
-        },
+        env: childEnv,
         useConpty: process.platform === 'win32',
       })
       entry.pid = entry.process.pid
       entry.status = 'running'
+      persistTerminal(entry)
       registerProcess(sessionId, runId, {
         pid: entry.pid,
         kind: 'terminal',
@@ -318,6 +427,29 @@ export function runTerminal({
         detach: !!keepAlive,
         child: entry.process,
       })
+      if (paths) {
+        entry.adapterType = 'jsonl'
+        entry.adapterReplyPath = paths.replyPath
+        entry.adapterStop = watchJsonlAdapter({
+          eventsPath: paths.eventsPath,
+          onEvent: (event) => {
+            adapterEventHandler?.({
+              sessionId,
+              nodeInstanceId: entry.nodeInstanceId,
+              memberId: entry.memberId,
+              terminalId: entry.id,
+              replyPath: entry.adapterReplyPath,
+              event,
+            })
+          },
+          onError: (error) => {
+            emitTerminal(entry, 'terminal.adapter_error', {
+              code: error?.code || 'ADAPTER_ERROR',
+              message: error?.message || 'adapter event ignored',
+            })
+          },
+        })
+      }
       entry.process.onData((data) => queueOutput(entry, data))
       entry.process.onExit(({ exitCode, signal }) => finish({ exitCode, signal }))
       emitTerminal(entry, 'terminal.opened', {
@@ -375,6 +507,41 @@ export function getTerminal(id) {
   return terminals.get(id) || null
 }
 
+export function writeAdapterReply(terminalId, payload) {
+  const entry = terminals.get(terminalId)
+  if (!entry?.adapterReplyPath) return false
+  try {
+    return appendAdapterReply(entry.adapterReplyPath, {
+      type: 'answer',
+      at: nowIso(),
+      terminalId,
+      ...payload,
+    })
+  } catch {
+    return false
+  }
+}
+
+export function deleteTerminalLog(sessionId, terminalId) {
+  const entry = terminals.get(terminalId)
+  if (!entry || entry.sessionId !== sessionId) return false
+  try {
+    if (entry.logPath && fs.existsSync(entry.logPath)) fs.unlinkSync(entry.logPath)
+  } catch {
+    return false
+  }
+  entry.logBytes = 0
+  entry.logTruncated = false
+  return true
+}
+
+export function readTerminalLogPath(sessionId, terminalId) {
+  const entry = terminals.get(terminalId)
+  if (!entry || entry.sessionId !== sessionId) return null
+  if (entry.logPath && fs.existsSync(entry.logPath)) return entry.logPath
+  return null
+}
+
 export function forgetSessionTerminals(sessionId) {
   for (const [id, entry] of [...terminals.entries()]) {
     if (entry.sessionId !== sessionId) continue
@@ -382,6 +549,14 @@ export function forgetSessionTerminals(sessionId) {
     entry.flushTimer = null
     entry.logStream?.end()
     entry.logStream = null
+    if (typeof entry.adapterStop === 'function') {
+      try {
+        entry.adapterStop()
+      } catch {
+        /* ignore */
+      }
+      entry.adapterStop = null
+    }
     if (entry.status === 'running' || entry.status === 'starting') {
       entry.status = 'killed'
       entry.signal = 'session_deleted'

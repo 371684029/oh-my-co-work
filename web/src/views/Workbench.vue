@@ -192,11 +192,16 @@
         <TerminalWorkspace
           v-if="activeTerminal"
           :terminal="activeTerminal"
+          :terminals="terminalSessions"
           :connection-status="terminalConnectionStatus"
+          :prefs="terminalPrefs"
           @close="activeTerminalId = null"
           @kill="killTerminal"
           @input="sendTerminalInput"
           @resize="resizeTerminal"
+          @select="openTerminal"
+          @download-log="downloadTerminalLog"
+          @gap="onTerminalSeqGap"
         />
 
         <!-- 经典布局：上消息滚动 · 下闸门+输入固定 -->
@@ -514,6 +519,26 @@
                         <template v-else-if="pendingGate.content?.mode === 'need_params'">
                           <el-button type="danger" @click="submitHuman(pendingGate)">
                             提交
+                          </el-button>
+                        </template>
+                        <template v-else-if="pendingGate.content?.mode === 'adapter_question'">
+                          <el-button
+                            v-for="choice in adapterChoices(pendingGate)"
+                            :key="choice"
+                            type="danger"
+                            @click="answerAdapterQuestion(pendingGate, choice)"
+                          >
+                            {{ choice }}
+                          </el-button>
+                          <el-button
+                            v-if="!adapterChoices(pendingGate).length"
+                            type="danger"
+                            @click="answerAdapterQuestion(pendingGate)"
+                          >
+                            提交
+                          </el-button>
+                          <el-button plain @click="answerAdapterQuestion(pendingGate, '取消', 'reject')">
+                            拒绝
                           </el-button>
                         </template>
                         <template v-else-if="pendingGate.content?.mode === 'interrupted'">
@@ -1075,6 +1100,14 @@ const terminalSessions = ref([])
 const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
+const terminalPrefs = ref({
+  theme: 'project-dark',
+  fontSize: 13,
+  cursorBlink: true,
+  pastePolicy: 'confirm',
+  autoCollapseOnExit: false,
+  scrollback: 5000,
+})
 const editTitle = ref('')
 const startTarget = ref('')
 const listFilter = ref('all')
@@ -1487,6 +1520,14 @@ const pendingGate = computed(() => {
   const curNode = Number.isFinite(curIdx)
     ? nodes.find((n) => Number(n.step_index) === curIdx)
     : null
+  const adapterGate = msgs.find(
+    (m) =>
+      m.type === 'gate' &&
+      m.content?.mode === 'adapter_question' &&
+      m.content?.humanAction === 'pending' &&
+      !m.content?.answered,
+  )
+  if (adapterGate) return adapterGate
   // 开聊启动闸门（无节点，等人点通过后再跑流程）
   const pendingStart = detail.value.session.context?.pendingStart
   if (pendingStart && detail.value.session.status !== 'interrupted') {
@@ -1670,6 +1711,7 @@ const footerCollapsedHint = computed(() => {
     if (pendingGate.value.content?.mode === 'session_start') return '确认开始 · 展开'
     if (pendingGate.value.content?.mode === 'human_input') return '请输入 · 展开'
     if (pendingGate.value.content?.mode === 'need_params') return '请输入 · 展开'
+    if (pendingGate.value.content?.mode === 'adapter_question') return '工具提问 · 展开'
     if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
     if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
     return '待你处理 · 展开'
@@ -1854,6 +1896,9 @@ const composerPlaceholder = computed(() => {
       ? '在此输入参数（空格/换行分段 → #1 #2…），Enter 或点「提交」'
       : '在此输入内容，Enter 或点「提交」'
   }
+  if (mode === 'adapter_question') {
+    return '工具在问你：可点选项，或先输入再提交'
+  }
   if (mode === 'interrupted') {
     return '服务曾中断：继续=从中断处恢复 · 放弃=跳过未完成步骤（进程到设置里释放）'
   }
@@ -1868,6 +1913,7 @@ const composerToolbarHint = computed(() => {
     if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
     if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
     if (mode === 'interrupted') return '点「继续」或「放弃」'
+    if (mode === 'adapter_question') return '点选项或提交回答工具'
     return 'Enter=附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
@@ -1930,6 +1976,7 @@ function roleLabel(m) {
     if (m.content?.mode === 'human_input') return '请输入'
     if (m.content?.mode === 'need_params') return '请输入'
     if (m.content?.mode === 'interrupted') return '崩溃恢复'
+    if (m.content?.mode === 'adapter_question') return '工具提问'
     return '待你处理'
   }
   if (m.role === 'system') return '系统'
@@ -2044,6 +2091,9 @@ function onPasteFile(firstFile, fileList) {
 function isPendingGate(m) {
   if (m.type !== 'gate' || !detail.value) return false
   if (m.content?.mode === 'archive_confirm') return false
+  if (m.content?.mode === 'adapter_question') {
+    return m.content?.humanAction === 'pending' && !m.content?.answered
+  }
   const node = detail.value.nodes.find((n) => n.id === m.node_instance_id)
   return node?.status === 'waiting_human'
 }
@@ -2195,6 +2245,12 @@ async function loadLists() {
     slashCommands.value = sc.commands || []
   } catch {
     slashCommands.value = []
+  }
+  try {
+    const s = await api.appSettings.get()
+    if (s?.terminal) terminalPrefs.value = { ...terminalPrefs.value, ...s.terminal }
+  } catch {
+    /* keep defaults */
   }
 }
 
@@ -2360,6 +2416,48 @@ async function killTerminal(terminalId) {
   }
 }
 
+function adapterChoices(m) {
+  return Array.isArray(m?.content?.choices) ? m.content.choices.filter(Boolean) : []
+}
+
+async function answerAdapterQuestion(m, choice, action = 'adapter_answer') {
+  if (gating.value || !activeId.value) return
+  gating.value = true
+  try {
+    const text = readSenderText()
+    await api.sessions.gate(activeId.value, {
+      action,
+      text: text || undefined,
+      choice: choice || undefined,
+      questionId: m?.content?.questionId,
+      nodeInstanceId: m?.node_instance_id || undefined,
+      idempotencyKey: nextIdempotencyKey('adapter_answer', m?.content?.questionId),
+    })
+    clearSender()
+    await loadDetail(activeId.value)
+    ElMessage.success('已回答工具提问')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    gating.value = false
+  }
+}
+
+function onTerminalSeqGap() {
+  if (!activeTerminalId.value) return
+  ElMessage.info('部分输出未回放，正在重新附着')
+  sendTerminalMessage({ type: 'terminal.attach', terminalId: activeTerminalId.value })
+}
+
+async function downloadTerminalLog(terminalId) {
+  if (!activeId.value || !terminalId) return
+  try {
+    await api.sessions.downloadTerminalLog(activeId.value, terminalId)
+  } catch (e) {
+    ElMessage.error(e.message || '无法下载日志')
+  }
+}
+
 function onConvChange(item) {
   const id = item?.uniqueKey || item?.id
   if (id) selectSession(id)
@@ -2460,7 +2558,13 @@ function bindWs(sessionId) {
       if (ev.type === 'terminal.output') {
         const terminalId = ev.payload?.terminalId
         const current = terminalSessions.value.find((item) => item.id === terminalId)
-        if (current && Number(ev.payload?.seq) > Number(current.seq || 0)) {
+        const nextSeq = Number(ev.payload?.seq)
+        const prevSeq = Number(current?.seq || 0)
+        if (current && nextSeq > prevSeq) {
+          if (nextSeq > prevSeq + 1) {
+            ElMessage.info('部分输出未回放，正在重新附着')
+            sendTerminalMessage({ type: 'terminal.attach', terminalId })
+          }
           const data = ev.payload.data || ''
           const replay = `${current.replay || ''}${data}`.slice(-256_000)
           upsertTerminal({
@@ -2474,6 +2578,9 @@ function bindWs(sessionId) {
         return
       }
       if (ev.type === 'terminal.snapshot') {
+        if (ev.payload?.truncated) {
+          ElMessage.info('回放已截断，仅显示最近输出')
+        }
         upsertTerminal({
           ...(ev.payload?.terminal || {}),
           id: ev.payload?.terminalId,
@@ -2488,9 +2595,12 @@ function bindWs(sessionId) {
       }
       if (ev.type === 'terminal.exited') {
         upsertTerminal(ev.payload?.terminal)
+        if (terminalPrefs.value.autoCollapseOnExit && activeTerminalId.value === ev.payload?.terminal?.id) {
+          activeTerminalId.value = null
+        }
         return
       }
-      if (ev.type === 'terminal.error') {
+      if (ev.type === 'terminal.error' || ev.type === 'terminal.adapter_error') {
         ElMessage.warning(ev.payload?.message || '终端连接异常')
         return
       }

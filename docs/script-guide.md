@@ -69,6 +69,27 @@
 
 演示成员「示例命令」就是这么配的：命令尾部留一个 `cmd`，终端可交互，节点照常推进。
 
+### 1.2 JSONL Adapter（2.4）
+
+默认关闭。成员「结构化 Adapter」选 JSONL 后，引擎**不会解析终端画面**，只读取工作目录侧通道：
+
+| 环境变量 | 默认文件 |
+|----------|----------|
+| `ACW_ADAPTER_EVENTS` | `.acw-adapter.events.jsonl` |
+| `ACW_ADAPTER_REPLY` | `.acw-adapter.reply.jsonl` |
+
+每行一个 JSON 对象，仅允许：
+
+```json
+{"type":"message","role":"assistant","text":"准备修改配置"}
+{"type":"tool.start","id":"t1","name":"edit_file","path":"package.json"}
+{"type":"tool.end","id":"t1","ok":true}
+{"type":"question","id":"q1","text":"是否继续部署？","choices":["继续","取消"]}
+{"type":"result","summary":"修改完成","files":["package.json"]}
+```
+
+`question` 出现在对话闸门；人点选项后追加一行到 reply 文件。坏行会被忽略，PTY 继续跑。
+
 ---
 
 ## 2. 占位符（command / args / filePath / env 值均支持）

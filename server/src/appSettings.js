@@ -52,6 +52,74 @@ function normalizeAdmin(raw) {
   }
 }
 
+export function defaultTerminalSettings() {
+  return {
+    theme: 'project-dark',
+    fontSize: 13,
+    cursorBlink: true,
+    pastePolicy: 'confirm',
+    autoCollapseOnExit: false,
+    scrollback: 5000,
+  }
+}
+
+export function defaultQuotaSettings() {
+  return {
+    maxConcurrentTerminals: 8,
+    maxLogMiB: 10,
+    maxReplayKiB: 256,
+  }
+}
+
+export function defaultRedactSettings() {
+  return {
+    enabled: true,
+    patternsText: '',
+  }
+}
+
+function clampInt(v, fallback, min, max) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.max(min, Math.min(max, Math.round(n)))
+}
+
+function normalizeTerminal(raw) {
+  const d = defaultTerminalSettings()
+  if (!raw || typeof raw !== 'object') return d
+  const theme = ['project-dark', 'native', 'high-contrast'].includes(raw.theme)
+    ? raw.theme
+    : d.theme
+  const pastePolicy = raw.pastePolicy === 'allow' ? 'allow' : 'confirm'
+  return {
+    theme,
+    fontSize: clampInt(raw.fontSize, d.fontSize, 10, 22),
+    cursorBlink: raw.cursorBlink !== false,
+    pastePolicy,
+    autoCollapseOnExit: !!raw.autoCollapseOnExit,
+    scrollback: clampInt(raw.scrollback, d.scrollback, 200, 20000),
+  }
+}
+
+function normalizeQuota(raw) {
+  const d = defaultQuotaSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return {
+    maxConcurrentTerminals: clampInt(raw.maxConcurrentTerminals, d.maxConcurrentTerminals, 1, 32),
+    maxLogMiB: clampInt(raw.maxLogMiB, d.maxLogMiB, 1, 200),
+    maxReplayKiB: clampInt(raw.maxReplayKiB, d.maxReplayKiB, 32, 2048),
+  }
+}
+
+function normalizeRedact(raw) {
+  const d = defaultRedactSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return {
+    enabled: raw.enabled !== false,
+    patternsText: String(raw.patternsText || '').slice(0, 4000),
+  }
+}
+
 function ensureSettingsFile() {
   if (!fs.existsSync(SETTINGS_PATH)) {
     fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
@@ -64,6 +132,9 @@ function ensureSettingsFile() {
           autoArchiveHours: 3,
           /** 脚本运行时是否弹出系统控制台 + 释放资源小窗（默认开） */
           showScriptPopup: true,
+          terminal: defaultTerminalSettings(),
+          quota: defaultQuotaSettings(),
+          redact: defaultRedactSettings(),
         },
         null,
         2,
@@ -94,6 +165,9 @@ export function getAppSettings() {
       ),
       /** 脚本弹窗：系统控制台 +「释放资源」HTA，默认 true */
       showScriptPopup: raw.showScriptPopup !== false,
+      terminal: normalizeTerminal(raw.terminal),
+      quota: normalizeQuota(raw.quota),
+      redact: normalizeRedact(raw.redact),
     }
   } catch {
     return {
@@ -101,6 +175,9 @@ export function getAppSettings() {
       admin: defaultAdminSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
+      terminal: defaultTerminalSettings(),
+      quota: defaultQuotaSettings(),
+      redact: defaultRedactSettings(),
     }
   }
 }
@@ -144,6 +221,16 @@ export function updateAppSettings(patch = {}) {
       patch.showScriptPopup !== undefined
         ? !!patch.showScriptPopup
         : cur.showScriptPopup !== false,
+    terminal:
+      patch.terminal !== undefined
+        ? normalizeTerminal({ ...cur.terminal, ...patch.terminal })
+        : cur.terminal,
+    quota:
+      patch.quota !== undefined ? normalizeQuota({ ...cur.quota, ...patch.quota }) : cur.quota,
+    redact:
+      patch.redact !== undefined
+        ? normalizeRedact({ ...cur.redact, ...patch.redact })
+        : cur.redact,
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

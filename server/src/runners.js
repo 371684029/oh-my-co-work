@@ -527,6 +527,8 @@ export async function runMember(
       ACW_PARAMS_JSON: JSON.stringify(paramsMap || {}),
       ACW_SCRIPT_PATH: filePath || '',
       ACW_CWD: cwd || '',
+      ACW_ADAPTER_EVENTS: '',
+      ACW_ADAPTER_REPLY: '',
       // 兼容旧脚本读 ECW_*
       ECW_SESSION_ID: sessionId || '',
       ECW_MEMBER_ID: member.id || '',
@@ -581,6 +583,7 @@ export async function runMember(
         stdinText: passStdin && humanInput != null ? String(humanInput) : script.stdinText || null,
         cols: script.terminal?.cols,
         rows: script.terminal?.rows,
+        adapter: script.adapter || script.terminal?.adapter || null,
       })
     }
 

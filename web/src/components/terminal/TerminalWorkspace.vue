@@ -7,6 +7,16 @@
           返回对话
         </button>
         <span class="terminal-divider" />
+        <select
+          v-if="terminals.length > 1"
+          class="terminal-switch"
+          :value="terminal.id"
+          @change="$emit('select', $event.target.value)"
+        >
+          <option v-for="item in terminals" :key="item.id" :value="item.id">
+            {{ item.label || '终端' }} · {{ item.status }}
+          </option>
+        </select>
         <div class="terminal-identity">
           <div class="terminal-name-row">
             <span class="terminal-live-dot" :class="{ active: isRunning }" aria-hidden="true" />
@@ -28,6 +38,14 @@
           {{ isFullscreen ? '退出全屏' : '全屏' }}
         </button>
         <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="下载终端日志"
+          @click="$emit('download-log', terminal.id)"
+        >
+          日志
+        </button>
+        <button
           v-if="isRunning"
           type="button"
           class="terminal-toolbar-button danger"
@@ -42,8 +60,11 @@
       <TerminalView
         :key="terminal.id"
         :terminal="terminal"
+        :prefs="prefs"
         @input="$emit('input', $event)"
         @resize="$emit('resize', $event)"
+        @gap="$emit('gap', $event)"
+        @focus-change="onFocusChange"
       />
     </div>
 
@@ -67,17 +88,22 @@ import {
 
 const props = defineProps({
   terminal: { type: Object, required: true },
+  terminals: { type: Array, default: () => [] },
   connectionStatus: { type: String, default: 'open' },
+  prefs: { type: Object, default: () => ({}) },
 })
 
-defineEmits(['close', 'kill', 'input', 'resize'])
+defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
 
 const workspaceRoot = ref(null)
 const isFullscreen = ref(false)
+const focused = ref(true)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
-  return '键盘输入将直接发送到终端 · 返回对话不会停止进程'
+  if (props.connectionStatus !== 'open') return '连接中断，PTY 仍在跑 · 重连后会补回放'
+  if (focused.value) return '终端输入中 · Esc 退出焦点，聊天快捷键不会进终端'
+  return '已退出终端焦点 · 点画面继续输入'
 })
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
@@ -104,13 +130,28 @@ async function toggleTerminalFullscreen() {
   else await requestFullscreen(workspaceRoot.value)
 }
 
+function onFocusChange(value) {
+  focused.value = !!value
+}
+
+function onKeydown(ev) {
+  if (ev.key !== 'Escape') return
+  if (focused.value) {
+    ev.preventDefault()
+    document.activeElement?.blur?.()
+    focused.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
+  document.addEventListener('keydown', onKeydown)
   syncFullscreenState()
 })
 
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', syncFullscreenState)
+  document.removeEventListener('keydown', onKeydown)
 })
 </script>
 
@@ -188,6 +229,16 @@ onUnmounted(() => {
   font-size: 18px;
   line-height: 10px;
   vertical-align: -1px;
+}
+
+.terminal-switch {
+  max-width: 220px;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce0e8;
+  font-size: 11px;
 }
 
 .terminal-toolbar-button.danger {

@@ -1,0 +1,56 @@
+export const TERMINAL_THEMES = {
+  'project-dark': {
+    background: '#17191f',
+    foreground: '#e7e9ee',
+    cursor: '#67b3ff',
+    cursorAccent: '#17191f',
+    selectionBackground: '#409eff55',
+    black: '#252830',
+    red: '#ff6b6b',
+    green: '#69db8b',
+    yellow: '#ffd166',
+    blue: '#64a9ff',
+    magenta: '#c792ea',
+    cyan: '#5ccfe6',
+    white: '#d8dee9',
+    brightBlack: '#71798a',
+    brightRed: '#ff8787',
+    brightGreen: '#8ce99a',
+    brightYellow: '#ffe066',
+    brightBlue: '#91c4ff',
+    brightMagenta: '#d6a6f2',
+    brightCyan: '#89e5f3',
+    brightWhite: '#ffffff',
+  },
+  native: {
+    background: '#000000',
+    foreground: '#c8c8c8',
+    cursor: '#c8c8c8',
+    cursorAccent: '#000000',
+    selectionBackground: '#ffffff44',
+  },
+  'high-contrast': {
+    background: '#000000',
+    foreground: '#ffffff',
+    cursor: '#ffff00',
+    cursorAccent: '#000000',
+    selectionBackground: '#ffff0066',
+    red: '#ff4444',
+    green: '#44ff44',
+    yellow: '#ffff44',
+    blue: '#66aaff',
+    magenta: '#ff66ff',
+    cyan: '#66ffff',
+  },
+}
+
+export function defaultTerminalPrefs() {
+  return {
+    theme: 'project-dark',
+    fontSize: 13,
+    cursorBlink: true,
+    pastePolicy: 'confirm',
+    autoCollapseOnExit: false,
+    scrollback: 5000,
+  }
+}

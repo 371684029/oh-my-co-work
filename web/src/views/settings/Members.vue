@@ -109,6 +109,18 @@
                 </div>
               </el-form-item>
 
+              <el-form-item v-if="form.script.executionMode === 'terminal'" label="结构化 Adapter">
+                <el-select v-model="form.script.adapter" style="width: 100%">
+                  <el-option label="关闭（仅真实终端）" value="none" />
+                  <el-option label="JSONL 侧通道（提问转闸门）" value="jsonl" />
+                </el-select>
+                <div class="field-hint">
+                  开启后工作目录写入 <code>.acw-adapter.events.jsonl</code>，环境变量
+                  <code>ACW_ADAPTER_EVENTS</code> / <code>ACW_ADAPTER_REPLY</code>。
+                  提问会出现在对话闸门，回答写回 reply 文件。解析失败不影响终端。
+                </div>
+              </el-form-item>
+
               <el-form-item v-if="form.script.executionMode !== 'terminal'" label="是否展示脚本弹窗">
                 <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
                   <el-option label="跟随全局设置" value="inherit" />
@@ -274,6 +286,7 @@ function emptyForm() {
       argsText: '',
       envText: '',
       executionMode: 'terminal',
+      adapter: 'none',
       /** inherit | yes | no */
       showScriptPopupMode: 'inherit',
       detach: true,
@@ -401,6 +414,7 @@ function fillFromRow(row, { asClone = false } = {}) {
       argsText: Array.isArray(s.args) ? s.args.join(' ') : '',
       envText: envTextFromObj(s.env),
       executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
+      adapter: s.adapter === 'jsonl' || s.adapter?.type === 'jsonl' ? 'jsonl' : 'none',
       showScriptPopupMode: popupModeFromScript(s),
       detach: scriptKeepAlive(s),
       useHumanAsStdin: !!(s.useHumanAsStdin || s.passHumanInput || s.stdin),
@@ -499,6 +513,7 @@ async function save() {
                   ? { env: parseEnvText(s.envText) }
                   : {}),
                 executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
+                adapter: s.adapter === 'jsonl' ? 'jsonl' : undefined,
                 ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
                 detach: !!s.detach,
                 waitForExit: !s.detach,

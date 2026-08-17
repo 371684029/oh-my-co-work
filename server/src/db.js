@@ -285,6 +285,25 @@ export function initDb() {
       key TEXT PRIMARY KEY,
       value_json TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS terminal_sessions (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      node_instance_id TEXT,
+      member_id TEXT,
+      run_id TEXT,
+      status TEXT NOT NULL,
+      cwd TEXT,
+      command_label TEXT,
+      pid INTEGER,
+      cols INTEGER,
+      rows INTEGER,
+      log_path TEXT,
+      exit_code INTEGER,
+      signal TEXT,
+      started_at TEXT,
+      finished_at TEXT
+    );
   `)
 
   const row = db.prepare('SELECT version FROM schema_version LIMIT 1').get()

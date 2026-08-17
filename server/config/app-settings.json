@@ -10,5 +10,22 @@
     }
   },
   "autoArchiveHours": 3,
-  "showScriptPopup": true
+  "showScriptPopup": true,
+  "terminal": {
+    "theme": "project-dark",
+    "fontSize": 13,
+    "cursorBlink": true,
+    "pastePolicy": "confirm",
+    "autoCollapseOnExit": false,
+    "scrollback": 5000
+  },
+  "quota": {
+    "maxConcurrentTerminals": 8,
+    "maxLogMiB": 10,
+    "maxReplayKiB": 256
+  },
+  "redact": {
+    "enabled": true,
+    "patternsText": ""
+  }
 }
