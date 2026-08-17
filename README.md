@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-2.0.1-409eff?style=flat-square" alt="version 2.0.1" />
+  <img src="https://img.shields.io/badge/version-2.2.0-409eff?style=flat-square" alt="version 2.2.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -169,8 +169,9 @@ packages/  可直接运行的三平台压缩包
 - [x] 1.x：群聊工作台、流程引擎、闸门、归档与续跑
 - [x] 2.0：真实 PTY、终端卡、中栏 TUI 工作区与全屏
 - [x] 2.0.1：本机令牌与 Origin 防护、PID/长输出/重连修复
+- [x] 2.2：常驻交互终端不再判超时、start.bat 双击修复、终端卡与闸门交互打磨
 - [ ] 2.1：终端偏好、配额、脱敏与更完整的重连体验
-- [ ] 2.2：结构化 Adapter，把子工具提问和结果转换成对话与闸门
+- [ ] 结构化 Adapter：把子工具提问和结果转换成对话与闸门
 - [ ] 2.3：多终端治理、更多 CLI Adapter、三平台稳定性封板
 - [ ] 桌面壳、托盘与系统通知
 

@@ -22,6 +22,23 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | web/src/views/Workbench.vue | 移除右栏「资源」Tab 及 loadResources/openResourcesTab/rekillSessionProcesses/openHolderSession/archiveHolderSession、sessionResources 状态与 resources-* CSS（清死代码，不留无入口逻辑）
+2026-08-17 | M | web/src/api.js | 移除 sessions.resources 与已无调用方的 sessions.killProcesses
+2026-08-17 | M | server/src/routes.js | 移除 GET /sessions/:id/resources 路由与 getSessionResources 导入
+2026-08-17 | M | server/src/services.js | 移除 getSessionResources；随之去掉失效的 pathLock 与 listSessionProcesses 导入
+2026-08-17 | M | README.md | 去掉「本机资源」能力条目与三栏描述里的「资源」；版本徽章 2.0.1→2.2.0；路线图勾选 2.2 并把 Adapter 拆成独立未完成项
+2026-08-17 | M | docs/frontend-components.md | 去掉「本机资源」视觉约定条目
+2026-08-17 | M | docs/mvp.md | 资源面板标记为「移除」；状态/更新日期改 2.2.0；新增 §2.22 封板小节与版本流水线一行
+2026-08-17 | M | docs/README.md | 索引发布线改 2.2.0（§2.19～§2.22）；修订表补 2.2.0 一行
+2026-08-17 | M | docs/data-and-ops.md | 修订记录补 2.2.0 最终封板一行
+2026-08-17 | M | docs/tui-2x-plan.md | 状态改 2.2.0 最终封板，注明 2.1 与 Adapter 仍待办
+2026-08-17 | M | docs/tui-2x.md | 状态改 2.2.0 最终封板
+2026-08-17 | M | AGENT.md | 版本现状改 2.2.0，补常驻终端行为
+2026-08-17 | M | package.json / web / server / shared package.json | 版本 2.0.1 → 2.2.0
+2026-08-17 | M | package-lock.json | 同步 workspace 版本 2.2.0（不动第三方依赖版本）
+2026-08-17 | M | server/config/about.json | version 2.2.0；changelog 置顶 2.2.0 封板条目
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮封板条目
+
 2026-08-14 | M | docs/author-contact.example.json | 清掉示例中的真实手机号和微信号（phone/wechat 置空），作为干净模板
 2026-08-14 | M | docs/technical-design.md | 移除 3 处真实手机号 17312678391（表格默认值、JSON 示例、待决表），统一改为「自行配置」占位
 2026-08-14 | M | web/src/views/Workbench.vue | 欢迎页加「内置 CLI 终端 · 终端守护者 · 进程常驻 · 崩溃可恢复」卖点行，配绿色 CLI 等宽字体徽章
