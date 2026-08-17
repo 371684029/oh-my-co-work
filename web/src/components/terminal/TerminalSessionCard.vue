@@ -9,11 +9,19 @@
       <span class="terminal-status">{{ statusText }}</span>
     </header>
 
-    <pre class="terminal-preview">{{ preview }}</pre>
+    <pre class="terminal-preview" :class="{ 'is-empty': !hasOutput }"><span
+      class="terminal-preview-body"
+    >{{ preview }}</span></pre>
 
     <footer class="terminal-card-foot">
       <span class="terminal-meta">
-        {{ elapsedText }}
+        <span class="terminal-card-cwd" :title="terminal.cwd">
+          <span aria-hidden="true">📁</span> {{ terminal.cwd || '—' }}
+        </span>
+        <template v-if="elapsedText">
+          <span class="terminal-meta-sep">·</span>
+          {{ elapsedText }}
+        </template>
         <template v-if="terminal.exitCode != null"> · exit {{ terminal.exitCode }}</template>
       </span>
       <div class="terminal-actions">
@@ -42,6 +50,9 @@ const props = defineProps({
 
 defineEmits(['open', 'kill'])
 
+// 预览保留的最大行数：足够铺满放大后的卡片，超出部分进全屏终端看
+const PREVIEW_LINES = 40
+
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 
 const statusText = computed(() => {
@@ -64,17 +75,23 @@ function stripAnsi(value) {
     .replace(/\r/g, '')
 }
 
-const preview = computed(() => {
-  const lines = stripAnsi(props.terminal.previewReplay || props.terminal.replay)
+const previewLines = computed(() =>
+  stripAnsi(props.terminal.previewReplay || props.terminal.replay)
     .split('\n')
-    .filter((line) => line.trim())
-  return lines.slice(-7).join('\n') || '终端已就绪，等待输出…'
-})
+    .filter((line) => line.trim()),
+)
+
+const hasOutput = computed(() => previewLines.value.length > 0)
+
+const preview = computed(
+  () => previewLines.value.slice(-PREVIEW_LINES).join('\n') || '终端已就绪，等待输出…',
+)
 
 const elapsedText = computed(() => {
   const start = Date.parse(props.terminal.startedAt || '')
   const end = Date.parse(props.terminal.finishedAt || '') || Date.now()
-  if (!Number.isFinite(start)) return props.terminal.cwd || ''
+  // 底栏已单独渲染 cwd，这里缺开始时间时直接留空，避免目录被打印两次
+  if (!Number.isFinite(start)) return ''
   const seconds = Math.max(0, Math.round((end - start) / 1000))
   if (seconds < 60) return `${seconds} 秒`
   const minutes = Math.floor(seconds / 60)
@@ -84,7 +101,7 @@ const elapsedText = computed(() => {
 
 <style scoped>
 .terminal-card {
-  width: min(680px, 100%);
+  width: min(1080px, 100%);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 16px;
@@ -102,8 +119,8 @@ const elapsedText = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 13px;
+  gap: 10px;
+  padding: 7px 12px;
 }
 
 .terminal-card-head {
@@ -161,17 +178,51 @@ const elapsedText = computed(() => {
 }
 
 .terminal-preview {
-  min-height: 86px;
-  max-height: 136px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: clamp(260px, 46vh, 620px);
   margin: 0;
   overflow: hidden;
-  padding: 12px 14px;
+  padding: 10px 12px;
   color: #cdd2dc;
   font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Consolas, monospace;
-  font-size: 11.5px;
-  line-height: 1.48;
+  font-size: 12.5px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 无输出时不撑出一整块纯黑：收成一行提示 */
+.terminal-preview.is-empty {
+  height: auto;
+  min-height: 46px;
+  justify-content: center;
+  color: #7f8693;
+  font-style: italic;
+}
+
+.terminal-preview-body {
+  display: block;
+}
+
+.terminal-card-cwd {
+  overflow: hidden;
+  max-width: 46%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+.terminal-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.terminal-meta-sep {
+  opacity: 0.5;
 }
 
 .terminal-card-foot {

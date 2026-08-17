@@ -1,9 +1,16 @@
 <template>
-  <div ref="host" class="terminal-view" aria-label="交互式终端" />
+  <div ref="host" class="terminal-view" :class="{ 'is-dead': !isRunning }" aria-label="交互式终端">
+    <div v-if="!isRunning" class="terminal-dead-overlay">
+      <div class="terminal-dead-text">
+        <span class="terminal-dead-icon" aria-hidden="true">⏻</span>
+        进程已结束，无法继续输入
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -11,6 +18,8 @@ import '@xterm/xterm/css/xterm.css'
 const props = defineProps({
   terminal: { type: Object, required: true },
 })
+
+const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 
 const emit = defineEmits(['input', 'resize'])
 const host = ref(null)
@@ -76,6 +85,7 @@ onMounted(async () => {
   xterm.loadAddon(fitAddon)
   xterm.open(host.value)
   xterm.onData((data) => {
+    if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
     if (lineBreaks > 1 && !window.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`)) {
       return
@@ -119,7 +129,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 12px 8px 10px 12px;
+  padding: 6px 4px 4px 8px;
   background: #17191f;
 }
 
@@ -130,5 +140,48 @@ onBeforeUnmount(() => {
 .terminal-view :deep(.xterm-viewport) {
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
   scrollbar-width: thin;
+}
+
+.terminal-view.is-dead {
+  position: relative;
+  cursor: not-allowed;
+}
+
+.terminal-view.is-dead :deep(.xterm-cursor) {
+  display: none !important;
+}
+
+.terminal-dead-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 14px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(23, 25, 31, 0) 0%,
+    rgba(23, 25, 31, 0.55) 70%,
+    rgba(23, 25, 31, 0.7) 100%
+  );
+}
+
+.terminal-dead-text {
+  font-size: 12px;
+  color: #9097a5;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-dead-icon {
+  font-size: 14px;
+  color: #ff9999;
 }
 </style>

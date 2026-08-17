@@ -51,7 +51,7 @@
       <span>{{ terminal.runtime || 'terminal' }}</span>
       <span v-if="terminal.pid">PID {{ terminal.pid }}</span>
       <span v-if="terminal.exitCode != null">exit {{ terminal.exitCode }}</span>
-      <span class="terminal-focus-hint">键盘输入将直接发送到终端 · 返回对话不会停止进程</span>
+      <span class="terminal-focus-hint">{{ footerHint }}</span>
     </footer>
   </section>
 </template>
@@ -75,6 +75,10 @@ defineEmits(['close', 'kill', 'input', 'resize'])
 const workspaceRoot = ref(null)
 const isFullscreen = ref(false)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
+const footerHint = computed(() => {
+  if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
+  return '键盘输入将直接发送到终端 · 返回对话不会停止进程'
+})
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
     return props.connectionStatus === 'connecting' ? '连接中' : '重连中'
@@ -116,7 +120,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin: 0 12px 12px;
+  margin: 0 8px 8px;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 18px;
@@ -144,10 +148,10 @@ onUnmounted(() => {
 }
 
 .terminal-workspace-head {
-  min-height: 58px;
+  min-height: 46px;
   justify-content: space-between;
   gap: 14px;
-  padding: 8px 12px;
+  padding: 5px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
@@ -254,8 +258,8 @@ onUnmounted(() => {
 
 .terminal-workspace-foot {
   gap: 12px;
-  min-height: 30px;
-  padding: 5px 12px;
+  min-height: 24px;
+  padding: 3px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
