@@ -46,11 +46,22 @@ function redactOpts() {
   return { enabled: r.enabled !== false, patternsText: r.patternsText || '' }
 }
 
-function countRunningTerminals(sessionId) {
+function countRunningTerminals(sessionId, { exceptMemberId } = {}) {
   return [...terminals.values()].filter(
     (t) =>
-      t.sessionId === sessionId && (t.status === 'running' || t.status === 'starting'),
+      t.sessionId === sessionId &&
+      (t.status === 'running' || t.status === 'starting') &&
+      (!exceptMemberId || t.memberId !== exceptMemberId),
   ).length
+}
+
+function stopMemberTerminals(sessionId, memberId) {
+  if (!sessionId || !memberId) return
+  for (const entry of [...terminals.values()]) {
+    if (entry.sessionId !== sessionId || entry.memberId !== memberId) continue
+    if (entry.status !== 'running' && entry.status !== 'starting') continue
+    killTerminal(entry.id, 'replaced')
+  }
 }
 
 function nowIso() {
@@ -154,16 +165,18 @@ function flushOutput(entry) {
 }
 
 function queueOutput(entry, data) {
-  const text = redactText(String(data || ''), redactOpts())
+  const text = String(data || '')
   if (!text) return
+  // 实时回放 / WebSocket 保持原文，避免脱敏改字节长度弄乱 TUI。
   appendReplay(entry, text)
   entry.pendingOutput += text
   if (entry.logStream && !entry.logTruncated) {
+    const logged = redactText(text, redactOpts())
     const maxLog = quotaLimits().maxLogBytes
-    const bytes = Buffer.byteLength(text)
+    const bytes = Buffer.byteLength(logged)
     const remaining = maxLog - entry.logBytes
     if (remaining > 0) {
-      const chunk = bytes <= remaining ? text : Buffer.from(text).subarray(0, remaining)
+      const chunk = bytes <= remaining ? logged : Buffer.from(logged).subarray(0, remaining)
       entry.logStream.write(chunk)
       entry.logBytes += Math.min(bytes, remaining)
     }
@@ -243,7 +256,8 @@ export function runTerminal({
       return
     }
 
-    const running = countRunningTerminals(sessionId)
+    // 同成员再开终端会先替换旧 PTY，配额按「替换后仍存活的其它终端」计。
+    const running = countRunningTerminals(sessionId, { exceptMemberId: memberId || undefined })
     if (running >= quotaLimits().maxConcurrent) {
       settle({
         ok: false,
@@ -253,7 +267,10 @@ export function runTerminal({
       return
     }
 
-    if (memberId) killMemberProcesses(sessionId, memberId, { includeDetach: true })
+    if (memberId) {
+      stopMemberTerminals(sessionId, memberId)
+      killMemberProcesses(sessionId, memberId, { includeDetach: true })
+    }
 
     const id = uid('term')
     const runId = uid('run')

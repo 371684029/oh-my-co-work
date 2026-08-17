@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-17 | M | server/src/terminal/terminalService.js | 同成员替换旧终端后再计配额；脱敏只写日志
+2026-08-17 | M | server/test/terminalService.test.js | 覆盖配额替换与日志脱敏、回放原文
+2026-08-17 | M | README.md / AGENT.md / docs/* / about.json | 2.4.0 最终封板
+2026-08-17 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-17 | M | server/src/engine.js | 成员开聊复用已有单聊，不再弹启动闸门
 2026-08-17 | M | shared/index.js | 项目参数 #1… 上限 #99
 2026-08-17 | M | web/src/views/Workbench.vue | 成员开聊提示；# 快捷最多到 #99

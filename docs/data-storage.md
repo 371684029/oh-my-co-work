@@ -36,7 +36,7 @@ oh-my-co-work/
 - 有限回放缓冲（约 256 KB）用于页面刷新后重新附着；前端按 `seq` 写入 xterm，避免缓冲封顶后停更。
 - attach 先 flush 尚未发出的 pending 输出，再发 snapshot，避免重复字符。
 - 完整原始输出异步追加写入 `data/logs/terminal_{terminalId}.log`，单文件上限可在设置配额里改（默认约 10 MiB）。
-- 日志与回放可按设置脱敏常见 Token；元数据写入 `terminal_sessions` 表。
+- 落盘日志可按设置脱敏常见 Token（实时回放与 TUI 保持原文）；元数据写入 `terminal_sessions` 表。
 - JSONL Adapter 事件文件在脚本工作目录，不进 SQLite 大字段。
 - 节点结束后，`output_json` 保存 terminalId、退出码、runtime、cwd 与日志文件名，不复制完整终端输出。
 - 用户停止或超时：`ok` 仅在进程真正退出且退出码属于成功码时为真；同时清理进程树与 PID 登记。
