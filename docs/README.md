@@ -10,7 +10,7 @@
 | [technical-design.md](./technical-design.md) | 完整技术设计（含后置能力） |
 | [tui-2x.md](./tui-2x.md) | **2.x 内嵌 TUI 设计**：真实 PTY、终端卡、工作区、适配器与安全边界 |
 | [tui-2x-plan.md](./tui-2x-plan.md) | **2.x 实施计划**：2.0～2.3 阶段、任务、测试、风险与完成定义 |
-| [crucible-3x.md](./crucible-3x.md) | **3.x 熔炉设计**：加人/建群/闸门可配；桌面形态就叫熔炉；Grok Build |
+| [crucible-3x.md](./crucible-3x.md) | **3.x 熔炉设计**：Grok Agent、无内置工具；加人改代码 / 加适配节点 |
 | [crucible-3x-plan.md](./crucible-3x-plan.md) | **3.x 实施计划**：3.0 可配置 → 3.1 适配创造成员 → 3.2 编码 → 3.3 熔炉桌面 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |

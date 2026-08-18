@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | docs/crucible-3x.md / crucible-3x-plan.md | 熔炉是 Grok Agent、无内置工具；加人改代码 / 加节点插适配节点
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | docs/crucible-3x.md / crucible-3x-plan.md | 桌面形态正式命名为熔炉，不再用精灵作产品名
 2026-08-18 | M | README.md / AGENT.md / docs/README.md / mvp.md | 同步熔炉桌面命名
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
