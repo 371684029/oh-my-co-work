@@ -38,7 +38,8 @@ import {
   OFFSITE_MODE,
   FURNACE_DISPLAY_NAME,
 } from '@acw/shared'
-import { resolveGroupAdmin } from './appSettings.js'
+import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
+import { prepareAdaptForMember, adaptStatusText } from './adaptBackup.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -1462,6 +1463,19 @@ function inheritCloneMeta(prev = {}, next = {}) {
   }
 }
 
+function inheritNodeInputMeta(prev = {}, next = {}) {
+  const out = inheritCloneMeta(prev, next)
+  if (!prev?.adapt && !next?.adapt) return out
+  return {
+    ...out,
+    adapt: true,
+    adaptBackup: next.adaptBackup || prev.adaptBackup || null,
+    adaptPatched: next.adaptPatched || prev.adaptPatched || [],
+    adaptFallback: next.adaptFallback ?? prev.adaptFallback,
+    adaptReason: next.adaptReason || prev.adaptReason || null,
+  }
+}
+
 function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   const session = getSession(sessionId)
   const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
@@ -1475,7 +1489,7 @@ function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {
   const prevOut = parseJson(n.output_json, {})
   const prevClone = { ...prevIn, ...prevOut }
   const nextInput =
-    input !== undefined ? inheritCloneMeta(prevClone, input) : undefined
+    input !== undefined ? inheritNodeInputMeta(prevClone, input) : undefined
   const nextOutput =
     output !== undefined ? inheritCloneMeta(prevClone, output) : undefined
   const next = {
@@ -2016,6 +2030,38 @@ export async function advance(sessionId) {
       resolveParamsMap(ctx, group),
       ctx.lastHumanInput,
     )
+    const wantAdapt = !!(
+      step?.adapt ||
+      parseJson(node.input_json, {}).adapt ||
+      member.config?.adapt
+    )
+    let runMemberAs = member
+    let adaptPrep = null
+    if (wantAdapt) {
+      try {
+        adaptPrep = prepareAdaptForMember(member, {
+          sessionId,
+          nodeId: node.id,
+          backup: getAppSettings().adapt?.backup !== false,
+        })
+      } catch (e) {
+        adaptPrep = {
+          canEdit: false,
+          fallback: true,
+          enableJsonl: false,
+          reason: 'backup_failed',
+          error: e?.message || String(e),
+          member,
+        }
+      }
+      runMemberAs = adaptPrep.member || member
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: { text: adaptStatusText(adaptPrep) },
+      })
+    }
     const memberInput = {
       memberId: member.id,
       memberName: member.display_name,
@@ -2027,6 +2073,15 @@ export async function advance(sessionId) {
       groupCard: paramsMap[SYSTEM_PARAM_KEYS.GROUP_CARD] || '',
       groupFolder: paramsMap[SYSTEM_PARAM_KEYS.GROUP_FOLDER] || '',
       callArgs: paramsMap[SYSTEM_PARAM_KEYS.CALL_ARGS] || '',
+      ...(wantAdapt
+        ? {
+            adapt: true,
+            adaptFallback: !!adaptPrep?.fallback,
+            adaptReason: adaptPrep?.reason || null,
+            adaptBackup: adaptPrep?.backup?.zipPath || null,
+            adaptPatched: adaptPrep?.patched || [],
+          }
+        : {}),
     }
     persistNodeIo(sessionId, node.id, {
       input: memberInput,
@@ -2042,7 +2097,7 @@ export async function advance(sessionId) {
       content: { text: `▶ ${member.display_name} 开始执行…` },
     })
 
-    const result = await runMember(member, {
+    const result = await runMember(runMemberAs, {
       group,
       sessionContext: {
         ...ctx,

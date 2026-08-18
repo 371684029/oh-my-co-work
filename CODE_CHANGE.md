@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | server/src/adaptBackup.js | 适配 zip 备份 + 幂等注释 + JSONL 覆盖
+2026-08-18 | A | server/test/adaptBackup.test.js | 备份落盘、只读不改、注释只打一次
+2026-08-18 | M | server/src/engine.js / appSettings.js | 适配步先备份再改；默开可关
+2026-08-18 | M | web/src/views/Workbench.vue | 流程轨适配角标与筛选 Tab
+2026-08-18 | M | web/src/views/settings/Prefs.vue | 改源文件前备份开关
+2026-08-18 | M | docs/frontend-components.md | 流程轨适配角标与筛选 Tab
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | server/src/services.js / engine.js | 步骤 adapt 标记落盘，开聊写入节点 input
 2026-08-18 | M | web/src/composables/furnaceUi.js / App.vue / Prefs.vue | 未配置 Grok 时精灵为等人态
 2026-08-18 | M | server/test/furnace.test.js | 3.0 验收：适配标记、无熔炉开聊、闸门不绕过

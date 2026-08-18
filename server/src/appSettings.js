@@ -25,6 +25,16 @@ export function isDemoGroup(g) {
   return false
 }
 
+export function defaultAdaptSettings() {
+  return { backup: true }
+}
+
+function normalizeAdapt(raw) {
+  const d = defaultAdaptSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return { backup: raw.backup !== false }
+}
+
 /** 本机 Grok TUI（3.0：勾选已配置后精灵可开内嵌终端） */
 export function defaultGrokSettings() {
   return {
@@ -148,6 +158,7 @@ function ensureSettingsFile() {
           showDemo: true,
           admin: defaultAdminSettings(),
           grok: defaultGrokSettings(),
+          adapt: defaultAdaptSettings(),
           autoArchiveHours: 3,
           /** 脚本运行时是否弹出系统控制台 + 释放资源小窗（默认开） */
           showScriptPopup: true,
@@ -179,6 +190,7 @@ export function getAppSettings() {
       showDemo: raw.showDemo !== false,
       admin: normalizeAdmin(raw.admin),
       grok: normalizeGrok(raw.grok),
+      adapt: normalizeAdapt(raw.adapt),
       /** 归档确认超时（小时），超时系统自动归档释放资源；默认 3 */
       autoArchiveHours: normalizeAutoArchiveHours(
         raw.autoArchiveHours != null ? raw.autoArchiveHours : 3,
@@ -194,6 +206,7 @@ export function getAppSettings() {
       showDemo: true,
       admin: defaultAdminSettings(),
       grok: defaultGrokSettings(),
+      adapt: defaultAdaptSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
       terminal: defaultTerminalSettings(),
@@ -238,6 +251,10 @@ export function updateAppSettings(patch = {}) {
       patch.grok !== undefined
         ? normalizeGrok({ ...cur.grok, ...patch.grok })
         : cur.grok,
+    adapt:
+      patch.adapt !== undefined
+        ? normalizeAdapt({ ...cur.adapt, ...patch.adapt })
+        : cur.adapt,
     autoArchiveHours:
       patch.autoArchiveHours !== undefined
         ? normalizeAutoArchiveHours(patch.autoArchiveHours)

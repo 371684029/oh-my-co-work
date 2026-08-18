@@ -152,6 +152,12 @@
         <el-form-item label="启动命令">
           <el-input v-model="grok.command" placeholder="grok" />
         </el-form-item>
+        <el-form-item label="改源文件前打压缩包备份">
+          <el-switch v-model="adaptBackup" />
+          <p class="prefs-resolved">
+            默认开。只备份即将改动的脚本，写到 data/backups/adapt。改失败则不改文件，只打步骤标记。
+          </p>
+        </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingGrok" @click="saveGrok">
         保存 Grok 配置
@@ -283,6 +289,7 @@ const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const backingUp = ref(false)
 const grok = ref({ command: 'grok', configured: false })
+const adaptBackup = ref(true)
 const savingGrok = ref(false)
 
 const resolvedHint = computed(() => {
@@ -323,6 +330,7 @@ async function load() {
       }
       setGrokConfigured(!!s.grok.configured)
     }
+    adaptBackup.value = s.adapt?.backup !== false
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
         maxLogMiB: s.quota.maxLogMiB || 10,
@@ -508,6 +516,7 @@ async function saveGrok() {
         command: String(grok.value.command || 'grok').trim() || 'grok',
         configured: !!grok.value.configured,
       },
+      adapt: { backup: adaptBackup.value !== false },
     })
     if (s.grok) {
       grok.value = {
@@ -516,6 +525,7 @@ async function saveGrok() {
       }
     }
     setGrokConfigured(!!grok.value.configured)
+    if (s.adapt) adaptBackup.value = s.adapt.backup !== false
     ElMessage.success('已保存 Grok 配置')
   } catch (e) {
     ElMessage.error(e.message)
