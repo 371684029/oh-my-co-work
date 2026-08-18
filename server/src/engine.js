@@ -36,6 +36,7 @@ import {
   extractCallArgsFromMention,
   isMentionAssistOnly,
   OFFSITE_MODE,
+  FURNACE_DISPLAY_NAME,
 } from '@acw/shared'
 import { resolveGroupAdmin } from './appSettings.js'
 
@@ -2127,7 +2128,7 @@ export async function advance(sessionId) {
     if (flow.human || flow.admin || flow.auto) {
       const bits = []
       if (flow.human) bits.push('须人工同意')
-      if (flow.admin) bits.push('可管理员确认')
+      if (flow.admin) bits.push(`可${FURNACE_DISPLAY_NAME}确认`)
       if (flow.auto) bits.push('已记自动产出票')
       openFlowGate(sessionId, node, {
         flow,
@@ -3323,7 +3324,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       ? !!votes.human
       : !!(votes.human || votes.admin)
 
-    const baseLabel = action === 'admin_approve' ? '管理员已同意' : '已同意'
+    const baseLabel = action === 'admin_approve' ? `${FURNACE_DISPLAY_NAME}已同意` : '已同意'
     addMessage(sessionId, {
       role: 'user',
       type: 'gate',

@@ -22,6 +22,17 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | web/src/components/FurnaceSprite.vue / composables/furnaceUi.js | 3.0 黑裙精灵三态入口
+2026-08-18 | M | shared/index.js | 熔炉常量、是否适配 hover、isFurnaceMember
+2026-08-18 | M | server/src/slashCommands.js / config/slash-commands.json | 默认成员与斜杠展示名改为熔炉；可接 Grok TUI
+2026-08-18 | M | server/src/appSettings.js / routes.js / index.js | grok.command/configured；保存后同步熔炉成员
+2026-08-18 | M | server/src/engine.js | 闸门文案管理员→熔炉
+2026-08-18 | M | web/src/App.vue / views/Workbench.vue | 顶栏精灵；未配置提示；已配置开熔炉会话
+2026-08-18 | M | web/src/views/settings/Prefs.vue / Groups.vue / Members.vue / Shortcuts.vue | 熔炉文案、是否适配、Grok 配置
+2026-08-18 | A | server/test/furnace.test.js | 熔炉成员种子与旧名迁移
+2026-08-18 | M | docs/crucible-3x-plan.md / frontend-components.md / demo.md / mvp.md | 3.0 台账与入口说明
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | docs/crucible-3x.md / crucible-3x-plan.md | 是否适配单选项；管理员改熔炉；标记+备份包；精灵三态
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
 

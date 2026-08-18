@@ -1,10 +1,17 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
-import { ROOT } from './db.js'
-import { getSessionDetail, getGroup, listMembers, createMember } from './services.js'
-import { MEMBER_KIND, applyParamPlaceholders, SYSTEM_PARAM_KEYS } from '@acw/shared'
-import { resolveShowScriptPopup } from './appSettings.js'
+import { ROOT, DATA_ROOT } from './db.js'
+import { getSessionDetail, getGroup, listMembers, createMember, updateMember } from './services.js'
+import {
+  MEMBER_KIND,
+  applyParamPlaceholders,
+  SYSTEM_PARAM_KEYS,
+  FURNACE_DISPLAY_NAME,
+  FURNACE_MEMBER_KEY,
+  isFurnaceMember,
+} from '@acw/shared'
+import { resolveShowScriptPopup, getAppSettings } from './appSettings.js'
 import {
   enrichScriptConfig,
   getScriptWorkDir,
@@ -14,29 +21,47 @@ import {
 
 const CONFIG_PATH = path.join(ROOT, 'server/config/slash-commands.json')
 
-/** 首位默认：统一管理员 Agent */
+function furnaceDefaultText() {
+  return `【${FURNACE_DISPLAY_NAME}】收到。我是本机协同台的熔炉 Agent，可协助调度、核对流程与本机事项（完全本地）。`
+}
+
+function furnaceGrokScript(command) {
+  const workDir = DATA_ROOT || ROOT
+  const cmd = String(command || 'grok').trim() || 'grok'
+  return {
+    mode: 'command',
+    command: cmd,
+    runtime: 'auto',
+    scriptWorkDir: workDir,
+    scriptDir: workDir,
+    executionMode: 'terminal',
+    detach: true,
+    waitForExit: false,
+  }
+}
+
+/** 首位默认：熔炉 Agent（内部 key 仍 unified_admin） */
 export const ADMIN_MEMBER = {
-  name: 'unified_admin',
-  displayName: '统一管理员',
+  name: FURNACE_MEMBER_KEY,
+  displayName: FURNACE_DISPLAY_NAME,
   kind: MEMBER_KIND.ECHO,
   config: {
     role: 'admin',
-    defaultText:
-      '【统一管理员】收到。我是本机协同台的管理员 Agent，可协助调度、核对流程与本机事项（完全本地）。',
+    defaultText: furnaceDefaultText(),
   },
 }
 
 const DEFAULT_COMMANDS = [
   {
     id: 'cmd_admin_agent',
-    name: '统一管理员',
+    name: FURNACE_DISPLAY_NAME,
     slash: 'admin',
-    description: '管理员 Agent：调度协同、本机事项与流程协助（首位默认）',
+    description: '熔炉：调度协同、本机事项与流程协助（首位默认）',
     enabled: true,
     kind: 'agent',
-    memberName: '统一管理员',
-    memberKey: 'unified_admin',
-    prompt: '请【统一管理员】协助处理：',
+    memberName: FURNACE_DISPLAY_NAME,
+    memberKey: FURNACE_MEMBER_KEY,
+    prompt: `请【${FURNACE_DISPLAY_NAME}】协助处理：`,
   },
   {
     id: 'cmd_open_editor',
@@ -70,24 +95,63 @@ const DEFAULT_COMMANDS = [
   },
 ]
 
-/** 确保存在「统一管理员」成员 Agent */
+function migrateFurnaceMember(m) {
+  if (!m) return m
+  const grok = getAppSettings().grok || {}
+  const nextConfig = { ...(m.config || {}) }
+  let kind = m.kind
+  let workFolder = m.work_folder
+  let changed = false
+
+  if (m.display_name !== FURNACE_DISPLAY_NAME) {
+    changed = true
+  }
+  if (String(nextConfig.defaultText || '').includes('统一管理员')) {
+    nextConfig.defaultText = furnaceDefaultText()
+    changed = true
+  }
+  if (!nextConfig.role) {
+    nextConfig.role = 'admin'
+    changed = true
+  }
+  if (grok.configured) {
+    const script = furnaceGrokScript(grok.command)
+    const prevCmd = nextConfig.script?.command
+    kind = MEMBER_KIND.SCRIPT
+    workFolder = workFolder || script.scriptWorkDir
+    nextConfig.script = { ...(nextConfig.script || {}), ...script }
+    if (prevCmd !== script.command || m.kind !== MEMBER_KIND.SCRIPT) changed = true
+  }
+
+  if (!changed && m.display_name === FURNACE_DISPLAY_NAME) return m
+  return updateMember(m.id, {
+    displayName: FURNACE_DISPLAY_NAME,
+    kind,
+    workFolder,
+    config: nextConfig,
+  })
+}
+
+/** 确保存在熔炉成员 Agent（内部 name=unified_admin） */
 export function ensureAdminMember() {
   const list = listMembers()
-  let m = list.find(
-    (x) =>
-      x.name === ADMIN_MEMBER.name ||
-      x.display_name === ADMIN_MEMBER.displayName,
-  )
+  let m = list.find((x) => x.name === ADMIN_MEMBER.name || isFurnaceMember(x))
+  const grok = getAppSettings().grok || {}
   if (!m) {
+    const script = grok.configured ? furnaceGrokScript(grok.command) : null
     m = createMember({
       name: ADMIN_MEMBER.name,
       displayName: ADMIN_MEMBER.displayName,
-      kind: ADMIN_MEMBER.kind,
-      config: ADMIN_MEMBER.config,
+      kind: grok.configured ? MEMBER_KIND.SCRIPT : ADMIN_MEMBER.kind,
+      workFolder: script ? script.scriptWorkDir : undefined,
+      config: grok.configured
+        ? { ...ADMIN_MEMBER.config, script }
+        : ADMIN_MEMBER.config,
     })
-    console.log('[acw] seeded member: 统一管理员')
+    console.log(`[acw] seeded member: ${FURNACE_DISPLAY_NAME}`)
+    return m
   }
-  return m
+  return migrateFurnaceMember(m)
 }
 
 function ensureConfig() {
@@ -100,7 +164,7 @@ function ensureConfig() {
     )
     return
   }
-  // 已有配置：若缺少管理员首位指令，则插入到最前（不覆盖用户其它项）
+  // 已有配置：若缺少熔炉首位指令，则插入到最前（不覆盖用户其它项）
   try {
     const raw = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
     const list = Array.isArray(raw.commands) ? raw.commands : []
@@ -109,12 +173,43 @@ function ensureConfig() {
         c.id === 'cmd_admin_agent' ||
         c.slash === 'admin' ||
         c.kind === 'agent' ||
+        c.name === FURNACE_DISPLAY_NAME ||
         c.name === '统一管理员',
     )
+    let next = list
+    let changed = false
     if (!hasAdmin) {
-      const next = [DEFAULT_COMMANDS[0], ...list]
+      next = [DEFAULT_COMMANDS[0], ...list]
+      changed = true
+      console.log(`[acw] prepended default slash: ${FURNACE_DISPLAY_NAME}`)
+    }
+    next = next.map((c) => {
+      const isFurnaceCmd =
+        c.id === 'cmd_admin_agent' ||
+        c.slash === 'admin' ||
+        c.memberKey === FURNACE_MEMBER_KEY
+      if (!isFurnaceCmd) return c
+      const patched = { ...c }
+      if (patched.name === '统一管理员') patched.name = FURNACE_DISPLAY_NAME
+      if (patched.memberName === '统一管理员') patched.memberName = FURNACE_DISPLAY_NAME
+      if (String(patched.prompt || '').includes('统一管理员')) {
+        patched.prompt = String(patched.prompt).replaceAll('统一管理员', FURNACE_DISPLAY_NAME)
+      }
+      if (String(patched.description || '').includes('管理员 Agent')) {
+        patched.description = '熔炉：调度协同、本机事项与流程协助（首位默认）'
+      }
+      if (
+        patched.name !== c.name ||
+        patched.memberName !== c.memberName ||
+        patched.prompt !== c.prompt ||
+        patched.description !== c.description
+      ) {
+        changed = true
+      }
+      return patched
+    })
+    if (changed) {
       fs.writeFileSync(CONFIG_PATH, JSON.stringify({ commands: next }, null, 2), 'utf8')
-      console.log('[acw] prepended default slash: 统一管理员')
     }
   } catch {
     /* ignore */
@@ -274,7 +369,7 @@ export function saveSlashCommands(commands) {
       throw new Error(`指令「${c.name}」缺少 URL 或未开启询问网址`)
     }
     if (c.kind === 'agent' && !c.memberId && !c.memberName && !c.memberKey) {
-      throw new Error(`指令「${c.name}」需绑定管理员/成员 Agent`)
+      throw new Error(`指令「${c.name}」需绑定熔炉/成员 Agent`)
     }
     if (
       c.kind === 'shell' &&
@@ -341,12 +436,8 @@ function findAgentMember(cmd) {
     const byName = list.find((m) => m.display_name === cmd.memberName)
     if (byName) return byName
   }
-  // 回落统一管理员
-  return (
-    list.find((m) => m.name === ADMIN_MEMBER.name) ||
-    list.find((m) => m.display_name === ADMIN_MEMBER.displayName) ||
-    null
-  )
+  // 回落熔炉（含旧展示名）
+  return list.find((m) => isFurnaceMember(m) || m.name === ADMIN_MEMBER.name) || null
 }
 
 /**
@@ -384,8 +475,8 @@ export async function runSlashCommand(id, { sessionId, url, args } = {}) {
   if (cmd.kind === 'agent') {
     ensureAdminMember()
     const member = findAgentMember(cmd)
-    if (!member) throw new Error('未找到绑定的管理员 Agent，请先在成员管理中创建')
-    const agentName = member.display_name || cmd.memberName || '统一管理员'
+    if (!member) throw new Error('未找到绑定的熔炉 Agent，请先在成员管理中创建')
+    const agentName = member.display_name || cmd.memberName || FURNACE_DISPLAY_NAME
     const insertText =
       applyTemplate(cmd.prompt || `请【{agent}】协助处理：`, {
         folder: sessionFolder,

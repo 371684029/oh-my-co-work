@@ -53,6 +53,11 @@
             clearable
           />
         </el-form-item>
+        <el-form-item>
+          <el-tooltip :content="adaptHover" placement="top" :show-after="300">
+            <el-checkbox v-model="form.adapt">是否适配</el-checkbox>
+          </el-tooltip>
+        </el-form-item>
 
 
         <template v-if="form.kind === 'script'">
@@ -199,6 +204,9 @@
             {{ viewRow.config?.description || '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="类型">{{ viewRow.kind }}</el-descriptions-item>
+          <el-descriptions-item label="是否适配">
+            {{ viewRow.config?.adapt ? '是' : '否' }}
+          </el-descriptions-item>
           <el-descriptions-item label="配置">
             <pre class="cfg-pre">{{ JSON.stringify(viewRow.config, null, 2) }}</pre>
           </el-descriptions-item>
@@ -217,6 +225,9 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
+import { ADAPT_OPTION_HOVER } from '@acw/shared'
+
+const adaptHover = ADAPT_OPTION_HOVER
 
 const scriptExts = [
   '.bat',
@@ -276,6 +287,7 @@ function emptyForm() {
     displayName: '',
     description: '',
     kind: 'script',
+    adapt: false,
     script: {
       mode: 'file',
       filePath: '',
@@ -404,6 +416,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     displayName: asClone ? `${row.display_name} 副本` : row.display_name,
     description: row.config?.description || '',
     kind: row.kind,
+    adapt: !!row.config?.adapt,
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
@@ -493,9 +506,13 @@ async function save() {
       baseConfig.defaultText = prev.defaultText
     }
 
+    if (prev?.role) baseConfig.role = prev.role
+    if (form.value.adapt) baseConfig.adapt = true
+
+    const prevRow = form.value._editId && list.value.find((m) => m.id === form.value._editId)
     const body = {
       displayName: form.value.displayName.trim(),
-      name: form.value.displayName.trim(),
+      name: prevRow?.name || form.value.displayName.trim(),
       kind: form.value.kind,
       config:
         form.value.kind === 'script'

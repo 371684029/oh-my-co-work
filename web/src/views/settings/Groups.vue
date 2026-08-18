@@ -43,25 +43,25 @@
             <el-input v-model="form.description" type="textarea" :rows="2" />
           </el-form-item>
 
-          <!-- 管理员配置：默认继承全局，可改、可不填 -->
+          <!-- 熔炉配置：默认继承全局，可改、可不填 -->
           <div class="admin-block">
             <div class="admin-block-title">
-              管理员配置
+              熔炉配置
               <span class="admin-block-hint">可选 · 默认继承全局</span>
             </div>
-            <el-form-item label="继承全局管理员" class="admin-inherit-item">
+            <el-form-item label="继承全局熔炉" class="admin-inherit-item">
               <el-switch v-model="form.adminInherit" />
               <span class="switch-hint">
-                开启后使用「设置 → 全局管理员」
+                开启后使用「设置 → 熔炉」
                 <template v-if="globalAdminLabel">（当前：{{ globalAdminLabel }}）</template>
               </span>
             </el-form-item>
-            <el-form-item v-if="!form.adminInherit" label="本群管理员">
+            <el-form-item v-if="!form.adminInherit" label="本群熔炉">
               <el-select
                 v-model="form.adminMemberId"
                 clearable
                 filterable
-                placeholder="可不选 · 留空表示本群不指定管理员"
+                placeholder="可不选 · 留空表示本群不指定熔炉"
                 style="width: 100%"
               >
                 <el-option
@@ -71,7 +71,7 @@
                   :value="m.id"
                 />
               </el-select>
-              <div class="field-hint">不填则本群无专属管理员，仅使用步骤上的流转勾选。</div>
+              <div class="field-hint">不填则本群无专属熔炉，仅使用步骤上的流转勾选。</div>
             </el-form-item>
           </div>
 
@@ -125,6 +125,9 @@
               >
                 项目参数 #1 #2…
               </el-checkbox>
+              <el-tooltip :content="adaptHover" placement="top" :show-after="300">
+                <el-checkbox v-model="s.adapt" class="capture-check">是否适配</el-checkbox>
+              </el-tooltip>
               <el-button size="small" @click="move(i, -1)" :disabled="i === 0">上移</el-button>
               <el-button size="small" @click="move(i, 1)" :disabled="i === form.steps.length - 1">
                 下移
@@ -141,12 +144,12 @@
                     <span class="flow-hint">可多选 · 默认全开</span>
                   </div>
                   <el-checkbox-group v-model="s.flowKeys" class="flow-checks">
-                    <el-checkbox value="admin">管理员总结与流转</el-checkbox>
+                    <el-checkbox value="admin">熔炉总结与流转</el-checkbox>
                     <el-checkbox value="auto">子节点产出自动流转</el-checkbox>
                     <el-checkbox value="human">人工流转</el-checkbox>
                   </el-checkbox-group>
                   <p class="flow-policy">
-                    明确拒绝=不通过；「人工流转」须人工同意；「管理员总结」写入群报告。
+                    明确拒绝=不通过；「人工流转」须人工同意；「熔炉总结」写入群报告。
                   </p>
                 </div>
               </el-collapse-item>
@@ -167,7 +170,7 @@
         <el-descriptions :column="1" border>
           <el-descriptions-item label="名称">{{ viewRow.title }}</el-descriptions-item>
           <el-descriptions-item label="工作文件夹">{{ viewRow.work_folder || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="管理员">
+          <el-descriptions-item label="熔炉">
             {{ formatAdminView(viewRow) }}
           </el-descriptions-item>
           <el-descriptions-item label="步骤">
@@ -194,6 +197,16 @@
                 class="view-step-tag"
               >
                 项目参数
+              </el-tag>
+              <el-tag
+                v-if="s.adapt"
+                size="small"
+                effect="plain"
+                round
+                type="warning"
+                class="view-step-tag"
+              >
+                适配
               </el-tag>
               <el-tag
                 v-for="t in flowTags(s)"
@@ -224,6 +237,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
+import { ADAPT_OPTION_HOVER, isFurnaceMember } from '@acw/shared'
+
+const adaptHover = ADAPT_OPTION_HOVER
 
 const router = useRouter()
 const list = ref([])
@@ -301,6 +317,7 @@ function stepForm(s = {}, index = 0) {
     gate: !!(s.gate || flowKeys.includes('human') || flowKeys.includes('admin')),
     flowKeys,
     captureParams: !!captureParams,
+    adapt: !!s.adapt,
   }
 }
 
@@ -352,7 +369,7 @@ function formatAdminView(row) {
 
 function flowTags(s) {
   const keys = flowToKeys(s.flow, s.gate)
-  const map = { admin: '管理员总结与流转', auto: '自动流转', human: '人工流转' }
+  const map = { admin: '熔炉总结与流转', auto: '自动流转', human: '人工流转' }
   return keys.map((k) => map[k]).filter(Boolean)
 }
 
@@ -370,6 +387,7 @@ function serializeSteps(steps) {
     if (s.type === 'human') {
       row.captureParams = !!s.captureParams
     }
+    if (s.adapt) row.adapt = true
     return row
   })
 }
@@ -389,10 +407,10 @@ function openCreate() {
   readonly.value = false
   form.value = emptyForm()
   const flow = globalDefaultFlow()
-  // 默认第二步：优先统一管理员，否则第一个成员
+  // 默认第二步：优先熔炉，否则第一个成员
   const admin =
+    members.value.find((x) => isFurnaceMember(x)) ||
     members.value.find((x) => x.name === 'unified_admin') ||
-    members.value.find((x) => String(x.display_name || '').includes('管理员')) ||
     members.value[0]
   if (admin) {
     form.value.steps.push(

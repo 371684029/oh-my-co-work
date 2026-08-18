@@ -68,6 +68,24 @@ export const MEMBER_KIND = {
   SCRIPT: 'script',
 }
 
+/** 3.x 熔炉：产品名；内部成员 key 仍为 unified_admin */
+export const FURNACE_MEMBER_KEY = 'unified_admin'
+export const FURNACE_DISPLAY_NAME = '熔炉'
+export const GROK_BUILD_DOWNLOAD_URL = 'https://grok.com'
+export const ADAPT_OPTION_HOVER =
+  '开启后由熔炉做适配：优先改代码接到工作台；改不了代码再给该步骤打适配标记。改源文件前会打压缩包备份。'
+
+export function isFurnaceMember(m) {
+  if (!m) return false
+  const name = String(m.name || '')
+  const display = String(m.display_name || m.displayName || '')
+  return (
+    name === FURNACE_MEMBER_KEY ||
+    display === FURNACE_DISPLAY_NAME ||
+    display === '统一管理员'
+  )
+}
+
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',

@@ -91,7 +91,7 @@
         </el-form-item>
         <el-form-item label="类型" required>
           <el-radio-group v-model="form.kind">
-            <el-radio value="agent">管理员/成员 Agent</el-radio>
+            <el-radio value="agent">熔炉/成员 Agent</el-radio>
             <el-radio value="shell">本机命令</el-radio>
             <el-radio value="url">打开网址</el-radio>
           </el-radio-group>
@@ -102,7 +102,7 @@
               v-model="form.memberId"
               filterable
               clearable
-              placeholder="选择成员（默认统一管理员）"
+              placeholder="选择成员（默认熔炉）"
               style="width: 100%"
               @change="onMemberPick"
             >
@@ -119,7 +119,7 @@
               v-model="form.prompt"
               type="textarea"
               :rows="2"
-              placeholder="请【统一管理员】协助处理："
+              placeholder="请【熔炉】协助处理："
             />
           </el-form-item>
         </template>
@@ -250,9 +250,9 @@ function emptyForm() {
     openTarget: 'sessionWorkFolder',
     customPath: '',
     memberId: '',
-    memberName: '统一管理员',
+    memberName: '熔炉',
     memberKey: 'unified_admin',
-    prompt: '请【统一管理员】协助处理：',
+    prompt: '请【熔炉】协助处理：',
     /** inherit | yes | no — 仅 shell 有效 */
     showScriptPopupMode: 'inherit',
     scriptPath: '',

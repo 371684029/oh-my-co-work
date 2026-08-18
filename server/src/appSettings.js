@@ -25,7 +25,25 @@ export function isDemoGroup(g) {
   return false
 }
 
-/** 全局管理员默认配置 */
+/** 本机 Grok TUI（3.0：勾选已配置后精灵可开内嵌终端） */
+export function defaultGrokSettings() {
+  return {
+    command: 'grok',
+    configured: false,
+  }
+}
+
+function normalizeGrok(raw) {
+  const d = defaultGrokSettings()
+  if (!raw || typeof raw !== 'object') return d
+  const command = String(raw.command || d.command).trim() || d.command
+  return {
+    command,
+    configured: raw.configured === true || raw.configured === 'true' || raw.configured === 1,
+  }
+}
+
+/** 全局熔炉（内部仍为 admin）默认配置 */
 export function defaultAdminSettings() {
   return {
     /** 成员 name 键，优先匹配 */
@@ -129,6 +147,7 @@ function ensureSettingsFile() {
         {
           showDemo: true,
           admin: defaultAdminSettings(),
+          grok: defaultGrokSettings(),
           autoArchiveHours: 3,
           /** 脚本运行时是否弹出系统控制台 + 释放资源小窗（默认开） */
           showScriptPopup: true,
@@ -159,6 +178,7 @@ export function getAppSettings() {
     return {
       showDemo: raw.showDemo !== false,
       admin: normalizeAdmin(raw.admin),
+      grok: normalizeGrok(raw.grok),
       /** 归档确认超时（小时），超时系统自动归档释放资源；默认 3 */
       autoArchiveHours: normalizeAutoArchiveHours(
         raw.autoArchiveHours != null ? raw.autoArchiveHours : 3,
@@ -173,6 +193,7 @@ export function getAppSettings() {
     return {
       showDemo: true,
       admin: defaultAdminSettings(),
+      grok: defaultGrokSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
       terminal: defaultTerminalSettings(),
@@ -213,6 +234,10 @@ export function updateAppSettings(patch = {}) {
       patch.admin !== undefined
         ? normalizeAdmin({ ...cur.admin, ...patch.admin })
         : cur.admin,
+    grok:
+      patch.grok !== undefined
+        ? normalizeGrok({ ...cur.grok, ...patch.grok })
+        : cur.grok,
     autoArchiveHours:
       patch.autoArchiveHours !== undefined
         ? normalizeAutoArchiveHours(patch.autoArchiveHours)
@@ -265,10 +290,13 @@ export function resolveGlobalAdminMember() {
       }
     }
   }
-  // 回落：display_name 含「管理员」
+  // 回落：熔炉 / 旧称统一管理员
   const all = db.prepare('SELECT * FROM members').all()
   const hit = all.find(
-    (m) => m.name === 'unified_admin' || String(m.display_name || '').includes('管理员'),
+    (m) =>
+      m.name === 'unified_admin' ||
+      String(m.display_name || '') === '熔炉' ||
+      String(m.display_name || '').includes('管理员'),
   )
   if (hit) {
     return {

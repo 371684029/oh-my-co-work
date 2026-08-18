@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h2 class="page-title">设置</h2>
-        <p class="page-desc">演示数据、全局管理员与本地偏好（仅本机生效）</p>
+        <p class="page-desc">演示数据、全局熔炉与本地偏好（仅本机生效）</p>
       </div>
     </div>
 
@@ -103,17 +103,17 @@
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">全局管理员（默认）</div>
+      <div class="prefs-title">熔炉（默认）</div>
       <p class="prefs-hint">
-        新建群模板默认<strong>继承</strong>此处配置；群内可改为指定成员或留空。可不选。
+        新建群模板默认<strong>继承</strong>此处配置；群内可改为指定成员或留空。可不选。闸门通道内部字段仍为 admin。
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="默认管理员成员">
+        <el-form-item label="默认熔炉成员">
           <el-select
             v-model="adminMemberId"
             clearable
             filterable
-            placeholder="可不选 · 默认匹配「统一管理员」"
+            placeholder="可不选 · 默认匹配「熔炉」"
             style="width: 100%"
             @change="onAdminChange"
           >
@@ -128,14 +128,33 @@
         </el-form-item>
         <el-form-item label="新建步骤默认流转">
           <el-checkbox-group v-model="defaultFlowKeys" @change="onAdminChange">
-            <el-checkbox value="admin">管理员总结与流转</el-checkbox>
+            <el-checkbox value="admin">熔炉总结与流转</el-checkbox>
             <el-checkbox value="auto">自动流转</el-checkbox>
             <el-checkbox value="human">人工流转</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingAdmin" @click="saveAdmin">
-        保存管理员配置
+        保存熔炉配置
+      </el-button>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-title">Grok Build</div>
+      <p class="prefs-hint">
+        熔炉先跑本机 Grok TUI。未勾选时顶栏精灵仍在，点击会提示下载并来此配置。
+        下载：<a :href="grokDownloadUrl" target="_blank" rel="noopener">{{ grokDownloadUrl }}</a>
+      </p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="已配置 Grok">
+          <el-switch v-model="grok.configured" />
+        </el-form-item>
+        <el-form-item label="启动命令">
+          <el-input v-model="grok.command" placeholder="grok" />
+        </el-form-item>
+      </el-form>
+      <el-button type="primary" plain size="small" :loading="savingGrok" @click="saveGrok">
+        保存 Grok 配置
       </el-button>
     </section>
 
@@ -215,7 +234,7 @@
       <div class="prefs-title">删除演示数据</div>
       <p class="prefs-hint">
         一键清除演示成员、演示群模板及其全部会话与消息，并结束相关进程。
-        <strong>不可还原</strong>。不会删除「统一管理员」与你自建的数据。
+        <strong>不可还原</strong>。不会删除「熔炉」与你自建的数据。
       </p>
       <el-button type="danger" plain :loading="purging" @click="onPurge">
         一键删除演示数据
@@ -228,6 +247,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
+import { GROK_BUILD_DOWNLOAD_URL } from '@acw/shared'
+
+const grokDownloadUrl = GROK_BUILD_DOWNLOAD_URL
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
@@ -259,11 +281,13 @@ const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const backingUp = ref(false)
+const grok = ref({ command: 'grok', configured: false })
+const savingGrok = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
   if (r?.display_name) return r.display_name
-  if (!adminMemberId.value) return '自动匹配「统一管理员」（若存在）'
+  if (!adminMemberId.value) return '自动匹配「熔炉」（若存在）'
   return ''
 })
 
@@ -289,6 +313,12 @@ async function load() {
         cursorBlink: s.terminal.cursorBlink !== false,
         pastePolicy: s.terminal.pastePolicy || 'confirm',
         autoCollapseOnExit: !!s.terminal.autoCollapseOnExit,
+      }
+    }
+    if (s.grok) {
+      grok.value = {
+        command: s.grok.command || 'grok',
+        configured: !!s.grok.configured,
       }
     }
     if (s.quota) {
@@ -461,11 +491,34 @@ async function saveAdmin() {
       },
     })
     resolvedAdmin.value = s.resolvedAdmin || null
-    ElMessage.success('已保存全局管理员配置')
+    ElMessage.success('已保存熔炉配置')
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
     savingAdmin.value = false
+  }
+}
+
+async function saveGrok() {
+  savingGrok.value = true
+  try {
+    const s = await api.appSettings.update({
+      grok: {
+        command: String(grok.value.command || 'grok').trim() || 'grok',
+        configured: !!grok.value.configured,
+      },
+    })
+    if (s.grok) {
+      grok.value = {
+        command: s.grok.command || 'grok',
+        configured: !!s.grok.configured,
+      }
+    }
+    ElMessage.success('已保存 Grok 配置')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingGrok.value = false
   }
 }
 

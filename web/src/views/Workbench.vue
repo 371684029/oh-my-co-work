@@ -1086,10 +1086,13 @@ import {
   isDiscardedUnexecutedFlowNode,
   stepTypeLabel as sharedStepTypeLabel,
   MAX_PROJECT_PARAMS,
+  isFurnaceMember,
+  FURNACE_DISPLAY_NAME,
 } from '@acw/shared'
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
+import { syncFurnaceSpriteState } from '../composables/furnaceUi.js'
 
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),
@@ -1739,9 +1742,57 @@ const footerCollapsedHint = computed(() => {
 })
 
 /** 出现待处理闸门时自动展开底栏，避免漏操作 */
+watch(
+  [
+    pendingGate,
+    terminalSessions,
+    () => detail.value?.session?.status,
+    () => detail.value?.nodes,
+  ],
+  () => {
+    syncFurnaceSpriteState({
+      pendingGate: pendingGate.value,
+      sessionStatus: detail.value?.session?.status,
+      terminals: terminalSessions.value,
+      nodes: detail.value?.nodes,
+    })
+  },
+  { immediate: true },
+)
+
 watch(pendingGate, (g) => {
   if (g) footerCollapsed.value = false
 })
+
+let furnaceLaunchLock = false
+async function launchFurnaceFromSprite() {
+  if (furnaceLaunchLock) return
+  furnaceLaunchLock = true
+  try {
+    await loadLists()
+    const m = (members.value || []).find((x) => isFurnaceMember(x))
+    if (!m) {
+      ElMessage.warning('未找到熔炉成员')
+      return
+    }
+    startTarget.value = `m:${m.id}`
+    await startChat()
+    if (route.query.furnace) {
+      const q = { ...route.query }
+      delete q.furnace
+      router.replace({ path: route.path, query: q, params: route.params })
+    }
+  } finally {
+    furnaceLaunchLock = false
+  }
+}
+
+watch(
+  () => route.query.furnace,
+  (v) => {
+    if (v === '1' || v === 'true') launchFurnaceFromSprite()
+  },
+)
 
 /** 运行时：当前需要人介入（闸门 / 等人状态）→ 标红突出 */
 const needsHuman = computed(() => {
@@ -3184,7 +3235,7 @@ async function runSlash(cmd) {
     } else if (r.kind === 'agent') {
       // 管理员 Agent：写入提示语到输入框，用户可补全后发送
       await replaceSenderText(
-        r.insertText || `请【${r.memberName || '统一管理员'}】协助处理：`,
+        r.insertText || `请【${r.memberName || FURNACE_DISPLAY_NAME}】协助处理：`,
       )
     } else {
       clearSender()
@@ -3420,6 +3471,9 @@ onUnmounted(() => {
 loadLists().then(() => {
   const sid = route.params.sessionId
   if (sid) selectSession(sid)
+  if (route.query.furnace === '1' || route.query.furnace === 'true') {
+    launchFurnaceFromSprite()
+  }
 })
 </script>
 

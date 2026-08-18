@@ -43,6 +43,7 @@ import {
   listSlashCommands,
   saveSlashCommands,
   runSlashCommand,
+  ensureAdminMember,
 } from './slashCommands.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { listOccupiedResources, releaseResources } from './resources.js'
@@ -627,6 +628,13 @@ router.get('/settings/app', (_req, res) => {
 router.patch('/settings/app', (req, res) => {
   try {
     const s = updateAppSettings(req.body || {})
+    if (req.body?.grok !== undefined) {
+      try {
+        ensureAdminMember()
+      } catch (e) {
+        console.warn('[acw] sync furnace member after grok settings', e?.message || e)
+      }
+    }
     res.json({
       ...s,
       resolvedAdmin: resolveGlobalAdminMember(),

@@ -40,7 +40,7 @@ try {
   console.warn('[acw] markInterruptedOnBoot failed', e?.message || e)
 }
 
-// 始终确保「统一管理员」Agent 存在（快捷指令首位默认）
+// 始终确保熔炉 Agent 存在（快捷指令首位默认；内部 key 仍 unified_admin）
 ensureAdminMember()
 
 /**

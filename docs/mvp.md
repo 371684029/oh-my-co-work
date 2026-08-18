@@ -53,7 +53,7 @@
 - 不做云端多租户；不替代 Cursor/Grok 本体  
 - 不做复杂 BPMN / 断点精确续跑  
 - MVP 不做 GUI 安装包（本机 Web）  
-- 真实业务 Agent 按需后接（已有 echo + script + 统一管理员）  
+- 真实业务 Agent 按需后接（已有 echo + script + 熔炉）  
 
 ---
 

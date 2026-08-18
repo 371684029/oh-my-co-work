@@ -37,7 +37,7 @@ app.use(ElementPlusX)
 
 | 区域 | 组件 | 说明 |
 |------|------|------|
-| 壳层顶栏 | `App.vue` + `AppLogo` | 矢量品牌 Logo + 分段导航 |
+| 壳层顶栏 | `App.vue` + `AppLogo` + `FurnaceSprite` | 品牌 Logo + 分段导航；右侧熔炉精灵（闲置/工作/等人），不是按钮 |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |

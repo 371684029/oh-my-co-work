@@ -2,9 +2,9 @@
   "commands": [
     {
       "id": "cmd_admin_agent",
-      "name": "统一管理员",
+      "name": "熔炉",
       "slash": "admin",
-      "description": "管理员 Agent：调度协同、本机事项与流程协助（首位默认）",
+      "description": "熔炉：调度协同、本机事项与流程协助（首位默认）",
       "enabled": true,
       "kind": "agent",
       "command": "",
@@ -13,9 +13,9 @@
       "openTarget": "sessionWorkFolder",
       "customPath": "",
       "memberId": "",
-      "memberName": "统一管理员",
+      "memberName": "熔炉",
       "memberKey": "unified_admin",
-      "prompt": "请【统一管理员】协助处理："
+      "prompt": "请【熔炉】协助处理："
     },
     {
       "id": "cmd_open_editor",

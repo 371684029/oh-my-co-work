@@ -35,6 +35,11 @@
         </nav>
       </div>
       <div class="top-right">
+        <FurnaceSprite
+          :state="furnaceSpriteState"
+          :title="furnaceTitle"
+          @click="onFurnaceClick"
+        />
         <button
           type="button"
           class="fullscreen-button"
@@ -57,8 +62,12 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
+import FurnaceSprite from './components/FurnaceSprite.vue'
+import { furnaceSpriteState } from './composables/furnaceUi.js'
+import { GROK_BUILD_DOWNLOAD_URL, FURNACE_DISPLAY_NAME } from '@acw/shared'
+import { api } from './api'
 import {
   exitFullscreen,
   fullscreenElement,
@@ -70,6 +79,7 @@ const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
 const isFullscreen = ref(false)
+const furnaceTitle = `${FURNACE_DISPLAY_NAME} · 闲置 / 工作 / 等人`
 
 function syncFullscreenState() {
   isFullscreen.value = !!fullscreenElement()
@@ -92,6 +102,37 @@ watch(
 function go(v) {
   nav.value = v
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
+}
+
+async function onFurnaceClick() {
+  let configured = false
+  try {
+    const s = await api.appSettings.get()
+    configured = !!s.grok?.configured
+  } catch {
+    configured = false
+  }
+  if (!configured) {
+    try {
+      await ElMessageBox.confirm(
+        `尚未配置 Grok Build。请先下载安装，再到「设置」勾选已配置并填写启动命令（默认 grok）。\n${GROK_BUILD_DOWNLOAD_URL}`,
+        FURNACE_DISPLAY_NAME,
+        {
+          confirmButtonText: '去设置',
+          cancelButtonText: '打开下载页',
+          distinguishCancelAndClose: true,
+        },
+      )
+      router.push('/settings/prefs')
+    } catch (action) {
+      if (action === 'cancel') {
+        window.open(GROK_BUILD_DOWNLOAD_URL, '_blank', 'noopener')
+      }
+    }
+    return
+  }
+  const path = route.path.startsWith('/workbench') ? route.path : '/workbench'
+  router.push({ path, query: { ...route.query, furnace: '1' } })
 }
 
 onMounted(() => {
@@ -254,6 +295,10 @@ onUnmounted(() => {
   color: var(--ecw-text-1, #1d1d1f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0.5px 0 rgba(0, 0, 0, 0.04);
   font-weight: 600;
+}
+
+.top-right :deep(.furnace-sprite) {
+  margin-right: 2px;
 }
 
 .mvp-pill {
