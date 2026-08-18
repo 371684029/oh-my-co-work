@@ -22,6 +22,15 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | package.json / workspaces / package-lock.json / about.json | 版本 2.6.0 最终封板
+2026-08-18 | M | README.md / AGENT.md / docs/* | 发布线与路线图改为 2.6.0 封板
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮封板条目
+
+2026-08-18 | M | web/src/components/terminal/TerminalWorkspace.vue | 终端增加满屏：铺满 HTML 页面
+2026-08-18 | M | web/src/styles.css | 满屏时禁止页面滚动
+2026-08-18 | M | docs/frontend-components.md / README.md | 同步满屏与全屏两种铺开方式
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | server/src/localAccess.js | 同源回环无 Origin 也可领令牌，跨站仍拒绝
 2026-08-18 | M | server/src/index.js | 增加 POST /api/bootstrap，确保浏览器带 Origin
 2026-08-18 | M | web/src/api.js | bootstrap 改 POST，避免 GET 不带 Origin 被拒

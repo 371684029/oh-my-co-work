@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-2.5.0-409eff?style=flat-square" alt="version 2.5.0" />
+  <img src="https://img.shields.io/badge/version-2.6.0-409eff?style=flat-square" alt="version 2.6.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -47,7 +47,7 @@
 - 对话中出现实时终端卡，保留任务时序。
 - 点击进入中栏终端工作区，右侧流程仍然可见。
 - 支持键盘输入、窗口缩放、重新附着、停止进程与日志。
-- 工作台和终端都可以独立全屏。
+- 工作台和终端都可以独立全屏；终端另有 **满屏**，铺满页面、不调用系统全屏。
 - 占用的进程在设置里选择释放；会话归档 API 仍保留给旧数据。
 - **2.0.1**：本机 REST/WebSocket 使用随机访问令牌与回环 Origin 校验；停止、PID、长输出与断线重连已加固。
 
@@ -70,7 +70,7 @@
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
 | 人工闸门 | 启动确认、参数输入、同意/拒绝 |
-| 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题与粘贴确认 |
+| 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
@@ -176,6 +176,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.3.0 最终封板：设置释放资源、去掉超时/归档闸门、终端守护者
 - [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
+- [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
 - [ ] 后续：多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

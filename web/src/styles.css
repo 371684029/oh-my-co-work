@@ -171,6 +171,11 @@ body,
   padding: 12px 14px 14px;
 }
 
+html.acw-terminal-pagefill,
+html.acw-terminal-pagefill body {
+  overflow: hidden;
+}
+
 /* ========== 工作台三栏：悬浮毛玻璃窗 ========== */
 .workbench {
   display: flex;

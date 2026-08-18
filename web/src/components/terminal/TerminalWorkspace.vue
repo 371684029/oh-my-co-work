@@ -1,5 +1,9 @@
 <template>
-  <section ref="workspaceRoot" class="terminal-workspace">
+  <section
+    ref="workspaceRoot"
+    class="terminal-workspace"
+    :class="{ 'is-pagefill': isPagefill }"
+  >
     <header class="terminal-workspace-head">
       <div class="terminal-workspace-leading">
         <button type="button" class="terminal-back" @click="$emit('close')">
@@ -30,8 +34,17 @@
         <button
           type="button"
           class="terminal-toolbar-button"
+          :title="isPagefill ? '退出满屏，回到中栏' : '满屏：铺满整个页面，不调用系统全屏'"
+          @click="togglePagefill"
+        >
+          <span aria-hidden="true">{{ isPagefill ? '↙' : '▣' }}</span>
+          {{ isPagefill ? '退出满屏' : '满屏' }}
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
           data-fullscreen-control
-          :title="isFullscreen ? '退出终端全屏' : '终端全屏'"
+          :title="isFullscreen ? '退出终端全屏' : '全屏：交给浏览器，铺满显示器'"
           @click="toggleTerminalFullscreen"
         >
           <span aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
@@ -78,7 +91,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
@@ -97,12 +110,14 @@ defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'
 
 const workspaceRoot = ref(null)
 const isFullscreen = ref(false)
+const isPagefill = ref(false)
 const focused = ref(true)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
   if (props.connectionStatus !== 'open') return '连接中断，PTY 仍在跑 · 重连后会补回放'
   if (focused.value) return '终端输入中 · Esc 退出焦点，聊天快捷键不会进终端'
+  if (isPagefill.value) return '已退出终端焦点 · 再按 Esc 退出满屏'
   return '已退出终端焦点 · 点画面继续输入'
 })
 const statusText = computed(() => {
@@ -130,6 +145,14 @@ async function toggleTerminalFullscreen() {
   else await requestFullscreen(workspaceRoot.value)
 }
 
+function togglePagefill() {
+  isPagefill.value = !isPagefill.value
+}
+
+watch(isPagefill, (on) => {
+  document.documentElement.classList.toggle('acw-terminal-pagefill', on)
+})
+
 function onFocusChange(value) {
   focused.value = !!value
 }
@@ -140,6 +163,11 @@ function onKeydown(ev) {
     ev.preventDefault()
     document.activeElement?.blur?.()
     focused.value = false
+    return
+  }
+  if (isPagefill.value) {
+    ev.preventDefault()
+    isPagefill.value = false
   }
 }
 
@@ -152,6 +180,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('fullscreenchange', syncFullscreenState)
   document.removeEventListener('keydown', onKeydown)
+  document.documentElement.classList.remove('acw-terminal-pagefill')
 })
 </script>
 
@@ -171,12 +200,21 @@ onUnmounted(() => {
     inset 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.terminal-workspace:fullscreen {
+.terminal-workspace:fullscreen,
+.terminal-workspace.is-pagefill {
   width: 100vw;
   height: 100vh;
   margin: 0;
   border: 0;
   border-radius: 0;
+}
+
+.terminal-workspace.is-pagefill {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  width: 100%;
+  height: 100%;
 }
 
 .terminal-workspace-head,
