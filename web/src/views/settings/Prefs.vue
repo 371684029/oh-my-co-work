@@ -149,6 +149,7 @@
       <el-form label-position="top" class="admin-form">
         <el-form-item label="已配置 Grok">
           <el-switch v-model="grok.configured" />
+          <p class="prefs-resolved">默认开。熔炉成员接到本机 grok 命令；关掉则只留聊天回声。</p>
         </el-form-item>
         <el-form-item label="启动命令">
           <el-input v-model="grok.command" placeholder="grok" />
@@ -285,7 +286,7 @@ const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const backingUp = ref(false)
-const grok = ref({ command: 'grok', configured: false })
+const grok = ref({ command: 'grok', configured: true })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
 

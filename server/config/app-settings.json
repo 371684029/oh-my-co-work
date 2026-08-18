@@ -9,6 +9,13 @@
       "human": true
     }
   },
+  "grok": {
+    "command": "grok",
+    "configured": false
+  },
+  "adapt": {
+    "backup": true
+  },
   "autoArchiveHours": 3,
   "showScriptPopup": true,
   "terminal": {

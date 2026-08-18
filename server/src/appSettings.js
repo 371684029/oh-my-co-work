@@ -35,11 +35,11 @@ function normalizeAdapt(raw) {
   return { backup: raw.backup !== false }
 }
 
-/** 本机 Grok TUI（3.0：勾选已配置后精灵可开内嵌终端） */
+/** 本机 Grok TUI（默认已开启；关掉则熔炉不接 grok 命令） */
 export function defaultGrokSettings() {
   return {
     command: 'grok',
-    configured: false,
+    configured: true,
   }
 }
 
@@ -47,9 +47,14 @@ function normalizeGrok(raw) {
   const d = defaultGrokSettings()
   if (!raw || typeof raw !== 'object') return d
   const command = String(raw.command || d.command).trim() || d.command
+  const off =
+    raw.configured === false ||
+    raw.configured === 'false' ||
+    raw.configured === 0 ||
+    raw.configured === '0'
   return {
     command,
-    configured: raw.configured === true || raw.configured === 'true' || raw.configured === 1,
+    configured: raw.configured === undefined || raw.configured === null ? d.configured : !off,
   }
 }
 

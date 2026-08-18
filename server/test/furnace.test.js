@@ -27,7 +27,7 @@ const {
   handleGateAction,
 } = await import('../src/services.js')
 const { ensureAdminMember } = await import('../src/slashCommands.js')
-const { getAppSettings, updateAppSettings } = await import('../src/appSettings.js')
+const { getAppSettings, updateAppSettings, defaultGrokSettings } = await import('../src/appSettings.js')
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -47,7 +47,12 @@ test('getAppSettings exposes grok defaults without requiring configured', () => 
   assert.equal(typeof s.grok.configured, 'boolean')
 })
 
+test('grok.configured defaults on', () => {
+  assert.equal(defaultGrokSettings().configured, true)
+})
+
 test('ensureAdminMember seeds 熔炉 with stable unified_admin key', () => {
+  updateAppSettings({ grok: { command: 'grok', configured: false } })
   const m = ensureAdminMember()
   assert.equal(m.name, FURNACE_MEMBER_KEY)
   assert.equal(m.display_name, FURNACE_DISPLAY_NAME)

@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | server/src/appSettings.js / config/app-settings.json / Prefs.vue | 「已配置 Grok」开关默认开启
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | web/src/components/FurnaceSprite.vue / App.vue | 熔炉改右下角桌宠：Q 版黑裙少女，可戳可拖会说话
 2026-08-18 | A | web/src/assets/furnace-idle.png / furnace-working.png / furnace-waiting.png | 熔炉三态立绘（原创，透明底）
 2026-08-18 | M | docs/frontend-components.md / crucible-3x.md / crucible-3.3.md | 入口从顶栏改为右下角桌宠
