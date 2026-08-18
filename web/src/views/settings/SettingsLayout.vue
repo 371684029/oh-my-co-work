@@ -15,6 +15,9 @@
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
           设置
         </el-menu-item>
+        <el-menu-item index="/settings/grok" class="menu-item-meta">
+          Grok Build 教程
+        </el-menu-item>
         <el-menu-item index="/settings/support" class="menu-item-meta">
           支持与交流
         </el-menu-item>

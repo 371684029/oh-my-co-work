@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | docs/crucible-3.3.md | 未安装/未登录/未配置时展示 Grok 教程
+2026-08-18 | A | server/config/furnace/grok-config.example.toml | 配置示例，api_key 均为秘钥
+2026-08-18 | A | server/src/grokStatus.js / test/grokStatus.test.js | 探测安装、登录、配置缺口
+2026-08-18 | A | web/src/components/GrokSetupGuide.vue / views/settings/GrokSetup.vue | 教程页与精灵弹层
+2026-08-18 | M | web/src/App.vue / Prefs.vue / router.js / SettingsLayout.vue | 缺口时点精灵打开教程
+2026-08-18 | M | shared/index.js / server/src/routes.js / web/src/api.js | GROK 安装常量与 /grok/status
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | server/src/engine.js / furnaceSituation.js | 开始执行后游标刷新当前节点合同
 2026-08-18 | M | server/test/furnace.test.js | 通过启动后意图与完成态进地图
 2026-08-18 | M | docs/crucible-3.2.md / crucible-3x-plan.md | 开跑接线验收

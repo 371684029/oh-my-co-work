@@ -47,13 +47,13 @@ import {
 } from './slashCommands.js'
 import { killSessionProcesses, listSessionProcesses } from './processRegistry.js'
 import { listOccupiedResources, releaseResources } from './resources.js'
-import {
-  getAppSettings,
+import { getAppSettings,
   updateAppSettings,
   purgeDemoData,
   resolveGlobalAdminMember,
   resolveGroupAdmin,
 } from './appSettings.js'
+import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -623,6 +623,13 @@ router.get('/settings/app', (_req, res) => {
   res.json({
     ...s,
     resolvedAdmin: resolveGlobalAdminMember(),
+  })
+})
+router.get('/grok/status', (_req, res) => {
+  const command = getAppSettings().grok?.command || 'grok'
+  res.json({
+    ...probeGrokStatus({ command }),
+    exampleToml: loadGrokExampleConfig(),
   })
 })
 router.patch('/settings/app', (req, res) => {

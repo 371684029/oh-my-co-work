@@ -142,8 +142,9 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉先跑本机 Grok TUI。未勾选时顶栏精灵仍在，点击会提示下载并来此配置。
-        下载：<a :href="grokDownloadUrl" target="_blank" rel="noopener">{{ grokDownloadUrl }}</a>
+        熔炉先跑本机 Grok TUI。未安装、未登录或未写好 <code>config.toml</code> 时，点精灵会打开教程。
+        完整步骤见
+        <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
       <el-form label-position="top" class="admin-form">
         <el-form-item label="已配置 Grok">
@@ -253,10 +254,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
-import { GROK_BUILD_DOWNLOAD_URL } from '@acw/shared'
 import { setGrokConfigured } from '../../composables/furnaceUi.js'
-
-const grokDownloadUrl = GROK_BUILD_DOWNLOAD_URL
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)

@@ -72,6 +72,14 @@ export const MEMBER_KIND = {
 export const FURNACE_MEMBER_KEY = 'unified_admin'
 export const FURNACE_DISPLAY_NAME = '熔炉'
 export const GROK_BUILD_DOWNLOAD_URL = 'https://grok.com'
+export const GROK_BUILD_INSTALL = {
+  site: 'https://grok.com',
+  docs: 'https://docs.x.ai/build/overview',
+  unix: 'curl -fsSL https://x.ai/cli/install.sh | bash',
+  windows: 'irm https://x.ai/cli/install.ps1 | iex',
+  configPathUnix: '~/.grok/config.toml',
+  configPathWindows: '%USERPROFILE%\\.grok\\config.toml',
+}
 /** 熔炉角色壳：一次只装一套；情境包另见 crucible-3.2.md */
 export const FURNACE_ROLE = {
   SESSION: 'session',

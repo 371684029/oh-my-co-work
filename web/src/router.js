@@ -7,6 +7,7 @@ import Support from './views/settings/Support.vue'
 import About from './views/settings/About.vue'
 import Shortcuts from './views/settings/Shortcuts.vue'
 import Prefs from './views/settings/Prefs.vue'
+import GrokSetup from './views/settings/GrokSetup.vue'
 
 const routes = [
   { path: '/', redirect: '/workbench' },
@@ -21,6 +22,7 @@ const routes = [
       { path: 'groups', component: Groups },
       { path: 'shortcuts', component: Shortcuts },
       { path: 'prefs', component: Prefs },
+      { path: 'grok', component: GrokSetup },
       { path: 'support', component: Support },
       { path: 'about', component: About },
     ],

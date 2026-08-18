@@ -56,17 +56,38 @@
     <main class="ecw-main">
       <router-view />
     </main>
+    <el-dialog
+      v-model="grokGuideOpen"
+      title="Grok Build 教程"
+      width="720px"
+      class="grok-guide-dialog"
+      destroy-on-close
+    >
+      <GrokSetupGuide :status="grokGuideStatus" :example-toml="grokExampleToml" />
+      <template #footer>
+        <el-button @click="grokGuideOpen = false">关闭</el-button>
+        <el-button type="primary" @click="goGrokSettings">去设置勾选已配置</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
-import { furnaceSpriteState, grokConfigured, setGrokConfigured } from './composables/furnaceUi.js'
-import { GROK_BUILD_DOWNLOAD_URL, FURNACE_DISPLAY_NAME } from '@acw/shared'
+import GrokSetupGuide from './components/GrokSetupGuide.vue'
+import {
+  furnaceSpriteState,
+  grokConfigured,
+  grokProbe,
+  setGrokConfigured,
+  setFurnaceGrokGate,
+  grokSetupNeeded,
+} from './composables/furnaceUi.js'
+import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
 import {
   exitFullscreen,
@@ -79,8 +100,17 @@ const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
 const isFullscreen = ref(false)
+const grokGuideOpen = ref(false)
+const grokGuideStatus = ref({})
+const grokExampleToml = ref('')
 const furnaceTitle = computed(() => {
-  if (grokConfigured.value === false) return `${FURNACE_DISPLAY_NAME} · 待配置 Grok`
+  const gaps = grokProbe.value?.gaps || []
+  if (grokConfigured.value === false || gaps.length) {
+    if (gaps.includes('install')) return `${FURNACE_DISPLAY_NAME} · 待安装 Grok`
+    if (gaps.includes('login')) return `${FURNACE_DISPLAY_NAME} · 待登录 Grok`
+    if (gaps.includes('config')) return `${FURNACE_DISPLAY_NAME} · 待配置 Grok`
+    return `${FURNACE_DISPLAY_NAME} · 待配置 Grok`
+  }
   const st = furnaceSpriteState.value
   if (st === 'working') return `${FURNACE_DISPLAY_NAME} · 工作中`
   if (st === 'waiting') return `${FURNACE_DISPLAY_NAME} · 等人`
@@ -110,44 +140,38 @@ function go(v) {
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
 }
 
-async function onFurnaceClick() {
-  let configured = false
+async function refreshGrokGate() {
   try {
-    const s = await api.appSettings.get()
-    configured = !!s.grok?.configured
+    const [s, probe] = await Promise.all([api.appSettings.get(), api.grok.status()])
+    grokGuideStatus.value = probe
+    grokExampleToml.value = probe.exampleToml || ''
+    setFurnaceGrokGate({ optedIn: !!s.grok?.configured, probe })
+    return { s, probe }
   } catch {
-    configured = false
+    setGrokConfigured(false)
+    return { s: null, probe: null }
   }
-  if (!configured) {
-    try {
-      await ElMessageBox.confirm(
-        `尚未配置 Grok Build。请先下载安装，再到「设置」勾选已配置并填写启动命令（默认 grok）。\n${GROK_BUILD_DOWNLOAD_URL}`,
-        FURNACE_DISPLAY_NAME,
-        {
-          confirmButtonText: '去设置',
-          cancelButtonText: '打开下载页',
-          distinguishCancelAndClose: true,
-        },
-      )
-      router.push('/settings/prefs')
-    } catch (action) {
-      if (action === 'cancel') {
-        window.open(GROK_BUILD_DOWNLOAD_URL, '_blank', 'noopener')
-      }
-    }
+}
+
+async function onFurnaceClick() {
+  const { s, probe } = await refreshGrokGate()
+  if (grokSetupNeeded(probe, !!s?.grok?.configured)) {
+    grokGuideOpen.value = true
     return
   }
   const path = route.path.startsWith('/workbench') ? route.path : '/workbench'
   router.push({ path, query: { ...route.query, furnace: '1' } })
 }
 
+function goGrokSettings() {
+  grokGuideOpen.value = false
+  router.push('/settings/grok')
+}
+
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   syncFullscreenState()
-  api.appSettings
-    .get()
-    .then((s) => setGrokConfigured(!!s.grok?.configured))
-    .catch(() => setGrokConfigured(false))
+  refreshGrokGate()
 })
 
 onUnmounted(() => {

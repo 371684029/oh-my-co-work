@@ -143,6 +143,9 @@ export const api = {
   heartbeat: () => req('/heartbeat', { method: 'POST', body: '{}' }),
   clientGone: () => req('/client-gone', { method: 'POST', body: '{}' }),
   shutdown: () => req('/shutdown', { method: 'POST', body: '{}' }),
+  grok: {
+    status: () => req('/grok/status'),
+  },
   appSettings: {
     get: () => req('/settings/app'),
     update: (body) =>
