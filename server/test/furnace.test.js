@@ -144,34 +144,43 @@ test('furnace member gate stays waiting_human and uses 熔炉 copy', async () =>
   assert.equal(text.includes('管理员'), false)
 })
 
-test('starting a group injects situation so furnace sees the job', () => {
+test('starting a group injects a node map so furnace sees each step', () => {
   const echo = createMember({
-    name: `echo-sum-${Date.now()}`,
-    displayName: '材料',
+    name: `echo-map-${Date.now()}`,
+    displayName: '采集器',
     kind: MEMBER_KIND.ECHO,
     workFolder: process.cwd(),
     config: { defaultText: 'ok' },
   })
   const group = createGroup({
-    title: '周报工作总结',
-    description: '根据本周节点产出写一段给老板',
+    title: '采集流水线',
+    description: '任意场景',
     workFolder: process.cwd(),
     steps: [
       {
-        title: '收集材料',
+        title: '填参',
+        type: 'human',
+        captureParams: true,
+        flow: { admin: false, auto: false, human: true },
+      },
+      {
+        title: '拉数据',
         type: 'member',
         memberId: echo.id,
+        adapt: true,
         flow: { admin: false, auto: true, human: false },
       },
     ],
   })
   createSessionFromGroup(group.id)
   const sit = fs.readFileSync(path.join(dataRoot, 'furnace', 'SITUATION.md'), 'utf8')
-  assert.ok(sit.includes('周报工作总结'))
-  assert.ok(sit.includes('给老板'))
-  assert.ok(sit.includes('收集材料'))
+  assert.ok(sit.includes('节点一览'))
+  assert.ok(sit.includes('#1 [人工'))
+  assert.ok(sit.includes('填参'))
+  assert.ok(sit.includes('#2 [成员 · 采集器 · 适配]'))
+  assert.ok(sit.includes('拉数据'))
+  assert.ok(sit.includes('当前节点'))
   const active = fs.readFileSync(path.join(dataRoot, 'furnace', 'ACTIVE.md'), 'utf8')
   assert.ok(active.includes('群聊主持'))
-  assert.ok(active.includes('此刻在做什么'))
-  assert.ok(active.includes('周报工作总结'))
+  assert.ok(active.includes('节点一览'))
 })

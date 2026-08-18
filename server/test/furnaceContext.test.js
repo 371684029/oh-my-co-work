@@ -64,30 +64,47 @@ test('step adapt prefers node role over member role', () => {
   assert.equal(resolveAdaptFurnaceRole({}), null)
 })
 
-test('situation slots copy user intent and group agenda', () => {
+test('situation slots copy a node map not a single scenario', () => {
   const text = composeFurnaceSituation({
-    intent: '把本周做的事收成一段给老板',
-    groupTitle: '周报工作总结',
-    groupDescription: '根据本周节点产出写一段给老板',
-    sessionTitle: '#1 · 周报',
-    workFolder: '/tmp/week',
-    agenda: [{ title: '收集材料' }, { title: '熔炉整理' }, { title: '人确认' }],
+    intent: '先把数据拉下来再问我',
+    groupTitle: '采集流水线',
+    groupDescription: '任意场景都行',
+    sessionTitle: '采集流水线',
+    workFolder: '/tmp/job',
+    agenda: [
+      { title: '填参', kind: '人工', gateHuman: true, statusLabel: '完成' },
+      {
+        title: '拉数据',
+        kind: '成员',
+        member: '采集器',
+        adapt: true,
+        statusLabel: '执行中',
+      },
+      { title: '确认', kind: '人工', gateHuman: true, statusLabel: '待跑' },
+    ],
     nowIndex: 1,
-    now: { title: '熔炉整理', status: 'running' },
-    params: [{ key: '#1', value: '本周完成适配闸' }],
+    now: {
+      title: '拉数据',
+      kind: '成员',
+      member: '采集器',
+      adapt: true,
+      statusLabel: '执行中',
+      prevOutput: '参数已齐',
+    },
+    params: [{ key: '#1', value: '项目A' }],
     announcementPath: 'journals/sessions/s1/ANNOUNCEMENT.md',
   })
-  assert.ok(text.includes('意图：把本周做的事收成一段给老板'))
-  assert.ok(text.includes('周报工作总结'))
-  assert.ok(text.includes('2. 熔炉整理 ← 现在'))
-  assert.ok(text.includes('#1'))
+  assert.ok(text.includes('节点一览'))
+  assert.ok(text.includes('#2 [成员 · 采集器 · 适配] 拉数据 · 执行中 ← 现在'))
+  assert.ok(text.includes('当前节点：#2 拉数据'))
+  assert.ok(text.includes('勾了适配'))
+  assert.ok(text.includes('上一节点产出：参数已齐'))
+  assert.ok(text.includes('只处理当前节点'))
   const packed = composeFurnaceContext(FURNACE_ROLE.SESSION, {
-    situation: { intent: '做工作总结', groupTitle: '周报工作总结' },
+    situation: { intent: '先问缺哪一步', groupTitle: '采集流水线' },
   })
   assert.ok(packed.includes('熔炉本轮：群聊主持'))
-  assert.ok(packed.includes('此刻在做什么'))
-  assert.ok(packed.includes('做工作总结'))
-  assert.ok(!packed.includes('按闸门政策'))
+  assert.ok(packed.includes('节点一览'))
 })
 
 test('situation clips oversized intent', () => {

@@ -4,7 +4,7 @@
 
 ## 做
 
-- 优先改这个成员的脚本/配置，让它能在内嵌终端跑，能走 JSONL 侧通道（`ACW_ADAPTER_EVENTS` / `ACW_ADAPTER_REPLY`）。
+- 优先改 **当前节点** 这个成员的脚本/配置，让它能在内嵌终端跑，能走 JSONL 侧通道（`ACW_ADAPTER_EVENTS` / `ACW_ADAPTER_REPLY`）。
 - 改源文件前必须已有压缩包备份（工作台会打到 `data/backups/adapt`）。
 - 尽量不影响该文件的其它用法。注释标记是 `ACW-ADAPT`。
 

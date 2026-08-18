@@ -11,4 +11,4 @@
 | `prompts/node-adapt.md` | 把当前步骤接到工作台 |
 | `prompts/review.md` | 闸门通过 / 拒绝 |
 
-`memory-seed/` 只在本机 `data/furnace/memory/` 还不存在时复制过去。情境在 `SITUATION.md`，不进角色记忆。
+`SITUATION.md` 是本场节点地图（哪个节点是什么）。不要把多套角色 prompt 拼在一起。

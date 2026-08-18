@@ -2,15 +2,52 @@
  * 从当前会话抽出熔炉情境包（槽位填充，不调模型）。
  */
 import { getDb, parseJson } from './db.js'
-import { FURNACE_ROLE } from '@acw/shared'
+import { FURNACE_ROLE, nodeStatusLabel, stepTypeLabel } from '@acw/shared'
 import {
   activateFurnaceRole,
   currentFurnaceRole,
+  clipFurnaceText,
+  SITUATION_LIMITS,
 } from './furnaceContext.js'
 
 function getMember(id) {
   if (!id) return null
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
+}
+
+function digestOutput(outputJson) {
+  const o = parseJson(outputJson, null)
+  if (o == null || o === '') return ''
+  if (typeof o === 'string') return clipFurnaceText(o, SITUATION_LIMITS.prevOut)
+  const text = o.text || o.summary || o.stdout || o.result || o.output
+  if (text != null && String(text).trim()) {
+    return clipFurnaceText(String(text), SITUATION_LIMITS.prevOut)
+  }
+  try {
+    return clipFurnaceText(JSON.stringify(o), SITUATION_LIMITS.prevOut)
+  } catch {
+    return ''
+  }
+}
+
+function nodeCard(step, node, member) {
+  const type = node?.step_type || step?.type || 'member'
+  const flow = step?.flow && typeof step.flow === 'object' ? step.flow : {}
+  const adapt = !!(
+    step?.adapt ||
+    parseJson(node?.input_json, {}).adapt
+  )
+  return {
+    title: node?.title || step?.title || '',
+    kind: stepTypeLabel(type),
+    member: member?.display_name || member?.name || '',
+    adapt,
+    gateAdmin: !!flow.admin,
+    gateHuman: !!flow.human,
+    status: node?.status || '',
+    statusLabel: nodeStatusLabel(node?.status) || '',
+    stepId: node?.step_id || step?.id || '',
+  }
 }
 
 export function collectFurnaceSituationFacts(sessionId, { nodeId } = {}) {
@@ -60,17 +97,35 @@ export function collectFurnaceSituationFacts(sessionId, { nodeId } = {}) {
     }
   }
 
-  const agenda = steps.map((s, i) => {
-    const member = s.memberId ? getMember(s.memberId) : null
-    const who = member?.display_name || member?.name || ''
-    const title = s.title || `步骤 ${i + 1}`
-    return { title: who ? `${title} · ${who}` : title }
-  })
-
   const nowIndex =
     nowNode && Number.isFinite(Number(nowNode.step_index))
       ? Number(nowNode.step_index)
       : Number(session.current_step_index) || 0
+
+  const rows = nodes.length
+    ? nodes
+    : steps.map((s, i) => ({
+        step_index: i,
+        step_id: s.id,
+        title: s.title,
+        step_type: s.type,
+        member_id: s.memberId,
+        status: 'pending',
+        input_json: s.adapt ? JSON.stringify({ adapt: true }) : null,
+        output_json: null,
+      }))
+
+  const agenda = rows.map((node) => {
+    const step = steps[Number(node.step_index)] || steps.find((s) => s.id === node.step_id) || {}
+    const member = getMember(node.member_id || step.memberId)
+    return nodeCard(step, node, member)
+  })
+
+  const nowStep = steps[nowIndex] || {}
+  const nowMember = getMember(nowNode?.member_id || nowStep.memberId)
+  const nowCard = nowNode ? nodeCard(nowStep, nowNode, nowMember) : {}
+  const prev = rows.find((n) => Number(n.step_index) === nowIndex - 1)
+  nowCard.prevOutput = prev ? digestOutput(prev.output_json) : ''
 
   return {
     intent,
@@ -81,12 +136,7 @@ export function collectFurnaceSituationFacts(sessionId, { nodeId } = {}) {
     workFolder: ctx.groupFolder || group?.work_folder || '',
     agenda,
     nowIndex,
-    now: nowNode
-      ? {
-          title: nowNode.title || '',
-          status: nowNode.status || '',
-        }
-      : {},
+    now: nowCard,
     params,
     announcementPath: ctx.announcementPath || '',
   }
