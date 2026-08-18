@@ -189,6 +189,27 @@
           </div>
         </div>
 
+        <div
+          v-if="!activeTerminal && terminalSessions.length > 1"
+          class="terminal-tabstrip"
+          role="tablist"
+          aria-label="会话终端"
+        >
+          <button
+            v-for="item in terminalSessions"
+            :key="item.id"
+            type="button"
+            class="terminal-tab"
+            :class="`is-${item.status || 'unknown'}`"
+            role="tab"
+            @click="openTerminal(item.id)"
+          >
+            <span class="terminal-tab-dot" aria-hidden="true" />
+            <span class="terminal-tab-label">{{ item.label || '终端' }}</span>
+            <span class="terminal-tab-state">{{ terminalChipStatus(item) }}</span>
+          </button>
+        </div>
+
         <TerminalWorkspace
           v-if="activeTerminal"
           :terminal="activeTerminal"
@@ -248,6 +269,11 @@
                     :terminal="item.terminal"
                     @open="openTerminal"
                     @kill="killTerminal"
+                  />
+                  <AdapterEventCard
+                    v-else-if="item._kind === 'adapter-tool' || item._kind === 'adapter-result'"
+                    :event="item._raw"
+                    @open="openTerminal"
                   />
                   <div
                     v-else
@@ -1090,6 +1116,7 @@ import {
 import { api, connectSessionWs } from '../api'
 import AppLogo from '../components/AppLogo.vue'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
+import AdapterEventCard from '../components/terminal/AdapterEventCard.vue'
 
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),
@@ -1473,11 +1500,15 @@ const bubbleList = computed(() => {
       ? 'user'
       : isArchive
         ? 'archive'
-        : isSystem
-          ? 'system'
-          : isGate
-            ? 'gate'
-            : 'agent'
+        : m.type === 'adapter_tool'
+          ? 'adapter-tool'
+          : m.type === 'adapter_result'
+            ? 'adapter-result'
+            : isSystem
+              ? 'system'
+              : isGate
+                ? 'gate'
+                : 'agent'
     return {
       id: m.id,
       content: messageText(m),
@@ -1486,7 +1517,8 @@ const bubbleList = computed(() => {
       /** 去掉组件自带外层壳，只保留我们自己的一层气泡 */
       noStyle: true,
       shape: 'round',
-      maxWidth: '78%',
+      maxWidth:
+        m.type === 'adapter_tool' || m.type === 'adapter_result' ? '90%' : '78%',
       avatarGap: 12,
       senderFull: full,
       senderShort: short,
@@ -1999,6 +2031,8 @@ function roleLabel(m) {
     return '待你处理'
   }
   if (m.role === 'system') return '系统'
+  if (m.type === 'adapter_tool') return '工具调用'
+  if (m.type === 'adapter_result') return '工具结果'
   if (m.member_id) {
     const mem = members.value.find((x) => x.id === m.member_id)
     return mem?.display_name || '成员'
@@ -2404,6 +2438,19 @@ function sendTerminalMessage(message) {
 function openTerminal(terminalId) {
   activeTerminalId.value = terminalId
   sendTerminalMessage({ type: 'terminal.attach', terminalId })
+}
+
+function terminalChipStatus(terminal) {
+  const map = {
+    starting: '启动中',
+    running: '运行中',
+    exited: '已结束',
+    failed: '失败',
+    killed: '已停止',
+    timed_out: '已超时',
+    interrupted: '已中断',
+  }
+  return map[terminal?.status] || terminal?.status || '终端'
 }
 
 function sendTerminalInput(data) {
@@ -3588,6 +3635,66 @@ loadLists().then(() => {
   box-shadow: inset 3px 0 0 #ff3b30;
 }
 
+.terminal-tabstrip {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.42);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.terminal-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ecw-text-1, #1d1d1f);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.terminal-tab:hover {
+  background: #fff;
+}
+
+.terminal-tab-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.terminal-tab.is-starting .terminal-tab-dot,
+.terminal-tab.is-running .terminal-tab-dot {
+  background: #34c759;
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.14);
+}
+
+.terminal-tab.is-failed .terminal-tab-dot,
+.terminal-tab.is-killed .terminal-tab-dot {
+  background: #ff3b30;
+}
+
+.terminal-tab-label {
+  overflow: hidden;
+  max-width: 160px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-tab-state {
+  color: var(--ecw-text-3, #86868b);
+  font-size: 11px;
+}
+
 .human-attention-pill {
   display: inline-flex;
   align-items: center;
@@ -3840,7 +3947,8 @@ loadLists().then(() => {
   gap: 8px !important;
 }
 
-.wb-chat-scroll :deep(.elx-bubble:has(.terminal-card) .elx-bubble__content-wrapper) {
+.wb-chat-scroll :deep(.elx-bubble:has(.terminal-card) .elx-bubble__content-wrapper),
+.wb-chat-scroll :deep(.elx-bubble:has(.adapter-event-card) .elx-bubble__content-wrapper) {
   width: 100%;
   flex: 1 1 auto;
   min-width: 0;
@@ -3964,6 +4072,11 @@ loadLists().then(() => {
   border-color: rgba(64, 158, 255, 0.22);
   box-shadow: 0 4px 12px rgba(23, 25, 31, 0.16);
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+.bubble-avatar.kind-adapter-tool,
+.bubble-avatar.kind-adapter-result {
+  background: linear-gradient(145deg, #e8f1ff 0%, #d6e8ff 100%);
+  color: #007aff;
 }
 .bubble-avatar.kind-system {
   background: linear-gradient(145deg, #e4e7ed 0%, #c0c4cc 100%);

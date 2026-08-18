@@ -13,16 +13,30 @@
           返回对话
         </button>
         <span class="terminal-divider" />
-        <select
+        <div
           v-if="terminals.length > 1"
-          class="terminal-switch"
-          :value="terminal.id"
-          @change="$emit('select', $event.target.value)"
+          class="terminal-tabs"
+          role="tablist"
+          aria-label="切换终端"
         >
-          <option v-for="item in terminals" :key="item.id" :value="item.id">
-            {{ item.label || '终端' }} · {{ item.status }}
-          </option>
-        </select>
+          <button
+            v-for="item in terminals"
+            :key="item.id"
+            type="button"
+            class="terminal-tab"
+            :class="{
+              'is-active': item.id === terminal.id,
+              [`is-${item.status || 'unknown'}`]: true,
+            }"
+            role="tab"
+            :aria-selected="item.id === terminal.id"
+            :title="`${item.label || '终端'} · ${item.status}`"
+            @click="$emit('select', item.id)"
+          >
+            <span class="terminal-tab-dot" aria-hidden="true" />
+            <span class="terminal-tab-label">{{ item.label || '终端' }}</span>
+          </button>
+        </div>
         <div class="terminal-identity">
           <div class="terminal-name-row">
             <span class="terminal-live-dot" :class="{ active: isRunning }" aria-hidden="true" />
@@ -274,14 +288,51 @@ onUnmounted(() => {
   vertical-align: -1px;
 }
 
-.terminal-switch {
-  max-width: 220px;
+.terminal-tabs {
+  display: flex;
+  min-width: 0;
+  max-width: min(46vw, 520px);
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.terminal-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   border: 0;
   border-radius: 8px;
-  padding: 5px 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #dce0e8;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c5cad4;
   font-size: 11px;
+  cursor: pointer;
+}
+
+.terminal-tab.is-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #eef1f6;
+}
+
+.terminal-tab-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #7d8492;
+}
+
+.terminal-tab.is-running .terminal-tab-dot,
+.terminal-tab.is-starting .terminal-tab-dot {
+  background: #5fd98e;
+}
+
+.terminal-tab-label {
+  overflow: hidden;
+  max-width: 140px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .terminal-toolbar-button.danger {

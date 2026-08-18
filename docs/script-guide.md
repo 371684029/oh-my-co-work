@@ -88,7 +88,9 @@
 {"type":"result","summary":"修改完成","files":["package.json"]}
 ```
 
-`question` 出现在对话闸门；人点选项后追加一行到 reply 文件。坏行会被忽略，PTY 继续跑。
+`question` 出现在对话闸门；人点选项后追加一行到 reply 文件。`tool.start` / `tool.end` 同一 `id` 会合成一张对话工具卡（结束时就地更新）；`result` 显示为结果卡并可点回终端。坏行会被忽略，PTY 继续跑。
+
+通用 JSONL 就是 2.x 的 Adapter 契约。Claude / Codex 等专用 CLI 适配仍后置：先让工具往侧通道写上述事件，工作台不解析终端画面。
 
 ---
 
