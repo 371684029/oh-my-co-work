@@ -12,3 +12,4 @@
 | `prompts/review.md` | 闸门通过 / 拒绝 |
 
 `SITUATION.md` 是本场节点地图（哪个节点是什么）。不要把多套角色 prompt 拼在一起。
+配置示例见 `grok-config.example.toml`（`api_key` 一律写「秘钥」）。
