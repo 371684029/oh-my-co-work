@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | web/src/components/terminal/TerminalWorkspace.vue | 满屏 Teleport 到 body，铺满整个网页视口
+2026-08-18 | M | docs/frontend-components.md / docs/mvp.md | 说明满屏不困在中栏毛玻璃卡片
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | package.json / workspaces / package-lock.json / about.json | 版本 2.6.0 最终封板
 2026-08-18 | M | README.md / AGENT.md / docs/* | 发布线与路线图改为 2.6.0 封板
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮封板条目

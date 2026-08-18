@@ -1,4 +1,6 @@
 <template>
+  <!-- 满屏必须挂到 body：中栏 backdrop-filter 会把内部 fixed 锁在卡片里，铺不满视口 -->
+  <Teleport to="body" :disabled="!isPagefill">
   <section
     ref="workspaceRoot"
     class="terminal-workspace"
@@ -88,10 +90,11 @@
       <span class="terminal-focus-hint">{{ footerHint }}</span>
     </footer>
   </section>
+  </Teleport>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
@@ -149,8 +152,10 @@ function togglePagefill() {
   isPagefill.value = !isPagefill.value
 }
 
-watch(isPagefill, (on) => {
+watch(isPagefill, async (on) => {
   document.documentElement.classList.toggle('acw-terminal-pagefill', on)
+  await nextTick()
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
 })
 
 function onFocusChange(value) {
@@ -212,7 +217,7 @@ onUnmounted(() => {
 .terminal-workspace.is-pagefill {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 200;
   width: 100%;
   height: 100%;
 }
