@@ -37,9 +37,14 @@ import {
   isMentionAssistOnly,
   OFFSITE_MODE,
   FURNACE_DISPLAY_NAME,
+  FURNACE_ROLE,
 } from '@acw/shared'
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
 import { prepareAdaptForMember, adaptStatusText } from './adaptBackup.js'
+import {
+  activateFurnaceRole,
+  resolveAdaptFurnaceRole,
+} from './furnaceContext.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -2038,6 +2043,26 @@ export async function advance(sessionId) {
     let runMemberAs = member
     let adaptPrep = null
     if (wantAdapt) {
+      const furnaceRole = resolveAdaptFurnaceRole({
+        stepAdapt: !!(step?.adapt || parseJson(node.input_json, {}).adapt),
+        memberAdapt: !!member.config?.adapt,
+      })
+      if (furnaceRole) {
+        try {
+          const pack = activateFurnaceRole(furnaceRole, {
+            sessionId,
+            nodeId: node.id,
+          })
+          addMessage(sessionId, {
+            role: 'system',
+            type: 'status',
+            node_instance_id: node.id,
+            content: { text: `熔炉本轮：${pack.label}（prompt 与记忆已写入 ${pack.activeMd}）` },
+          })
+        } catch (e) {
+          console.warn('[acw] furnace role', e?.message || e)
+        }
+      }
       try {
         adaptPrep = prepareAdaptForMember(member, {
           sessionId,
@@ -2384,6 +2409,17 @@ function openFlowGate(sessionId, node, payload) {
   })
   // 管理员总结与流转：闸门打开后刷新群报告 MD
   if (payload.flow?.admin || payload.requireAdmin) {
+    try {
+      const pack = activateFurnaceRole(FURNACE_ROLE.REVIEW, { sessionId, nodeId: node.id })
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: { text: `熔炉本轮：${pack.label}（prompt 与记忆已写入 ${pack.activeMd}）` },
+      })
+    } catch (e) {
+      console.warn('[acw] furnace review context', e?.message || e)
+    }
     refreshSessionAnnouncement(sessionId)
   }
   emitSession(sessionId, {

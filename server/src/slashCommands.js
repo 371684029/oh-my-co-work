@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
-import { ROOT, DATA_ROOT } from './db.js'
+import { ROOT } from './db.js'
 import { getSessionDetail, getGroup, listMembers, createMember, updateMember } from './services.js'
 import {
   MEMBER_KIND,
@@ -12,6 +12,7 @@ import {
   isFurnaceMember,
 } from '@acw/shared'
 import { resolveShowScriptPopup, getAppSettings } from './appSettings.js'
+import { ensureFurnaceWorkspace } from './furnaceContext.js'
 import {
   enrichScriptConfig,
   getScriptWorkDir,
@@ -26,7 +27,7 @@ function furnaceDefaultText() {
 }
 
 function furnaceGrokScript(command) {
-  const workDir = DATA_ROOT || ROOT
+  const workDir = ensureFurnaceWorkspace()
   const cmd = String(command || 'grok').trim() || 'grok'
   return {
     mode: 'command',
@@ -134,6 +135,11 @@ function migrateFurnaceMember(m) {
 
 /** 确保存在熔炉成员 Agent（内部 name=unified_admin） */
 export function ensureAdminMember() {
+  try {
+    ensureFurnaceWorkspace()
+  } catch (e) {
+    console.warn('[acw] furnace workspace', e?.message || e)
+  }
   const list = listMembers()
   let m = list.find((x) => x.name === ADMIN_MEMBER.name || isFurnaceMember(x))
   const grok = getAppSettings().grok || {}

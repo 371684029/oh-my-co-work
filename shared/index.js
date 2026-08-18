@@ -72,6 +72,17 @@ export const MEMBER_KIND = {
 export const FURNACE_MEMBER_KEY = 'unified_admin'
 export const FURNACE_DISPLAY_NAME = '熔炉'
 export const GROK_BUILD_DOWNLOAD_URL = 'https://grok.com'
+/** 熔炉三套互不串的上下文 */
+export const FURNACE_ROLE = {
+  MEMBER_ADAPT: 'member_adapt',
+  NODE_ADAPT: 'node_adapt',
+  REVIEW: 'review',
+}
+export const FURNACE_ROLE_LABEL = {
+  member_adapt: '成员适配',
+  node_adapt: '节点适配',
+  review: '系统审核',
+}
 export const ADAPT_OPTION_HOVER =
   '开启后由熔炉做适配：优先改代码接到工作台；改不了代码再给该步骤打适配标记。改源文件前会打压缩包备份。'
 

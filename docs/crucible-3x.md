@@ -51,9 +51,17 @@
 
 不要同时让用户选「改代码还是加节点」。改源文件前 **默认打压缩包备份**，尽量不影响其它场景使用；备份可恢复。
 
-### 3.2 适配与审核不混
+### 3.2 适配与审核不混（三套 prompt / 记忆）
 
-适配是适配，审核是审核，上下文分开：熔炉可以做适配，闸门仍可配给人审或给熔炉审（原管理员通道的继任）。两套角色不视为冲突。
+适配是适配，审核是审核，上下文分开：熔炉可以做适配，闸门仍可配给人审或给熔炉审（原管理员通道的继任）。**三套作用各有一份 prompt 和一份记忆，本轮只装一套。**
+
+| 作用 | 何时装入 | Prompt（进仓库） | 记忆种子（进仓库） | 本机记忆（不进 git） |
+| --- | --- | --- | --- | --- |
+| 成员适配 | 成员勾了适配、步骤未勾 | `server/config/furnace/prompts/member-adapt.md` | `memory-seed/member-adapt.md` | `data/furnace/memory/member-adapt.md` |
+| 节点适配 | 步骤勾了适配 | `prompts/node-adapt.md` | `memory-seed/node-adapt.md` | `memory/node-adapt.md` |
+| 系统审核 | 闸门要熔炉确认 | `prompts/review.md` | `memory-seed/review.md` | `memory/review.md` |
+
+本轮装入写成 `data/furnace/ACTIVE.md`（Grok TUI 工作目录就是这里）。系统气泡只写「熔炉本轮：xxx」，不把全文灌进聊天。记忆种子只复制一次，已有本机记忆不覆盖。
 
 ### 3.3 统一管理员 → 熔炉
 
@@ -155,7 +163,9 @@
 - 「改不了代码」：只读、二进制、过大、找不到源文件、备份失败 → 不改文件，只打步骤标记。  
 - 压缩包：`data/backups/adapt/<成员id>/adapt-<时间>.zip` + 同名 json 清单；只含即将改动的文件。  
 - 流程轨：步骤角标「适配」+ 右侧「适配」筛选 Tab（不是新页面）。  
+- 三套上下文：prompt 进仓库、记忆在 `data/furnace`、本轮只写 `ACTIVE.md`。  
 - `unified_admin` 的内部 id 是否保留、只改展示名？  
+- 精灵点开时是否切换角色。  
 
 发型、正侧脸、动画仍后细化。
 

@@ -27,7 +27,8 @@ oh-my-co-work/
 │   ├── package.json
 │   ├── config/
 │   │   ├── support.json         # 支持与交流
-│   │   └── about.json           # 关于与更新（版本/日志/本地说明）
+│   │   ├── about.json           # 关于与更新（版本/日志/本地说明）
+│   │   └── furnace/             # 熔炉三套 prompt + 记忆种子
 │   └── src/
 │       ├── index.js             # Express + WS 入口，自动 seed
 │       ├── localAccess.js       # 本机 Origin / 访问令牌（2.0.1）
@@ -64,7 +65,9 @@ oh-my-co-work/
 ├── data/                        # 运行时（gitignore，勿提交）
 │   ├── oh-my-co-work.sqlite
 │   ├── logs/
-│   └── journals/
+│   ├── journals/
+│   ├── backups/adapt/           # 适配备份 zip（不进 git）
+│   └── furnace/                 # ACTIVE.md + 本机记忆（不进 git）
 │
 └── scripts/                     # 可选运维脚本
 ```
@@ -93,6 +96,8 @@ oh-my-co-work/
 | `app-settings.json` | `showDemo`、`showScriptPopup`、`autoArchiveHours`、全局 `admin` |
 | `slash-commands.json` | 快捷指令（可含 `showScriptPopup`） |
 | `about.json` / `support.json` | 关于页 / 支持与交流 |
+| `furnace/prompts/*.md` | 成员适配 / 节点适配 / 系统审核 prompt |
+| `furnace/memory-seed/*.md` | 本机记忆初始副本（只复制一次） |
 
 运行时数据见 [data-storage.md](./data-storage.md)。
 
