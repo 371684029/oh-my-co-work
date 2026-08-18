@@ -195,6 +195,7 @@
           :terminals="terminalSessions"
           :connection-status="terminalConnectionStatus"
           :prefs="terminalPrefs"
+          :default-pagefill="furnaceTuiPagefill"
           @close="activeTerminalId = null"
           @kill="killTerminal"
           @input="sendTerminalInput"
@@ -1539,6 +1540,23 @@ const activeTerminal = computed(
   () => terminalSessions.value.find((terminal) => terminal.id === activeTerminalId.value) || null,
 )
 
+function isFurnaceTuiContext(terminal) {
+  if (terminal?.memberId) {
+    const mem = members.value.find((x) => x.id === terminal.memberId)
+    if (isFurnaceMember(mem)) return true
+  }
+  if (isFurnaceMember({ display_name: terminal?.label, name: terminal?.label })) return true
+  const fromId = detail.value?.group?.config?.fromMemberId || ''
+  if (fromId) {
+    const mem = members.value.find((x) => x.id === fromId)
+    if (isFurnaceMember(mem)) return true
+  }
+  const cmd = `${terminal?.command || ''} ${terminal?.label || ''}`
+  return /(^|[\s/\\])grok(\.exe)?(\s|$)/i.test(cmd)
+}
+
+const furnaceTuiPagefill = computed(() => isFurnaceTuiContext(activeTerminal.value))
+
 const pendingGate = computed(() => {
   if (!detail.value) return null
   if (detail.value.session.status === 'archived') return null
@@ -2352,6 +2370,7 @@ async function selectSession(id) {
   expandedSkippedFlowGroups.value = {}
   bindWs(id)
   await Promise.all([loadDetail(id), loadTerminals(id)])
+  revealFurnaceTui()
 }
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
@@ -2439,6 +2458,7 @@ async function loadTerminals(id) {
         })
       }
     }
+    revealFurnaceTui()
   } catch {
     /* 保留 WebSocket 已收到的较新状态 */
   }
@@ -2473,6 +2493,16 @@ function sendTerminalMessage(message) {
 function openTerminal(terminalId) {
   activeTerminalId.value = terminalId
   sendTerminalMessage({ type: 'terminal.attach', terminalId })
+}
+
+function revealFurnaceTui(terminalId) {
+  const target =
+    terminalSessions.value.find((t) => t.id === terminalId) ||
+    terminalSessions.value.find((t) => ['starting', 'running'].includes(t.status)) ||
+    terminalSessions.value[terminalSessions.value.length - 1]
+  if (!target || !isFurnaceTuiContext(target)) return
+  if (activeTerminalId.value === target.id) return
+  openTerminal(target.id)
 }
 
 function sendTerminalInput(data) {
@@ -2641,6 +2671,7 @@ function bindWs(sessionId) {
           ...terminal,
           previewReplay: String(terminal?.replay || '').slice(-12_000),
         })
+        revealFurnaceTui(terminal?.id)
         return
       }
       if (ev.type === 'terminal.output') {

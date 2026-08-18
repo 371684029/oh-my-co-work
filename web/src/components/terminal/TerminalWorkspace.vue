@@ -107,13 +107,14 @@ const props = defineProps({
   terminals: { type: Array, default: () => [] },
   connectionStatus: { type: String, default: 'open' },
   prefs: { type: Object, default: () => ({}) },
+  defaultPagefill: { type: Boolean, default: false },
 })
 
 defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
 
 const workspaceRoot = ref(null)
 const isFullscreen = ref(false)
-const isPagefill = ref(false)
+const isPagefill = ref(!!props.defaultPagefill)
 const focused = ref(true)
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const footerHint = computed(() => {
@@ -158,6 +159,13 @@ watch(isPagefill, async (on) => {
   requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
 })
 
+watch(
+  () => props.defaultPagefill,
+  (on) => {
+    if (on) isPagefill.value = true
+  },
+)
+
 function onFocusChange(value) {
   focused.value = !!value
 }
@@ -180,6 +188,10 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   document.addEventListener('keydown', onKeydown)
   syncFullscreenState()
+  if (isPagefill.value) {
+    document.documentElement.classList.add('acw-terminal-pagefill')
+    nextTick(() => requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))))
+  }
 })
 
 onUnmounted(() => {

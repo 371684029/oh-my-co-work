@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | Workbench.vue / TerminalWorkspace.vue | 熔炉内嵌 TUI 默认满屏铺满页面
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | server/src/appSettings.js / config/app-settings.json / Prefs.vue | 「已配置 Grok」开关默认开启
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
 

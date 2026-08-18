@@ -142,7 +142,7 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉先跑本机 Grok TUI。本机已安装并登录后，点右下角桌宠的「开熔炉」或双击直接开终端。
+        熔炉先跑本机 Grok TUI，开起来默认满屏。本机已安装并登录后，点右下角桌宠的「开熔炉」或双击直接进终端。
         仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
