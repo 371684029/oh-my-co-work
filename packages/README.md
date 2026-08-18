@@ -13,6 +13,7 @@
 
 | 平台 | 文件 | 大小 |
 |------|------|------|
+| darwin-arm64 | [`oh-my-co-work-v3-darwin-arm64.zip`](./oh-my-co-work-v3-darwin-arm64.zip) | 20877421 |
 | linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 21051015 |
 
 版本：`3.3.0`（大版本 v3）
