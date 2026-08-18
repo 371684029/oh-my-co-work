@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | docs/data-and-ops.md | 修订记录补 2.4.0 / 2.5.0
+2026-08-18 | M | package.json / workspaces / package-lock.json / about.json | 版本 2.5.0 最终封板
+2026-08-18 | M | README.md / AGENT.md / docs/* | 发布线与路线图改为 2.5.0 封板
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮封板条目
+
 2026-08-18 | M | web/src/views/Workbench.vue | 首页主口号「皆可 Workflow」后加重标识「终端守护者」
 2026-08-18 | M | web/src/App.vue | 顶栏副标同步「终端守护者」
 2026-08-18 | M | docs/assets/screenshots/workbench-home.webp | 重拍首页截图
