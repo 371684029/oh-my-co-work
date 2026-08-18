@@ -15,7 +15,7 @@
 |------|------|------|
 | darwin-arm64 | [`oh-my-co-work-v2-darwin-arm64.zip`](./oh-my-co-work-v2-darwin-arm64.zip) | 20853718 |
 | linux-x64 | [`oh-my-co-work-v2-linux-x64.zip`](./oh-my-co-work-v2-linux-x64.zip) | 21027353 |
-| win32-x64 | [`oh-my-co-work-v2-win32-x64.zip`](./oh-my-co-work-v2-win32-x64.zip) | 21371748 |
+| win32-x64 | [`oh-my-co-work-v2-win32-x64.zip`](./oh-my-co-work-v2-win32-x64.zip) | 21372202 |
 
 版本：`2.6.0`（大版本 v2）
 
