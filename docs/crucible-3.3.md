@@ -25,7 +25,7 @@
 
 未装或未登录时点精灵弹教程。本机 `canRun`（已装且已登录）时点精灵**直接开熔炉 Grok TUI**，不先弹教程；若设置里尚未勾「已配置」，入口会自动勾上并把熔炉成员接到 `grok` 命令。第三方 `config.toml` 仍可在设置里补。去勾选跳设置 → **偏好**（`/settings/prefs`），不是 Grok 教程页。
 
-入口：点顶栏精灵（缺口时弹教程）· 设置 → **Grok Build 教程**。
+入口：右下角熔炉桌宠（缺口时弹教程；可戳可拖）· 设置 → **Grok Build 教程**。
 
 配置示例：`server/config/furnace/grok-config.example.toml`。所有 `api_key` 均为 **秘钥**，不要把真实密钥写进仓库。
 

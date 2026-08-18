@@ -35,11 +35,6 @@
         </nav>
       </div>
       <div class="top-right">
-        <FurnaceSprite
-          :state="furnaceSpriteState"
-          :title="furnaceTitle"
-          @click="onFurnaceClick"
-        />
         <button
           type="button"
           class="fullscreen-button"
@@ -56,6 +51,11 @@
     <main class="ecw-main">
       <router-view />
     </main>
+    <FurnaceSprite
+      :state="furnaceSpriteState"
+      :title="furnaceTitle"
+      @click="onFurnaceClick"
+    />
     <el-dialog
       v-model="grokGuideOpen"
       title="Grok Build 教程"
@@ -363,10 +363,6 @@ onUnmounted(() => {
   color: var(--ecw-text-1, #1d1d1f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0.5px 0 rgba(0, 0, 0, 0.04);
   font-weight: 600;
-}
-
-.top-right :deep(.furnace-sprite) {
-  margin-right: 2px;
 }
 
 .mvp-pill {

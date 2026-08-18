@@ -1,27 +1,67 @@
 <template>
-  <button
-    type="button"
-    class="furnace-sprite"
-    :class="`is-${state}`"
-    :title="title"
-    :aria-label="title"
-    @click="$emit('click')"
+  <div
+    class="furnace-pet"
+    :class="{
+      'is-min': minimized,
+      'is-hover': hovered,
+      'is-poke': poking,
+      [`is-${state}`]: true,
+    }"
+    :style="petStyle"
+    @pointerenter="onEnter"
+    @pointerleave="onLeave"
   >
-    <svg viewBox="0 0 48 64" aria-hidden="true">
-      <!-- 极简黑裙剪影：头 + 发 + 裙 -->
-      <ellipse class="hair" cx="24" cy="16" rx="11" ry="13" />
-      <circle class="face" cx="24" cy="18" r="7.2" />
-      <path
-        class="dress"
-        d="M16 28 C16 26 20 25 24 25 C28 25 32 26 32 28 L36 58 C36 61 30 63 24 63 C18 63 12 61 12 58 Z"
-      />
-    </svg>
-    <span class="furnace-sprite-name">熔炉</span>
-  </button>
+    <div v-if="!minimized" class="furnace-pet-stage">
+      <div v-show="showBubble" class="furnace-bubble" role="status">
+        <p>{{ bubbleText }}</p>
+        <div class="furnace-actions">
+          <button type="button" class="furnace-act furnace-act--primary" @click.stop="$emit('click')">
+            开熔炉
+          </button>
+          <button type="button" class="furnace-act" @click.stop="poke">戳一下</button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="furnace-pet-hit"
+        :title="title"
+        :aria-label="title"
+        @pointerdown="onDragStart"
+        @dblclick.stop="$emit('click')"
+      >
+        <img :src="spriteSrc" :alt="title" class="furnace-pet-img" draggable="false" />
+      </button>
+      <div class="furnace-pet-meta">
+        <span class="furnace-pet-name">熔炉</span>
+        <span class="furnace-pet-state">{{ stateLabel }}</span>
+        <button type="button" class="furnace-pet-min" title="收起" @click.stop="minimized = true">
+          收起
+        </button>
+      </div>
+    </div>
+    <button
+      v-else
+      type="button"
+      class="furnace-pet-peek"
+      :title="title"
+      :aria-label="`${title} · 展开`"
+      @click="minimized = false"
+    >
+      <img :src="spriteSrc" alt="" draggable="false" />
+    </button>
+  </div>
 </template>
 
 <script setup>
-defineProps({
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import imgIdle from '../assets/furnace-idle.png'
+import imgWorking from '../assets/furnace-working.png'
+import imgWaiting from '../assets/furnace-waiting.png'
+
+const POS_KEY = 'acw.furnacePet.pos'
+const MIN_KEY = 'acw.furnacePet.min'
+
+const props = defineProps({
   state: {
     type: String,
     default: 'idle',
@@ -30,91 +70,407 @@ defineProps({
   title: { type: String, default: '熔炉' },
 })
 defineEmits(['click'])
+
+const IDLE_LINES = ['有事叫我～', '点两下开熔炉。', '今天先适配，还是先聊？', '我就在这儿。']
+const WORK_LINES = ['在干活，稍等。', '改完再叫你。', '这边正忙着呢。']
+const WAIT_LINES = ['等人拍板。', '轮到你了。', '配好 Grok 就能开。']
+const POKE_LINES = ['嗯？', '别戳了……要开就点「开熔炉」。', '我在听。', '再戳也还是我。']
+
+const hovered = ref(false)
+const poking = ref(false)
+const minimized = ref(false)
+const showBubble = ref(false)
+const bubbleText = ref(IDLE_LINES[0])
+const pos = ref({ right: 18, bottom: 16, left: null, top: null })
+const dragging = ref(false)
+
+const spriteSrc = computed(() => {
+  if (props.state === 'working') return imgWorking
+  if (props.state === 'waiting') return imgWaiting
+  return imgIdle
+})
+
+const stateLabel = computed(() => {
+  if (props.state === 'working') return '工作中'
+  if (props.state === 'waiting') return '等人'
+  return '闲置'
+})
+
+const petStyle = computed(() => {
+  const s = {}
+  if (pos.value.left != null) s.left = `${pos.value.left}px`
+  else s.right = `${pos.value.right}px`
+  if (pos.value.top != null) s.top = `${pos.value.top}px`
+  else s.bottom = `${pos.value.bottom}px`
+  return s
+})
+
+let chatterTimer = 0
+let hideTimer = 0
+let pokeTimer = 0
+let lineIndex = 0
+let dragMoved = false
+let dragOff = { x: 0, y: 0 }
+
+function linesForState() {
+  if (props.state === 'working') return WORK_LINES
+  if (props.state === 'waiting') return WAIT_LINES
+  return IDLE_LINES
+}
+
+function say(text, linger = 4200) {
+  bubbleText.value = text
+  showBubble.value = true
+  window.clearTimeout(hideTimer)
+  if (hovered.value) return
+  hideTimer = window.setTimeout(() => {
+    if (!hovered.value) showBubble.value = false
+  }, linger)
+}
+
+function nextChatter() {
+  const lines = linesForState()
+  lineIndex = (lineIndex + 1) % lines.length
+  say(lines[lineIndex])
+}
+
+function poke() {
+  poking.value = false
+  void document.body.offsetWidth
+  poking.value = true
+  window.clearTimeout(pokeTimer)
+  pokeTimer = window.setTimeout(() => {
+    poking.value = false
+  }, 520)
+  const line = POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]
+  say(line, 2800)
+}
+
+function onEnter() {
+  hovered.value = true
+  showBubble.value = true
+  bubbleText.value = linesForState()[lineIndex % linesForState().length]
+}
+
+function onLeave() {
+  hovered.value = false
+  if (!poking.value) {
+    window.clearTimeout(hideTimer)
+    hideTimer = window.setTimeout(() => {
+      if (!hovered.value) showBubble.value = false
+    }, 900)
+  }
+}
+
+function persist() {
+  try {
+    localStorage.setItem(POS_KEY, JSON.stringify(pos.value))
+    localStorage.setItem(MIN_KEY, minimized.value ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
+
+function clampPos(left, top, el) {
+  const w = el?.offsetWidth || 160
+  const h = el?.offsetHeight || 220
+  const maxL = Math.max(8, window.innerWidth - w - 8)
+  const maxT = Math.max(8, window.innerHeight - h - 8)
+  return {
+    left: Math.min(maxL, Math.max(8, left)),
+    top: Math.min(maxT, Math.max(8, top)),
+    right: null,
+    bottom: null,
+  }
+}
+
+function onDragStart(e) {
+  if (e.button != null && e.button !== 0) return
+  const root = e.currentTarget.closest('.furnace-pet')
+  const rect = root.getBoundingClientRect()
+  dragMoved = false
+  dragging.value = true
+  dragOff = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  try {
+    e.currentTarget.setPointerCapture(e.pointerId)
+  } catch {
+    /* ignore */
+  }
+  const move = (ev) => {
+    const dx = ev.clientX - (rect.left + dragOff.x)
+    const dy = ev.clientY - (rect.top + dragOff.y)
+    if (!dragMoved && Math.hypot(dx, dy) < 6) return
+    dragMoved = true
+    pos.value = clampPos(ev.clientX - dragOff.x, ev.clientY - dragOff.y, root)
+  }
+  const up = () => {
+    dragging.value = false
+    window.removeEventListener('pointermove', move)
+    window.removeEventListener('pointerup', up)
+    if (dragMoved) persist()
+    else poke()
+  }
+  window.addEventListener('pointermove', move)
+  window.addEventListener('pointerup', up)
+}
+
+watch(minimized, persist)
+watch(
+  () => props.state,
+  () => {
+    lineIndex = 0
+    if (hovered.value) bubbleText.value = linesForState()[0]
+  },
+)
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(POS_KEY)
+    if (raw) pos.value = { ...pos.value, ...JSON.parse(raw) }
+    minimized.value = localStorage.getItem(MIN_KEY) === '1'
+  } catch {
+    /* ignore */
+  }
+  chatterTimer = window.setInterval(() => {
+    if (minimized.value || hovered.value || document.hidden) return
+    nextChatter()
+  }, 22000)
+  window.setTimeout(() => {
+    if (!minimized.value) say(linesForState()[0], 5600)
+  }, 900)
+})
+
+onUnmounted(() => {
+  window.clearInterval(chatterTimer)
+  window.clearTimeout(hideTimer)
+  window.clearTimeout(pokeTimer)
+})
 </script>
 
 <style scoped>
-.furnace-sprite {
-  display: inline-flex;
+.furnace-pet {
+  position: fixed;
+  z-index: 40;
+  width: 168px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.furnace-pet-stage,
+.furnace-pet-peek,
+.furnace-pet-hit,
+.furnace-act,
+.furnace-pet-min {
+  pointer-events: auto;
+}
+
+.furnace-pet-stage {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+}
+
+.furnace-bubble {
+  width: 168px;
+  padding: 8px 10px 8px;
+  border-radius: 14px 14px 14px 6px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 24px rgba(20, 16, 28, 0.14), inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  animation: furnace-bubble-in 0.22s ease;
+}
+
+.furnace-bubble p {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #2a2433;
+}
+
+.furnace-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.furnace-act {
+  flex: 1;
   border: 0;
-  padding: 4px 8px 2px;
-  background: transparent;
-  cursor: pointer;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.furnace-sprite svg {
-  width: 28px;
-  height: 38px;
-  display: block;
-}
-
-.hair,
-.dress {
-  fill: #16161a;
-}
-
-.face {
-  fill: #f3d7c4;
-}
-
-.furnace-sprite-name {
-  font-size: 10px;
+  border-radius: 999px;
+  padding: 4px 0;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  color: var(--ecw-text-2, #6e6e73);
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.06);
+  color: #4a4454;
 }
 
-.furnace-sprite.is-idle .dress {
-  fill: #1c1c22;
+.furnace-act--primary {
+  background: #16161a;
+  color: #fff;
 }
 
-.furnace-sprite.is-working svg {
-  animation: furnace-work 1.1s ease-in-out infinite;
+.furnace-act:hover {
+  filter: brightness(1.06);
 }
 
-.furnace-sprite.is-working .dress {
-  fill: #0b0b10;
+.furnace-pet-hit {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: grab;
 }
 
-.furnace-sprite.is-waiting svg {
+.furnace-pet-hit:active {
+  cursor: grabbing;
+}
+
+.furnace-pet-img {
+  display: block;
+  width: 132px;
+  height: auto;
+  filter: drop-shadow(0 10px 16px rgba(20, 16, 30, 0.22));
+  transform-origin: 50% 100%;
+  animation: furnace-breathe 3.4s ease-in-out infinite;
+}
+
+.furnace-pet.is-working .furnace-pet-img {
+  animation: furnace-work 1.15s ease-in-out infinite;
+}
+
+.furnace-pet.is-waiting .furnace-pet-img {
   animation: furnace-wait 1.8s ease-in-out infinite;
 }
 
-.furnace-sprite.is-waiting .face {
-  fill: #f7c9b8;
+.furnace-pet.is-hover .furnace-pet-img {
+  transform: translateY(-4px) scale(1.03);
 }
 
-@keyframes furnace-work {
+.furnace-pet.is-poke .furnace-pet-img {
+  animation: furnace-poke 0.5s ease;
+}
+
+.furnace-pet-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+.furnace-pet-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.furnace-pet-state {
+  font-size: 10px;
+  color: #8e8ea0;
+}
+
+.furnace-pet.is-working .furnace-pet-state {
+  color: #007aff;
+}
+
+.furnace-pet.is-waiting .furnace-pet-state {
+  color: #c2410c;
+}
+
+.furnace-pet-min {
+  border: 0;
+  background: transparent;
+  color: #8e8ea0;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.furnace-pet-peek {
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(20, 16, 28, 0.18);
+}
+
+.furnace-pet-peek img {
+  width: 64px;
+  height: 86px;
+  object-fit: cover;
+  object-position: 50% 8%;
+}
+
+.furnace-pet.is-min {
+  width: 64px;
+}
+
+@keyframes furnace-breathe {
   0%,
   100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-2px);
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes furnace-work {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1.4deg);
   }
 }
 
 @keyframes furnace-wait {
   0%,
   100% {
-    opacity: 1;
+    transform: translateY(0) rotate(0);
   }
-  50% {
-    opacity: 0.62;
+  40% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  70% {
+    transform: rotate(2deg);
   }
 }
 
-.furnace-sprite:hover .furnace-sprite-name {
-  color: var(--ecw-text-1, #1d1d1f);
+@keyframes furnace-poke {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: translateY(-10px) scale(1.06) rotate(-4deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes furnace-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .furnace-sprite.is-working svg,
-  .furnace-sprite.is-waiting svg {
+  .furnace-pet-img,
+  .furnace-pet.is-working .furnace-pet-img,
+  .furnace-pet.is-waiting .furnace-pet-img,
+  .furnace-bubble {
     animation: none;
   }
 }
