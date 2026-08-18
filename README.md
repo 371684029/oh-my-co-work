@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-2.5.0-409eff?style=flat-square" alt="version 2.5.0" />
+  <img src="https://img.shields.io/badge/version-2.6.0-409eff?style=flat-square" alt="version 2.6.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -176,6 +176,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.3.0 最终封板：设置释放资源、去掉超时/归档闸门、终端守护者
 - [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
+- [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
 - [ ] 后续：多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 
