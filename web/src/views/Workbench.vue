@@ -1780,7 +1780,7 @@ async function launchFurnaceFromSprite() {
     if (route.query.furnace) {
       const q = { ...route.query }
       delete q.furnace
-      router.replace({ path: route.path, query: q, params: route.params })
+      router.replace({ path: route.path, query: q })
     }
   } finally {
     furnaceLaunchLock = false
@@ -3233,7 +3233,7 @@ async function runSlash(cmd) {
       window.open(r.url, '_blank', 'noopener')
       clearSender()
     } else if (r.kind === 'agent') {
-      // 管理员 Agent：写入提示语到输入框，用户可补全后发送
+      // 熔炉 / 成员 Agent：写入提示语到输入框，用户可补全后发送
       await replaceSenderText(
         r.insertText || `请【${r.memberName || FURNACE_DISPLAY_NAME}】协助处理：`,
       )

@@ -248,6 +248,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import { GROK_BUILD_DOWNLOAD_URL } from '@acw/shared'
+import { setGrokConfigured } from '../../composables/furnaceUi.js'
 
 const grokDownloadUrl = GROK_BUILD_DOWNLOAD_URL
 
@@ -320,8 +321,8 @@ async function load() {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
       }
+      setGrokConfigured(!!s.grok.configured)
     }
-    if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
         maxLogMiB: s.quota.maxLogMiB || 10,
@@ -514,6 +515,7 @@ async function saveGrok() {
         configured: !!s.grok.configured,
       }
     }
+    setGrokConfigured(!!grok.value.configured)
     ElMessage.success('已保存 Grok 配置')
   } catch (e) {
     ElMessage.error(e.message)

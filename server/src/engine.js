@@ -44,6 +44,12 @@ function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
 }
 
+function stepAdaptInput(step, extra = {}) {
+  const input = { ...extra }
+  if (step?.adapt === true || extra.adapt === true) input.adapt = true
+  return Object.keys(input).length ? JSON.stringify(input) : null
+}
+
 /**
  * 场外插入游标：当前主线步索引（开场未跑则为 0 → 插到最前）。
  */
@@ -1110,7 +1116,7 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
       st === STEP_TYPE.HUMAN ? null : step.memberId || src?.member_id || null,
       NODE_STATUS.PENDING,
       flowNeedsWait(flow) || step.gate ? 1 : 0,
-      JSON.stringify({ ...meta }),
+      JSON.stringify({ ...meta, ...(step.adapt ? { adapt: true } : {}) }),
       JSON.stringify({ ...meta }),
     )
     created.push(
@@ -1586,8 +1592,8 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     )
 
   const insertNode = getDb().prepare(
-    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO node_instances (id, session_id, step_index, step_id, title, step_type, member_id, status, gate, input_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
 
   steps.forEach((step, i) => {
@@ -1605,6 +1611,7 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       st === STEP_TYPE.OFFSITE ? null : step.memberId || null,
       NODE_STATUS.PENDING,
       st === STEP_TYPE.OFFSITE ? 0 : flowNeedsWait(flow) || step.gate ? 1 : 0,
+      stepAdaptInput(step),
     )
   })
   // 场外不在开聊时预挂末尾；首次 @ / 插队时按当前时序游标插入
@@ -1731,6 +1738,7 @@ export function createSessionFromMember(memberId, { title } = {}) {
       memberId: raw.id,
       gate: false,
       flow: { admin: true, auto: true, human: false },
+      ...(raw.config?.adapt ? { adapt: true } : {}),
     },
   ]
   const config = {

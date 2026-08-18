@@ -251,6 +251,9 @@ function normalizeSteps(steps) {
             ? false
             : i === 0
     }
+    if (s.adapt === true || s.adapt === 'true' || s.adapt === 1) {
+      row.adapt = true
+    }
     return row
   })
 }

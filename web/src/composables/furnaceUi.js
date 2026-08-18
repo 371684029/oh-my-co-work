@@ -2,8 +2,19 @@ import { ref } from 'vue'
 
 /** 顶栏熔炉精灵三态：闲置 / 工作 / 等人 */
 export const furnaceSpriteState = ref('idle')
+/** null=未知；false=未配 Grok，精灵保持「等人」且不隐藏 */
+export const grokConfigured = ref(null)
+
+export function setGrokConfigured(v) {
+  grokConfigured.value = v === true
+  if (grokConfigured.value === false) furnaceSpriteState.value = 'waiting'
+}
 
 export function syncFurnaceSpriteState({ pendingGate, sessionStatus, terminals, nodes } = {}) {
+  if (grokConfigured.value === false) {
+    furnaceSpriteState.value = 'waiting'
+    return
+  }
   const status = String(sessionStatus || '')
   if (
     pendingGate ||

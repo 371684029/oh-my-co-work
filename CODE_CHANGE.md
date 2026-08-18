@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | server/src/services.js / engine.js | 步骤 adapt 标记落盘，开聊写入节点 input
+2026-08-18 | M | web/src/composables/furnaceUi.js / App.vue / Prefs.vue | 未配置 Grok 时精灵为等人态
+2026-08-18 | M | server/test/furnace.test.js | 3.0 验收：适配标记、无熔炉开聊、闸门不绕过
+2026-08-18 | M | docs/crucible-3x-plan.md | 勾选 3.0 验收
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | A | web/src/components/FurnaceSprite.vue / composables/furnaceUi.js | 3.0 黑裙精灵三态入口
 2026-08-18 | M | shared/index.js | 熔炉常量、是否适配 hover、isFurnaceMember
 2026-08-18 | M | server/src/slashCommands.js / config/slash-commands.json | 默认成员与斜杠展示名改为熔炉；可接 Grok TUI

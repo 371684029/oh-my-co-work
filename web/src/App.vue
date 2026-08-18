@@ -60,12 +60,12 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
-import { furnaceSpriteState } from './composables/furnaceUi.js'
+import { furnaceSpriteState, grokConfigured, setGrokConfigured } from './composables/furnaceUi.js'
 import { GROK_BUILD_DOWNLOAD_URL, FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
 import {
@@ -79,7 +79,13 @@ const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
 const isFullscreen = ref(false)
-const furnaceTitle = `${FURNACE_DISPLAY_NAME} · 闲置 / 工作 / 等人`
+const furnaceTitle = computed(() => {
+  if (grokConfigured.value === false) return `${FURNACE_DISPLAY_NAME} · 待配置 Grok`
+  const st = furnaceSpriteState.value
+  if (st === 'working') return `${FURNACE_DISPLAY_NAME} · 工作中`
+  if (st === 'waiting') return `${FURNACE_DISPLAY_NAME} · 等人`
+  return `${FURNACE_DISPLAY_NAME} · 闲置`
+})
 
 function syncFullscreenState() {
   isFullscreen.value = !!fullscreenElement()
@@ -138,6 +144,10 @@ async function onFurnaceClick() {
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   syncFullscreenState()
+  api.appSettings
+    .get()
+    .then((s) => setGrokConfigured(!!s.grok?.configured))
+    .catch(() => setGrokConfigured(false))
 })
 
 onUnmounted(() => {
