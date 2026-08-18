@@ -199,6 +199,6 @@ start.bat
 - `docs/technical-design.md` — Workflow、会话、节点、闸门设计
 - `docs/data-storage.md` — SQLite 与 Markdown 台账结构
 - `docs/tui-2x.md` — PTY 架构、协议与安全
-- `docs/crucible-3x.md` — 3.x 熔炉规划（加人/建群/闸门；桌面精灵）
+- `docs/crucible-3x.md` — 3.x 熔炉规划（加人/建群/闸门；桌面亦名熔炉）
 - `docs/script-guide.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/demo.md` — 演示流完整操作路径

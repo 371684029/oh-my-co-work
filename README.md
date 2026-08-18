@@ -161,7 +161,7 @@ packages/  可直接运行的三平台压缩包
 |------|------|
 | [2.x TUI 设计](./docs/tui-2x.md) | 产品形态、PTY 架构、协议、安全与平台兼容 |
 | [2.x 实施计划](./docs/tui-2x-plan.md) | 2.0～2.3 阶段、测试、风险与完成定义 |
-| [3.x 熔炉设计](./docs/crucible-3x.md) | 加人/建群/闸门可配熔炉；桌面精灵与 Grok Build（规划） |
+| [3.x 熔炉设计](./docs/crucible-3x.md) | 加人/建群/闸门可配熔炉；桌面形态就叫熔炉；Grok Build（规划） |
 | [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.3 阶段与完成定义 |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
@@ -180,8 +180,8 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
 - [ ] 后续：多终端标签治理、更多 CLI Adapter
-- [ ] 3.x 熔炉（规划）：加人/建群/闸门可配；桌面精灵与 Grok Build 见 [docs/crucible-3x.md](./docs/crucible-3x.md)
-- [ ] 桌面壳、托盘与系统通知（并入 3.3 精灵时再收口，避免三个壳）
+- [ ] 3.x 熔炉（规划）：加人/建群/闸门可配；桌面就叫熔炉；Grok Build 见 [docs/crucible-3x.md](./docs/crucible-3x.md)
+- [ ] 桌面壳、托盘与系统通知（并入 3.3 熔炉桌面，避免三个壳）
 
 ## 参与项目
 
