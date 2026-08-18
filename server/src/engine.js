@@ -751,6 +751,22 @@ function updateMessageContent(id, content) {
   return next
 }
 
+function findOpenAdapterToolMessage(sessionId, toolId) {
+  if (!sessionId || !toolId) return null
+  const rows = getDb()
+    .prepare(
+      `SELECT * FROM messages WHERE session_id = ? AND type = 'adapter_tool' ORDER BY created_at DESC LIMIT 40`,
+    )
+    .all(sessionId)
+  for (const row of rows) {
+    const content = parseJson(row.content_json, {})
+    if (content.toolId === toolId && content.phase === 'start') {
+      return { row, content }
+    }
+  }
+  return null
+}
+
 /**
  * Trusted JSONL adapter events → chat / gates / node output.
  * Failures must not throw into the PTY watcher.
@@ -779,6 +795,23 @@ export function applyAdapterEvent({
     }
     if (event.type === 'tool.start' || event.type === 'tool.end') {
       const started = event.type === 'tool.start'
+      if (!started) {
+        const open = findOpenAdapterToolMessage(sessionId, event.id)
+        if (open) {
+          const name = open.content.name || event.name || event.id
+          const pathText = open.content.path || event.path
+          updateMessageContent(open.row.id, {
+            ...open.content,
+            phase: 'end',
+            ok: event.ok !== false,
+            summary: event.summary || '',
+            name,
+            path: pathText,
+            text: `工具 ${name}${pathText ? ` · ${pathText}` : ''} ${event.ok === false ? '失败' : '完成'}${event.summary ? `：${event.summary}` : ''}`,
+          })
+          return
+        }
+      }
       addMessage(sessionId, {
         role: 'assistant',
         member_id: memberId || null,
@@ -787,12 +820,13 @@ export function applyAdapterEvent({
         content: {
           text: started
             ? `工具 ${event.name}${event.path ? ` · ${event.path}` : ''} 开始`
-            : `工具 ${event.id} ${event.ok === false ? '失败' : '结束'}${event.summary ? `：${event.summary}` : ''}`,
+            : `工具 ${event.name || event.id} ${event.ok === false ? '失败' : '结束'}${event.summary ? `：${event.summary}` : ''}`,
           toolId: event.id,
           name: event.name,
           path: event.path,
           ok: event.ok,
           phase: started ? 'start' : 'end',
+          summary: event.summary || '',
           terminalId,
         },
       })

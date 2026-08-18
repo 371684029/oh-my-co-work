@@ -42,7 +42,8 @@ app.use(ElementPlusX)
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
 | 终端消息 | `TerminalSessionCard` | 深灰玻璃终端卡；有限输出预览、运行态、进入终端与停止 |
-| 终端工作区 | `TerminalWorkspace` + `TerminalView` | 中栏占满；`xterm.js` 延迟加载，保留右侧流程轨；返回对话不停止进程 |
+| Adapter 工具卡 | `AdapterEventCard` | `tool.start/end` 与 `result` 在对话里显示为工具/结果卡，可进入对应终端 |
+| 终端工作区 | `TerminalWorkspace` + `TerminalView` | 中栏占满；多终端用标签切换；`xterm.js` 延迟加载，保留右侧流程轨；返回对话不停止进程 |
 | 中栏输入 | `XSender` | **`ref` 取文** + `@submit`；`@paste-file` 粘贴上传；`submit-type="enter"`；工具栏 `/` `@` `#` · 附件 · **复制** |
 | 附件 | 自研 chip + 气泡 file-card | 先 `POST /sessions/:id/files`，再随消息 `attachments[]` |
 | Composer 面板 | 自研 slash / at / hash | `/` 指令；`@` 成员/节点；`#` → `#群聊`/`#文件夹`/`#1`…/`#出n` |
@@ -129,6 +130,9 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 4. 终端获得焦点后键盘直接写入 PTY；多行粘贴需要确认。
 5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。
 6. 顶栏可切换整个工作台全屏；终端工具栏可切换 **满屏**（铺满 HTML 页面）与 **全屏**（浏览器系统全屏）。不自动进入，只在用户点按钮时切换。满屏层 Teleport 到 `body`，避免中栏毛玻璃（`backdrop-filter`）把 `position: fixed` 锁在卡片内。
+7. 同一会话多个终端时，对话顶栏和工作区用标签切换前台；后台 PTY 继续跑。JSONL `tool.start/end` 与 `result` 显示为对话工具卡，结束事件更新同一张卡。
+
+7. 同一会话多个终端时，对话顶栏和工作区用标签切换前台；后台 PTY 继续跑。
 
 ### Composer 三快捷（已实现）
 

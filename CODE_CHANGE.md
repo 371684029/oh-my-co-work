@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | web/src/components/terminal/AdapterEventCard.vue | JSONL 工具/结果对话卡
+2026-08-18 | M | web/src/views/Workbench.vue | 渲染工具卡，会话多终端标签条
+2026-08-18 | M | web/src/components/terminal/TerminalWorkspace.vue | 下拉改为终端标签
+2026-08-18 | M | server/src/engine.js | tool.end 更新同一张 start 卡
+2026-08-18 | M | server/test/adapterEvents.test.js | 覆盖工具卡合并
+2026-08-18 | M | docs/script-guide.md / frontend-components.md / mvp.md / README.md / tui-2x*.md | 同步工具卡与标签
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | web/src/components/terminal/TerminalWorkspace.vue | 满屏 Teleport 到 body，铺满整个网页视口
 2026-08-18 | M | docs/frontend-components.md / docs/mvp.md | 说明满屏不困在中栏毛玻璃卡片
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目

@@ -62,3 +62,44 @@ test('adapter question becomes a chat gate and answer clears it', () => {
   const done = getSessionDetail(session.id)
   assert.equal((done.session.context.pendingAdapterQuestions || []).length, 0)
 })
+
+test('adapter tool.start/end update the same chat card', () => {
+  const { session, member } = makeSession()
+  const node = getSessionDetail(session.id).nodes[0]
+  applyAdapterEvent({
+    sessionId: session.id,
+    nodeInstanceId: node.id,
+    memberId: member.id,
+    terminalId: 'term_tool',
+    event: { type: 'tool.start', id: 't1', name: 'edit_file', path: 'package.json' },
+  })
+  applyAdapterEvent({
+    sessionId: session.id,
+    nodeInstanceId: node.id,
+    memberId: member.id,
+    terminalId: 'term_tool',
+    event: { type: 'tool.end', id: 't1', ok: true, summary: '已保存' },
+  })
+  const tools = getSessionDetail(session.id).messages.filter((m) => m.type === 'adapter_tool')
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0].content.phase, 'end')
+  assert.equal(tools[0].content.name, 'edit_file')
+  assert.equal(tools[0].content.ok, true)
+  assert.match(tools[0].content.text, /完成/)
+})
+
+test('adapter tool.end without start still inserts a card', () => {
+  const { session, member } = makeSession()
+  const node = getSessionDetail(session.id).nodes[0]
+  applyAdapterEvent({
+    sessionId: session.id,
+    nodeInstanceId: node.id,
+    memberId: member.id,
+    terminalId: 'term_tool',
+    event: { type: 'tool.end', id: 'orphan', ok: false, summary: '中断' },
+  })
+  const tools = getSessionDetail(session.id).messages.filter((m) => m.type === 'adapter_tool')
+  assert.equal(tools.length, 1)
+  assert.equal(tools[0].content.phase, 'end')
+  assert.equal(tools[0].content.ok, false)
+})
