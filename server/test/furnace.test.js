@@ -24,6 +24,7 @@ const {
   createSessionFromMember,
   createSessionFromGroup,
   getSessionDetail,
+  handleGateAction,
 } = await import('../src/services.js')
 const { ensureAdminMember } = await import('../src/slashCommands.js')
 const { getAppSettings } = await import('../src/appSettings.js')
@@ -183,4 +184,42 @@ test('starting a group injects a node map so furnace sees each step', () => {
   const active = fs.readFileSync(path.join(dataRoot, 'furnace', 'ACTIVE.md'), 'utf8')
   assert.ok(active.includes('群聊主持'))
   assert.ok(active.includes('节点一览'))
+})
+
+test('starting a group run refreshes current node as it executes', async () => {
+  const echo = createMember({
+    name: `echo-run-${Date.now()}`,
+    displayName: '采集器',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: '采集完成' },
+  })
+  const group = createGroup({
+    title: '采集流水线',
+    description: '任意场景',
+    workFolder: process.cwd(),
+    steps: [
+      {
+        title: '拉数据',
+        type: 'member',
+        memberId: echo.id,
+        flow: { admin: false, auto: false, human: false },
+      },
+    ],
+  })
+  const session = createSessionFromGroup(group.id)
+  await handleGateAction(session.id, { action: 'approve_start', text: '开始跑采集' })
+  let detail
+  for (let i = 0; i < 40; i++) {
+    await wait(25)
+    detail = getSessionDetail(session.id)
+    if (detail.nodes?.[0]?.status === 'succeeded') break
+  }
+  assert.equal(detail.nodes[0].status, 'succeeded')
+  const sit = fs.readFileSync(path.join(dataRoot, 'furnace', 'SITUATION.md'), 'utf8')
+  assert.ok(sit.includes('意图：开始跑采集'))
+  assert.ok(sit.includes('#1 [成员 · 采集器]'))
+  assert.ok(sit.includes('拉数据'))
+  assert.ok(sit.includes('完成'))
+  assert.ok(sit.includes('当前节点：#1 拉数据'))
 })

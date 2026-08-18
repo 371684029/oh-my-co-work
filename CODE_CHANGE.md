@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | server/src/engine.js / furnaceSituation.js | 开始执行后游标刷新当前节点合同
+2026-08-18 | M | server/test/furnace.test.js | 通过启动后意图与完成态进地图
+2026-08-18 | M | docs/crucible-3.2.md / crucible-3x-plan.md | 开跑接线验收
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | docs/crucible-3.2.md | 收口为工作流 prompt 管理：节点一览 + 当前节点合同
 2026-08-18 | M | server/src/furnaceContext.js / furnaceSituation.js | 编译节点类型/执行者/适配/闸门/游标
 2026-08-18 | M | server/config/furnace/prompts/*.md | 角色壳改为读节点地图，不绑单一场景

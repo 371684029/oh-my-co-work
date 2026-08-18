@@ -155,3 +155,13 @@ export function syncFurnaceSessionContext(
     situation: facts,
   })
 }
+
+/** 游标移动时刷新地图；失败不挡流程。 */
+export function touchFurnaceWorkflow(sessionId, opts = {}) {
+  try {
+    return syncFurnaceSessionContext(sessionId, opts)
+  } catch (e) {
+    console.warn('[acw] furnace workflow', e?.message || e)
+    return null
+  }
+}

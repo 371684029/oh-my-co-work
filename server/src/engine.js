@@ -44,7 +44,7 @@ import { prepareAdaptForMember, adaptStatusText } from './adaptBackup.js'
 import {
   resolveAdaptFurnaceRole,
 } from './furnaceContext.js'
-import { syncFurnaceSessionContext } from './furnaceSituation.js'
+import { syncFurnaceSessionContext, touchFurnaceWorkflow } from './furnaceSituation.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -1881,6 +1881,7 @@ export async function advance(sessionId) {
         planned: true,
       }
       updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+      touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
       addMessage(sessionId, {
         role: 'system',
         type: 'status',
@@ -1907,6 +1908,7 @@ export async function advance(sessionId) {
     // run step
     updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
     updateNode(node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
+    touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
     emitSession(sessionId, {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
@@ -1951,6 +1953,7 @@ export async function advance(sessionId) {
         status: NODE_STATUS.WAITING_HUMAN,
       })
       updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
       addMessage(sessionId, {
         role: 'system',
         type: 'gate',
@@ -2160,6 +2163,7 @@ export async function advance(sessionId) {
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
       finished: true,
     })
+    touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
 
     // 节点完成：弹窗脚本默认保留黑窗；detach 同理。下一成员步开始时会统一释放。
     if (!result?.detached && !result?.preserveConsole) {
@@ -2439,6 +2443,8 @@ function openFlowGate(sessionId, node, payload) {
       console.warn('[acw] furnace review context', e?.message || e)
     }
     refreshSessionAnnouncement(sessionId)
+  } else {
+    touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
   }
   emitSession(sessionId, {
     type: 'gate.request',
