@@ -329,6 +329,7 @@ async function load() {
       setGrokConfigured(!!s.grok.configured)
     }
     adaptBackup.value = s.adapt?.backup !== false
+    if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
         maxLogMiB: s.quota.maxLogMiB || 10,
