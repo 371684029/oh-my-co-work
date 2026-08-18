@@ -591,15 +591,21 @@
             <AppLogo size="xl" class="welcome-logo" :glow="true" />
           </div>
           <h1 class="core-slogan">
-            <span>人机协同</span>
-            <i class="dot">·</i>
-            <span>万物归元</span>
-            <i class="dot">·</i>
-            <span class="accent">皆可 Workflow</span>
+            <span class="slogan-lead">
+              <span>人机协同</span>
+              <i class="dot">·</i>
+              <span>万物归元</span>
+              <i class="dot">·</i>
+            </span>
+            <span class="slogan-tail">
+              <span class="accent">皆可 Workflow</span>
+              <i class="dot">·</i>
+              <span class="guard-mark">终端守护者</span>
+            </span>
           </h1>
           <p class="core-living">
             <span class="living-lead">节点是死的，人是活的</span>
-            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来 · 终端守护者</span>
+            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来</span>
           </p>
           <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
           <p class="welcome-journey" aria-label="上手三步">
@@ -4221,7 +4227,7 @@ loadLists().then(() => {
 .welcome-hero {
   position: relative;
   z-index: 1;
-  width: min(520px, 100%);
+  width: min(620px, 100%);
   text-align: center;
   padding: 36px 28px 28px;
   border-radius: 28px;
@@ -4288,13 +4294,26 @@ loadLists().then(() => {
 .core-slogan {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  column-gap: 0;
+  row-gap: 8px;
   margin: 0 0 16px;
-  font-size: clamp(23px, 2.8vw, 30px);
+  font-size: clamp(21px, 2.5vw, 28px);
   font-weight: 780;
   letter-spacing: -0.045em;
   line-height: 1.28;
   color: var(--ecw-text-1, #1d1d1f);
   animation: welcome-rise 0.75s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.core-slogan .slogan-lead,
+.core-slogan .slogan-tail {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .core-slogan .dot {
@@ -4309,6 +4328,22 @@ loadLists().then(() => {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.core-slogan .guard-mark {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16em 0.52em 0.2em;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #007aff 0%, #2b7cd3 48%, #34c759 100%);
+  color: #fff;
+  font-size: 0.58em;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 8px 20px rgba(0, 122, 255, 0.28);
 }
 
 .core-living {
