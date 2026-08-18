@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | web/src/views/settings/Prefs.vue | 补回 if (s.quota)，修复 load() 语法使 vite 能打包
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | package.json / workspaces / about.json | 版本 3.3.0 最终封板
 2026-08-18 | M | README.md / AGENT.md / docs/mvp.md / crucible-3x*.md | 3.3.0 封板口径
 2026-08-18 | M | server/src/grokStatus.js / App.vue / furnaceUi.js | 已登录即可进熔炉；教程「仍打开熔炉」
