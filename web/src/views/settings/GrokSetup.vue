@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h2 class="page-title">Grok Build</h2>
-        <p class="page-desc">未安装、未登录或未写好配置时，按本页教程补齐。秘钥只填在本机 config.toml。</p>
+        <p class="page-desc">未安装、未登录或未写好配置时，按本页教程补齐。秘钥只填在本机 config.toml。勾选「已配置」请到「设置」。</p>
       </div>
       <el-button size="small" :loading="loading" @click="reload">重新检测</el-button>
     </div>

@@ -96,6 +96,7 @@ export function probeGrokStatus({ command = 'grok' } = {}) {
     hasConfigFile,
     hasAuth,
     ready: installed && loggedIn && configured,
+    canRun: installed && loggedIn,
     gaps,
     home,
     configPath,

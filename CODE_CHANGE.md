@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | package.json / workspaces / about.json | 版本 3.3.0 最终封板
+2026-08-18 | M | README.md / AGENT.md / docs/mvp.md / crucible-3x*.md | 3.3.0 封板口径
+2026-08-18 | M | server/src/grokStatus.js / App.vue / furnaceUi.js | 已登录即可进熔炉；教程「仍打开熔炉」
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | A | docs/crucible-3.3.md | 未安装/未登录/未配置时展示 Grok 教程
 2026-08-18 | A | server/config/furnace/grok-config.example.toml | 配置示例，api_key 均为秘钥
 2026-08-18 | A | server/src/grokStatus.js / test/grokStatus.test.js | 探测安装、登录、配置缺口

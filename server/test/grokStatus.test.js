@@ -18,6 +18,7 @@ test('probe reports install/login/config gaps when grok home is empty', () => {
   assert.equal(s.loggedIn, false)
   assert.equal(s.configured, false)
   assert.equal(s.ready, false)
+  assert.equal(s.canRun, false)
   assert.ok(s.gaps.includes('install'))
   assert.ok(s.gaps.includes('login'))
   assert.ok(s.gaps.includes('config'))
@@ -31,16 +32,21 @@ test('example config uses placeholder keys only', () => {
   assert.ok(raw.includes('deepseek-v4-pro'))
 })
 
-test('real key in config.toml counts as configured and logged in', () => {
+test('official login without custom keys can run but is not fully configured', () => {
+  const bin = path.join(home, 'bin')
+  fs.mkdirSync(bin, { recursive: true })
+  fs.writeFileSync(path.join(bin, 'grok'), '', 'utf8')
+  fs.writeFileSync(path.join(home, 'auth.json'), '{"user":"x"}', 'utf8')
   fs.writeFileSync(
     path.join(home, 'config.toml'),
-    `[models]\ndefault = "x"\n[model.x]\nmodel = "x"\napi_key = "sk-not-a-placeholder"\n`,
+    `[models]\ndefault = "x"\n[model.x]\nmodel = "x"\napi_key = "秘钥"\n`,
     'utf8',
   )
   const s = probeGrokStatus({ command: 'grok-acw-missing-binary' })
-  assert.equal(s.configured, true)
+  assert.equal(s.installed, true)
   assert.equal(s.loggedIn, true)
-  assert.equal(s.installed, false)
-  assert.ok(!s.gaps.includes('config'))
-  assert.ok(!s.gaps.includes('login'))
+  assert.equal(s.configured, false)
+  assert.equal(s.canRun, true)
+  assert.equal(s.ready, false)
+  assert.ok(s.gaps.includes('config'))
 })

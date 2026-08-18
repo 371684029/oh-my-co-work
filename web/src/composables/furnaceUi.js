@@ -13,15 +13,15 @@ export function setGrokConfigured(v) {
 
 export function setFurnaceGrokGate({ optedIn, probe } = {}) {
   grokProbe.value = probe || null
-  const ready = !!optedIn && !!probe?.ready
-  grokConfigured.value = ready
-  if (!ready) furnaceSpriteState.value = 'waiting'
+  const canRun = !!probe?.canRun || (!!probe?.installed && !!probe?.loggedIn)
+  grokConfigured.value = !!optedIn && canRun
+  if (!grokConfigured.value) furnaceSpriteState.value = 'waiting'
 }
 
 export function grokSetupNeeded(probe, optedIn) {
   if (!optedIn) return true
   if (!probe) return true
-  return !probe.ready
+  return !probe.installed || !probe.loggedIn || !probe.configured
 }
 
 export function syncFurnaceSpriteState({ pendingGate, sessionStatus, terminals, nodes } = {}) {

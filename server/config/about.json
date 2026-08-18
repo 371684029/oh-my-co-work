@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "2.6.0",
+  "version": "3.3.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -12,6 +12,18 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "3.3.0",
+      "date": "2026-08-18",
+      "title": "3.3.0 最终封板：熔炉与 Grok Build 教程",
+      "items": [
+        "熔炉替换管理员入口：精灵三态、是否适配、适配备份与标记。",
+        "工作流 prompt：节点一览与当前节点合同随开跑刷新。",
+        "未安装 / 未登录 / 未配置 Grok Build 时展示下载、登录、配置教程；示例 api_key 为「秘钥」。",
+        "官方已登录但未写第三方模型时仍可进熔炉，教程可继续补配置。",
+        "3.3.0 最终封板。"
+      ]
+    },
     {
       "version": "2.6.0",
       "date": "2026-08-18",

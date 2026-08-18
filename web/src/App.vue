@@ -66,7 +66,8 @@
       <GrokSetupGuide :status="grokGuideStatus" :example-toml="grokExampleToml" />
       <template #footer>
         <el-button @click="grokGuideOpen = false">关闭</el-button>
-        <el-button type="primary" @click="goGrokSettings">去设置勾选已配置</el-button>
+        <el-button v-if="grokCanContinue" @click="openFurnaceAnyway">仍打开熔炉</el-button>
+        <el-button type="primary" @click="goGrokSettings">去设置</el-button>
       </template>
     </el-dialog>
   </div>
@@ -103,6 +104,10 @@ const isFullscreen = ref(false)
 const grokGuideOpen = ref(false)
 const grokGuideStatus = ref({})
 const grokExampleToml = ref('')
+const grokOptedIn = ref(false)
+const grokCanContinue = computed(
+  () => grokOptedIn.value && !!(grokGuideStatus.value.canRun || (grokGuideStatus.value.installed && grokGuideStatus.value.loggedIn)),
+)
 const furnaceTitle = computed(() => {
   const gaps = grokProbe.value?.gaps || []
   if (grokConfigured.value === false || gaps.length) {
@@ -145,12 +150,18 @@ async function refreshGrokGate() {
     const [s, probe] = await Promise.all([api.appSettings.get(), api.grok.status()])
     grokGuideStatus.value = probe
     grokExampleToml.value = probe.exampleToml || ''
-    setFurnaceGrokGate({ optedIn: !!s.grok?.configured, probe })
+    grokOptedIn.value = !!s.grok?.configured
+    setFurnaceGrokGate({ optedIn: grokOptedIn.value, probe })
     return { s, probe }
   } catch {
     setGrokConfigured(false)
     return { s: null, probe: null }
   }
+}
+
+function openFurnaceSession() {
+  const path = route.path.startsWith('/workbench') ? route.path : '/workbench'
+  router.push({ path, query: { ...route.query, furnace: '1' } })
 }
 
 async function onFurnaceClick() {
@@ -159,13 +170,17 @@ async function onFurnaceClick() {
     grokGuideOpen.value = true
     return
   }
-  const path = route.path.startsWith('/workbench') ? route.path : '/workbench'
-  router.push({ path, query: { ...route.query, furnace: '1' } })
+  openFurnaceSession()
+}
+
+function openFurnaceAnyway() {
+  grokGuideOpen.value = false
+  openFurnaceSession()
 }
 
 function goGrokSettings() {
   grokGuideOpen.value = false
-  router.push('/settings/grok')
+  router.push('/settings/prefs')
 }
 
 onMounted(() => {
