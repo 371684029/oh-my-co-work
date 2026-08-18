@@ -66,8 +66,8 @@
       <GrokSetupGuide :status="grokGuideStatus" :example-toml="grokExampleToml" />
       <template #footer>
         <el-button @click="grokGuideOpen = false">关闭</el-button>
-        <el-button v-if="grokCanContinue" @click="openFurnaceAnyway">仍打开熔炉</el-button>
-        <el-button type="primary" @click="goGrokSettings">去设置</el-button>
+        <el-button v-if="grokCanContinue" type="primary" @click="openFurnaceAnyway">打开熔炉</el-button>
+        <el-button :type="grokCanContinue ? 'default' : 'primary'" @click="goGrokSettings">去设置</el-button>
       </template>
     </el-dialog>
   </div>
@@ -82,10 +82,10 @@ import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
 import {
   furnaceSpriteState,
-  grokConfigured,
   grokProbe,
   setGrokConfigured,
   setFurnaceGrokGate,
+  grokCanRun,
   grokSetupNeeded,
 } from './composables/furnaceUi.js'
 import { FURNACE_DISPLAY_NAME } from '@acw/shared'
@@ -104,13 +104,11 @@ const isFullscreen = ref(false)
 const grokGuideOpen = ref(false)
 const grokGuideStatus = ref({})
 const grokExampleToml = ref('')
-const grokOptedIn = ref(false)
-const grokCanContinue = computed(
-  () => grokOptedIn.value && !!(grokGuideStatus.value.canRun || (grokGuideStatus.value.installed && grokGuideStatus.value.loggedIn)),
-)
+const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
 const furnaceTitle = computed(() => {
-  const gaps = grokProbe.value?.gaps || []
-  if (grokConfigured.value === false || gaps.length) {
+  const probe = grokProbe.value
+  const gaps = probe?.gaps || []
+  if (!grokCanRun(probe)) {
     if (gaps.includes('install')) return `${FURNACE_DISPLAY_NAME} · 待安装 Grok`
     if (gaps.includes('login')) return `${FURNACE_DISPLAY_NAME} · 待登录 Grok`
     if (gaps.includes('config')) return `${FURNACE_DISPLAY_NAME} · 待配置 Grok`
@@ -150,8 +148,7 @@ async function refreshGrokGate() {
     const [s, probe] = await Promise.all([api.appSettings.get(), api.grok.status()])
     grokGuideStatus.value = probe
     grokExampleToml.value = probe.exampleToml || ''
-    grokOptedIn.value = !!s.grok?.configured
-    setFurnaceGrokGate({ optedIn: grokOptedIn.value, probe })
+    setFurnaceGrokGate({ probe })
     return { s, probe }
   } catch {
     setGrokConfigured(false)
@@ -164,17 +161,39 @@ function openFurnaceSession() {
   router.push({ path, query: { ...route.query, furnace: '1' } })
 }
 
+/** 本机已能跑 Grok 时，把熔炉成员接到 grok 命令，否则只开聊天回声 */
+async function ensureFurnaceGrokWired(s, probe) {
+  if (!grokCanRun(probe) || s?.grok?.configured) return s
+  try {
+    const next = await api.appSettings.update({
+      grok: {
+        command: s?.grok?.command || probe?.command || 'grok',
+        configured: true,
+      },
+    })
+    setFurnaceGrokGate({ probe })
+    return next
+  } catch {
+    return s
+  }
+}
+
 async function onFurnaceClick() {
   const { s, probe } = await refreshGrokGate()
-  if (grokSetupNeeded(probe, !!s?.grok?.configured)) {
+  grokGuideStatus.value = probe || {}
+  if (grokSetupNeeded(probe)) {
     grokGuideOpen.value = true
     return
   }
+  grokGuideOpen.value = false
+  await ensureFurnaceGrokWired(s, probe)
   openFurnaceSession()
 }
 
-function openFurnaceAnyway() {
+async function openFurnaceAnyway() {
   grokGuideOpen.value = false
+  const { s, probe } = await refreshGrokGate()
+  await ensureFurnaceGrokWired(s, probe)
   openFurnaceSession()
 }
 

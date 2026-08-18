@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | M | shared/index.js / furnaceUi.js / App.vue | 已装且已登录直接开熔炉 TUI，不再被设置开关挡住
+2026-08-18 | M | Prefs.vue / GrokSetup.vue / docs/crucible-3.3.md / frontend-components.md | 入口文案：教程只在未装或未登录时弹出
+2026-08-18 | M | server/test/grokStatus.test.js / furnace.test.js | 覆盖 canRun 免教程、勾选后接到 grok 脚本
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | web/src/views/settings/Prefs.vue | 补回 if (s.quota)，修复 load() 语法使 vite 能打包
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
 

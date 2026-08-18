@@ -142,8 +142,8 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉先跑本机 Grok TUI。未安装、未登录或未写好 <code>config.toml</code> 时，点精灵会打开教程。
-        完整步骤见
+        熔炉先跑本机 Grok TUI。本机已安装并登录后，点精灵直接开终端，不再先弹教程。
+        仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
       <el-form label-position="top" class="admin-form">
@@ -254,7 +254,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
-import { setGrokConfigured } from '../../composables/furnaceUi.js'
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
@@ -326,7 +325,6 @@ async function load() {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
       }
-      setGrokConfigured(!!s.grok.configured)
     }
     adaptBackup.value = s.adapt?.backup !== false
     if (s.quota) {
@@ -523,7 +521,6 @@ async function saveGrok() {
         configured: !!s.grok.configured,
       }
     }
-    setGrokConfigured(!!grok.value.configured)
     if (s.adapt) adaptBackup.value = s.adapt.backup !== false
     ElMessage.success('已保存 Grok 配置')
   } catch (e) {

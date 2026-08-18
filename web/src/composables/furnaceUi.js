@@ -1,8 +1,11 @@
 import { ref } from 'vue'
+import { grokCanRun, grokSetupNeeded } from '@acw/shared'
+
+export { grokCanRun, grokSetupNeeded }
 
 /** 顶栏熔炉精灵三态：闲置 / 工作 / 等人 */
 export const furnaceSpriteState = ref('idle')
-/** null=未知；false=未配好 Grok，精灵保持「等人」且不隐藏 */
+/** null=未知；false=本机还跑不了 Grok，精灵保持「等人」且不隐藏 */
 export const grokConfigured = ref(null)
 export const grokProbe = ref(null)
 
@@ -11,17 +14,10 @@ export function setGrokConfigured(v) {
   if (grokConfigured.value === false) furnaceSpriteState.value = 'waiting'
 }
 
-export function setFurnaceGrokGate({ optedIn, probe } = {}) {
+export function setFurnaceGrokGate({ probe } = {}) {
   grokProbe.value = probe || null
-  const canRun = !!probe?.canRun || (!!probe?.installed && !!probe?.loggedIn)
-  grokConfigured.value = !!optedIn && canRun
+  grokConfigured.value = grokCanRun(probe)
   if (!grokConfigured.value) furnaceSpriteState.value = 'waiting'
-}
-
-export function grokSetupNeeded(probe, optedIn) {
-  if (!optedIn) return true
-  if (!probe) return true
-  return !probe.installed || !probe.loggedIn || !probe.configured
 }
 
 export function syncFurnaceSpriteState({ pendingGate, sessionStatus, terminals, nodes } = {}) {

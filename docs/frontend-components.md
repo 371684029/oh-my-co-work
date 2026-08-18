@@ -51,7 +51,7 @@ app.use(ElementPlusX)
 | 右栏流程 | 自研 `flow-step` | 当前 / 执行中呼吸 / **未执行** / 完成落定 / **场外**；适配角标 + 「适配」筛选 Tab |
 | 右栏资源 | 自研 resources pane | 进程登记、目录占用提示、再杀一次、归档对方 |
 | 右栏群报告 | 自研 announce 卡片 | **# 参数** + 各节点入出；刷新 / **打开 MD**（`ANNOUNCEMENT.md`） |
-| 设置 | `el-form` / `el-table` / `el-drawer` | 成员、群模板、**Grok Build 教程**（未装/未登录/未配置） |
+| 设置 | `el-form` / `el-table` / `el-drawer` | 成员、群模板、**Grok Build 教程**（未装/未登录时弹；已登录点精灵直接开 TUI） |
 | 支持与交流 | `Support.vue` | 侧栏浅灰「其它」分区，非项目功能 |
 
 ### XSender 注意（必读）

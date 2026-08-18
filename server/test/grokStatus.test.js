@@ -11,6 +11,7 @@ const {
   probeGrokStatus,
   loadGrokExampleConfig,
 } = await import('../src/grokStatus.js')
+const { grokCanRun, grokSetupNeeded } = await import('@acw/shared')
 
 test('probe reports install/login/config gaps when grok home is empty', () => {
   const s = probeGrokStatus({ command: 'grok-acw-missing-binary' })
@@ -22,6 +23,8 @@ test('probe reports install/login/config gaps when grok home is empty', () => {
   assert.ok(s.gaps.includes('install'))
   assert.ok(s.gaps.includes('login'))
   assert.ok(s.gaps.includes('config'))
+  assert.equal(grokCanRun(s), false)
+  assert.equal(grokSetupNeeded(s), true)
 })
 
 test('example config uses placeholder keys only', () => {
@@ -49,4 +52,12 @@ test('official login without custom keys can run but is not fully configured', (
   assert.equal(s.canRun, true)
   assert.equal(s.ready, false)
   assert.ok(s.gaps.includes('config'))
+  assert.equal(grokCanRun(s), true)
+  assert.equal(grokSetupNeeded(s), false)
+})
+
+test('setup is not needed when probe can run, even without settings opt-in', () => {
+  assert.equal(grokSetupNeeded({ installed: true, loggedIn: true, configured: true, canRun: true }), false)
+  assert.equal(grokSetupNeeded({ installed: true, loggedIn: true, configured: false, canRun: true }), false)
+  assert.equal(grokSetupNeeded(null), true)
 })

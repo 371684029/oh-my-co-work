@@ -27,7 +27,7 @@ const {
   handleGateAction,
 } = await import('../src/services.js')
 const { ensureAdminMember } = await import('../src/slashCommands.js')
-const { getAppSettings } = await import('../src/appSettings.js')
+const { getAppSettings, updateAppSettings } = await import('../src/appSettings.js')
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -55,6 +55,21 @@ test('ensureAdminMember seeds 熔炉 with stable unified_admin key', () => {
   const again = ensureAdminMember()
   assert.equal(again.id, m.id)
   assert.equal(again.display_name, FURNACE_DISPLAY_NAME)
+})
+
+test('ensureAdminMember wires grok script after grok.configured is saved', () => {
+  const m = ensureAdminMember()
+  assert.equal(m.kind, MEMBER_KIND.ECHO)
+  updateAppSettings({ grok: { command: 'grok', configured: true } })
+  const wired = ensureAdminMember()
+  assert.equal(wired.id, m.id)
+  assert.equal(wired.kind, MEMBER_KIND.SCRIPT)
+  assert.equal(wired.config?.script?.command, 'grok')
+  assert.equal(wired.config?.script?.executionMode, 'terminal')
+  updateAppSettings({ grok: { command: 'grok', configured: false } })
+  const config = { ...(wired.config || {}) }
+  delete config.script
+  updateMember(wired.id, { kind: MEMBER_KIND.ECHO, config })
 })
 
 test('ensureAdminMember renames legacy 统一管理员 display name', () => {
