@@ -92,5 +92,6 @@
 ## 相关
 
 - UI：[frontend-components.md](./frontend-components.md)  
+- 3.x 熔炉角色标（黑裙两态，不替代本 Logo）：[crucible-3x.md](./crucible-3x.md) §5.3  
 - 宗旨：[mvp.md](./mvp.md)  
 - 上手：[../README.md](../README.md)  
