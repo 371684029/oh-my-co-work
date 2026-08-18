@@ -38,6 +38,18 @@ test('bootstrap requires a trusted Origin and then issues a token', () => {
   bootstrapLocalAccess({ headers: { origin: 'https://example.com' } }, evil)
   assert.equal(evil.out.statusCode, 403)
 
+  const crossSite = jsonRes()
+  bootstrapLocalAccess(
+    { headers: { host: '127.0.0.1:3780', 'sec-fetch-site': 'cross-site' } },
+    crossSite,
+  )
+  assert.equal(crossSite.out.statusCode, 403)
+
+  const sameOriginNoHeader = jsonRes()
+  bootstrapLocalAccess({ headers: { host: '127.0.0.1:3780' } }, sameOriginNoHeader)
+  assert.equal(sameOriginNoHeader.out.statusCode, 200)
+  assert.ok(sameOriginNoHeader.out.body?.token)
+
   const ok = jsonRes()
   bootstrapLocalAccess({ headers: { origin: 'http://127.0.0.1:5173' } }, ok)
   assert.equal(ok.out.statusCode, 200)

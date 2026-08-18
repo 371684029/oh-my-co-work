@@ -48,7 +48,7 @@ oh-my-co-work/
 本机 API 默认只服务本机页面，避免任意网页跨站驱动 `/api` 或终端：
 
 - 启动时生成随机 `ACW_API_TOKEN`（也可用环境变量固定）。
-- `GET /api/bootstrap` 在可信 Origin 下下发令牌；前端 `web/src/api.js` 缓存后用于 REST 与 WebSocket。
+- `GET` / `POST /api/bootstrap` 在本机页面下发令牌；无 Origin 时只要 Host 是回环且不是跨站。前端 `web/src/api.js` 用 POST 领取后用于 REST 与 WebSocket。
 - CORS / Origin 仅允许 `127.0.0.1`、`localhost`、`::1`。
 - `/api/health` 免令牌；其余 `/api` 需要 `X-ACW-Token`、`Authorization: Bearer` 或 query `token`。
 - WebSocket `verifyClient` 同样校验 Origin 与 URL 中的 `token`。
