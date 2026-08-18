@@ -8,19 +8,49 @@ function safeEqual(a, b) {
   return left.length === right.length && crypto.timingSafeEqual(left, right)
 }
 
+function hostnameOf(hostOrUrl) {
+  const raw = String(hostOrUrl || '').trim()
+  if (!raw || raw === 'null') return ''
+  try {
+    const url = raw.includes('://') ? new URL(raw) : new URL(`http://${raw}`)
+    return String(url.hostname || '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+export function isLoopbackHostname(host) {
+  const h = hostnameOf(host)
+  return h === '127.0.0.1' || h === 'localhost' || h === '::1' || h.endsWith('.localhost')
+}
+
 export function isTrustedOrigin(origin) {
   if (!origin) return true
   if (origin === 'null') return false
   try {
     const url = new URL(origin)
-    const host = url.hostname.toLowerCase()
     return (
       (url.protocol === 'http:' || url.protocol === 'https:') &&
-      (host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1')
+      isLoopbackHostname(url.hostname)
     )
   } catch {
     return false
   }
+}
+
+/** 本机页面发起的请求：可信 Origin，或同源回环且不是跨站。 */
+export function isTrustedLocalRequest(req) {
+  const origin = req?.headers?.origin
+  const host = req?.headers?.host
+  const site = String(req?.headers['sec-fetch-site'] || '').toLowerCase()
+  const referer = req?.headers?.referer
+
+  if (site === 'cross-site') return false
+  if (origin === 'null') return false
+  if (origin) return isTrustedOrigin(origin)
+  if (!isLoopbackHostname(host)) return false
+  if (referer && !isTrustedOrigin(referer)) return false
+  return true
 }
 
 export function rejectUntrustedOrigin(req, res, next) {
@@ -31,8 +61,7 @@ export function rejectUntrustedOrigin(req, res, next) {
 }
 
 export function bootstrapLocalAccess(req, res) {
-  const origin = req?.headers?.origin
-  if (!origin || !isTrustedOrigin(origin)) {
+  if (!isTrustedLocalRequest(req)) {
     return res.status(403).json({ error: '拒绝非本机页面访问' })
   }
   res.setHeader('Cache-Control', 'no-store')
@@ -62,4 +91,3 @@ export function requireLocalAccess(req, res, next) {
   }
   next()
 }
-

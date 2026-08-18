@@ -133,6 +133,7 @@ app.use(
 )
 app.use(express.json({ limit: '2mb' }))
 app.get('/api/bootstrap', bootstrapLocalAccess)
+app.post('/api/bootstrap', bootstrapLocalAccess)
 app.use('/api', requireLocalAccess)
 app.use('/api', routes)
 

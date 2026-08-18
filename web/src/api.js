@@ -3,7 +3,12 @@ let accessTokenPromise = null
 
 async function accessToken({ refresh = false } = {}) {
   if (refresh || !accessTokenPromise) {
-    accessTokenPromise = fetch(`${BASE}/bootstrap`, { cache: 'no-store' })
+    accessTokenPromise = fetch(`${BASE}/bootstrap`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: '{}',
+    })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok || !data.token) throw new Error(data.error || '无法建立本地安全连接')
