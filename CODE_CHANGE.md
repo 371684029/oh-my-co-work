@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | docs/crucible-3x.md | 3.x 熔炉设计：加人/建群/闸门可配；精灵与 Grok Build 边界
+2026-08-18 | A | docs/crucible-3x-plan.md | 3.x 实施计划 3.0～3.3
+2026-08-18 | M | docs/README.md / README.md / AGENT.md / mvp.md / tui-2x.md / tui-2x-plan.md / technical-design.md | 索引与后置指向 3.x 规划
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | web/src/components/terminal/TerminalWorkspace.vue | 满屏 Teleport 到 body，铺满整个网页视口
 2026-08-18 | M | docs/frontend-components.md / docs/mvp.md | 说明满屏不困在中栏毛玻璃卡片
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目

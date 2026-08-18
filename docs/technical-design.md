@@ -9,6 +9,8 @@
 | 更新日期 | 2026-07-16（UI 氛围 · 点赞支持 · 等人标红） |
 | 上手 | 根目录 [README.md](../README.md) |
 | MVP 对照 | [mvp.md](./mvp.md) |
+| 2.x TUI | [tui-2x.md](./tui-2x.md) |
+| 3.x 熔炉（规划） | [crucible-3x.md](./crucible-3x.md) |
 | 工程清单 | [data-and-ops.md](./data-and-ops.md)（P0–P4） |
 | 前端组件 | [frontend-components.md](./frontend-components.md) |
 | 技术基线 | **双轨**：Web + **GUI（桌面壳）**；Vue3 + Element Plus + Plus-X；共用 Node.js 内核 |

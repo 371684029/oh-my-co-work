@@ -15,7 +15,7 @@ oh-my-co-work 是一个**本地优先的群聊式多智能体协同工作台**�
 - 执行端支持交互式 TUI（node-pty + xterm.js）和普通 pipe 两种模式
 - 数据全部留在本机：SQLite + Markdown + 本地附件
 
-版本现状：**2.6.0 最终封板**。服务端已上随机访问令牌与 Origin 校验（本机同源即可领取令牌）；前端已支持终端卡、中栏 TUI 工作区、满屏与全屏、终端偏好、配额与日志脱敏；内嵌终端默认常驻；占用进程在设置里选择释放。JSONL Adapter 可将子工具提问转成对话闸门。首页主口号「皆可 Workflow」后加重标识「终端守护者」。桌面壳与更多 CLI Adapter 仍后置。
+版本现状：**2.6.0 最终封板**。服务端已上随机访问令牌与 Origin 校验（本机同源即可领取令牌）；前端已支持终端卡、中栏 TUI 工作区、满屏与全屏、终端偏好、配额与日志脱敏；内嵌终端默认常驻；占用进程在设置里选择释放。JSONL Adapter 可将子工具提问转成对话闸门。首页主口号「皆可 Workflow」后加重标识「终端守护者」。**3.x 熔炉仅规划**（[docs/crucible-3x.md](./docs/crucible-3x.md)），桌面壳与更多 CLI Adapter 仍后置。
 
 ---
 
@@ -199,5 +199,6 @@ start.bat
 - `docs/technical-design.md` — Workflow、会话、节点、闸门设计
 - `docs/data-storage.md` — SQLite 与 Markdown 台账结构
 - `docs/tui-2x.md` — PTY 架构、协议与安全
+- `docs/crucible-3x.md` — 3.x 熔炉规划（加人/建群/闸门；桌面精灵）
 - `docs/script-guide.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/demo.md` — 演示流完整操作路径
