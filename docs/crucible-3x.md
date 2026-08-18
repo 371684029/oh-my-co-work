@@ -6,6 +6,7 @@
 | 状态 | **规划中**（来自 2026-08-18 产品讨论，未开工） |
 | 前置 | `2.x` 终端守护者已封（`2.6.0`）；JSONL Adapter 为融合契约 |
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
+| 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
 本文固定 3.x 主题与边界。细节（模型、壳技术、闸门 UI）后置细化，不在本文一次定死。
@@ -53,15 +54,18 @@
 
 ### 3.2 适配与审核不混（三套 prompt / 记忆）
 
-适配是适配，审核是审核，上下文分开：熔炉可以做适配，闸门仍可配给人审或给熔炉审（原管理员通道的继任）。**三套作用各有一份 prompt 和一份记忆，本轮只装一套。**
+适配是适配，审核是审核，主持是主持，上下文分开：熔炉可以做适配，闸门仍可配给人审或给熔炉审（原管理员通道的继任）。**角色壳一次只装一套；开聊另附情境包。**
 
 | 作用 | 何时装入 | Prompt（进仓库） | 记忆种子（进仓库） | 本机记忆（不进 git） |
 | --- | --- | --- | --- | --- |
+| 群聊主持 | 开聊 / 尚未换到适配或审核 | `prompts/session.md` | `memory-seed/session.md` | `memory/session.md` |
 | 成员适配 | 成员勾了适配、步骤未勾 | `server/config/furnace/prompts/member-adapt.md` | `memory-seed/member-adapt.md` | `data/furnace/memory/member-adapt.md` |
 | 节点适配 | 步骤勾了适配 | `prompts/node-adapt.md` | `memory-seed/node-adapt.md` | `memory/node-adapt.md` |
 | 系统审核 | 闸门要熔炉确认 | `prompts/review.md` | `memory-seed/review.md` | `memory/review.md` |
 
 本轮装入写成 `data/furnace/ACTIVE.md`（Grok TUI 工作目录就是这里）。系统气泡只写「熔炉本轮：xxx」，不把全文灌进聊天。记忆种子只复制一次，已有本机记忆不覆盖。
+
+开聊之后还要让熔炉知道**这场群在干什么**（例如工作总结）。角色壳只回答「你是谁」；情境包回答「此刻做什么」。完整 prompt 工程见 **[crucible-3.2.md](./crucible-3.2.md)**。
 
 ### 3.3 统一管理员 → 熔炉
 

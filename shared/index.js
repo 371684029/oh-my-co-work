@@ -72,13 +72,15 @@ export const MEMBER_KIND = {
 export const FURNACE_MEMBER_KEY = 'unified_admin'
 export const FURNACE_DISPLAY_NAME = '熔炉'
 export const GROK_BUILD_DOWNLOAD_URL = 'https://grok.com'
-/** 熔炉三套互不串的上下文 */
+/** 熔炉角色壳：一次只装一套；情境包另见 crucible-3.2.md */
 export const FURNACE_ROLE = {
+  SESSION: 'session',
   MEMBER_ADAPT: 'member_adapt',
   NODE_ADAPT: 'node_adapt',
   REVIEW: 'review',
 }
 export const FURNACE_ROLE_LABEL = {
+  session: '群聊主持',
   member_adapt: '成员适配',
   node_adapt: '节点适配',
   review: '系统审核',

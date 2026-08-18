@@ -67,7 +67,7 @@ oh-my-co-work/
 │   ├── logs/
 │   ├── journals/
 │   ├── backups/adapt/           # 适配备份 zip（不进 git）
-│   └── furnace/                 # ACTIVE.md + 本机记忆（不进 git）
+│   └── furnace/                 # ACTIVE.md + SITUATION.md + 本机记忆（不进 git）
 │
 └── scripts/                     # 可选运维脚本
 ```
@@ -96,7 +96,7 @@ oh-my-co-work/
 | `app-settings.json` | `showDemo`、`showScriptPopup`、`autoArchiveHours`、全局 `admin` |
 | `slash-commands.json` | 快捷指令（可含 `showScriptPopup`） |
 | `about.json` / `support.json` | 关于页 / 支持与交流 |
-| `furnace/prompts/*.md` | 成员适配 / 节点适配 / 系统审核 prompt |
+| `furnace/prompts/*.md` | 群聊主持 / 成员适配 / 节点适配 / 系统审核 prompt |
 | `furnace/memory-seed/*.md` | 本机记忆初始副本（只复制一次） |
 
 运行时数据见 [data-storage.md](./data-storage.md)。

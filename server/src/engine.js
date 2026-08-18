@@ -42,9 +42,9 @@ import {
 import { resolveGroupAdmin, getAppSettings } from './appSettings.js'
 import { prepareAdaptForMember, adaptStatusText } from './adaptBackup.js'
 import {
-  activateFurnaceRole,
   resolveAdaptFurnaceRole,
 } from './furnaceContext.js'
+import { syncFurnaceSessionContext } from './furnaceSituation.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -626,6 +626,11 @@ function recordUserChatInput(
     ...(autoTitle ? { title: autoTitle } : {}),
   })
   refreshSessionAnnouncement(sessionId)
+  try {
+    syncFurnaceSessionContext(sessionId, { keepRole: true })
+  } catch (e) {
+    console.warn('[acw] furnace situation chat', e?.message || e)
+  }
   return parsed
 }
 
@@ -1647,6 +1652,11 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
     })
+    try {
+      syncFurnaceSessionContext(sessionId, { role: FURNACE_ROLE.SESSION })
+    } catch (e) {
+      console.warn('[acw] furnace situation adhoc', e?.message || e)
+    }
     setTimeout(() => {
       advance(sessionId).catch((e) => console.warn('[acw] adhoc start', e?.message || e))
     }, 0)
@@ -1685,6 +1695,11 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     type: 'session.status',
     payload: { sessionId, status: SESSION_STATUS.WAITING_HUMAN, pendingStart: true },
   })
+  try {
+    syncFurnaceSessionContext(sessionId, { role: FURNACE_ROLE.SESSION })
+  } catch (e) {
+    console.warn('[acw] furnace situation start', e?.message || e)
+  }
   // 不自动 advance：等人点「通过」后再跑第一步
   return getSession(sessionId)
 }
@@ -2049,15 +2064,15 @@ export async function advance(sessionId) {
       })
       if (furnaceRole) {
         try {
-          const pack = activateFurnaceRole(furnaceRole, {
-            sessionId,
+          const pack = syncFurnaceSessionContext(sessionId, {
+            role: furnaceRole,
             nodeId: node.id,
           })
           addMessage(sessionId, {
             role: 'system',
             type: 'status',
             node_instance_id: node.id,
-            content: { text: `熔炉本轮：${pack.label}（prompt 与记忆已写入 ${pack.activeMd}）` },
+            content: { text: `熔炉本轮：${pack?.label || furnaceRole}（prompt 与记忆已写入 ${pack?.activeMd || 'data/furnace'}）` },
           })
         } catch (e) {
           console.warn('[acw] furnace role', e?.message || e)
@@ -2410,12 +2425,15 @@ function openFlowGate(sessionId, node, payload) {
   // 管理员总结与流转：闸门打开后刷新群报告 MD
   if (payload.flow?.admin || payload.requireAdmin) {
     try {
-      const pack = activateFurnaceRole(FURNACE_ROLE.REVIEW, { sessionId, nodeId: node.id })
+      const pack = syncFurnaceSessionContext(sessionId, {
+        role: FURNACE_ROLE.REVIEW,
+        nodeId: node.id,
+      })
       addMessage(sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
-        content: { text: `熔炉本轮：${pack.label}（prompt 与记忆已写入 ${pack.activeMd}）` },
+        content: { text: `熔炉本轮：${pack?.label || '系统审核'}（prompt 与记忆已写入 ${pack?.activeMd || 'data/furnace'}）` },
       })
     } catch (e) {
       console.warn('[acw] furnace review context', e?.message || e)
@@ -3036,6 +3054,11 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       }
 
       refreshSessionAnnouncement(sessionId)
+      try {
+        syncFurnaceSessionContext(sessionId, { role: FURNACE_ROLE.SESSION })
+      } catch (e) {
+        console.warn('[acw] furnace situation kickoff', e?.message || e)
+      }
       emitSession(sessionId, {
         type: 'session.status',
         payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },

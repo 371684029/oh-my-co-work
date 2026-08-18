@@ -10,11 +10,13 @@ process.env.ACW_DATA_ROOT = dataRoot
 const { FURNACE_ROLE } = await import('@acw/shared')
 const {
   composeFurnaceContext,
+  composeFurnaceSituation,
   activateFurnaceRole,
   resolveAdaptFurnaceRole,
   loadFurnaceMemory,
   furnaceMemoryDir,
   ensureFurnaceWorkspace,
+  clipFurnaceText,
 } = await import('../src/furnaceContext.js')
 
 test('three roles compose in isolation', () => {
@@ -60,4 +62,47 @@ test('step adapt prefers node role over member role', () => {
     FURNACE_ROLE.MEMBER_ADAPT,
   )
   assert.equal(resolveAdaptFurnaceRole({}), null)
+})
+
+test('situation slots copy user intent and group agenda', () => {
+  const text = composeFurnaceSituation({
+    intent: '把本周做的事收成一段给老板',
+    groupTitle: '周报工作总结',
+    groupDescription: '根据本周节点产出写一段给老板',
+    sessionTitle: '#1 · 周报',
+    workFolder: '/tmp/week',
+    agenda: [{ title: '收集材料' }, { title: '熔炉整理' }, { title: '人确认' }],
+    nowIndex: 1,
+    now: { title: '熔炉整理', status: 'running' },
+    params: [{ key: '#1', value: '本周完成适配闸' }],
+    announcementPath: 'journals/sessions/s1/ANNOUNCEMENT.md',
+  })
+  assert.ok(text.includes('意图：把本周做的事收成一段给老板'))
+  assert.ok(text.includes('周报工作总结'))
+  assert.ok(text.includes('2. 熔炉整理 ← 现在'))
+  assert.ok(text.includes('#1'))
+  const packed = composeFurnaceContext(FURNACE_ROLE.SESSION, {
+    situation: { intent: '做工作总结', groupTitle: '周报工作总结' },
+  })
+  assert.ok(packed.includes('熔炉本轮：群聊主持'))
+  assert.ok(packed.includes('此刻在做什么'))
+  assert.ok(packed.includes('做工作总结'))
+  assert.ok(!packed.includes('按闸门政策'))
+})
+
+test('situation clips oversized intent', () => {
+  const huge = '总结'.repeat(3000)
+  const clipped = clipFurnaceText(huge, 20)
+  assert.ok(clipped.includes('截断'))
+  assert.ok(clipped.length < huge.length)
+})
+
+test('switching role keeps situation in ACTIVE.md', () => {
+  const situation = { intent: '做工作总结', groupTitle: '周报工作总结' }
+  activateFurnaceRole(FURNACE_ROLE.SESSION, { sessionId: 's2', situation })
+  const pack = activateFurnaceRole(FURNACE_ROLE.REVIEW, { sessionId: 's2', situation })
+  const text = fs.readFileSync(pack.activeMd, 'utf8')
+  assert.ok(text.includes('熔炉本轮：系统审核'))
+  assert.ok(text.includes('做工作总结'))
+  assert.ok(fs.readFileSync(pack.situationMd, 'utf8').includes('做工作总结'))
 })

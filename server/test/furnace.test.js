@@ -143,3 +143,35 @@ test('furnace member gate stays waiting_human and uses 熔炉 copy', async () =>
   assert.ok(text.includes('熔炉') || text.includes('审核'))
   assert.equal(text.includes('管理员'), false)
 })
+
+test('starting a group injects situation so furnace sees the job', () => {
+  const echo = createMember({
+    name: `echo-sum-${Date.now()}`,
+    displayName: '材料',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'ok' },
+  })
+  const group = createGroup({
+    title: '周报工作总结',
+    description: '根据本周节点产出写一段给老板',
+    workFolder: process.cwd(),
+    steps: [
+      {
+        title: '收集材料',
+        type: 'member',
+        memberId: echo.id,
+        flow: { admin: false, auto: true, human: false },
+      },
+    ],
+  })
+  createSessionFromGroup(group.id)
+  const sit = fs.readFileSync(path.join(dataRoot, 'furnace', 'SITUATION.md'), 'utf8')
+  assert.ok(sit.includes('周报工作总结'))
+  assert.ok(sit.includes('给老板'))
+  assert.ok(sit.includes('收集材料'))
+  const active = fs.readFileSync(path.join(dataRoot, 'furnace', 'ACTIVE.md'), 'utf8')
+  assert.ok(active.includes('群聊主持'))
+  assert.ok(active.includes('此刻在做什么'))
+  assert.ok(active.includes('周报工作总结'))
+})

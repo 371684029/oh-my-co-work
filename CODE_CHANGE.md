@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-18 | A | docs/crucible-3.2.md | 情境注入 prompt 工程：角色壳 × 情境包
+2026-08-18 | A | server/config/furnace/prompts/session.md | 群聊主持角色 prompt
+2026-08-18 | A | server/src/furnaceSituation.js | 从会话抽出意图/议程/当前步
+2026-08-18 | M | server/src/furnaceContext.js / engine.js / shared/index.js | ACTIVE 拼情境；开聊与换壳刷新
+2026-08-18 | M | server/test/furnaceContext.test.js / furnace.test.js | 意图原话、换壳保留情境、开聊落盘
+2026-08-18 | M | docs/crucible-3x.md / crucible-3x-plan.md / README.md | 3.2 改为情境注入，Grok 客户端后置
+2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | A | server/config/furnace/prompts/*.md | 熔炉三套 prompt：成员适配 / 节点适配 / 系统审核
 2026-08-18 | A | server/config/furnace/memory-seed/*.md | 三套记忆种子，复制到 data/furnace/memory 一次
 2026-08-18 | A | server/src/furnaceContext.js | 本轮只装一套 ACTIVE.md，记忆不覆盖
