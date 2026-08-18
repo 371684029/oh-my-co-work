@@ -11,8 +11,8 @@
         <AppLogo size="md" class="brand-logo" />
         <div class="brand-block">
           <span class="brand">oh-my-co-work</span>
-          <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow"
-            >人机协同 · 万物归元 · 皆可 Workflow</span
+          <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow · 终端守护者"
+            >人机协同 · 万物归元 · 皆可 Workflow · <em class="brand-guard">终端守护者</em></span
           >
         </div>
         <nav class="top-nav" aria-label="主导航" data-fullscreen-control>
@@ -162,6 +162,12 @@ onUnmounted(() => {
   font-size: 11px !important;
   letter-spacing: 0.01em;
   font-weight: 400 !important;
+}
+
+.brand-block .brand-guard {
+  font-style: normal;
+  font-weight: 700 !important;
+  color: var(--ecw-accent, #007aff);
 }
 
 .top-right {
