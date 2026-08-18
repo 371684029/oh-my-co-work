@@ -26,6 +26,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-18 | M | server/src/index.js | 增加 POST /api/bootstrap，确保浏览器带 Origin
 2026-08-18 | M | web/src/api.js | bootstrap 改 POST，避免 GET 不带 Origin 被拒
 2026-08-18 | M | server/test/localAccess.test.js | 覆盖无 Origin 的本机 Host 与跨站拒绝
+2026-08-18 | M | docs/data-storage.md | 同步 bootstrap 本机无 Origin 行为
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
 
 2026-08-18 | M | docs/data-and-ops.md | 修订记录补 2.4.0 / 2.5.0
