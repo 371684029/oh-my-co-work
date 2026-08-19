@@ -4324,7 +4324,7 @@ loadLists().then(() => {
 .welcome-hero {
   position: relative;
   z-index: 1;
-  width: min(520px, 100%);
+  width: min(640px, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4358,7 +4358,7 @@ loadLists().then(() => {
   align-items: center;
   gap: 0 0.12em;
   margin: 0 0 10px;
-  max-width: 28em;
+  max-width: 100%;
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.01em;
