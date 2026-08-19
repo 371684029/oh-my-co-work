@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-19 | M | FurnaceSprite.vue | 桌宠默认小头像、半透明，少占空间
+2026-08-19 | M | engine.js / archiveSkip.test.js | 群聊同意最后一步即完成并归档释放资源；单聊不自动归档
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-18 | M | web/src/assets/furnace-idle.png / furnace-working.png / furnace-waiting.png | 熔炉立绘改为偏瘦双马尾
 2026-08-18 | M | CODE_CHANGE.md | 追加本轮条目
 

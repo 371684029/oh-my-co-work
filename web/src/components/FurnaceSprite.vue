@@ -31,7 +31,7 @@
       >
         <img :src="spriteSrc" :alt="title" class="furnace-pet-img" draggable="false" />
       </button>
-      <div class="furnace-pet-meta">
+      <div v-show="hovered" class="furnace-pet-meta">
         <span class="furnace-pet-name">熔炉</span>
         <span class="furnace-pet-state">{{ stateLabel }}</span>
         <button type="button" class="furnace-pet-min" title="收起" @click.stop="minimized = true">
@@ -78,7 +78,7 @@ const POKE_LINES = ['嗯？', '别戳了……要开就点「开熔炉」。', '
 
 const hovered = ref(false)
 const poking = ref(false)
-const minimized = ref(false)
+const minimized = ref(true)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
 const pos = ref({ right: 18, bottom: 16, left: null, top: null })
@@ -227,17 +227,14 @@ onMounted(() => {
   try {
     const raw = localStorage.getItem(POS_KEY)
     if (raw) pos.value = { ...pos.value, ...JSON.parse(raw) }
-    minimized.value = localStorage.getItem(MIN_KEY) === '1'
+    minimized.value = localStorage.getItem(MIN_KEY) !== '0'
   } catch {
     /* ignore */
   }
   chatterTimer = window.setInterval(() => {
     if (minimized.value || hovered.value || document.hidden) return
     nextChatter()
-  }, 22000)
-  window.setTimeout(() => {
-    if (!minimized.value) say(linesForState()[0], 5600)
-  }, 900)
+  }, 90000)
 })
 
 onUnmounted(() => {
@@ -251,7 +248,7 @@ onUnmounted(() => {
 .furnace-pet {
   position: fixed;
   z-index: 40;
-  width: 168px;
+  width: 88px;
   pointer-events: none;
   user-select: none;
 }
@@ -272,18 +269,18 @@ onUnmounted(() => {
 }
 
 .furnace-bubble {
-  width: 168px;
-  padding: 8px 10px 8px;
-  border-radius: 14px 14px 14px 6px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 8px 24px rgba(20, 16, 28, 0.14), inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  width: 148px;
+  padding: 7px 8px 8px;
+  border-radius: 12px 12px 12px 6px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 16px rgba(20, 16, 28, 0.1), inset 0 0 0 0.5px rgba(0, 0, 0, 0.05);
   animation: furnace-bubble-in 0.22s ease;
 }
 
 .furnace-bubble p {
-  margin: 0 0 8px;
-  font-size: 12.5px;
-  line-height: 1.45;
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
   color: #2a2433;
 }
 
@@ -326,11 +323,18 @@ onUnmounted(() => {
 
 .furnace-pet-img {
   display: block;
-  width: 132px;
+  width: 72px;
   height: auto;
-  filter: drop-shadow(0 10px 16px rgba(20, 16, 30, 0.22));
+  opacity: 0.58;
+  filter: drop-shadow(0 4px 8px rgba(20, 16, 30, 0.12));
   transform-origin: 50% 100%;
-  animation: furnace-breathe 3.4s ease-in-out infinite;
+  animation: furnace-breathe 4.2s ease-in-out infinite;
+}
+
+.furnace-pet.is-hover .furnace-pet-img,
+.furnace-pet.is-working .furnace-pet-img,
+.furnace-pet.is-waiting .furnace-pet-img {
+  opacity: 0.92;
 }
 
 .furnace-pet.is-working .furnace-pet-img {
@@ -342,7 +346,7 @@ onUnmounted(() => {
 }
 
 .furnace-pet.is-hover .furnace-pet-img {
-  transform: translateY(-4px) scale(1.03);
+  transform: translateY(-2px);
 }
 
 .furnace-pet.is-poke .furnace-pet-img {
@@ -388,26 +392,31 @@ onUnmounted(() => {
 }
 
 .furnace-pet-peek {
-  width: 64px;
-  height: 64px;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: 50%;
   overflow: hidden;
   padding: 0;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 20px rgba(20, 16, 28, 0.18);
+  opacity: 0.72;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 4px 10px rgba(20, 16, 28, 0.1);
+}
+
+.furnace-pet-peek:hover {
+  opacity: 1;
 }
 
 .furnace-pet-peek img {
-  width: 64px;
-  height: 86px;
+  width: 40px;
+  height: 54px;
   object-fit: cover;
   object-position: 50% 8%;
 }
 
 .furnace-pet.is-min {
-  width: 64px;
+  width: 40px;
 }
 
 @keyframes furnace-breathe {

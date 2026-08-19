@@ -559,7 +559,7 @@
                             <span class="gate-info-dot" title="查看详情">i</span>
                           </el-tooltip>
                           <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                            同意
+                            {{ pendingGate.content?.lastNodeComplete ? '同意并完成' : '同意' }}
                           </el-button>
                           <el-button plain @click="gate(pendingGate, 'reject')">
                             拒绝

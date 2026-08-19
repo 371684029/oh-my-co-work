@@ -2237,10 +2237,14 @@ export async function advance(sessionId) {
       if (flow.human) bits.push('须人工同意')
       if (flow.admin) bits.push(`可${FURNACE_DISPLAY_NAME}确认`)
       if (flow.auto) bits.push('已记自动产出票')
+      const last = isLastMainlineNode(sessionId, node) && !isAdhocSession(sessionId)
       openFlowGate(sessionId, node, {
         flow,
         failed: false,
-        text: `「${node.title}」已产出，审核中（pending）。${bits.join('；')}。输入或再跑脚本不会自动通过/拒绝。`,
+        lastNodeComplete: last,
+        text: last
+          ? `「${node.title}」已产出，这是最后一步。同意即完成群聊并归档（释放本会话进程与目录占用）。${bits.join('；')}。`
+          : `「${node.title}」已产出，审核中（pending）。${bits.join('；')}。输入或再跑脚本不会自动通过/拒绝。`,
         summary: result.summary,
         votes,
         requireHuman: !!flow.human,
@@ -2254,9 +2258,8 @@ export async function advance(sessionId) {
     updateSession(sessionId, { current_step_index: idx })
   }
 
-  // 全部步骤完成：保持会话进行中，常驻终端不回收；到设置里释放资源
-  refreshSessionAnnouncement(sessionId)
-  dismissPendingArchiveIfAny(sessionId, 'completed')
+  // 全部步骤完成：群聊默认归档释放资源；成员单聊（adhoc）保持进行中
+  finishMainlineIfComplete(sessionId)
 }
 
 /**
@@ -2388,6 +2391,38 @@ export function saveSessionAnnouncement(sessionId, markdown) {
   return { rel, markdown: body, manual: true }
 }
 
+function isLastMainlineNode(sessionId, node) {
+  const later =
+    getDb()
+      .prepare(
+        `SELECT COUNT(*) AS c FROM node_instances
+         WHERE session_id = ? AND step_index > ? AND IFNULL(step_type,'') != ?`,
+      )
+      .get(sessionId, node.step_index, STEP_TYPE.ARCHIVE)?.c || 0
+  return later === 0
+}
+
+function isAdhocSession(sessionId) {
+  const session = getSession(sessionId)
+  if (!session) return false
+  const group = getGroup(session.group_id)
+  const cfg = parseJson(group?.config_json, {})
+  return cfg.adhoc === true
+}
+
+function finishMainlineIfComplete(sessionId) {
+  refreshSessionAnnouncement(sessionId)
+  if (isAdhocSession(sessionId)) {
+    dismissPendingArchiveIfAny(sessionId, 'completed')
+    const s = getSession(sessionId)
+    if (s && s.status !== SESSION_STATUS.ARCHIVED && s.status !== SESSION_STATUS.INTERRUPTED) {
+      updateSession(sessionId, { status: SESSION_STATUS.ACTIVE })
+    }
+    return
+  }
+  archiveSession(sessionId, 'completed')
+}
+
 /** 打开流转闸门（人工/管理员）；审核态先置 pending */
 function openFlowGate(sessionId, node, payload) {
   updateNode(node.id, { status: NODE_STATUS.WAITING_HUMAN })
@@ -2403,6 +2438,7 @@ function openFlowGate(sessionId, node, payload) {
       requireHuman: !!payload.requireHuman,
       requireAdmin: !!payload.requireAdmin,
       failed: !!payload.failed,
+      lastNodeComplete: !!payload.lastNodeComplete,
       summary: payload.summary,
       /** pending | approve | reject；脚本/输入不改此态，仅同意/拒绝按钮改 */
       humanAction: 'pending',
@@ -2420,6 +2456,7 @@ function openFlowGate(sessionId, node, payload) {
       requireHuman: !!payload.requireHuman,
       requireAdmin: !!payload.requireAdmin,
       failed: !!payload.failed,
+      lastNodeComplete: !!payload.lastNodeComplete,
       summary: payload.summary,
       humanAction: 'pending',
       policy:

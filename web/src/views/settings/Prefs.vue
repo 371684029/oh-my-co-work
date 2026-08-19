@@ -50,8 +50,8 @@
     <section class="prefs-card">
       <div class="prefs-title">释放资源</div>
       <p class="prefs-hint">
-        流程走完<strong>不再自动归档</strong>，常驻终端会一直占着。
-        在此选择会话结束进程 / 内嵌终端，或一次性全部释放。
+        流程走完默认<strong>归档并释放本会话资源</strong>（同意最后一步即完成群聊）。
+        成员单聊不自动归档。也可在此选择会话结束进程 / 内嵌终端，或一次性全部释放。
       </p>
       <el-form label-position="top" class="admin-form">
         <el-form-item label="占用中的会话">

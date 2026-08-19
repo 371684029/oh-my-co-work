@@ -10,7 +10,7 @@ process.env.ACW_DATA_ROOT = dataRoot
 const { enrichScriptConfig } = await import('../src/runners.js')
 const { initDb, getDb } = await import('../src/db.js')
 initDb()
-const { createMember, createGroup, createSessionFromGroup, getSessionDetail } = await import(
+const { createMember, createGroup, createSessionFromGroup, createSessionFromMember, getSessionDetail, handleGateAction } = await import(
   '../src/services.js'
 )
 const { requestArchiveConsent, processDueArchives, dismissPendingArchiveIfAny } = await import(
@@ -104,4 +104,69 @@ test('resource release listing is empty without live processes', () => {
   const r = releaseResources({ sessionIds: [] })
   assert.equal(r.ok, true)
   assert.equal(r.released, 0)
+})
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+test('approving the last group node archives the session', async () => {
+  const member = createMember({
+    name: `echo-last-${Date.now()}`,
+    displayName: '末步回声',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'ok' },
+  })
+  const group = createGroup({
+    title: '末步归档',
+    workFolder: process.cwd(),
+    steps: [
+      {
+        title: '回声',
+        type: 'member',
+        memberId: member.id,
+        flow: { admin: false, auto: false, human: false },
+      },
+    ],
+  })
+  const session = createSessionFromGroup(group.id)
+  await handleGateAction(session.id, { action: 'approve_start', text: '开始' })
+  let detail
+  for (let i = 0; i < 40; i++) {
+    await wait(25)
+    detail = getSessionDetail(session.id)
+    if (detail.session.status === SESSION_STATUS.ARCHIVED) break
+  }
+  assert.equal(detail.nodes[0].status, 'succeeded')
+  assert.equal(detail.session.status, SESSION_STATUS.ARCHIVED)
+  assert.equal(detail.session.archive_reason, 'completed')
+})
+
+test('adhoc member chat does not auto-archive when its only node finishes', async () => {
+  const member = createMember({
+    name: `echo-adhoc-${Date.now()}`,
+    displayName: '单聊回声',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'ok' },
+  })
+  const session = createSessionFromMember(member.id)
+  let detail
+  for (let i = 0; i < 40; i++) {
+    await wait(25)
+    detail = getSessionDetail(session.id)
+    if (detail.nodes?.[0]?.status === 'waiting_human' || detail.nodes?.[0]?.status === 'succeeded') break
+  }
+  const node = detail.nodes[0]
+  if (node.status === 'waiting_human') {
+    await handleGateAction(session.id, { action: 'approve', nodeInstanceId: node.id })
+    for (let i = 0; i < 40; i++) {
+      await wait(25)
+      detail = getSessionDetail(session.id)
+      if (detail.nodes[0].status === 'succeeded') break
+    }
+  }
+  assert.equal(detail.nodes[0].status, 'succeeded')
+  assert.notEqual(detail.session.status, SESSION_STATUS.ARCHIVED)
 })
