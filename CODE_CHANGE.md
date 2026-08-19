@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-19 | A | web/src/assets/furnace-idle.gif / furnace-working.gif / furnace-waiting.gif | 桌宠三态轻动画（浮动/晃）
+2026-08-19 | A | docs/assets/furnace-pet.gif | README 用闲置态 GIF
+2026-08-19 | M | FurnaceSprite.vue | 默认播 GIF；减少动效时用 PNG
+2026-08-19 | M | README.md | 使用场景：前端流、联调、发版、熔炉排障
+2026-08-19 | M | frontend-components.md / crucible-3x.md | 桌宠改为 GIF
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-19 | A | docs/assets/screenshots/furnace-grok-guide.webp | README：熔炉桌宠弹出的 Grok Build 教程
 2026-08-19 | A | docs/assets/screenshots/furnace-workspace-chat.webp | README：熔炉铺满干活面（画面皮）
 2026-08-19 | M | README.md | 3.5 熔炉截图与能力说明
