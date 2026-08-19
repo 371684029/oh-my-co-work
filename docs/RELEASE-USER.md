@@ -14,9 +14,9 @@
 
 按本机系统选：
 
-- Windows：`oh-my-co-work-v2-win32-x64.zip`
-- Linux：`oh-my-co-work-v2-linux-x64.zip`
-- macOS：`oh-my-co-work-v2-darwin-arm64.zip` 或 `darwin-x64`
+- Windows：`oh-my-co-work-v3-win32-x64.zip`
+- Linux：`oh-my-co-work-v3-linux-x64.zip`
+- macOS：`oh-my-co-work-v3-darwin-arm64.zip` 或 `darwin-x64`
 
 目录：https://github.com/371684029/oh-my-co-work/tree/main/packages  
 备选：[Releases · latest](https://github.com/371684029/oh-my-co-work/releases/tag/latest)
@@ -72,7 +72,7 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 
 运行后会在解压目录生成 `data/`（SQLite、日志、群报告等）。
 
-当前运行包版本以 [`packages/CURRENT.txt`](../packages/CURRENT.txt) 为准（大版本 v2，小版本随同平台 zip 覆盖）。
+当前运行包版本以 [`packages/CURRENT.txt`](../packages/CURRENT.txt) 为准（大版本 v3，小版本随同平台 zip 覆盖）。
 
 ## 注意
 
