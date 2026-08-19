@@ -17,7 +17,7 @@
           </button>
           <span class="furnace-divider" />
           <div class="furnace-identity">
-            <span class="furnace-dot" :class="{ active: isRunning }" />
+            <FurnaceAvatar size="sm" :mood="buddyMood" :live="isRunning" title="熔炉" />
             <strong>熔炉</strong>
             <span class="furnace-state">{{ statusText }}</span>
           </div>
@@ -75,13 +75,19 @@
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log">
-          <div v-if="!liveText" class="furnace-empty">
-            这是 Grok 终端画面的去颜色副本，不是多轮聊天气泡。菜单和快捷键请切「终端」。
-            下方输入会写进同一进程。
-          </div>
-          <div v-if="liveText" class="screen">
-            <span class="bubble-label">Grok 画面（去颜色）</span>
-            <pre>{{ liveText }}</pre>
+          <aside class="furnace-buddy">
+            <FurnaceAvatar size="lg" :mood="buddyMood" :live="isRunning" :title="buddyTitle" />
+            <p class="furnace-buddy-line">{{ buddyLine }}</p>
+          </aside>
+          <div class="furnace-log-main">
+            <div v-if="!liveText" class="furnace-empty">
+              这是 Grok 终端画面的去颜色副本，不是多轮聊天气泡。菜单和快捷键请切「终端」。
+              下方输入会写进同一进程。
+            </div>
+            <div v-if="liveText" class="screen">
+              <span class="bubble-label">Grok 画面（去颜色）</span>
+              <pre>{{ liveText }}</pre>
+            </div>
           </div>
         </div>
         <div v-if="sent.length" class="furnace-sent">
@@ -126,6 +132,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { stripAnsiTail } from '@acw/shared'
+import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
@@ -156,6 +163,29 @@ const sent = ref([])
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const liveText = computed(() => stripAnsiTail(props.terminal.replay || ''))
 const canSend = computed(() => isRunning.value && !!draft.value.trim())
+
+/** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
+const buddyMood = computed(() => {
+  const st = String(props.terminal.status || '')
+  if (st === 'running') return 'working'
+  if (st === 'starting' || props.connectionStatus === 'connecting') return 'idle'
+  if (['exited', 'failed', 'killed'].includes(st) || props.connectionStatus !== 'open') {
+    return 'waiting'
+  }
+  return 'idle'
+})
+
+const buddyTitle = computed(() => {
+  if (buddyMood.value === 'working') return '熔炉 · 在干活'
+  if (buddyMood.value === 'waiting') return '熔炉 · 等人'
+  return '熔炉 · 闲置'
+})
+
+const buddyLine = computed(() => {
+  if (buddyMood.value === 'working') return '在听。下面那框写进同一进程。'
+  if (buddyMood.value === 'waiting') return '这轮停了。记录还在。'
+  return '点火中，稍等。'
+})
 
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
@@ -348,17 +378,6 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.furnace-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #c5c7ce;
-}
-
-.furnace-dot.active {
-  background: #34c759;
-}
-
 .furnace-state {
   font-size: 11px;
   color: #6e6e73;
@@ -411,7 +430,33 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 20px 8% 12px;
+  padding: 20px 6% 12px;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 20px 16px;
+  align-items: start;
+}
+
+.furnace-buddy {
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.furnace-buddy-line {
+  margin: 0;
+  max-width: 7.5rem;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+.furnace-log-main {
+  min-width: 0;
 }
 
 .furnace-empty {
@@ -419,7 +464,7 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.6;
   max-width: 52rem;
-  margin: 12vh auto 0;
+  margin: 8vh 0 0;
 }
 
 .screen {
@@ -523,5 +568,15 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, Consolas, monospace;
+}
+
+@media (max-width: 820px) {
+  .furnace-log {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .furnace-buddy {
+    display: none;
+  }
 }
 </style>

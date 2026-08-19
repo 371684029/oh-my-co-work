@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-19 | A | web/src/components/FurnaceAvatar.vue | 熔炉干活面卡通头像，三态 GIF
+2026-08-19 | M | FurnaceWorkspace.vue | 顶栏小头 + 画面右侧大头，随进程换表情
+2026-08-19 | M | README.md / crucible-3.5.md / frontend-components.md | 同步干活面头像
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-19 | A | web/src/assets/furnace-idle.gif / furnace-working.gif / furnace-waiting.gif | 桌宠三态轻动画（浮动/晃）
 2026-08-19 | A | docs/assets/furnace-pet.gif | README 用闲置态 GIF
 2026-08-19 | M | FurnaceSprite.vue | 默认播 GIF；减少动效时用 PNG
