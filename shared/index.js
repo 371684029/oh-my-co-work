@@ -118,6 +118,26 @@ export function grokSetupNeeded(probe) {
   return !grokCanRun(probe)
 }
 
+/** 熔炉干活面：气泡皮 / 原 TUI */
+export const FURNACE_SURFACE = {
+  CHAT: 'chat',
+  TUI: 'tui',
+}
+
+export function normalizeFurnaceSurface(v) {
+  return String(v || '').trim() === FURNACE_SURFACE.TUI
+    ? FURNACE_SURFACE.TUI
+    : FURNACE_SURFACE.CHAT
+}
+
+/** 去 CSI / OSC，给熔炉对话皮读 PTY 回放 */
+export function stripAnsi(value) {
+  return String(value || '')
+    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')
+    .replace(/\u001b(?:[@-_][0-?]*[ -/]*[@-~]|\[[0-?]*[ -/]*[@-~])/g, '')
+    .replace(/\r/g, '')
+}
+
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',

@@ -43,6 +43,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { stripAnsi } from '@acw/shared'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -67,13 +68,6 @@ const statusText = computed(() => {
   }
   return map[props.terminal.status] || props.terminal.status || '未知'
 })
-
-function stripAnsi(value) {
-  return String(value || '')
-    .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')
-    .replace(/\u001b(?:[@-_][0-?]*[ -/]*[@-~]|\[[0-?]*[ -/]*[@-~])/g, '')
-    .replace(/\r/g, '')
-}
 
 const previewLines = computed(() =>
   stripAnsi(props.terminal.previewReplay || props.terminal.replay)

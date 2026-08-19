@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-19 | A | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉铺满对话皮，可缩小、可切 TUI
+2026-08-19 | M | Workbench.vue / Prefs.vue / appSettings.js / shared/index.js | 开熔炉默认 surface=chat；stripAnsi 共用
+2026-08-19 | A | docs/crucible-3.5.md | 3.5 简易对话皮设计
+2026-08-19 | M | crucible-3x.md / crucible-3x-plan.md / about.json / AGENT.md | 3.5.0 版本与封板口径
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-19 | M | README.md / AGENT.md | 首页口号与居中欢迎截图说明同步到 README
 2026-08-19 | M | Workbench.vue | 首页欢迎居中；口号同一字号颜色；补终端守护者/熔炉连接一切
 2026-08-19 | M | docs/brand-logo.md / frontend-components.md | 同步欢迎区文案与布局

@@ -142,7 +142,7 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉先跑本机 Grok TUI，开起来默认满屏。本机已安装并登录后，点右下角桌宠的「开熔炉」或双击直接进终端。
+        熔炉默认铺满页面：简易对话皮（同一条 grok 进程）或原 TUI。可点「缩小」回到工作台三栏。
         仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
@@ -153,6 +153,13 @@
         </el-form-item>
         <el-form-item label="启动命令">
           <el-input v-model="grok.command" placeholder="grok" />
+        </el-form-item>
+        <el-form-item label="开熔炉默认">
+          <el-radio-group v-model="grok.surface">
+            <el-radio value="chat">铺满对话</el-radio>
+            <el-radio value="tui">铺满终端</el-radio>
+          </el-radio-group>
+          <p class="prefs-resolved">都是整页，不是小对话框。工具栏可随时切换，并「缩小」回三栏。</p>
         </el-form-item>
         <el-form-item label="改源文件前打压缩包备份">
           <el-switch v-model="adaptBackup" />
@@ -286,7 +293,7 @@ const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const backingUp = ref(false)
-const grok = ref({ command: 'grok', configured: true })
+const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
 
@@ -325,6 +332,7 @@ async function load() {
       grok.value = {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
+        surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
       }
     }
     adaptBackup.value = s.adapt?.backup !== false
@@ -513,6 +521,7 @@ async function saveGrok() {
       grok: {
         command: String(grok.value.command || 'grok').trim() || 'grok',
         configured: !!grok.value.configured,
+        surface: grok.value.surface === 'tui' ? 'tui' : 'chat',
       },
       adapt: { backup: adaptBackup.value !== false },
     })
@@ -520,6 +529,7 @@ async function saveGrok() {
       grok.value = {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
+        surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
       }
     }
     if (s.adapt) adaptBackup.value = s.adapt.backup !== false

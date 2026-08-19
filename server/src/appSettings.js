@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT, getDb, parseJson } from './db.js'
 import { killSessionProcesses } from './processRegistry.js'
-import { defaultStepFlow } from '@acw/shared'
+import { defaultStepFlow, normalizeFurnaceSurface } from '@acw/shared'
 
 const SETTINGS_PATH = path.join(ROOT, 'server/config/app-settings.json')
 
@@ -40,6 +40,8 @@ export function defaultGrokSettings() {
   return {
     command: 'grok',
     configured: true,
+    /** chat=满屏气泡皮；tui=满屏原终端 */
+    surface: 'chat',
   }
 }
 
@@ -52,9 +54,11 @@ function normalizeGrok(raw) {
     raw.configured === 'false' ||
     raw.configured === 0 ||
     raw.configured === '0'
+  const surface = normalizeFurnaceSurface(raw.surface)
   return {
     command,
     configured: raw.configured === undefined || raw.configured === null ? d.configured : !off,
+    surface,
   }
 }
 

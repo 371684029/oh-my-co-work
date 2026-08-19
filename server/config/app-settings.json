@@ -11,7 +11,8 @@
   },
   "grok": {
     "command": "grok",
-    "configured": false
+    "configured": false,
+    "surface": "chat"
   },
   "adapt": {
     "backup": true

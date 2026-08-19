@@ -189,13 +189,29 @@
           </div>
         </div>
 
-        <TerminalWorkspace
-          v-if="activeTerminal"
+        <FurnaceWorkspace
+          v-if="activeTerminal && furnaceTuiPagefill"
           :terminal="activeTerminal"
           :terminals="terminalSessions"
           :connection-status="terminalConnectionStatus"
           :prefs="terminalPrefs"
-          :default-pagefill="furnaceTuiPagefill"
+          :default-pagefill="true"
+          :default-surface="furnaceSurface"
+          @close="activeTerminalId = null"
+          @kill="killTerminal"
+          @input="sendTerminalInput"
+          @resize="resizeTerminal"
+          @select="openTerminal"
+          @download-log="downloadTerminalLog"
+          @gap="onTerminalSeqGap"
+        />
+        <TerminalWorkspace
+          v-else-if="activeTerminal"
+          :terminal="activeTerminal"
+          :terminals="terminalSessions"
+          :connection-status="terminalConnectionStatus"
+          :prefs="terminalPrefs"
+          :default-pagefill="false"
           @close="activeTerminalId = null"
           @kill="killTerminal"
           @input="sendTerminalInput"
@@ -1100,6 +1116,9 @@ import { syncFurnaceSpriteState } from '../composables/furnaceUi.js'
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),
 )
+const FurnaceWorkspace = defineAsyncComponent(
+  () => import('../components/terminal/FurnaceWorkspace.vue'),
+)
 
 const route = useRoute()
 const router = useRouter()
@@ -1113,6 +1132,7 @@ const terminalSessions = ref([])
 const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
+const furnaceSurface = ref('chat')
 const terminalPrefs = ref({
   theme: 'project-dark',
   fontSize: 13,
@@ -2339,6 +2359,8 @@ async function loadLists() {
   try {
     const s = await api.appSettings.get()
     if (s?.terminal) terminalPrefs.value = { ...terminalPrefs.value, ...s.terminal }
+    if (s?.grok?.surface === 'tui') furnaceSurface.value = 'tui'
+    else furnaceSurface.value = 'chat'
   } catch {
     /* keep defaults */
   }

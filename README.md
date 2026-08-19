@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-3.3.0-409eff?style=flat-square" alt="version 3.3.0" />
+  <img src="https://img.shields.io/badge/version-3.5.0-409eff?style=flat-square" alt="version 3.5.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -35,7 +35,7 @@
 - **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
 - **关键决定交给人**：启动、参数、审核都可以设置人工闸门；群聊同意最后一步即完成并归档。
 - **过程始终可见**：左边看会话，中间对话和执行，右边看流程与报告。
-- **终端不再跳出去**：真实 PTY 内嵌 TUI；熔炉桌宠可直接开 Grok Build（已装且已登录时默认满屏）。
+- **终端不再跳出去**：真实 PTY 内嵌 TUI；熔炉默认铺满页面的对话皮（可缩小、可切终端）。
 - **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
 
 ## 2.0：真实 TUI，不是终端模拟
@@ -180,8 +180,9 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
-- [x] 3.3.0 最终封板：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；首页口号含终端守护者与熔炉连接一切；已登录直接开 TUI；群聊完成即归档
-- [ ] 后续：多终端标签治理、更多 CLI Adapter
+- [x] 3.3.0：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；群聊完成即归档
+- [x] 3.5.0：熔炉铺满对话皮（可缩小回三栏、可切 TUI）
+- [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 
 ## 参与项目
