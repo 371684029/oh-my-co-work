@@ -73,17 +73,16 @@
 | 场景 | 规格 |
 |------|------|
 | 顶栏 | `AppLogo` size=`md`，glow |
-| 欢迎页 | size=`xl`，居中主视觉卡片 + 渐变光晕 |
+| 欢迎页 | size=`xl`，左对齐主视觉 + 浅色光晕 |
 | Favicon | `favicon.svg` |
 | 文档插图 | `docs/assets/logo-mark.jpg` |
 
 ### 首页空态文案（Workbench 未选会话）
 
-- 口号：人机协同 · 万物归元 · 皆可 Workflow（「皆可 Workflow」可渐变强调）
-- 副句：只做 MVP，不做花里胡哨
-- 说明：脚本与 Agent 都是元节点…够用就好
-- 三步：选群或成员开聊 → 对话推进 → 闸门拍板
-- 底栏提示：从左侧选择群模板或成员，点「开聊」开始
+- 口号：人机协同 · 万物归元 / 皆可 Workflow（第二行渐变强调）
+- 说明：节点是死的，人是活的 · 可绕行、插队，临时协助再回来
+- 主按钮：一键开聊：演示流
+- 提示：或左侧自选群模板后点「开聊」
 
 **避免**：去掉人形只留节点网（会偏纯 Agent）；拉伸变形；改主色脱离 Element 蓝。
 
@@ -92,6 +91,6 @@
 ## 相关
 
 - UI：[frontend-components.md](./frontend-components.md)  
-- 3.x 熔炉角色标（右下角黑裙桌宠，不替代本 Logo）：[crucible-3x.md](./crucible-3x.md) §5.3  
+- 3.x 熔炉角色标（右侧黑裙桌宠，不替代本 Logo）：[crucible-3x.md](./crucible-3x.md) §5.3  
 - 宗旨：[mvp.md](./mvp.md)  
 - 上手：[../README.md](../README.md)  

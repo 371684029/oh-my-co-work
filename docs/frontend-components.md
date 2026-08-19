@@ -38,7 +38,7 @@ app.use(ElementPlusX)
 | 区域 | 组件 | 说明 |
 |------|------|------|
 | 壳层顶栏 | `App.vue` + `AppLogo` | 品牌 Logo + 分段导航 |
-| 熔炉桌宠 | `FurnaceSprite` | 右下角黑裙少女；闲置/工作/等人；可戳、可拖、气泡「开熔炉」 |
+| 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；默认小头像；闲置/工作/等人；可戳、可拖、气泡「开熔炉」 |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
@@ -47,7 +47,7 @@ app.use(ElementPlusX)
 | 中栏输入 | `XSender` | **`ref` 取文** + `@submit`；`@paste-file` 粘贴上传；`submit-type="enter"`；工具栏 `/` `@` `#` · 附件 · **复制** |
 | 附件 | 自研 chip + 气泡 file-card | 先 `POST /sessions/:id/files`，再随消息 `attachments[]` |
 | Composer 面板 | 自研 slash / at / hash | `/` 指令；`@` 成员/节点；`#` → `#群聊`/`#文件夹`/`#1`…/`#出n` |
-| 未选会话 | 自研欢迎主视觉 | 居中口号 + Logo + 三步引导（项目核心文案） |
+| 未选会话 | 自研欢迎主视觉 | 左对齐：工具 Logo、口号、一句说明、开聊按钮 |
 | 运行时闸门 | 说明卡 + 操作下沉 | 卡内只留说明；**通过/取消/提交…** 在输入区工具栏右侧大按钮 |
 | 右栏流程 | 自研 `flow-step` | 当前 / 执行中呼吸 / **未执行** / 完成落定 / **场外**；适配角标 + 「适配」筛选 Tab |
 | 右栏资源 | 自研 resources pane | 进程登记、目录占用提示、再杀一次、归档对方 |

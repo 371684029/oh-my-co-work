@@ -22,7 +22,7 @@
 > **节点是死的，人是活的。**
 > Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
 
-<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：皆可 Workflow · 终端守护者" width="100%" />
+<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：左对齐欢迎区与右侧熔炉桌宠" width="100%" />
 
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台" width="100%" />
 
@@ -33,9 +33,9 @@
 `oh-my-co-work` 把这些能力收进一个本地工作台：
 
 - **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
-- **关键决定交给人**：启动、参数、审核都可以设置人工闸门。
+- **关键决定交给人**：启动、参数、审核都可以设置人工闸门；群聊同意最后一步即完成并归档。
 - **过程始终可见**：左边看会话，中间对话和执行，右边看流程与报告。
-- **终端不再跳出去**：真实 PTY 内嵌 TUI，ANSI、方向键、Tab、Ctrl+C 和 resize 都保留。
+- **终端不再跳出去**：真实 PTY 内嵌 TUI；熔炉桌宠可直接开 Grok Build（已装且已登录时默认满屏）。
 - **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
 
 ## 2.0：真实 TUI，不是终端模拟
@@ -48,14 +48,14 @@
 - 点击进入中栏终端工作区，右侧流程仍然可见。
 - 支持键盘输入、窗口缩放、重新附着、停止进程与日志。
 - 工作台和终端都可以独立全屏；终端另有 **满屏**，铺满页面、不调用系统全屏。
-- 占用的进程在设置里选择释放；会话归档 API 仍保留给旧数据。
+- 群聊走完默认归档并释放本会话进程；成员单聊不自动归档。其它占用可在设置里手动释放。
 - **2.0.1**：本机 REST/WebSocket 使用随机访问令牌与回环 Origin 校验；停止、PID、长输出与断线重连已加固。
 
 <table>
   <tr>
     <td width="50%">
-      <img src="./docs/assets/screenshots/chat-terminal-collaboration.webp" alt="终端卡融入协同对话" />
-      <p align="center"><b>终端融入对话时序</b></p>
+      <img src="./docs/assets/screenshots/chat-terminal-collaboration.webp" alt="对话、闸门与右侧流程轨同屏" />
+      <p align="center"><b>对话、闸门与流程同屏</b></p>
     </td>
     <td width="50%">
       <img src="./docs/assets/screenshots/terminal-member-settings.webp" alt="可配置的内嵌终端成员" />
@@ -69,13 +69,14 @@
 | 能力 | 说明 |
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
-| 人工闸门 | 启动确认、参数输入、同意/拒绝 |
+| 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
+| 熔炉 | 右侧桌宠（默认小头像，距底约三分之一）；已装且已登录直接开 Grok TUI |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏 |
-| 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
+| 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown |
-| 会话治理 | 置顶、改名、删除、续跑；设置里释放资源、备份、配额与脱敏 |
+| 会话治理 | 置顶、改名、删除、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
 | JSONL Adapter | 可信侧通道提问转闸门、工具卡与结果写回；失败降级为真实终端 |
 | 本地数据 | SQLite + Markdown + 本地附件和日志 |
 
@@ -179,7 +180,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
-- [x] 3.3.0 最终封板：熔炉精灵、适配、工作流 prompt、Grok Build 教程
+- [x] 3.3.0 最终封板：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；已登录直接开 TUI；群聊完成即归档
 - [ ] 后续：多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 
