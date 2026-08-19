@@ -587,20 +587,24 @@
       </template>
       <div v-else class="wb-welcome">
         <div class="welcome-hero">
-          <div class="welcome-glow" aria-hidden="true" />
           <div class="welcome-logo-wrap">
-            <AppLogo size="xl" class="welcome-logo" :glow="true" />
+            <AppLogo size="lg" class="welcome-logo" :glow="false" />
           </div>
           <h1 class="core-slogan">
-            <span class="slogan-line">人机协同 · 万物归元</span>
-            <span class="accent">皆可 Workflow</span>
+            <span>人机协同</span>
+            <i class="dot">·</i>
+            <span>万物归元</span>
+            <i class="dot">·</i>
+            <span>皆可 Workflow</span>
+            <i class="dot">·</i>
+            <span>终端守护者</span>
+            <i class="dot">·</i>
+            <span>熔炉连接一切</span>
           </h1>
           <p class="core-living">节点是死的，人是活的 · 可绕行、插队，临时协助再回来</p>
           <div class="welcome-actions">
             <el-button
               type="primary"
-              size="large"
-              round
               :loading="startingChat"
               :disabled="startingChat"
               @click="startDemoChat"
@@ -4305,33 +4309,33 @@ loadLists().then(() => {
   color: #b42318;
 }
 
-/* —— 欢迎态：左对齐、少层级 —— */
+/* —— 欢迎态：居中主视觉，字号与颜色统一 —— */
 .wb-welcome {
   flex: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: 48px 40px 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px 56px;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 720px 380px at 8% 0%, rgba(0, 122, 255, 0.1), transparent 58%),
-    linear-gradient(180deg, #eef3f9 0%, #f7f9fc 42%, #fbfcfe 100%);
+  background: linear-gradient(180deg, #f4f7fb 0%, #f8fafc 55%, #fbfcfe 100%);
 }
 
 .welcome-hero {
   position: relative;
   z-index: 1;
-  width: min(440px, 100%);
-  text-align: left;
-  padding: 8px 0 0;
-  animation: welcome-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: welcome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes welcome-in {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.985);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -4339,129 +4343,80 @@ loadLists().then(() => {
   }
 }
 
-.welcome-glow {
-  pointer-events: none;
-  position: absolute;
-  left: 0;
-  top: -8px;
-  width: 220px;
-  height: 100px;
-  background: radial-gradient(ellipse at center, rgba(0, 122, 255, 0.16), transparent 72%);
-  filter: blur(10px);
-  z-index: 0;
-  animation: welcome-glow 4.5s ease-in-out infinite;
-}
-
-@keyframes welcome-glow {
-  0%,
-  100% {
-    opacity: 0.65;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-}
-
 .welcome-logo-wrap {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 20px;
-  animation: welcome-rise 0.75s 0.06s cubic-bezier(0.22, 1, 0.36, 1) both;
+  margin-bottom: 22px;
 }
 
 .welcome-logo {
-  transform: scale(1.04);
-  transform-origin: left center;
+  border-radius: 14px;
 }
 
 .core-slogan {
-  position: relative;
-  z-index: 1;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 0 0 12px;
-  font-size: clamp(22px, 2.4vw, 28px);
-  font-weight: 780;
-  letter-spacing: -0.04em;
-  line-height: 1.28;
-  color: var(--ecw-text-1, #1d1d1f);
-  animation: welcome-rise 0.75s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 0.12em;
+  margin: 0 0 10px;
+  max-width: 28em;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.75;
+  color: var(--ecw-text-1, #3a3a3c);
 }
 
-.core-slogan .slogan-line {
-  display: block;
+.core-slogan span {
+  white-space: nowrap;
 }
 
-.core-slogan .accent {
-  background: linear-gradient(120deg, #007aff 0%, #2b7cd3 55%, #5856d6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.core-slogan .dot {
+  font-style: normal;
+  font-weight: 400;
+  color: #c5c5c7;
 }
 
 .core-living {
-  position: relative;
-  z-index: 1;
   margin: 0 0 28px;
   max-width: 28em;
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.55;
-  letter-spacing: -0.01em;
-  color: var(--ecw-text-2, #6e6e73);
-  animation: welcome-rise 0.75s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--ecw-text-2, #6a6a6e);
 }
 
 .welcome-cta {
-  position: relative;
-  z-index: 1;
   margin: 0;
-  font-size: 12px;
-  color: var(--ecw-text-3, #86868b);
-  letter-spacing: 0.01em;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ecw-text-3, #8a8a8e);
 }
 
 .welcome-actions {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  align-items: center;
+  gap: 12px;
 }
 
 @keyframes welcome-rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-hero,
-  .welcome-glow,
-  .welcome-logo-wrap,
-  .core-slogan,
-  .core-living,
-  .welcome-actions {
+  .welcome-hero {
     animation: none !important;
   }
 }
 
 @media (max-width: 720px) {
   .wb-welcome {
-    padding: 28px 20px 24px;
+    padding: 28px 20px 32px;
   }
 }
 

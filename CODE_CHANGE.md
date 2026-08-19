@@ -22,7 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
-2026-08-19 | M | README.md / docs/assets/screenshots/* | 按当前功能重拍首页/工作台/设置截图并改说明
+2026-08-19 | M | Workbench.vue | 首页欢迎居中；口号同一字号颜色；补终端守护者/熔炉连接一切
+2026-08-19 | M | docs/brand-logo.md / frontend-components.md | 同步欢迎区文案与布局
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-19 | M | AGENT.md / docs/frontend-components.md / brand-logo.md / crucible-3x*.md / mvp.md | 桌宠位置、欢迎区、完成即归档与文档对齐
 2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
 
