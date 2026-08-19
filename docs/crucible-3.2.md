@@ -2,9 +2,9 @@
 
 | 属性 | 内容 |
 |------|------|
-| 目标版本 | `3.2` |
-| 状态 | **游标开跑已接线：节点一览随执行刷新** |
-| 日期 | 2026-08-18 |
+| 目标版本 | `3.2`（注入落地为 `3.4`） |
+| 状态 | **游标开跑已接线**；Grok 本机规则注入见 §10，**3.4 已落地** |
+| 日期 | 2026-08-19 |
 | 前置 | [crucible-3x.md](./crucible-3x.md)；群模板 + 节点实例 |
 | 对照 | 脚本仍走 [data-and-ops.md](./data-and-ops.md) §9.1 的 `#` / `ACW_*` |
 
@@ -49,7 +49,7 @@
 | 当前节点合同 | 游标 + 该步配置 + 上一产出 | 游标一动就换 | 这一格的任务边界 |
 | 脚本契约 | 成员配置 | 跟脚本走 | CLI 读参数；熔炉不要抢 |
 
-本机 Grok 仍只认 `data/furnace/ACTIVE.md` = ① + ② + ③ + 当前角色记忆。脚本成员继续只走 ④。两套通道，避免「把熔炉 system prompt 偷偷塞进 python」。
+本机 Grok 仍只认它会自动装载的规则文件（见 [§10](#10-grok-本机注入技术)），不是任意名为 `ACTIVE.md` 的文件。引擎继续编译 `ACTIVE.md` = ① + ② + ③ + 当前角色记忆；**点开熔炉时**再写入 Grok 会读的本机 md，并用短 `--prompt` 点名本轮操作。脚本成员继续只走 ④。
 
 用户原话（开聊输入、后来的 `#1`）进地图的「意图 / 参数」槽，**不论这场是总结、发布、修脚本还是别的。**
 
@@ -158,6 +158,8 @@
 - 不把多场会话的地图拼进同一份 ACTIVE。
 - `step.hint`（人给某一格的短备注）后置，且不能变成第二套编排语言。
 - 精灵点开切壳、Grok 客户端：后置。
+- 不为每个业务场景各写一份 skill / 一份 AGENT.md。
+- 不覆盖用户全局 `~/.grok/AGENTS.md` 全文。
 
 ---
 
@@ -167,3 +169,82 @@
 - 换到适配步 / 熔炉闸门时，角色壳变、节点一览还在，「当前节点」对准那一格。
 - 群标题叫什么都可以；地图不依赖「工作总结」这种场景词。
 - `npm test` 覆盖节点一览编译与换壳保留地图。
+
+---
+
+## 10. Grok 本机注入（技术）
+
+Grok Build TUI **不会**自动把 cwd 里任意 md 塞进上下文。它启动时只把下列内容装进 system prompt：
+
+- `AGENTS.md` / `Agents.md` / `AGENT.md` / `CLAUDE.md` / `Claude.md` / `CLAUDE.local.md`
+- 该目录下 `.grok/rules/*.md`（以及兼容的 `.claude/rules/`、`.cursor/rules/`）
+- 全局 `~/.grok/` 里同名规则
+
+Skill（`SKILL.md`）按描述按需调用，不是每次全文灌入。`ACTIVE.md` 不在自动装载名单里。被 `.gitignore` 忽略的规则文件也会被跳过——因此 **`data/furnace/`（仓库 `data/` 下、gitignore）不能当作「打开就会读」的规则目录。**
+
+### 10.1 目录与文件
+
+熔炉 Grok 的 cwd **改为专用本机目录**（默认 `~/.grok/workspaces/oh-my-co-work/`，设置可改），不要用业务仓根（会误读仓库给人看的 `AGENT.md`），也不要只用 gitignore 的 `data/furnace/`。
+
+| 路径 | 谁写 | 作用 |
+| --- | --- | --- |
+| `{cwd}/AGENTS.md` | 引擎只改标记块 | Grok **默认装载**。块外留给用户手写 |
+| `{cwd}/ACTIVE.md` | 引擎整份覆盖 | 本轮角色壳 + 情境全文；给人看、给 `read` |
+| `{cwd}/SITUATION.md` | 引擎整份覆盖 | 节点地图副本 |
+| `{cwd}/.grok/rules/session.md` | 可选，引擎整份覆盖 | 与标记块二选一或并用：该目录每个 md 都会被装载 |
+| `data/furnace/memory/*.md` | 首次从种子复制，之后本机 | 风格记忆，不写本场事实 |
+
+`AGENTS.md` 标记块（只替换 begin→end，块外不动）：
+
+```markdown
+<!-- oh-my-co-work-furnace:begin -->
+你是熔炉。只使用当前角色。先读本块与 ACTIVE.md。
+只处理节点一览里标了「现在」的那一格；其它行是地图，不要提前执行、不要改编排。
+本轮角色：{label}（{role}）
+{短情境：意图 + 当前节点合同，受 SITUATION_LIMITS 截断}
+全文：同目录 ACTIVE.md
+<!-- oh-my-co-work-furnace:end -->
+```
+
+冲突：块缺失或被改乱 → 写入前复制 `AGENTS.md.bak-furnace`，再重写块。
+
+**禁止**把整份 ACTIVE 写进用户**全局** `~/.grok/AGENTS.md`（会污染其它项目的 Grok）。
+
+### 10.2 打开熔炉时的时序
+
+每次用户点精灵 / 「开熔炉」（已装且已登录）走同一条管线，**先写盘再起 TUI**：
+
+```text
+判定功能（游标 / 闸门 / 缺口）
+  → activateFurnaceRole：编译 ACTIVE.md + SITUATION.md
+  → 刷新 {cwd}/AGENTS.md 标记块（或 .grok/rules/session.md）
+  → PTY：cwd={专用目录} 启动
+       grok --prompt "<本轮短指令>"
+```
+
+未装或未登录：不写业务规则、不 `--prompt` 业务指令，只开教程。
+
+短 `--prompt` 只点名「读哪份、本轮动作」，不把 8k 地图塞进命令行。`--rules` 仅用于极短站岗句；本场地图以 md 为准。不要用 `--system-prompt-override`。
+
+| 本轮功能 | 装哪套壳 | `--prompt` 要它做什么 |
+| --- | --- | --- |
+| 主持（默认闲置 / 普通推进） | `session` | 读 ACTIVE；复述当前格；提醒缺输入；不改编排、不过闸、不改代码 |
+| 成员适配 | `member-adapt` | 只把当前执行者接到工作台 |
+| 节点适配 | `node-adapt` | 只接当前这一格；改不了则保留适配标记 |
+| 系统审核 | `review` | 只对当前格通过/拒绝 |
+
+群聊每条消息**不**刷新 Grok 规则。刷新时机：开熔炉、开聊落盘、游标换壳（适配步 / 熔炉闸）。TUI 已开着时 Grok **不会**自动重读文件；换壳后工作台提示「规则已更新」，需要新开一轮熔炉或用户在 TUI 里再说一句。产品上允许「换壳 = 视同再开一次熔炉」（可复用 PTY，但下一句才吃到新规则）。
+
+### 10.3 交互（设置 + 工作台）
+
+- 设置 → Grok / 熔炉：上下文目录、开关「写入本机 Grok 规则」（默认开）。第一次确认路径与「只改标记块」。提供打开文件夹、移除标记块。
+- 工作台系统气泡仍只写「熔炉本轮：{label}」，可附「已写入 {cwd}/AGENTS.md」，不把全文灌进聊天。
+- 实现落点：`furnaceContext.js` 编译与写标记块；`furnaceGrokScript` 的 `scriptWorkDir` 改为专用 cwd，`command` 带 `--prompt`；设置项进 `app-settings.json`（路径与开关，不进 git 的本机文件）。
+
+### 10.4 验收（注入）
+
+- `data/furnace` 下只有 `ACTIVE.md` 时，`grok inspect`（若在该目录且被 gitignore）**不能**作为「已注入」的依据。
+- 专用 cwd 下 `grok inspect` 能列出 `{cwd}/AGENTS.md` 或 `.grok/rules/session.md`。
+- 点开熔炉后，标记块角色与当前节点合同与工作台游标一致。
+- 用户在标记块外的手写内容，刷新后仍在。
+- 关掉「写入本机 Grok 规则」后不再改用户 md，TUI 仍可开，但不保证 Grok 带着本场地图。

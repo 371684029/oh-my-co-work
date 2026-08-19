@@ -22,7 +22,18 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
-2026-08-19 | M | README.md / AGENT.md | 首页口号与居中欢迎截图说明同步到 README
+2026-08-19 | A | server/src/furnaceGrokInject.js / test/furnaceGrokInject.test.js | AGENTS 标记块、专用 cwd、短 --prompt
+2026-08-19 | M | furnaceContext.js / furnaceSituation.js / slashCommands.js / runners.js / engine.js | 开炉/换壳写盘；聊天 keepRole 不灌 Grok；TUI cwd 与 --prompt
+2026-08-19 | M | appSettings.js / routes.js / api.js / Prefs.vue / App.vue | 路径、写入开关、第一次确认、打开文件夹、移除标记块
+2026-08-19 | M | docs/crucible-3.2.md / crucible-3x-plan.md / about.json / AGENT.md | 3.4 落地与版本
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+
+2026-08-19 | M | docs/crucible-3.2.md / crucible-3x.md / crucible-3x-plan.md | 3.4：开熔炉写入本机 AGENTS 标记块 + --prompt
+2026-08-19 | M | docs/README.md / directory-structure.md | 索引与熔炉 cwd 指向 3.4
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-19 | M | Workbench.vue | 首页欢迎居中；口号同一字号颜色；补终端守护者/熔炉连接一切
 2026-08-19 | M | docs/brand-logo.md / frontend-components.md | 同步欢迎区文案与布局
 2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目

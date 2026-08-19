@@ -249,6 +249,7 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
     label: FURNACE_ROLE_LABEL[role] || role,
     activeMd,
     situationMd,
+    situationText: sitText || '',
     text: composed,
   }
 }

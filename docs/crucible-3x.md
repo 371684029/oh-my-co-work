@@ -8,6 +8,7 @@
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
 | 3.3 教程 | [crucible-3.3.md](./crucible-3.3.md) |
+| 3.4 注入 | [crucible-3.2.md](./crucible-3.2.md) §10；计划 [crucible-3x-plan.md](./crucible-3x-plan.md) Phase 5 |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
 本文固定 3.x 主题与边界。细节（模型、壳技术、闸门 UI）后置细化，不在本文一次定死。
@@ -64,7 +65,7 @@
 | 节点适配 | 步骤勾了适配 | `prompts/node-adapt.md` | `memory-seed/node-adapt.md` | `memory/node-adapt.md` |
 | 系统审核 | 闸门要熔炉确认 | `prompts/review.md` | `memory-seed/review.md` | `memory/review.md` |
 
-本轮装入写成 `data/furnace/ACTIVE.md`（Grok TUI 工作目录就是这里）。系统气泡只写「熔炉本轮：xxx」，不把全文灌进聊天。记忆种子只复制一次，已有本机记忆不覆盖。
+本轮装入写成 `ACTIVE.md`（给人看 / 给 Grok `read`）。Grok Build **不会**自动装载任意名为 `ACTIVE.md` 的文件。点开熔炉时写入专用 cwd 里它会读的规则 md，并用短 `--prompt` 点名本轮操作。详见 [crucible-3.2.md](./crucible-3.2.md) §10。系统气泡只写「熔炉本轮：xxx」，不把全文灌进聊天。记忆种子只复制一次，已有本机记忆不覆盖。
 
 开聊之后熔炉要的是 **节点地图**（哪个节点是什么、游标在哪），不是某一个业务场景的专用 prompt。角色壳回答「你是谁」；节点一览 + 当前节点合同回答「工作流里这一格是什么」。管理模型见 **[crucible-3.2.md](./crucible-3.2.md)**。
 
@@ -168,9 +169,9 @@
 - 「改不了代码」：只读、二进制、过大、找不到源文件、备份失败 → 不改文件，只打步骤标记。  
 - 压缩包：`data/backups/adapt/<成员id>/adapt-<时间>.zip` + 同名 json 清单；只含即将改动的文件。  
 - 流程轨：步骤角标「适配」+ 右侧「适配」筛选 Tab（不是新页面）。  
-- 三套上下文：prompt 进仓库、记忆在 `data/furnace`、本轮只写 `ACTIVE.md`。  
-- `unified_admin` 的内部 id 是否保留、只改展示名？  
+- 三套上下文：prompt 进仓库、记忆在本机；`ACTIVE.md` 给人看；Grok 默认上下文靠专用目录 `AGENTS.md` 标记块（[crucible-3.2.md](./crucible-3.2.md) §10）。  
 - 精灵点开时是否切换角色。  
+- `unified_admin` 的内部 id 是否保留、只改展示名？  
 
 发型、正侧脸、动画仍后细化。
 

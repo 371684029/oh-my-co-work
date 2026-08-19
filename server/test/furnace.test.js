@@ -6,6 +6,7 @@ import test from 'node:test'
 
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-furnace-'))
 process.env.ACW_DATA_ROOT = dataRoot
+process.env.ACW_GROK_WORKSPACE = path.join(dataRoot, 'grok-ws')
 
 const { initDb } = await import('../src/db.js')
 initDb()
@@ -45,6 +46,7 @@ test('getAppSettings exposes grok defaults without requiring configured', () => 
   assert.equal(typeof s.grok.command, 'string')
   assert.ok(s.grok.command.length > 0)
   assert.equal(typeof s.grok.configured, 'boolean')
+  assert.equal(s.grok.writeRules, true)
 })
 
 test('grok.configured defaults on', () => {
@@ -71,6 +73,7 @@ test('ensureAdminMember wires grok script after grok.configured is saved', () =>
   assert.equal(wired.kind, MEMBER_KIND.SCRIPT)
   assert.equal(wired.config?.script?.command, 'grok')
   assert.equal(wired.config?.script?.executionMode, 'terminal')
+  assert.ok(String(wired.config?.script?.scriptWorkDir || '').includes('grok-ws'))
   updateAppSettings({ grok: { command: 'grok', configured: false } })
   const config = { ...(wired.config || {}) }
   delete config.script
