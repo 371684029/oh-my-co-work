@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -12,6 +12,17 @@
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。"
   ],
   "changelog": [
+    {
+      "version": "3.4.0",
+      "date": "2026-08-19",
+      "title": "3.4.0：开熔炉写入本机 Grok 规则",
+      "items": [
+        "熔炉 TUI 改到专用 cwd（默认 ~/.grok/workspaces/oh-my-co-work/），不读业务仓根、不用 gitignore 的 data/furnace 当规则目录。",
+        "点开熔炉先编译 ACTIVE.md，再写入 AGENTS.md 标记块与 .grok/rules/session.md，并以短 --prompt 点名主持/适配/审核。",
+        "设置可改路径、关闭写入、打开文件夹、移除标记块；不覆盖全局 ~/.grok/AGENTS.md。",
+        "群聊每条消息不刷新 Grok 规则；开炉 / 开聊 / 换壳才写。"
+      ]
+    },
     {
       "version": "3.3.0",
       "date": "2026-08-18",

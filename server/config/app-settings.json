@@ -11,7 +11,10 @@
   },
   "grok": {
     "command": "grok",
-    "configured": false
+    "configured": false,
+    "workspaceDir": "",
+    "writeRules": true,
+    "rulesAcknowledged": false
   },
   "adapt": {
     "backup": true

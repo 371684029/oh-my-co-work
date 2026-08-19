@@ -1,4 +1,4 @@
-version=3.3.0
+version=3.4.0
 major=3
 kind=runtime-bundle
 needsNpmInstall=false

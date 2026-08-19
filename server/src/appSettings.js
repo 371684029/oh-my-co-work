@@ -40,6 +40,10 @@ export function defaultGrokSettings() {
   return {
     command: 'grok',
     configured: true,
+    /** 空 = 默认 ~/.grok/workspaces/oh-my-co-work/ */
+    workspaceDir: '',
+    writeRules: true,
+    rulesAcknowledged: false,
   }
 }
 
@@ -52,9 +56,17 @@ function normalizeGrok(raw) {
     raw.configured === 'false' ||
     raw.configured === 0 ||
     raw.configured === '0'
+  const writeOff =
+    raw.writeRules === false ||
+    raw.writeRules === 'false' ||
+    raw.writeRules === 0 ||
+    raw.writeRules === '0'
   return {
     command,
     configured: raw.configured === undefined || raw.configured === null ? d.configured : !off,
+    workspaceDir: raw.workspaceDir != null ? String(raw.workspaceDir).trim() : d.workspaceDir,
+    writeRules: raw.writeRules === undefined || raw.writeRules === null ? d.writeRules : !writeOff,
+    rulesAcknowledged: !!raw.rulesAcknowledged,
   }
 }
 

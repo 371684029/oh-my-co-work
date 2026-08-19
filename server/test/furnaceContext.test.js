@@ -6,6 +6,7 @@ import test from 'node:test'
 
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-furnace-ctx-'))
 process.env.ACW_DATA_ROOT = dataRoot
+process.env.ACW_GROK_WORKSPACE = path.join(dataRoot, 'grok-ws')
 
 const { FURNACE_ROLE } = await import('@acw/shared')
 const {

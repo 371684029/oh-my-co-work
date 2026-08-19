@@ -54,6 +54,13 @@ import { getAppSettings,
   resolveGroupAdmin,
 } from './appSettings.js'
 import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
+import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
+import {
+  removeFurnaceGrokBlock,
+  resolveGrokWorkspaceDir,
+  ensureGrokWorkspace,
+  defaultGrokWorkspaceDir,
+} from './furnaceGrokInject.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -631,6 +638,45 @@ router.get('/grok/status', (_req, res) => {
     ...probeGrokStatus({ command }),
     exampleToml: loadGrokExampleConfig(),
   })
+})
+router.get('/furnace/grok-workspace', (_req, res) => {
+  const grok = getAppSettings().grok || {}
+  const cwd = resolveGrokWorkspaceDir(grok)
+  res.json({
+    cwd,
+    defaultCwd: defaultGrokWorkspaceDir(),
+    agentsMd: path.join(cwd, 'AGENTS.md'),
+    writeRules: grok.writeRules !== false,
+    rulesAcknowledged: !!grok.rulesAcknowledged,
+  })
+})
+router.post('/furnace/prepare', (req, res) => {
+  try {
+    if (req.body?.acknowledge) {
+      updateAppSettings({ grok: { rulesAcknowledged: true } })
+    }
+    const sessionId = req.body?.sessionId || null
+    res.json(prepareFurnaceGrokLaunch({ sessionId }))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.post('/furnace/grok-workspace/open', async (_req, res) => {
+  try {
+    const grok = getAppSettings().grok || {}
+    const cwd = ensureGrokWorkspace(resolveGrokWorkspaceDir(grok))
+    await openLocalPath(cwd)
+    res.json({ ok: true, path: cwd })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.post('/furnace/grok-block/remove', (_req, res) => {
+  try {
+    res.json(removeFurnaceGrokBlock(getAppSettings().grok || {}))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 router.patch('/settings/app', (req, res) => {
   try {
