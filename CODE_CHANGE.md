@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-19 | M | FurnaceWorkspace.vue / shared/index.js | IME 防误发；画面只渲染回放尾部；缩小与返回群聊分开；默认皮不覆盖本次切换
+2026-08-19 | M | server/test/stripAnsi.test.js / docs/crucible-3.5.md | 尾部截断测试与文案
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-19 | A | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉铺满对话皮，可缩小、可切 TUI
 2026-08-19 | M | Workbench.vue / Prefs.vue / appSettings.js / shared/index.js | 开熔炉默认 surface=chat；stripAnsi 共用
 2026-08-19 | A | docs/crucible-3.5.md | 3.5 简易对话皮设计

@@ -7,7 +7,14 @@
     >
       <header class="furnace-head">
         <div class="furnace-leading">
-          <button type="button" class="furnace-btn" @click="$emit('close')">返回工作台</button>
+          <button
+            type="button"
+            class="furnace-btn"
+            title="关掉这层皮，回到群聊。Grok 进程还在，可点终端卡再进来。"
+            @click="$emit('close')"
+          >
+            返回群聊
+          </button>
           <span class="furnace-divider" />
           <div class="furnace-identity">
             <span class="furnace-dot" :class="{ active: isRunning }" />
@@ -20,10 +27,10 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
-            title="气泡皮：去 ANSI 的大对话面，同一条 grok 进程"
+            title="去颜色的 Grok 画面 + 底部输入；菜单请用终端"
             @click="surface = 'chat'"
           >
-            对话
+            画面
           </button>
           <button
             type="button"
@@ -37,10 +44,14 @@
           <button
             type="button"
             class="furnace-btn"
-            :title="isPagefill ? '缩小：回到工作台三栏' : '铺满整个页面'"
+            :title="
+              isPagefill
+                ? '缩小到工作台三栏，熔炉仍在中间'
+                : '铺满整个页面'
+            "
             @click="togglePagefill"
           >
-            {{ isPagefill ? '缩小' : '铺满页面' }}
+            {{ isPagefill ? '缩小到三栏' : '铺满页面' }}
           </button>
           <button
             type="button"
@@ -64,24 +75,27 @@
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log">
-          <div v-if="!liveText && !sent.length" class="furnace-empty">
-            Grok 已在本机跑着。在下方输入，发送进同一进程。菜单或快捷键请切「终端」。
+          <div v-if="!liveText" class="furnace-empty">
+            这是 Grok 终端画面的去颜色副本，不是多轮聊天气泡。菜单和快捷键请切「终端」。
+            下方输入会写进同一进程。
           </div>
-          <div v-for="item in sent" :key="item.id" class="bubble bubble-user">
-            <span class="bubble-label">你</span>
-            <pre>{{ item.text }}</pre>
-          </div>
-          <div v-if="liveText" class="bubble bubble-grok">
-            <span class="bubble-label">Grok</span>
+          <div v-if="liveText" class="screen">
+            <span class="bubble-label">Grok 画面（去颜色）</span>
             <pre>{{ liveText }}</pre>
           </div>
+        </div>
+        <div v-if="sent.length" class="furnace-sent">
+          <span class="furnace-sent-label">已写入进程</span>
+          <span v-for="item in sent.slice(-3)" :key="item.id" class="furnace-sent-chip">{{
+            item.text
+          }}</span>
         </div>
         <form class="furnace-composer" @submit.prevent="sendChat">
           <textarea
             v-model="draft"
             rows="3"
             :disabled="!isRunning"
-            placeholder="写给熔炉… Enter 发送，Shift+Enter 换行"
+            placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行"
             @keydown="onComposerKey"
           />
           <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
@@ -101,7 +115,7 @@
       </div>
 
       <footer class="furnace-foot">
-        <span>{{ isPagefill ? '铺满页面' : '工作台中栏' }} · {{ surface === 'chat' ? '对话皮' : 'TUI' }}</span>
+        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? '去色画面' : 'TUI' }}</span>
         <span v-if="terminal.cwd" class="furnace-cwd" :title="terminal.cwd">{{ terminal.cwd }}</span>
         <span>{{ footerHint }}</span>
       </footer>
@@ -111,7 +125,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { stripAnsi } from '@acw/shared'
+import { stripAnsiTail } from '@acw/shared'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
@@ -140,7 +154,7 @@ const draft = ref('')
 const sent = ref([])
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
-const liveText = computed(() => stripAnsi(props.terminal.replay || '').trim())
+const liveText = computed(() => stripAnsiTail(props.terminal.replay || ''))
 const canSend = computed(() => isRunning.value && !!draft.value.trim())
 
 const statusText = computed(() => {
@@ -158,8 +172,12 @@ const statusText = computed(() => {
 })
 
 const footerHint = computed(() => {
-  if (!isRunning.value) return '进程已结束 · 返回工作台保留记录'
-  if (surface.value === 'chat') return '发送写入同一 grok 进程 · 缩小后仍在中栏'
+  if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
+  if (surface.value === 'chat') {
+    return isPagefill.value
+      ? '画面是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
+      : '已在三栏中栏 · 可再铺满页面'
+  }
   if (focused.value) return '终端输入中 · Esc 退出焦点'
   if (isPagefill.value) return '再按 Esc 缩小回工作台'
   return '点画面继续输入'
@@ -193,6 +211,7 @@ function sendChat() {
 
 function onComposerKey(ev) {
   if (ev.key !== 'Enter' || ev.shiftKey) return
+  if (ev.isComposing || ev.keyCode === 229) return
   ev.preventDefault()
   sendChat()
 }
@@ -232,13 +251,6 @@ watch(surface, (mode) => {
   if (mode === 'chat') emit('resize', { cols: 120, rows: 40 })
   nextTick(() => window.dispatchEvent(new Event('resize')))
 })
-
-watch(
-  () => props.defaultSurface,
-  (v) => {
-    surface.value = v === 'tui' ? 'tui' : 'chat'
-  },
-)
 
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
@@ -313,8 +325,16 @@ onUnmounted(() => {
   border-color: rgba(255, 255, 255, 0.07);
 }
 
-.furnace-leading,
 .furnace-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.furnace-leading {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -402,14 +422,9 @@ onUnmounted(() => {
   margin: 12vh auto 0;
 }
 
-.bubble {
-  max-width: min(52rem, 100%);
+.screen {
+  max-width: min(56rem, 100%);
   margin: 0 auto 16px;
-}
-
-.bubble-user {
-  margin-left: auto;
-  margin-right: 8%;
 }
 
 .bubble-label {
@@ -420,26 +435,44 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
-.bubble pre {
+.screen pre {
   margin: 0;
   padding: 14px 16px;
   border-radius: 16px;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: inherit;
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.bubble-user pre {
-  background: #007aff;
-  color: #fff;
-}
-
-.bubble-grok pre {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
   background: #fff;
   color: #1d1d1f;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.furnace-sent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8% 0;
+}
+
+.furnace-sent-label {
+  font-size: 11px;
+  color: #6e6e73;
+  flex-shrink: 0;
+}
+
+.furnace-sent-chip {
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
 }
 
 .furnace-composer {

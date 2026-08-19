@@ -138,6 +138,27 @@ export function stripAnsi(value) {
     .replace(/\r/g, '')
 }
 
+/** 对话皮只展示回放尾部，避免整页塞满 TUI 录像 */
+export const FURNACE_CHAT_TAIL_CHARS = 12_000
+export const FURNACE_CHAT_TAIL_LINES = 80
+
+export function stripAnsiTail(
+  value,
+  { maxChars = FURNACE_CHAT_TAIL_CHARS, maxLines = FURNACE_CHAT_TAIL_LINES } = {},
+) {
+  let text = stripAnsi(value)
+  if (maxChars > 0 && text.length > maxChars) {
+    text = text.slice(-maxChars)
+    const nl = text.indexOf('\n')
+    if (nl >= 0 && nl < 240) text = text.slice(nl + 1)
+  }
+  if (maxLines > 0) {
+    const lines = text.split('\n')
+    if (lines.length > maxLines) text = lines.slice(-maxLines).join('\n')
+  }
+  return text.replace(/^\s+/, '').replace(/\s+$/, '')
+}
+
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',
