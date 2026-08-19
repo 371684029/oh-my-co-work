@@ -4,10 +4,10 @@
   <img src="./docs/assets/logo-mark.jpg" alt="oh-my-co-work logo" width="104" height="104" />
 </p>
 
-<h3 align="center">把人、Agent、脚本和 TUI 放进同一条 Workflow</h3>
+<h3 align="center">人机协同 · 万物归元 · 皆可 Workflow · 终端守护者 · 熔炉连接一切</h3>
 
 <p align="center">
-  群聊式多智能体协同工作台 · 本地优先 · 可视化流程 · 人工闸门 · 内嵌真实终端
+  把人、Agent、脚本和 TUI 放进同一条 Workflow · 本地优先 · 人工闸门 · 内嵌真实终端
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 > **节点是死的，人是活的。**
 > Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
 
-<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：左对齐欢迎区与右侧熔炉桌宠" width="100%" />
+<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，口号含终端守护者与熔炉连接一切" width="100%" />
 
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台" width="100%" />
 
@@ -180,7 +180,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
-- [x] 3.3.0 最终封板：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；已登录直接开 TUI；群聊完成即归档
+- [x] 3.3.0 最终封板：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；首页口号含终端守护者与熔炉连接一切；已登录直接开 TUI；群聊完成即归档
 - [ ] 后续：多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

@@ -4378,7 +4378,7 @@ loadLists().then(() => {
 
 .core-living {
   margin: 0 0 28px;
-  max-width: 28em;
+  max-width: 36em;
   font-size: 14px;
   font-weight: 400;
   line-height: 1.7;
