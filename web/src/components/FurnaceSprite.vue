@@ -85,18 +85,18 @@ function defaultPos() {
   const h = typeof window !== 'undefined' ? window.innerHeight : 720
   return {
     right: 18,
-    top: Math.round(h / 3),
+    bottom: Math.round(h / 3),
     left: null,
-    bottom: null,
+    top: null,
   }
 }
 
-function isLegacyCornerPos(saved) {
+/** 未拖过：贴右的自动落点（旧贴底角 / 旧距顶三分之一）都迁到距底三分之一 */
+function isAutoPlacedPos(saved) {
   if (!saved || typeof saved !== 'object') return true
-  if (saved.left != null || saved.top != null) return false
-  const bottom = Number(saved.bottom)
+  if (saved.left != null) return false
   const right = Number(saved.right ?? 18)
-  return Number.isFinite(bottom) && bottom <= 48 && Number.isFinite(right) && right <= 48
+  return !Number.isFinite(right) || right <= 48
 }
 
 const pos = ref(defaultPos())
@@ -246,7 +246,7 @@ onMounted(() => {
     const raw = localStorage.getItem(POS_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
-      pos.value = isLegacyCornerPos(saved) ? defaultPos() : { ...defaultPos(), ...saved }
+      pos.value = isAutoPlacedPos(saved) ? defaultPos() : { ...defaultPos(), ...saved }
     } else {
       pos.value = defaultPos()
     }
