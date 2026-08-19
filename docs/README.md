@@ -11,7 +11,7 @@
 | [tui-2x.md](./tui-2x.md) | **2.x 内嵌 TUI 设计**：真实 PTY、终端卡、工作区、适配器与安全边界 |
 | [tui-2x-plan.md](./tui-2x-plan.md) | **2.x 实施计划**：2.0～2.3 阶段、任务、测试、风险与完成定义 |
 | [crucible-3x.md](./crucible-3x.md) | **3.x 熔炉设计**：Grok Agent、无内置工具；加人改代码 / 加适配节点 |
-| [crucible-3x-plan.md](./crucible-3x-plan.md) | **3.x 实施计划**：3.0 入口 → 3.1 适配 → 3.2 prompt → 3.3 Grok 教程 |
+| [crucible-3x-plan.md](./crucible-3x-plan.md) | **3.x 实施计划**：3.0 入口 → 3.1 适配 → 3.2 prompt → 3.3 教程 → **3.4 开熔炉注入** |
 | [crucible-3.2.md](./crucible-3.2.md) | **3.2 工作流 prompt 工程**：节点一览、当前节点合同、角色壳换挡 |
 | [crucible-3.3.md](./crucible-3.3.md) | **3.3 Grok Build 教程**：未安装/未登录/未配置时的下载登录配置 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |

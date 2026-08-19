@@ -67,7 +67,7 @@ oh-my-co-work/
 │   ├── logs/
 │   ├── journals/
 │   ├── backups/adapt/           # 适配备份 zip（不进 git）
-│   └── furnace/                 # ACTIVE.md + SITUATION.md + 本机记忆（不进 git）
+│   └── furnace/                 # 本机记忆等；Grok 默认规则在 ~/.grok/workspaces/oh-my-co-work/（3.4）
 │
 └── scripts/                     # 可选运维脚本
 ```
