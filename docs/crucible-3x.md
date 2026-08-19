@@ -8,6 +8,7 @@
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
 | 3.3 教程 | [crucible-3.3.md](./crucible-3.3.md) |
+| 3.4 注入 | [crucible-3.2.md](./crucible-3.2.md) §10；计划 [crucible-3x-plan.md](./crucible-3x-plan.md) Phase 5 |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
 本文固定 3.x 主题与边界。细节（模型、壳技术、闸门 UI）后置细化，不在本文一次定死。
