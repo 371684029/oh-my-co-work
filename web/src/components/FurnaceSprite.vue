@@ -81,7 +81,25 @@ const poking = ref(false)
 const minimized = ref(true)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
-const pos = ref({ right: 18, bottom: 16, left: null, top: null })
+function defaultPos() {
+  const h = typeof window !== 'undefined' ? window.innerHeight : 720
+  return {
+    right: 18,
+    top: Math.round(h / 3),
+    left: null,
+    bottom: null,
+  }
+}
+
+function isLegacyCornerPos(saved) {
+  if (!saved || typeof saved !== 'object') return true
+  if (saved.left != null || saved.top != null) return false
+  const bottom = Number(saved.bottom)
+  const right = Number(saved.right ?? 18)
+  return Number.isFinite(bottom) && bottom <= 48 && Number.isFinite(right) && right <= 48
+}
+
+const pos = ref(defaultPos())
 const dragging = ref(false)
 
 const spriteSrc = computed(() => {
@@ -226,10 +244,15 @@ watch(
 onMounted(() => {
   try {
     const raw = localStorage.getItem(POS_KEY)
-    if (raw) pos.value = { ...pos.value, ...JSON.parse(raw) }
+    if (raw) {
+      const saved = JSON.parse(raw)
+      pos.value = isLegacyCornerPos(saved) ? defaultPos() : { ...defaultPos(), ...saved }
+    } else {
+      pos.value = defaultPos()
+    }
     minimized.value = localStorage.getItem(MIN_KEY) !== '0'
   } catch {
-    /* ignore */
+    pos.value = defaultPos()
   }
   chatterTimer = window.setInterval(() => {
     if (minimized.value || hovered.value || document.hidden) return

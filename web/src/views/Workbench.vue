@@ -592,30 +592,10 @@
             <AppLogo size="xl" class="welcome-logo" :glow="true" />
           </div>
           <h1 class="core-slogan">
-            <span class="slogan-lead">
-              <span>人机协同</span>
-              <i class="dot">·</i>
-              <span>万物归元</span>
-              <i class="dot">·</i>
-            </span>
-            <span class="slogan-tail">
-              <span class="accent">皆可 Workflow</span>
-              <i class="dot">·</i>
-              <span class="guard-mark">终端守护者</span>
-            </span>
+            <span class="slogan-line">人机协同 · 万物归元</span>
+            <span class="accent">皆可 Workflow</span>
           </h1>
-          <p class="core-living">
-            <span class="living-lead">节点是死的，人是活的</span>
-            <span class="living-rest">流动的 Workflow · 可绕行、插队、临时协助再回来</span>
-          </p>
-          <p class="core-mvp">只做 MVP · 聊天推进 · 流程对齐</p>
-          <p class="welcome-journey" aria-label="上手三步">
-            <span>开聊</span>
-            <i aria-hidden="true" />
-            <span>对话</span>
-            <i aria-hidden="true" />
-            <span>确认</span>
-          </p>
+          <p class="core-living">节点是死的，人是活的 · 可绕行、插队，临时协助再回来</p>
           <div class="welcome-actions">
             <el-button
               type="primary"
@@ -627,7 +607,7 @@
             >
               一键开聊：演示流
             </el-button>
-            <p class="welcome-cta">或左侧自选群模板后点「开聊」；成员会回到已有单聊</p>
+            <p class="welcome-cta">或左侧自选群模板后点「开聊」</p>
           </div>
         </div>
       </div>
@@ -4325,36 +4305,26 @@ loadLists().then(() => {
   color: #b42318;
 }
 
-/* —— 欢迎态：一屏一构图，品牌与流动宗旨优先 —— */
+/* —— 欢迎态：左对齐、少层级 —— */
 .wb-welcome {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px 48px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 48px 40px 40px;
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 980px 460px at 50% 12%, rgba(0, 122, 255, 0.14), transparent 62%),
-    radial-gradient(ellipse 420px 280px at 12% 78%, rgba(90, 200, 250, 0.1), transparent 55%),
-    radial-gradient(ellipse 380px 240px at 88% 72%, rgba(175, 82, 222, 0.05), transparent 50%),
-    linear-gradient(180deg, #eef3f9 0%, #f7f9fc 38%, #fbfcfe 100%);
+    radial-gradient(ellipse 720px 380px at 8% 0%, rgba(0, 122, 255, 0.1), transparent 58%),
+    linear-gradient(180deg, #eef3f9 0%, #f7f9fc 42%, #fbfcfe 100%);
 }
 
 .welcome-hero {
   position: relative;
   z-index: 1;
-  width: min(620px, 100%);
-  text-align: center;
-  padding: 36px 28px 28px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 0.5px solid rgba(255, 255, 255, 0.7);
-  box-shadow:
-    0 24px 56px rgba(15, 23, 42, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  width: min(440px, 100%);
+  text-align: left;
+  padding: 8px 0 0;
   animation: welcome-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -4372,12 +4342,11 @@ loadLists().then(() => {
 .welcome-glow {
   pointer-events: none;
   position: absolute;
-  left: 50%;
-  top: 6%;
-  width: 260px;
-  height: 120px;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(0, 122, 255, 0.2), transparent 72%);
+  left: 0;
+  top: -8px;
+  width: 220px;
+  height: 100px;
+  background: radial-gradient(ellipse at center, rgba(0, 122, 255, 0.16), transparent 72%);
   filter: blur(10px);
   z-index: 0;
   animation: welcome-glow 4.5s ease-in-out infinite;
@@ -4386,12 +4355,12 @@ loadLists().then(() => {
 @keyframes welcome-glow {
   0%,
   100% {
-    opacity: 0.7;
-    transform: translateX(-50%) scale(1);
+    opacity: 0.65;
+    transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: translateX(-50%) scale(1.06);
+    transform: scale(1.05);
   }
 }
 
@@ -4399,45 +4368,34 @@ loadLists().then(() => {
   position: relative;
   z-index: 1;
   display: flex;
-  justify-content: center;
-  margin-bottom: 18px;
+  justify-content: flex-start;
+  margin-bottom: 20px;
   animation: welcome-rise 0.75s 0.06s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .welcome-logo {
   transform: scale(1.04);
+  transform-origin: left center;
 }
 
 .core-slogan {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  column-gap: 0;
-  row-gap: 8px;
-  margin: 0 0 16px;
-  font-size: clamp(21px, 2.5vw, 28px);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: clamp(22px, 2.4vw, 28px);
   font-weight: 780;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
   line-height: 1.28;
   color: var(--ecw-text-1, #1d1d1f);
   animation: welcome-rise 0.75s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.core-slogan .slogan-lead,
-.core-slogan .slogan-tail {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-}
-
-.core-slogan .dot {
-  font-style: normal;
-  margin: 0 0.16em;
-  color: rgba(29, 29, 31, 0.2);
-  font-weight: 500;
+.core-slogan .slogan-line {
+  display: block;
 }
 
 .core-slogan .accent {
@@ -4447,83 +4405,17 @@ loadLists().then(() => {
   color: transparent;
 }
 
-.core-slogan .guard-mark {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.16em 0.52em 0.2em;
-  border-radius: 999px;
-  background: linear-gradient(120deg, #007aff 0%, #2b7cd3 48%, #34c759 100%);
-  color: #fff;
-  font-size: 0.58em;
-  font-weight: 780;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
-    0 8px 20px rgba(0, 122, 255, 0.28);
-}
-
 .core-living {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin: 0 auto 14px;
-  max-width: 22em;
-  animation: welcome-rise 0.75s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.living-lead {
-  font-size: clamp(17px, 2vw, 20px);
-  font-weight: 720;
-  letter-spacing: -0.03em;
-  line-height: 1.35;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.living-rest {
-  font-size: 13.5px;
+  margin: 0 0 28px;
+  max-width: 28em;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.55;
   letter-spacing: -0.01em;
   color: var(--ecw-text-2, #6e6e73);
-}
-
-.core-mvp {
-  position: relative;
-  z-index: 1;
-  margin: 0 0 22px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ecw-accent, #007aff);
-  letter-spacing: 0.04em;
-  animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.welcome-journey {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ecw-text-2, #6e6e73);
-  letter-spacing: 0.02em;
-  animation: welcome-rise 0.75s 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.welcome-journey i {
-  display: inline-block;
-  width: 18px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.45), transparent);
-  border: 0;
+  animation: welcome-rise 0.75s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .welcome-cta {
@@ -4533,7 +4425,6 @@ loadLists().then(() => {
   font-size: 12px;
   color: var(--ecw-text-3, #86868b);
   letter-spacing: 0.01em;
-  animation: welcome-rise 0.75s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .welcome-actions {
@@ -4541,10 +4432,9 @@ loadLists().then(() => {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  margin-top: 4px;
-  animation: welcome-rise 0.75s 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: welcome-rise 0.75s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes welcome-rise {
@@ -4564,23 +4454,14 @@ loadLists().then(() => {
   .welcome-logo-wrap,
   .core-slogan,
   .core-living,
-  .core-mvp,
-  .welcome-journey,
-  .welcome-cta,
   .welcome-actions {
     animation: none !important;
   }
 }
 
 @media (max-width: 720px) {
-  .welcome-hero {
+  .wb-welcome {
     padding: 28px 20px 24px;
-  }
-  .welcome-journey {
-    gap: 8px;
-  }
-  .welcome-journey i {
-    width: 12px;
   }
 }
 
