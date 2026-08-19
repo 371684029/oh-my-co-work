@@ -3692,6 +3692,8 @@ loadLists().then(() => {
 .human-attention-pill {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -3718,6 +3720,12 @@ loadLists().then(() => {
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1;
+}
+
+.header-left :deep(.el-tag) {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .header-actions {
@@ -3728,6 +3736,8 @@ loadLists().then(() => {
 
 .title-input {
   width: min(380px, 46vw);
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .title-input :deep(.el-input__wrapper) {
