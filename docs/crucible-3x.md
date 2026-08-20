@@ -3,11 +3,13 @@
 | 属性 | 内容 |
 |------|------|
 | 目标版本 | `3.x` |
-| 状态 | **3.5.0 简易对话皮** |
+| 状态 | **3.7.0 最终封板** |
 | 前置 | `2.x` 终端守护者已封（`2.6.0`）；JSONL Adapter 为融合契约 |
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
-| 3.5 对话皮 | [crucible-3.5.md](./crucible-3.5.md) |
+| 3.5 GUI / TUI | [crucible-3.5.md](./crucible-3.5.md) |
+| 3.7 封板 | [crucible-3.7.md](./crucible-3.7.md) |
+| Grok 客户端原理 | [crucible-grok-client.md](./crucible-grok-client.md) |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
 本文固定 3.x 主题与边界。细节（模型、壳技术、闸门 UI）后置细化，不在本文一次定死。
@@ -102,8 +104,8 @@
 
 落地顺序：
 
-1. 本机 **Grok TUI**（现有内嵌终端里跑 Grok）  
-2. **铺满页面的简易对话皮**（3.5，与 TUI 同一进程）  
+1. 本机 **Grok TUI**（现有内嵌终端里跑官方 `grok` CLI，见 [crucible-grok-client.md](./crucible-grok-client.md)）  
+2. **铺满页面的 GUI**（3.5 / 3.7，与 TUI 同一进程）  
 3. 托盘 / 独立小窗留给 4.x
 
 未配置时精灵仍在，提示下载并配置 Grok Build。
@@ -114,9 +116,9 @@
 
 ### 5.3 形象 Logo（已决）
 
-不替代工作台 [人·文档·机](./brand-logo.md)。卡通 **黑裙美少女** Q 版，贴在页面**右侧、距底约三分之一**当桌宠（默认收成小头像），不进顶栏。可戳、可拖、会说话，点「开熔炉」或双击进 TUI。
+不替代工作台 [人·文档·机](./brand-logo.md)。卡通 **黑裙美少女** Q 版（三态 GIF 轻动画），贴在页面**右侧、距底约三分之一**当桌宠（默认收成小头像），不进顶栏。可戳、可拖、会说话，点「开熔炉」或双击进 TUI。
 
-**三态**（均为卡通 Logo，可为静态帧）：
+**三态**（卡通 Logo；系统要求减少动效时回退 PNG）：
 
 | 态 | 何时 |
 |----|------|
@@ -160,7 +162,7 @@
 | 适配标记 | 打在步骤上，非新 `step_type`；会话按原类型展示。 |
 | 流程轨 Tab | 标出带适配标记的步骤，便于在流程图里找。 |
 | 终端守护者 / 工作台 | oh-my-co-work 三栏 + 内嵌 TUI；与熔炉桌面可切换。 |
-| Grok / Grok Build | 熔炉所用的 Agent 模型与编码/构建来源；对接方式后细化。 |
+| Grok / Grok Build | 官方本机 CLI。工作台用 PTY 托管它，不自研 xAI HTTP 客户端。原理见 [crucible-grok-client.md](./crucible-grok-client.md)。 |
 
 ---
 

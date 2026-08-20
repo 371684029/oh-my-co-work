@@ -197,6 +197,7 @@
           :prefs="terminalPrefs"
           :default-pagefill="true"
           :default-surface="furnaceSurface"
+          :session-id="activeId"
           @close="activeTerminalId = null"
           @kill="killTerminal"
           @input="sendTerminalInput"

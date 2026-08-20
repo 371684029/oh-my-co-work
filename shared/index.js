@@ -118,7 +118,7 @@ export function grokSetupNeeded(probe) {
   return !grokCanRun(probe)
 }
 
-/** 熔炉干活面：气泡皮 / 原 TUI */
+/** 熔炉干活面：GUI（chat）/ TUI */
 export const FURNACE_SURFACE = {
   CHAT: 'chat',
   TUI: 'tui',
@@ -130,7 +130,7 @@ export function normalizeFurnaceSurface(v) {
     : FURNACE_SURFACE.CHAT
 }
 
-/** 去 CSI / OSC，给熔炉对话皮读 PTY 回放 */
+/** 去 CSI / OSC，给熔炉 GUI 读 PTY 回放 */
 export function stripAnsi(value) {
   return String(value || '')
     .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')
@@ -157,6 +157,18 @@ export function stripAnsiTail(
     if (lines.length > maxLines) text = lines.slice(-maxLines).join('\n')
   }
   return text.replace(/^\s+/, '').replace(/\s+$/, '')
+}
+
+/** GUI 把附件路径写成一行，一次回车交给 grok */
+export function buildFurnacePtyAttachText(userText, files = []) {
+  const text = String(userText || '').trim()
+  const list = Array.isArray(files)
+    ? files.map((f) => String(f?.relPath || '').trim()).filter(Boolean)
+    : []
+  if (!text && !list.length) return ''
+  if (!list.length) return text
+  const note = `请阅读工作目录文件 ${list.join(' ')}`
+  return text ? `${text} ${note}` : note
 }
 
 /** 产品宗旨（口号放关于页；日常控件用功能名） */

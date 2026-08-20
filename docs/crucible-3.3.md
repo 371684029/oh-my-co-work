@@ -8,6 +8,8 @@
 
 本机没有 Grok Build、或没有登录时，**展示下载 / 登录 / 配置教程**。不隐藏精灵。已装且已登录后点精灵直接开 TUI。
 
+实现原理（PTY 托管官方 CLI，不是自研 Chat API）：[crucible-grok-client.md](./crucible-grok-client.md)。
+
 检测（不启动 grok，避免弹浏览器）：
 
 | 缺口 | 判定 |

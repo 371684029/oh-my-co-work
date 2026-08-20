@@ -1,6 +1,6 @@
 # AGENT.md — oh-my-co-work 项目协作指引
 
-> 最后更新: 2026-08-19 · 适用于 oh-my-co-work v3.5.0
+> 最后更新: 2026-08-20 · 适用于 oh-my-co-work v3.7.0
 
 本文件面向所有在该仓库工作的贡献者和 AI Agent。阅读后再动手，能减少 80% 的格式和路径翻车。
 
@@ -15,7 +15,7 @@ oh-my-co-work 是一个**本地优先的群聊式多智能体协同工作台**�
 - 执行端支持交互式 TUI（node-pty + xterm.js）和普通 pipe 两种模式
 - 数据全部留在本机：SQLite + Markdown + 本地附件
 
-版本现状：**3.5.0**。点精灵开熔炉默认铺满页面的对话皮（可缩小回三栏、可切 TUI），未装或未登录弹教程。群聊同意最后一步即完成并归档；成员单聊不自动归档。服务端已上随机访问令牌与 Origin 校验。首页欢迎区居中，口号含终端守护者 · 熔炉连接一切。托盘独立窗与更多 CLI Adapter 仍后置。
+版本现状：**3.7.0（3.x 最终封板）**。点精灵开熔炉默认铺满 GUI（可缩小回三栏、可切 TUI）；桌宠三态 GIF；GUI 附件把路径写进同一 PTY。未装或未登录弹教程。没有自研 Grok HTTP 客户端。群聊同意最后一步即完成并归档；成员单聊不自动归档。服务端已上随机访问令牌与 Origin 校验。首页欢迎区居中，口号含终端守护者 · 熔炉连接一切。托盘独立窗与更多 CLI Adapter 仍后置。
 
 ---
 
@@ -200,5 +200,7 @@ start.bat
 - `docs/data-storage.md` — SQLite 与 Markdown 台账结构
 - `docs/tui-2x.md` — PTY 架构、协议与安全
 - `docs/crucible-3x.md` — 3.x 熔炉：Grok Agent、提示词适配、加人/加节点两条路径
+- `docs/crucible-3.7.md` — 3.x 最终封板口径
+- `docs/crucible-grok-client.md` — 熔炉如何托管本机 `grok` CLI（PTY，不是 Chat API）
 - `docs/script-guide.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/demo.md` — 演示流完整操作路径

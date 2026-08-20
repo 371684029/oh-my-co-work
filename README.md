@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-3.5.0-409eff?style=flat-square" alt="version 3.5.0" />
+  <img src="https://img.shields.io/badge/version-3.7.0-409eff?style=flat-square" alt="version 3.7.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -21,6 +21,10 @@
 
 > **节点是死的，人是活的。**
 > Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
+
+<p align="center">
+  <img src="./docs/assets/furnace-pet.gif" alt="熔炉桌宠：黑裙双马尾少女，轻微浮动" width="88" height="170" />
+</p>
 
 <img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，口号含终端守护者与熔炉连接一切" width="100%" />
 
@@ -35,8 +39,28 @@
 - **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
 - **关键决定交给人**：启动、参数、审核都可以设置人工闸门；群聊同意最后一步即完成并归档。
 - **过程始终可见**：左边看会话，中间对话和执行，右边看流程与报告。
-- **终端不再跳出去**：真实 PTY 内嵌 TUI；熔炉默认铺满页面的对话皮（可缩小、可切终端）。未装好 Grok 时，点桌宠会弹出 Grok Build 教程。
+- **终端不再跳出去**：真实 PTY 内嵌 TUI。熔炉是本机官方 `grok` CLI 的宿主（不是自研 Chat API）：默认铺满 **GUI**，可切 **TUI**、可缩小回三栏。未装或未登录时点桌宠弹出 Grok Build 教程。
 - **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
+
+## 使用场景
+
+把日常流水线收成一条群聊：每一步是脚本、CLI、TUI 或 Agent 成员，关键处加人闸门。下面是几种常见配法，克隆群模板就能改。
+
+**前端开发流**
+
+切分支 → 起本地服务 → 脚本截 Figma / 对照稿 → 导出或拉取接口文档 → 氛围编程改页面 → 跑单测或 e2e → 提交并开/合 PR。本地服务和 TUI 走内嵌终端；合代码前用「同意」闸门。
+
+**接口联调流**
+
+拉最新 OpenAPI / 导出接口文档 → 起 mock 或连测试环境 → 跑集成脚本 → 人眼对一下响应 → 改客户端 → 提交。文档和命令都做成脚本成员，对不上就停在闸门。
+
+**发版验收流**
+
+切发布分支 → 跑测试与打包 → 预览包 / 打开产物 → 人验收截图或清单 → 打 tag、合并主干。打包用本机命令；「能不能发」留给最后一步人工同意。
+
+**本机排障 + 熔炉**
+
+复现命令进终端卡 → 需要改代码时点桌宠开熔炉（Grok）→ 人确认补丁 → 回归脚本 → 提交。熔炉和脚本同一条群聊里插队，不用另开窗口记进度。
 
 ## 2.0：真实 TUI，不是终端模拟
 
@@ -64,17 +88,21 @@
   </tr>
 </table>
 
-## 3.5：熔炉铺满干活面
+## 3.7：熔炉干活面（3.x 封板）
 
 点右侧桌宠「开熔炉」（或点两下头像）。本机已装且已登录 Grok 时直接铺满干活面；否则弹出 **Grok Build 教程**。
+
+熔炉 **没有** 自研一套 Grok HTTP 客户端：工作台用 node-pty 托管本机官方 `grok` CLI。原理见 [熔炉 Grok 客户端](./docs/crucible-grok-client.md)。
 
 <img src="./docs/assets/screenshots/furnace-grok-guide.webp" alt="点熔炉桌宠后弹出的 Grok Build 教程" width="100%" />
 
 <img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：去颜色画面、底部输入、可缩小回三栏" width="100%" />
 
-- 默认 **画面**：去颜色的 Grok 终端尾部 + 底部输入，写进同一进程。
-- **终端**：原 Grok TUI。
+- 桌宠三态 **GIF**（闲置 / 干活 / 等人）；系统要求减少动效时回退静图。
+- 默认 **GUI**：去颜色的 TUI 尾部 + 底部输入。附件落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程（不是 Grok 原生传文件）。顶栏和右侧有动态卡通头像。
+- **TUI**：原 Grok 终端。菜单和快捷键走这里。首次进入后切皮不拆终端。
 - **缩小到三栏**：熔炉仍在中栏；**返回群聊**只关这层皮，进程还在。
+- 设置「开熔炉默认」：铺满 GUI / 铺满 TUI。顶栏切换只改这一轮，不写回设置。
 
 ## 已实现
 
@@ -82,7 +110,7 @@
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
 | 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
-| 熔炉 | 右侧桌宠（默认小头像，距底约三分之一）；未就绪弹 Grok 教程；已就绪铺满对话皮（可缩小、可切 TUI） |
+| 熔炉 | 右侧桌宠（三态 GIF）；未就绪弹 Grok 教程；已就绪铺满 GUI / 可切 TUI；GUI 附件写路径进同一进程 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程 |
@@ -175,8 +203,10 @@ packages/  可直接运行的三平台压缩包
 | [2.x TUI 设计](./docs/tui-2x.md) | 产品形态、PTY 架构、协议、安全与平台兼容 |
 | [2.x 实施计划](./docs/tui-2x-plan.md) | 2.0～2.3 阶段、测试、风险与完成定义 |
 | [3.x 熔炉设计](./docs/crucible-3x.md) | Grok Agent + 提示词适配；加人改代码 / 加适配节点；桌面亦名熔炉 |
-| [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.5 阶段与完成定义 |
-| [3.5 熔炉对话皮](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、画面/终端同一进程 |
+| [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.7 阶段与完成定义 |
+| [3.5 熔炉 GUI / TUI](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、GUI 与 TUI 同一进程 |
+| [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：GIF、头像、GUI 附件、PTY 宿主 |
+| [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
 | [技术设计](./docs/technical-design.md) | Workflow、会话、节点、闸门与扩展设计 |
@@ -194,7 +224,8 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
 - [x] 3.3.0：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；群聊完成即归档
-- [x] 3.5.0：熔炉铺满对话皮（可缩小回三栏、可切 TUI）
+- [x] 3.5.0：熔炉铺满 GUI（可缩小回三栏、可切 TUI）
+- [x] 3.7.0 最终封板：桌宠 GIF、干活面头像、GUI 附件（路径写入 PTY）、Grok 原理文档
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

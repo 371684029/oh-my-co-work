@@ -22,6 +22,54 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | packages/oh-my-co-work-v3-linux-x64.zip | 3.7.0 Linux 运行包覆盖
+2026-08-20 | M | packages/README.md / CURRENT.txt | 同步 3.7.0 包大小
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮封板条目
+
+2026-08-20 | A | docs/crucible-3.7.md | 3.7.0 3.x 最终封板口径
+2026-08-20 | M | README.md / AGENT.md / about.json / package.json / workspaces | 版本 3.7.0 最终封板
+2026-08-20 | M | docs/README.md / mvp.md / crucible-3x.md / crucible-3x-plan.md / crucible-grok-client.md / packages/README.md | 发布线改为 3.7.0
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮封板条目
+
+2026-08-20 | M | server/src/uploads.js / routes.js | 熔炉附件类型限制、不回 absPath、会话校验、归档删会话清 inbox
+2026-08-20 | M | shared/index.js / FurnaceWorkspace.vue | 附件路径单行 + \\r\\n；TUI 首次挂载后 v-show；粘贴有字不抢附件
+2026-08-20 | M | FurnaceSprite.vue | 只读一次 prefers-reduced-motion，不挂 change 监听
+2026-08-20 | M | furnaceInbox.test.js / crucible-grok-client.md / crucible-3.5.md / frontend-components.md | 单行正文、公开元数据、附件口径
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+2026-08-20 | M | FurnaceWorkspace.vue / Prefs.vue | 两张皮用户名改为 GUI / TUI
+2026-08-20 | M | README / about.json / crucible-3.5.md / crucible-grok-client.md | 同步 GUI / TUI 叫法
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+2026-08-20 | A | server/src/uploads.js 熔炉 inbox + POST /sessions/:id/furnace-files | 画面皮附件落到 Grok cwd
+2026-08-20 | M | FurnaceWorkspace.vue / Workbench.vue / web/src/api.js | 附件、粘贴、拖放，发送写相对路径
+2026-08-20 | A | server/test/furnaceInbox.test.js | inbox 路径与 PTY 正文
+2026-08-20 | M | shared/index.js | buildFurnacePtyAttachText
+2026-08-20 | M | frontend-components.md | 画面皮附件栏
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+2026-08-20 | M | docs/crucible-grok-client.md | 用户如何选画面/TUI；进程共存、屏幕不同时铺开
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+
+2026-08-20 | M | README.md / docs/README.md / crucible-3x.md / crucible-3.3.md / crucible-3.5.md / AGENT.md | 链到 Grok 客户端原理
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+2026-08-19 | A | web/src/components/FurnaceAvatar.vue | 熔炉干活面卡通头像，三态 GIF
+2026-08-19 | M | FurnaceWorkspace.vue | 顶栏小头 + 画面右侧大头，随进程换表情
+2026-08-19 | M | README.md / crucible-3.5.md / frontend-components.md | 同步干活面头像
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
+2026-08-19 | A | web/src/assets/furnace-idle.gif / furnace-working.gif / furnace-waiting.gif | 桌宠三态轻动画（浮动/晃）
+2026-08-19 | A | docs/assets/furnace-pet.gif | README 用闲置态 GIF
+2026-08-19 | M | FurnaceSprite.vue | 默认播 GIF；减少动效时用 PNG
+2026-08-19 | M | README.md | 使用场景：前端流、联调、发版、熔炉排障
+2026-08-19 | M | frontend-components.md / crucible-3x.md | 桌宠改为 GIF
+2026-08-19 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-19 | A | docs/assets/screenshots/furnace-grok-guide.webp | README：熔炉桌宠弹出的 Grok Build 教程
 2026-08-19 | A | docs/assets/screenshots/furnace-workspace-chat.webp | README：熔炉铺满干活面（画面皮）
 2026-08-19 | M | README.md | 3.5 熔炉截图与能力说明

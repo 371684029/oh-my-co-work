@@ -54,9 +54,12 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import imgIdle from '../assets/furnace-idle.png'
-import imgWorking from '../assets/furnace-working.png'
-import imgWaiting from '../assets/furnace-waiting.png'
+import imgIdleGif from '../assets/furnace-idle.gif'
+import imgWorkingGif from '../assets/furnace-working.gif'
+import imgWaitingGif from '../assets/furnace-waiting.gif'
+import imgIdlePng from '../assets/furnace-idle.png'
+import imgWorkingPng from '../assets/furnace-working.png'
+import imgWaitingPng from '../assets/furnace-waiting.png'
 
 const POS_KEY = 'acw.furnacePet.pos'
 const MIN_KEY = 'acw.furnacePet.min'
@@ -101,11 +104,13 @@ function isAutoPlacedPos(saved) {
 
 const pos = ref(defaultPos())
 const dragging = ref(false)
+const reduceMotion = ref(false)
 
 const spriteSrc = computed(() => {
-  if (props.state === 'working') return imgWorking
-  if (props.state === 'waiting') return imgWaiting
-  return imgIdle
+  const still = reduceMotion.value
+  if (props.state === 'working') return still ? imgWorkingPng : imgWorkingGif
+  if (props.state === 'waiting') return still ? imgWaitingPng : imgWaitingGif
+  return still ? imgIdlePng : imgIdleGif
 })
 
 const stateLabel = computed(() => {
@@ -243,6 +248,11 @@ watch(
 
 onMounted(() => {
   try {
+    reduceMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    /* ignore */
+  }
+  try {
     const raw = localStorage.getItem(POS_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
@@ -351,21 +361,12 @@ onUnmounted(() => {
   opacity: 0.58;
   filter: drop-shadow(0 4px 8px rgba(20, 16, 30, 0.12));
   transform-origin: 50% 100%;
-  animation: furnace-breathe 4.2s ease-in-out infinite;
 }
 
 .furnace-pet.is-hover .furnace-pet-img,
 .furnace-pet.is-working .furnace-pet-img,
 .furnace-pet.is-waiting .furnace-pet-img {
   opacity: 0.92;
-}
-
-.furnace-pet.is-working .furnace-pet-img {
-  animation: furnace-work 1.15s ease-in-out infinite;
-}
-
-.furnace-pet.is-waiting .furnace-pet-img {
-  animation: furnace-wait 1.8s ease-in-out infinite;
 }
 
 .furnace-pet.is-hover .furnace-pet-img {
@@ -442,39 +443,6 @@ onUnmounted(() => {
   width: 40px;
 }
 
-@keyframes furnace-breathe {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes furnace-work {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-1deg);
-  }
-  50% {
-    transform: translateY(-7px) rotate(1.4deg);
-  }
-}
-
-@keyframes furnace-wait {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0);
-  }
-  40% {
-    transform: translateY(-3px) rotate(-2deg);
-  }
-  70% {
-    transform: rotate(2deg);
-  }
-}
-
 @keyframes furnace-poke {
   0% {
     transform: scale(1);
@@ -500,8 +468,6 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .furnace-pet-img,
-  .furnace-pet.is-working .furnace-pet-img,
-  .furnace-pet.is-waiting .furnace-pet-img,
   .furnace-bubble {
     animation: none;
   }

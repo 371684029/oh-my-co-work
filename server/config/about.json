@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "3.5.0",
+  "version": "3.7.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,13 +13,25 @@
   ],
   "changelog": [
     {
+      "version": "3.7.0",
+      "date": "2026-08-20",
+      "title": "3.7.0 最终封板：熔炉干活面",
+      "items": [
+        "桌宠三态 GIF；干活面顶栏与 GUI 右侧卡通头像随进程换表情。",
+        "GUI 附件落到 inbox/，发送写成一行相对路径写入同一 grok 进程（不是原生传文件）。",
+        "两张皮叫 GUI / TUI；TUI 首次挂载后切皮不拆终端。",
+        "没有自研 Grok HTTP 客户端：node-pty 托管本机官方 grok CLI。",
+        "3.7.0 最终封板（3.x）。"
+      ]
+    },
+    {
       "version": "3.5.0",
       "date": "2026-08-19",
-      "title": "3.5.0：熔炉铺满对话皮",
+      "title": "3.5.0：熔炉铺满 GUI",
       "items": [
-        "点开熔炉默认铺满页面的简易对话（同一条 grok 进程），不是小对话框。",
-        "可缩小回工作台三栏；可切回原 TUI。",
-        "设置里选择开熔炉默认：铺满对话 / 铺满终端。"
+        "点开熔炉默认铺满 GUI（同一条 grok 进程），不是小对话框。",
+        "可缩小回工作台三栏；可切 TUI。",
+        "设置里选择开熔炉默认：铺满 GUI / 铺满 TUI。"
       ]
     },
     {

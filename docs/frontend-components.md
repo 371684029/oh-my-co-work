@@ -38,7 +38,9 @@ app.use(ElementPlusX)
 | 区域 | 组件 | 说明 |
 |------|------|------|
 | 壳层顶栏 | `App.vue` + `AppLogo` | 品牌 Logo + 分段导航 |
-| 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；默认小头像；闲置/工作/等人；可戳、可拖、气泡「开熔炉」 |
+| 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；默认小头像；闲置/工作/等人 GIF；可戳、可拖、气泡「开熔炉」 |
+| 熔炉干活面头像 | `FurnaceAvatar` | 顶栏小头 + GUI 右侧大头；交互中/等人/闲置换表情 GIF |
+| 熔炉 GUI 附件 | `FurnaceWorkspace` 附件栏 | 落到 `inbox/`，发送写成一行相对路径进 PTY（非 Grok 原生附件） |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
@@ -129,7 +131,7 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 3. `TerminalWorkspace` 使用异步组件加载，普通会话不必加载 `xterm.js`。
 4. 终端获得焦点后键盘直接写入 PTY；多行粘贴需要确认。
 5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。
-6. 顶栏可切换整个工作台全屏；终端工具栏可切换 **满屏**（铺满 HTML 页面）与 **全屏**（浏览器系统全屏）。满屏层 Teleport 到 `body`，避免中栏毛玻璃（`backdrop-filter`）把 `position: fixed` 锁在卡片内。**熔炉**默认 `FurnaceWorkspace`：铺满对话皮，可切终端、可「缩小」回三栏。
+6. 顶栏可切换整个工作台全屏；终端工具栏可切换 **满屏**（铺满 HTML 页面）与 **全屏**（浏览器系统全屏）。满屏层 Teleport 到 `body`，避免中栏毛玻璃（`backdrop-filter`）把 `position: fixed` 锁在卡片内。**熔炉**默认 `FurnaceWorkspace`：铺满 GUI，可切 TUI、可「缩小」回三栏。
 
 ### Composer 三快捷（已实现）
 

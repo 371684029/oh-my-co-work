@@ -17,7 +17,7 @@
           </button>
           <span class="furnace-divider" />
           <div class="furnace-identity">
-            <span class="furnace-dot" :class="{ active: isRunning }" />
+            <FurnaceAvatar size="sm" :mood="buddyMood" :live="isRunning" title="熔炉" />
             <strong>熔炉</strong>
             <span class="furnace-state">{{ statusText }}</span>
           </div>
@@ -27,19 +27,19 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
-            title="去颜色的 Grok 画面 + 底部输入；菜单请用终端"
+            title="GUI：去颜色画面 + 底部输入；菜单请用 TUI"
             @click="surface = 'chat'"
           >
-            画面
+            GUI
           </button>
           <button
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'tui' }"
-            title="原 Grok TUI"
+            title="TUI：原 Grok 终端"
             @click="surface = 'tui'"
           >
-            终端
+            TUI
           </button>
           <button
             type="button"
@@ -75,13 +75,19 @@
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log">
-          <div v-if="!liveText" class="furnace-empty">
-            这是 Grok 终端画面的去颜色副本，不是多轮聊天气泡。菜单和快捷键请切「终端」。
-            下方输入会写进同一进程。
-          </div>
-          <div v-if="liveText" class="screen">
-            <span class="bubble-label">Grok 画面（去颜色）</span>
-            <pre>{{ liveText }}</pre>
+          <aside class="furnace-buddy">
+            <FurnaceAvatar size="lg" :mood="buddyMood" :live="isRunning" :title="buddyTitle" />
+            <p class="furnace-buddy-line">{{ buddyLine }}</p>
+          </aside>
+          <div class="furnace-log-main">
+            <div v-if="!liveText" class="furnace-empty">
+              这是 Grok 的 GUI（去颜色的 TUI 副本），不是多轮聊天气泡。菜单和快捷键请切 TUI。
+              下方输入会写进同一进程。附件不是 Grok 原生传文件，只是把工作目录相对路径写成一行再回车。
+            </div>
+            <div v-if="liveText" class="screen">
+              <span class="bubble-label">GUI（去颜色）</span>
+              <pre>{{ liveText }}</pre>
+            </div>
           </div>
         </div>
         <div v-if="sent.length" class="furnace-sent">
@@ -90,19 +96,57 @@
             item.text
           }}</span>
         </div>
-        <form class="furnace-composer" @submit.prevent="sendChat">
-          <textarea
-            v-model="draft"
-            rows="3"
-            :disabled="!isRunning"
-            placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行"
-            @keydown="onComposerKey"
+        <form
+          class="furnace-composer"
+          @submit.prevent="sendChat"
+          @dragover.prevent
+          @drop.prevent="onDrop"
+        >
+          <input
+            ref="fileInput"
+            type="file"
+            multiple
+            class="furnace-file-input"
+            @change="onFileInputChange"
           />
+          <div class="furnace-compose-main">
+            <textarea
+              v-model="draft"
+              rows="3"
+              :disabled="!isRunning"
+              placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行；可点附件或粘贴文件"
+              @keydown="onComposerKey"
+              @paste="onPaste"
+            />
+            <div v-if="pendingFiles.length" class="furnace-pending">
+              <span
+                v-for="(f, i) in pendingFiles"
+                :key="f.id || f.relPath"
+                class="furnace-pending-chip"
+              >
+                {{ f.name }}
+                <button type="button" title="去掉" @click="removePending(i)">×</button>
+              </span>
+            </div>
+            <div class="furnace-compose-bar">
+              <button
+                type="button"
+                class="furnace-btn"
+                :disabled="!isRunning || uploading || !sessionId"
+                title="文件落到熔炉工作目录 inbox/；发送时把相对路径写成一行写进 grok，不是官方附件通道"
+                @click="pickFiles"
+              >
+                {{ uploading ? '上传中…' : '附件' }}
+              </button>
+              <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
+              <span class="furnace-compose-hint">图片/文档/源码 · 最多 8 个 · 单文件 20MB</span>
+            </div>
+          </div>
           <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
         </form>
       </div>
 
-      <div v-if="surface === 'tui'" class="furnace-tui">
+      <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
         <TerminalView
           :key="terminal.id"
           :terminal="terminal"
@@ -115,7 +159,7 @@
       </div>
 
       <footer class="furnace-foot">
-        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? '去色画面' : 'TUI' }}</span>
+        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? 'GUI' : 'TUI' }}</span>
         <span v-if="terminal.cwd" class="furnace-cwd" :title="terminal.cwd">{{ terminal.cwd }}</span>
         <span>{{ footerHint }}</span>
       </footer>
@@ -125,7 +169,10 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { stripAnsiTail } from '@acw/shared'
+import { stripAnsiTail, buildFurnacePtyAttachText } from '@acw/shared'
+import { ElMessage } from 'element-plus'
+import { api } from '../../api'
+import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import {
   exitFullscreen,
@@ -140,6 +187,7 @@ const props = defineProps({
   prefs: { type: Object, default: () => ({}) },
   defaultPagefill: { type: Boolean, default: true },
   defaultSurface: { type: String, default: 'chat' },
+  sessionId: { type: String, default: '' },
 })
 
 const emit = defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
@@ -149,13 +197,47 @@ const logEl = ref(null)
 const isFullscreen = ref(false)
 const isPagefill = ref(props.defaultPagefill !== false)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
+/** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
+const tuiEverShown = ref(surface.value === 'tui')
 const focused = ref(false)
 const draft = ref('')
 const sent = ref([])
+const pendingFiles = ref([])
+const uploading = ref(false)
+const uploadError = ref('')
+const fileInput = ref(null)
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const liveText = computed(() => stripAnsiTail(props.terminal.replay || ''))
-const canSend = computed(() => isRunning.value && !!draft.value.trim())
+const canSend = computed(
+  () =>
+    isRunning.value &&
+    !uploading.value &&
+    (!!draft.value.trim() || pendingFiles.value.length > 0),
+)
+
+/** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
+const buddyMood = computed(() => {
+  const st = String(props.terminal.status || '')
+  if (st === 'running') return 'working'
+  if (st === 'starting' || props.connectionStatus === 'connecting') return 'idle'
+  if (['exited', 'failed', 'killed'].includes(st) || props.connectionStatus !== 'open') {
+    return 'waiting'
+  }
+  return 'idle'
+})
+
+const buddyTitle = computed(() => {
+  if (buddyMood.value === 'working') return '熔炉 · 在干活'
+  if (buddyMood.value === 'waiting') return '熔炉 · 等人'
+  return '熔炉 · 闲置'
+})
+
+const buddyLine = computed(() => {
+  if (buddyMood.value === 'working') return '在听。下面那框写进同一进程。'
+  if (buddyMood.value === 'waiting') return '这轮停了。记录还在。'
+  return '点火中，稍等。'
+})
 
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
@@ -175,12 +257,12 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? '画面是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
+      ? 'GUI 是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
       : '已在三栏中栏 · 可再铺满页面'
   }
-  if (focused.value) return '终端输入中 · Esc 退出焦点'
+  if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
   if (isPagefill.value) return '再按 Esc 缩小回工作台'
-  return '点画面继续输入'
+  return '点 TUI 继续输入'
 })
 
 function syncFullscreenState() {
@@ -201,12 +283,71 @@ function onFocusChange(value) {
 }
 
 function sendChat() {
-  const text = draft.value.trim()
-  if (!text || !isRunning.value) return
-  sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text })
-  emit('input', `${text}\r`)
+  const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
+  if (!payload || !isRunning.value || uploading.value) return
+  sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
+  emit('input', `${payload}\r\n`)
   draft.value = ''
+  pendingFiles.value = []
   nextTick(scrollLog)
+}
+
+function pickFiles() {
+  if (!props.sessionId) {
+    ElMessage.warning('没有会话，没法落到熔炉目录')
+    return
+  }
+  fileInput.value?.click()
+}
+
+function removePending(i) {
+  pendingFiles.value.splice(i, 1)
+}
+
+async function addLocalFiles(fileList) {
+  uploadError.value = ''
+  if (!props.sessionId) {
+    ElMessage.warning('没有会话，没法上传')
+    return
+  }
+  const arr = [...fileList].filter(Boolean)
+  if (!arr.length) return
+  if (pendingFiles.value.length + arr.length > 8) {
+    ElMessage.warning('一次最多 8 个附件')
+    return
+  }
+  uploading.value = true
+  try {
+    const r = await api.sessions.uploadFurnaceFiles(props.sessionId, arr)
+    const files = r.files || []
+    pendingFiles.value = [...pendingFiles.value, ...files]
+    ElMessage.success(`已放入熔炉目录 ${files.length} 个文件`)
+  } catch (e) {
+    uploadError.value = e.message || '上传失败'
+    ElMessage.error(uploadError.value)
+  } finally {
+    uploading.value = false
+  }
+}
+
+function onFileInputChange(e) {
+  const files = e.target?.files
+  if (files?.length) addLocalFiles(files)
+  if (e.target) e.target.value = ''
+}
+
+function onPaste(ev) {
+  const files = ev.clipboardData?.files
+  const text = String(ev.clipboardData?.getData('text') || '')
+  if (files?.length && !text.trim()) {
+    ev.preventDefault()
+    addLocalFiles(files)
+  }
+}
+
+function onDrop(ev) {
+  const files = ev.dataTransfer?.files
+  if (files?.length) addLocalFiles(files)
 }
 
 function onComposerKey(ev) {
@@ -248,6 +389,7 @@ watch(isPagefill, async (on) => {
 watch(liveText, () => nextTick(scrollLog))
 
 watch(surface, (mode) => {
+  if (mode === 'tui') tuiEverShown.value = true
   if (mode === 'chat') emit('resize', { cols: 120, rows: 40 })
   nextTick(() => window.dispatchEvent(new Event('resize')))
 })
@@ -348,17 +490,6 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-.furnace-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #c5c7ce;
-}
-
-.furnace-dot.active {
-  background: #34c759;
-}
-
 .furnace-state {
   font-size: 11px;
   color: #6e6e73;
@@ -411,7 +542,33 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 20px 8% 12px;
+  padding: 20px 6% 12px;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 20px 16px;
+  align-items: start;
+}
+
+.furnace-buddy {
+  position: sticky;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.furnace-buddy-line {
+  margin: 0;
+  max-width: 7.5rem;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+.furnace-log-main {
+  min-width: 0;
 }
 
 .furnace-empty {
@@ -419,7 +576,7 @@ onUnmounted(() => {
   font-size: 14px;
   line-height: 1.6;
   max-width: 52rem;
-  margin: 12vh auto 0;
+  margin: 8vh 0 0;
 }
 
 .screen {
@@ -484,8 +641,21 @@ onUnmounted(() => {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.furnace-file-input {
+  display: none;
+}
+
+.furnace-compose-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .furnace-composer textarea {
   flex: 1;
+  width: 100%;
   resize: none;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 14px;
@@ -493,6 +663,50 @@ onUnmounted(() => {
   font: inherit;
   font-size: 15px;
   min-height: 72px;
+  box-sizing: border-box;
+}
+
+.furnace-pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.furnace-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 16rem;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.furnace-pending-chip button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #6e6e73;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.furnace-compose-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.furnace-compose-hint,
+.furnace-upload-err {
+  font-size: 11px;
+  color: #6e6e73;
+}
+
+.furnace-upload-err {
+  color: #ff3b30;
 }
 
 .furnace-send {
@@ -523,5 +737,15 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, Consolas, monospace;
+}
+
+@media (max-width: 820px) {
+  .furnace-log {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .furnace-buddy {
+    display: none;
+  }
 }
 </style>
