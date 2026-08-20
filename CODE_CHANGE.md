@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | shared/ptyPlain.js / index.js | 备用屏；GUI 只取当前屏；furnaceGuiReadable
+2026-08-20 | M | furnaceGrokInject.js / furnaceSituation / runners | grok 用 argv --prompt，开炉 120×40
+2026-08-20 | M | TerminalView / FurnaceWorkspace / Workbench | 隐藏 TUI 不缩 PTY；欢迎卡看正文；发送只用 \\r
+2026-08-20 | M | App.vue | 开炉 prepare 不带可能过期的 sessionId
+2026-08-20 | M | ptyPlain.test.js / furnaceGrokInject.test.js | last-screen、备用屏、argv spawn
+2026-08-20 | M | CODE_CHANGE.md | 追加乱码修复条目
+
 2026-08-20 | A | server/src/furnaceGrokInject.js | 短 AGENTS 标记块 + 短 --prompt，禁止写 ~/.grok
 2026-08-20 | A | server/test/furnaceGrokInject.test.js | 启动词长度与紧凑注入
 2026-08-20 | M | furnaceSituation / runners / slashCommands / engine / routes / appSettings | 开炉注入并拼 --prompt

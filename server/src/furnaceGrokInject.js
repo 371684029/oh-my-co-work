@@ -60,6 +60,46 @@ export function withGrokPrompt(command, prompt) {
   return `${base} --prompt ${JSON.stringify(text)}`
 }
 
+/** 把 grok 命令拆成可 spawn 的 argv，避免 Windows cmd 把中文 --prompt 弄乱。 */
+export function tokenizeCommand(command) {
+  const s = String(command || '').trim()
+  const out = []
+  let cur = ''
+  let quote = ''
+  for (let i = 0; i < s.length; i += 1) {
+    const ch = s[i]
+    if (quote) {
+      if (ch === quote) quote = ''
+      else cur += ch
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+    if (/\s/.test(ch)) {
+      if (cur) {
+        out.push(cur)
+        cur = ''
+      }
+      continue
+    }
+    cur += ch
+  }
+  if (cur) out.push(cur)
+  return out
+}
+
+export function grokPtyLaunch(command, prompt) {
+  const tokens = tokenizeCommand(command || 'grok')
+  const exe = tokens[0] || 'grok'
+  const args = tokens.slice(1)
+  const text = String(prompt || '').trim()
+  const hasPrompt = args.some((a) => a === '--prompt' || String(a).startsWith('--prompt='))
+  if (text && !hasPrompt) args.push('--prompt', text)
+  return { cmd: exe, args, shell: false, label: 'grok' }
+}
+
 export function buildGrokLaunchPrompt(role) {
   return LAUNCH_PROMPT[role] || LAUNCH_PROMPT[FURNACE_ROLE.SESSION]
 }

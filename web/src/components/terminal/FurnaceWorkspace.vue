@@ -79,12 +79,12 @@
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
           <div class="furnace-log-main">
-            <div v-if="!liveText" class="furnace-welcome">
+            <div v-if="showWelcome" class="furnace-welcome">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
               <h3>本机 Grok 已接进协同台</h3>
               <p>
-                同一条进程：这里是可读皮，TUI 才是原终端。长合同在工作目录
-                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不必整段粘贴，省 token。
+                同一条进程：这里读回答，菜单和模型在 TUI。细节在工作目录
+                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。
               </p>
               <ul>
                 <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
@@ -105,7 +105,7 @@
                 </button>
               </div>
             </div>
-            <div v-else class="screen">
+            <div v-if="showBody" class="screen">
               <span class="bubble-label">Grok · 可读正文</span>
               <pre>{{ liveText }}</pre>
             </div>
@@ -173,6 +173,7 @@
           :key="terminal.id"
           :terminal="terminal"
           :prefs="prefs"
+          :active="surface === 'tui'"
           @input="$emit('input', $event)"
           @resize="$emit('resize', $event)"
           @gap="$emit('gap', $event)"
@@ -191,7 +192,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, furnaceGuiTranscript } from '@acw/shared'
+import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable } from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
@@ -243,9 +244,11 @@ const liveText = computed(() =>
   furnaceGuiTranscript(props.terminal.replay || '', {
     cols: props.terminal.cols || 120,
     rows: props.terminal.rows || 40,
-    maxLines: 80,
+    maxLines: 40,
   }),
 )
+const showBody = computed(() => furnaceGuiReadable(liveText.value))
+const showWelcome = computed(() => !showBody.value)
 const canSend = computed(
   () =>
     isRunning.value &&
@@ -272,7 +275,7 @@ const buddyTitle = computed(() => {
 
 const buddyLine = computed(() => {
   if (!isRunning.value) return '这轮停了。记录还在。'
-  if (!liveText.value) return '她会先用几句话自我介绍，然后等你。'
+  if (!showBody.value) return '她准备好后会先介绍，再等你。'
   return '同一条 Grok。问当前格即可。'
 })
 
@@ -330,7 +333,7 @@ function sendChat() {
   const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
   if (!payload || !isRunning.value || uploading.value) return
   sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
-  emit('input', `${payload}\r\n`)
+  emit('input', `${payload}\r`)
   draft.value = ''
   pendingFiles.value = []
   stickBottom.value = true
@@ -339,7 +342,8 @@ function sendChat() {
 
 function sendChip(text) {
   draft.value = text
-  sendChat()
+  if (showBody.value) sendChat()
+  else nextTick(() => composerEl.value?.focus?.())
 }
 
 function onLogScroll() {

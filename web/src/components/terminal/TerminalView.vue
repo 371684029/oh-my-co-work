@@ -19,6 +19,8 @@ import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 const props = defineProps({
   terminal: { type: Object, required: true },
   prefs: { type: Object, default: () => ({}) },
+  /** 隐藏时禁止 fit，避免把 PTY 缩成几列 */
+  active: { type: Boolean, default: true },
 })
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
@@ -32,9 +34,15 @@ let lastSeq = 0
 
 function fit() {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
+  if (props.active === false) return
+  const rect = host.value.getBoundingClientRect()
+  if (rect.width < 80 || rect.height < 80) return
   try {
     fitAddon.fit()
-    emit('resize', { cols: xterm.cols, rows: xterm.rows })
+    const cols = Number(xterm.cols)
+    const rows = Number(xterm.rows)
+    if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 20 || rows < 8) return
+    emit('resize', { cols, rows })
   } catch {
     /* 容器切换动画期间尺寸可能暂不可用 */
   }
@@ -100,6 +108,18 @@ watch(
 watch(
   () => props.terminal.snapshotKey,
   () => resetToReplay(props.terminal.replay),
+)
+
+watch(
+  () => props.active,
+  (on) => {
+    if (!on) return
+    nextTick(() => {
+      fit()
+      xterm?.focus()
+      emit('focus-change', true)
+    })
+  },
 )
 
 onBeforeUnmount(() => {

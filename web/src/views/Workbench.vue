@@ -1816,11 +1816,6 @@ async function launchFurnaceFromSprite() {
       ElMessage.warning('未找到熔炉成员')
       return
     }
-    try {
-      await api.furnace.prepare({ sessionId: activeId.value || null })
-    } catch {
-      /* 启动时 runners 还会再写一遍 */
-    }
     startTarget.value = `m:${m.id}`
     await startChat()
     if (route.query.furnace) {
@@ -2527,13 +2522,16 @@ function sendTerminalInput(data) {
 }
 
 function resizeTerminal({ cols, rows }) {
+  const c = Number(cols)
+  const r = Number(rows)
   if (!activeTerminalId.value) return
-  lastTerminalSize.value = { cols, rows }
+  if (!Number.isFinite(c) || !Number.isFinite(r) || c < 20 || r < 8) return
+  lastTerminalSize.value = { cols: c, rows: r }
   sendTerminalMessage({
     type: 'terminal.resize',
     terminalId: activeTerminalId.value,
-    cols,
-    rows,
+    cols: c,
+    rows: r,
   })
 }
 

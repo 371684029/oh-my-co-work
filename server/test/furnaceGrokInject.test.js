@@ -16,8 +16,10 @@ const {
   maybeInjectGrokFurnace,
   withGrokPrompt,
   buildGrokLaunchPrompt,
-  resolveGrokWorkspaceDir,
   defaultGrokWorkspaceDir,
+  resolveGrokWorkspaceDir,
+  grokPtyLaunch,
+  tokenizeCommand,
 } = await import('../src/furnaceGrokInject.js')
 const { grokHomeDir: grokHome } = await import('../src/grokStatus.js')
 
@@ -71,6 +73,15 @@ test('upsert keeps handwritten notes', () => {
   assert.ok(text.startsWith('# mine'))
   assert.ok(text.includes('b'))
   assert.equal(text.includes('\na\n'), false)
+})
+
+test('grok spawn uses argv so prompt is not passed through cmd.exe', () => {
+  const prompt = buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)
+  const spec = grokPtyLaunch('grok', prompt)
+  assert.equal(spec.shell, false)
+  assert.equal(spec.cmd, 'grok')
+  assert.deepEqual(spec.args, ['--prompt', prompt])
+  assert.equal(tokenizeCommand('grok --prompt "a b"').join('|'), 'grok|--prompt|a b')
 })
 
 test('default cwd is furnace home', () => {

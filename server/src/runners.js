@@ -502,11 +502,13 @@ export async function runMember(
     }
 
     let cwd = resolveCwdForScript(script, mode === 'file' ? filePath : null)
+    let furnaceLaunch = null
     if (isFurnaceMember(member)) {
       const fx = applyFurnaceGrokRuntime({ member, sessionId, command })
       if (fx) {
         if (mode !== 'file') command = fx.command
         cwd = fx.cwd
+        furnaceLaunch = fx.launch || null
       }
     }
     if (!cwd) {
@@ -566,13 +568,15 @@ export async function runMember(
       env.ECW_FOLDER = String(cwd)
     }
 
-    const launch = resolveLaunchSpec({
-      filePath,
-      command,
-      shell: script.shell,
-      runtime: script.runtime,
-      args,
-    })
+    const launch =
+      furnaceLaunch ||
+      resolveLaunchSpec({
+        filePath,
+        command,
+        shell: script.shell,
+        runtime: script.runtime,
+        args,
+      })
 
     console.log(
       `[acw] script run label=${label} file=${filePath || '-'} cwd=${cwd} mode=${script.executionMode || 'terminal'} popup=${showConsole}`,
@@ -590,8 +594,8 @@ export async function runMember(
         label,
         successCodes,
         stdinText: passStdin && humanInput != null ? String(humanInput) : script.stdinText || null,
-        cols: script.terminal?.cols,
-        rows: script.terminal?.rows,
+        cols: isFurnaceMember(member) ? 120 : script.terminal?.cols,
+        rows: isFurnaceMember(member) ? 40 : script.terminal?.rows,
         adapter: script.adapter || script.terminal?.adapter || null,
       })
     }

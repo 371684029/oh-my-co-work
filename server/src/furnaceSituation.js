@@ -23,6 +23,7 @@ import {
   withGrokPrompt,
   buildGrokLaunchPrompt,
   grokRulesWriteAllowed,
+  grokPtyLaunch,
 } from './furnaceGrokInject.js'
 
 function getMember(id) {
@@ -207,8 +208,10 @@ export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
 export function applyFurnaceGrokRuntime({ member, sessionId, command } = {}) {
   if (!isFurnaceMember(member)) return null
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
+  const rawCmd = String(command || 'grok').trim() || 'grok'
   return {
-    command: withGrokPrompt(command || 'grok', prepared.prompt),
+    command: withGrokPrompt(rawCmd, prepared.prompt),
+    launch: grokPtyLaunch(rawCmd, prepared.prompt),
     cwd: prepared.cwd,
     prompt: prepared.prompt,
     wrote: prepared.wrote,

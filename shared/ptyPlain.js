@@ -49,7 +49,38 @@ function createScreen(cols, rows) {
     scrollback: [],
     cx: 0,
     cy: 0,
+    alt: false,
+    saved: null,
   }
+}
+
+function snapshotScreen(screen) {
+  return {
+    grid: screen.grid.map((row) => row.slice()),
+    scrollback: screen.scrollback.slice(),
+    cx: screen.cx,
+    cy: screen.cy,
+  }
+}
+
+function enterAltScreen(screen) {
+  if (screen.alt) return
+  screen.saved = snapshotScreen(screen)
+  screen.grid = Array.from({ length: screen.rows }, () => makeRow(screen.cols))
+  screen.scrollback = []
+  screen.cx = 0
+  screen.cy = 0
+  screen.alt = true
+}
+
+function leaveAltScreen(screen) {
+  if (!screen.alt || !screen.saved) return
+  screen.grid = screen.saved.grid
+  screen.scrollback = screen.saved.scrollback
+  screen.cx = screen.saved.cx
+  screen.cy = screen.saved.cy
+  screen.saved = null
+  screen.alt = false
 }
 
 function putChar(screen, ch) {
@@ -107,7 +138,17 @@ function eraseDisplay(screen, mode) {
 }
 
 function applyCsi(screen, priv, params, cmd) {
-  if (priv === '?') return
+  if (priv === '?') {
+    if (cmd === 'h' || cmd === 'l') {
+      const codes = String(params || '').split(';')
+      const alt = codes.some((c) => c === '1049' || c === '1047' || c === '47')
+      if (alt) {
+        if (cmd === 'h') enterAltScreen(screen)
+        else leaveAltScreen(screen)
+      }
+    }
+    return
+  }
   const p = params.split(';').map((n) => {
     const v = Number.parseInt(n, 10)
     return Number.isFinite(v) ? v : 0
@@ -250,7 +291,9 @@ export function renderPtyPlainText(value, opts = {}) {
   if (!raw) return ''
   const screen = createScreen(cols, rows)
   parse(raw, screen)
-  const lines = [...screen.scrollback, ...screen.grid.map(rowToString)]
+  const lines = opts.lastScreenOnly
+    ? screen.grid.map(rowToString)
+    : [...screen.scrollback, ...screen.grid.map(rowToString)]
   return tidyLines(lines, maxLines)
 }
 
@@ -269,7 +312,7 @@ const CHROME_LINE = [
   /^\s*thinking\b/i,
   /api key\s*\|/i,
   /^\s*beta\s*$/i,
-  /^\s*(deepseek|claude|gpt-?4|grok)\b.{0,48}(pro|beta|mini|sonnet)/i,
+  /^\s*(deepseek|claude|gpt-?4|grok)(\s|$)/i,
 ]
 
 function hasCjk(s) {
@@ -279,9 +322,10 @@ function hasCjk(s) {
 function isChromeLine(line) {
   const stripped = line.replace(BOX_CHARS, '').replace(/[-+|═\s]/g, '')
   if (!stripped) return true
-  if (CHROME_LINE.some((re) => re.test(line))) return true
   const trimmed = line.replace(BOX_CHARS, '').trim()
   if (!trimmed) return true
+  if (hasCjk(trimmed) && trimmed.length > 12) return false
+  if (CHROME_LINE.some((re) => re.test(line) || re.test(trimmed))) return true
   if (!hasCjk(trimmed) && !/[a-zA-Z]{2,}/.test(trimmed) && trimmed.length < 12) return true
   return false
 }
@@ -311,7 +355,19 @@ export function sanitizeFurnaceGuiText(text) {
   return out.join('\n')
 }
 
-/** GUI 用：先画屏幕，再去壳 */
+/** 是否够当 GUI 正文（有中文句子或较长英文）。壳残片不当正文。 */
+export function furnaceGuiReadable(text) {
+  const t = String(text || '').trim()
+  if (!t) return false
+  const compact = t.replace(/\s+/g, '')
+  if (hasCjk(t) && compact.length >= 6) return true
+  if (t.length >= 28 && /[A-Za-z]{4,}/.test(t) && /\s/.test(t)) return true
+  return false
+}
+
+/** GUI 用：只取当前屏，再去壳，避免把旧 TUI 帧拼进聊天 */
 export function furnaceGuiTranscript(value, opts = {}) {
-  return sanitizeFurnaceGuiText(renderPtyPlainText(value, opts))
+  return sanitizeFurnaceGuiText(
+    renderPtyPlainText(value, { ...opts, lastScreenOnly: true }),
+  )
 }
