@@ -22,7 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
-2026-08-20 | M | docs/crucible-grok-client.md | 画面/终端不是 Tab；画面皮无传文件
+2026-08-20 | M | docs/crucible-grok-client.md | 用户如何选画面/TUI；进程共存、屏幕不同时铺开
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
 
 
