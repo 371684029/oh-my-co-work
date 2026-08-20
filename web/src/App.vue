@@ -52,6 +52,7 @@
       <router-view />
     </main>
     <FurnaceSprite
+      v-show="!furnaceWorkspaceOpen"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
       @click="onFurnaceClick"
@@ -82,6 +83,7 @@ import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
 import {
   furnaceSpriteState,
+  furnaceWorkspaceOpen,
   grokProbe,
   setGrokConfigured,
   setFurnaceGrokGate,
