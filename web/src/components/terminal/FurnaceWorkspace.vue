@@ -26,7 +26,7 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
-            title="GUI：去颜色画面 + 底部输入；菜单请用 TUI"
+            title="GUI：可读正文 + 底部输入；模型菜单请用 TUI"
             @click="surface = 'chat'"
           >
             GUI
@@ -73,18 +73,40 @@
       </header>
 
       <div v-show="surface === 'chat'" class="furnace-chat">
-        <div ref="logEl" class="furnace-log">
+        <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
           <aside class="furnace-buddy">
             <FurnaceAvatar size="lg" :mood="buddyMood" :live="isRunning" :title="buddyTitle" />
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
           <div class="furnace-log-main">
-            <div v-if="!liveText" class="furnace-empty">
-              这是可读正文（同一条 Grok 进程）。框线、快捷键、模型条请切 TUI。
-              下方输入会写进该进程。附件不是官方传文件，只是把工作目录相对路径写成一行再回车。
+            <div v-if="!liveText" class="furnace-welcome">
+              <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
+              <h3>本机 Grok 已接进协同台</h3>
+              <p>
+                同一条进程：这里是可读皮，TUI 才是原终端。长合同在工作目录
+                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不必整段粘贴，省 token。
+              </p>
+              <ul>
+                <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
+                <li>让她<strong>适配</strong>：把当前成员或步骤接到工作台</li>
+                <li>过闸时只说<strong>通过或拒绝</strong>，不要改编排</li>
+                <li>附件落到 <code>inbox/</code>，发送时写成一行相对路径再回车</li>
+              </ul>
+              <div class="furnace-chips">
+                <button
+                  v-for="chip in quickChips"
+                  :key="chip"
+                  type="button"
+                  class="furnace-chip"
+                  :disabled="!isRunning"
+                  @click="sendChip(chip)"
+                >
+                  {{ chip }}
+                </button>
+              </div>
             </div>
-            <div v-if="liveText" class="screen">
-              <span class="bubble-label">GUI（正文）</span>
+            <div v-else class="screen">
+              <span class="bubble-label">Grok · 可读正文</span>
               <pre>{{ liveText }}</pre>
             </div>
           </div>
@@ -110,10 +132,11 @@
           />
           <div class="furnace-compose-main">
             <textarea
+              ref="composerEl"
               v-model="draft"
               rows="3"
               :disabled="!isRunning"
-              placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行；可点附件或粘贴文件"
+              placeholder="问进度、适配或过闸… Enter 发送，Shift+Enter 换行"
               @keydown="onComposerKey"
               @paste="onPaste"
             />
@@ -138,7 +161,7 @@
                 {{ uploading ? '上传中…' : '附件' }}
               </button>
               <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
-              <span class="furnace-compose-hint">图片/文档/源码 · 最多 8 个 · 单文件 20MB</span>
+              <span class="furnace-compose-hint">同一条 grok · 菜单请切 TUI · 附件最多 8 个</span>
             </div>
           </div>
           <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
@@ -206,6 +229,14 @@ const pendingFiles = ref([])
 const uploading = ref(false)
 const uploadError = ref('')
 const fileInput = ref(null)
+const composerEl = ref(null)
+const stickBottom = ref(true)
+
+const quickChips = [
+  '现在做到哪了？只看当前格。',
+  '当前格缺什么？',
+  '过闸的话只说通过或拒绝，先告诉我卡在哪。',
+]
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const liveText = computed(() =>
@@ -240,9 +271,16 @@ const buddyTitle = computed(() => {
 })
 
 const buddyLine = computed(() => {
-  if (buddyMood.value === 'working') return '在听。下面那框写进同一进程。'
-  if (buddyMood.value === 'waiting') return '这轮停了。记录还在。'
-  return '点火中，稍等。'
+  if (!isRunning.value) return '这轮停了。记录还在。'
+  if (!liveText.value) return '她会先用几句话自我介绍，然后等你。'
+  return '同一条 Grok。问当前格即可。'
+})
+
+const welcomeKicker = computed(() => {
+  if (props.connectionStatus === 'connecting') return '正在连工作台…'
+  if (props.terminal.status === 'starting') return '正在启动本机 grok…'
+  if (isRunning.value) return '已就绪 · 短规则在 AGENTS.md'
+  return '进程未在跑'
 })
 
 const statusText = computed(() => {
@@ -263,7 +301,7 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? 'GUI 只显示可读正文 · 菜单请切 TUI'
+      ? '可读正文 · 长合同在文件里 · 菜单请切 TUI'
       : '已在三栏中栏 · 可再铺满页面'
   }
   if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
@@ -295,7 +333,19 @@ function sendChat() {
   emit('input', `${payload}\r\n`)
   draft.value = ''
   pendingFiles.value = []
+  stickBottom.value = true
   nextTick(scrollLog)
+}
+
+function sendChip(text) {
+  draft.value = text
+  sendChat()
+}
+
+function onLogScroll() {
+  const el = logEl.value
+  if (!el) return
+  stickBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 64
 }
 
 function pickFiles() {
@@ -365,7 +415,8 @@ function onComposerKey(ev) {
 
 function scrollLog() {
   const el = logEl.value
-  if (el) el.scrollTop = el.scrollHeight
+  if (!el || !stickBottom.value) return
+  el.scrollTop = el.scrollHeight
 }
 
 function onKeydown(ev) {
@@ -396,8 +447,17 @@ watch(liveText, () => nextTick(scrollLog))
 
 watch(surface, (mode) => {
   if (mode === 'tui') tuiEverShown.value = true
-  if (mode === 'chat') emit('resize', { cols: 120, rows: 40 })
+  if (mode === 'chat') {
+    emit('resize', { cols: 120, rows: 40 })
+    nextTick(() => composerEl.value?.focus?.())
+  }
   nextTick(() => window.dispatchEvent(new Event('resize')))
+})
+
+watch(isRunning, (on) => {
+  if (on && surface.value === 'chat') {
+    nextTick(() => composerEl.value?.focus?.())
+  }
 })
 
 onMounted(() => {
@@ -587,6 +647,74 @@ onUnmounted(() => {
   margin: 8vh 0 0;
 }
 
+.furnace-welcome {
+  max-width: 40rem;
+  margin: 4vh 0 0;
+  padding: 18px 20px 16px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+  color: #1d1d1f;
+}
+
+.furnace-welcome-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #6e6e73;
+}
+
+.furnace-welcome h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.furnace-welcome p,
+.furnace-welcome li {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #3a3a40;
+}
+
+.furnace-welcome p {
+  margin: 0 0 10px;
+}
+
+.furnace-welcome ul {
+  margin: 0 0 14px;
+  padding-left: 1.15rem;
+}
+
+.furnace-welcome code {
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.furnace-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.furnace-chip {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.furnace-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .screen {
   max-width: min(56rem, 100%);
   margin: 0 auto 16px;
@@ -602,14 +730,14 @@ onUnmounted(() => {
 
 .screen pre {
   margin: 0;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border-radius: 16px;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: normal;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Microsoft YaHei', monospace;
-  font-size: 14px;
-  line-height: 1.55;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
   background: #fff;
   color: #1d1d1f;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);

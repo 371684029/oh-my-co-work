@@ -29,7 +29,7 @@ test('GUI transcript drops TUI chrome and keeps the answer', () => {
     '┌──────────────┐',
     '│ DeepSeek V4 Pro · always-approve',
     'Logged in with API key | Beta',
-    'Enter:send  Alt+Enter:newline',
+    'Enter:send  Alt+Enter:newline  Shift+Enter:newline',
     'Waiting for response... 0.0s',
     '你好，我是 Grok。',
     '可以帮你看代码。',
@@ -43,4 +43,5 @@ test('GUI transcript drops TUI chrome and keeps the answer', () => {
   assert.equal(text.includes('always-approve'), false)
   assert.equal(text.includes('Waiting for response'), false)
   assert.equal(text.includes(':2 P'), false)
+  assert.equal(text.includes('Shift+Enter'), false)
 })

@@ -45,6 +45,7 @@ import {
   resolveAdaptFurnaceRole,
 } from './furnaceContext.js'
 import { syncFurnaceSessionContext, touchFurnaceWorkflow } from './furnaceSituation.js'
+import { formatFurnaceRoleNotice } from './furnaceGrokInject.js'
 
 function getMember(id) {
   return getDb().prepare('SELECT * FROM members WHERE id = ?').get(id)
@@ -2075,7 +2076,7 @@ export async function advance(sessionId) {
             role: 'system',
             type: 'status',
             node_instance_id: node.id,
-            content: { text: `熔炉本轮：${pack?.label || furnaceRole}（prompt 与记忆已写入 ${pack?.activeMd || 'data/furnace'}）` },
+            content: { text: formatFurnaceRoleNotice(pack) },
           })
         } catch (e) {
           console.warn('[acw] furnace role', e?.message || e)
@@ -2474,7 +2475,7 @@ function openFlowGate(sessionId, node, payload) {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
-        content: { text: `熔炉本轮：${pack?.label || '系统审核'}（prompt 与记忆已写入 ${pack?.activeMd || 'data/furnace'}）` },
+        content: { text: formatFurnaceRoleNotice(pack) },
       })
     } catch (e) {
       console.warn('[acw] furnace review context', e?.message || e)

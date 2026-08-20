@@ -259,15 +259,17 @@ const BOX_CHARS = /[\u2500-\u257F\u2580-\u259F]/g
 const CHROME_LINE = [
   /enter\s*:\s*send/i,
   /alt\s*\+\s*enter/i,
+  /shift\s*\+\s*enter/i,
   /shift\s*\+\s*tab/i,
   /ctrl\s*\+\s*x\s*:/i,
   /logged in with/i,
   /always-approve/i,
   /grok build beta/i,
   /waiting for response/i,
-  /^\s*thinking\.\.\./i,
+  /^\s*thinking\b/i,
   /api key\s*\|/i,
   /^\s*beta\s*$/i,
+  /^\s*(deepseek|claude|gpt-?4|grok)\b.{0,48}(pro|beta|mini|sonnet)/i,
 ]
 
 function hasCjk(s) {
@@ -293,6 +295,7 @@ export function sanitizeFurnaceGuiText(text) {
     const noBox = line.replace(BOX_CHARS, ' ').replace(/[ \t]+/g, ' ').trim()
     if (!noBox) continue
     if (isChromeLine(line) || isChromeLine(noBox)) continue
+    if (!hasCjk(noBox) && noBox.length <= 3 && !/^[A-Za-z]{2,}$/.test(noBox)) continue
     kept.push(noBox)
   }
   const out = []

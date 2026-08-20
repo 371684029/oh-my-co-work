@@ -54,6 +54,7 @@ import { getAppSettings,
   resolveGroupAdmin,
 } from './appSettings.js'
 import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
+import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -658,6 +659,16 @@ router.get('/grok/status', (_req, res) => {
     ...probeGrokStatus({ command }),
     exampleToml: loadGrokExampleConfig(),
   })
+})
+router.post('/furnace/prepare', (req, res) => {
+  try {
+    if (req.body?.acknowledge) {
+      updateAppSettings({ grok: { rulesAcknowledged: true } })
+    }
+    res.json(prepareFurnaceGrokLaunch({ sessionId: req.body?.sessionId || null }))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 router.patch('/settings/app', (req, res) => {
   try {

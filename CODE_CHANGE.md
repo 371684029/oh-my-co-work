@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | server/src/furnaceGrokInject.js | 短 AGENTS 标记块 + 短 --prompt，禁止写 ~/.grok
+2026-08-20 | A | server/test/furnaceGrokInject.test.js | 启动词长度与紧凑注入
+2026-08-20 | M | furnaceSituation / runners / slashCommands / engine / routes / appSettings | 开炉注入并拼 --prompt
+2026-08-20 | M | FurnaceWorkspace.vue | GUI 欢迎卡、短指令、去等宽折行、滚动贴底
+2026-08-20 | M | App.vue / Workbench.vue / api.js | 开炉前 prepare
+2026-08-20 | M | shared/ptyPlain.js | 再滤一层 TUI 壳
+2026-08-20 | M | docs/crucible-grok-client.md / CODE_CHANGE.md | 短合同口径
+
 2026-08-20 | M | packages/win32 + linux zip | 覆盖 GUI 可读正文运行包
 2026-08-20 | A | docs/crucible-gui-plain.md | GUI 可读正文方案：去壳、不抄 TUI 框
 2026-08-20 | M | shared/ptyPlain.js / FurnaceWorkspace.vue / ptyPlain.test.js | furnaceGuiTranscript 去框线底栏

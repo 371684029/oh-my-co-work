@@ -42,6 +42,9 @@ export function defaultGrokSettings() {
     configured: true,
     /** chat=满屏气泡皮；tui=满屏原终端 */
     surface: 'chat',
+    workspaceDir: '',
+    writeRules: true,
+    rulesAcknowledged: false,
   }
 }
 
@@ -55,10 +58,18 @@ function normalizeGrok(raw) {
     raw.configured === 0 ||
     raw.configured === '0'
   const surface = normalizeFurnaceSurface(raw.surface)
+  const writeOff =
+    raw.writeRules === false ||
+    raw.writeRules === 'false' ||
+    raw.writeRules === 0 ||
+    raw.writeRules === '0'
   return {
     command,
     configured: raw.configured === undefined || raw.configured === null ? d.configured : !off,
     surface,
+    workspaceDir: raw.workspaceDir != null ? String(raw.workspaceDir).trim() : d.workspaceDir,
+    writeRules: raw.writeRules === undefined || raw.writeRules === null ? d.writeRules : !writeOff,
+    rulesAcknowledged: !!raw.rulesAcknowledged,
   }
 }
 

@@ -136,13 +136,16 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 
 开聊 / 适配 / 审核时，引擎只装 **一套** 角色壳，拼上节点地图，写成：
 
-- `data/furnace/ACTIVE.md` — 本轮 prompt + 记忆 + 情境  
+- `data/furnace/ACTIVE.md` — 本轮 prompt + 记忆 + 情境（长文，按需再读）  
 - `data/furnace/SITUATION.md` — 情境副本  
+- `data/furnace/AGENTS.md` — **短合同**标记块（角色 + 用户能干什么 + 一两行此刻）；**不写** `~/.grok/AGENTS.md`  
 - `data/furnace/memory/*.md` — 本机记忆（种子只复制一次）
+
+开熔炉时给 `grok` 一条 **短 `--prompt`**（约百字）：点名角色，让她用不超过四句介绍能力，然后停。**不要把 ACTIVE 全文灌进启动词或聊天。**
 
 系统气泡只报「熔炉本轮：xxx」，**不把全文灌进群聊**。
 
-这是给 **坐在该 cwd 里的 Grok CLI** 读的 Markdown，不是工作台用秘钥去调模型。Grok Build 自己认哪些项目文件（例如它习惯的 `AGENTS.md`）由官方 CLI 决定；当前实现 **保证写的是 `ACTIVE.md`**，没有再包一层「代 Grok 调 API」。
+这是给 **坐在该 cwd 里的 Grok CLI** 读的 Markdown，不是工作台用秘钥去调模型。cwd 默认 `data/furnace`，与 GUI `inbox/` 同目录。
 
 ---
 

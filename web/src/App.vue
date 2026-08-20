@@ -189,6 +189,11 @@ async function onFurnaceClick() {
   }
   grokGuideOpen.value = false
   await ensureFurnaceGrokWired(s, probe)
+  try {
+    await api.furnace.prepare({ sessionId: route.params.sessionId || null })
+  } catch (e) {
+    ElMessage.warning(e?.message || '熔炉短规则未写完，仍打开')
+  }
   openFurnaceSession()
 }
 
@@ -196,6 +201,11 @@ async function openFurnaceAnyway() {
   grokGuideOpen.value = false
   const { s, probe } = await refreshGrokGate()
   await ensureFurnaceGrokWired(s, probe)
+  try {
+    await api.furnace.prepare({ sessionId: route.params.sessionId || null })
+  } catch {
+    /* 教程入口允许先开 */
+  }
   openFurnaceSession()
 }
 

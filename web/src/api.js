@@ -159,6 +159,10 @@ export const api = {
   grok: {
     status: () => req('/grok/status'),
   },
+  furnace: {
+    prepare: (body) =>
+      req('/furnace/prepare', { method: 'POST', body: JSON.stringify(body || {}) }),
+  },
   appSettings: {
     get: () => req('/settings/app'),
     update: (body) =>
