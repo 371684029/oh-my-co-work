@@ -200,5 +200,6 @@ start.bat
 - `docs/data-storage.md` — SQLite 与 Markdown 台账结构
 - `docs/tui-2x.md` — PTY 架构、协议与安全
 - `docs/crucible-3x.md` — 3.x 熔炉：Grok Agent、提示词适配、加人/加节点两条路径
+- `docs/crucible-grok-client.md` — 熔炉如何托管本机 `grok` CLI（PTY，不是 Chat API）
 - `docs/script-guide.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/demo.md` — 演示流完整操作路径

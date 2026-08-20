@@ -8,6 +8,7 @@
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
 | 3.5 对话皮 | [crucible-3.5.md](./crucible-3.5.md) |
+| Grok 客户端原理 | [crucible-grok-client.md](./crucible-grok-client.md) |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
 本文固定 3.x 主题与边界。细节（模型、壳技术、闸门 UI）后置细化，不在本文一次定死。
@@ -102,7 +103,7 @@
 
 落地顺序：
 
-1. 本机 **Grok TUI**（现有内嵌终端里跑 Grok）  
+1. 本机 **Grok TUI**（现有内嵌终端里跑官方 `grok` CLI，见 [crucible-grok-client.md](./crucible-grok-client.md)）  
 2. **铺满页面的简易对话皮**（3.5，与 TUI 同一进程）  
 3. 托盘 / 独立小窗留给 4.x
 
@@ -160,7 +161,7 @@
 | 适配标记 | 打在步骤上，非新 `step_type`；会话按原类型展示。 |
 | 流程轨 Tab | 标出带适配标记的步骤，便于在流程图里找。 |
 | 终端守护者 / 工作台 | oh-my-co-work 三栏 + 内嵌 TUI；与熔炉桌面可切换。 |
-| Grok / Grok Build | 熔炉所用的 Agent 模型与编码/构建来源；对接方式后细化。 |
+| Grok / Grok Build | 官方本机 CLI。工作台用 PTY 托管它，不自研 xAI HTTP 客户端。原理见 [crucible-grok-client.md](./crucible-grok-client.md)。 |
 
 ---
 

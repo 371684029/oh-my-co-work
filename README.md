@@ -201,6 +201,7 @@ packages/  可直接运行的三平台压缩包
 | [3.x 熔炉设计](./docs/crucible-3x.md) | Grok Agent + 提示词适配；加人改代码 / 加适配节点；桌面亦名熔炉 |
 | [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.5 阶段与完成定义 |
 | [3.5 熔炉对话皮](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、画面/终端同一进程 |
+| [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
 | [技术设计](./docs/technical-design.md) | Workflow、会话、节点、闸门与扩展设计 |
