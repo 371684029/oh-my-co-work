@@ -17,7 +17,7 @@
 | linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 21451395 |
 | win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 21393984 |
 
-版本：`3.5.0`（大版本 v3）
+版本：`3.7.0`（大版本 v3）
 
 ## 启动
 

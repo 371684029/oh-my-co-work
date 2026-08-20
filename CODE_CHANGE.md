@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | docs/crucible-3.7.md | 3.7.0 3.x 最终封板口径
+2026-08-20 | M | README.md / AGENT.md / about.json / package.json / workspaces | 版本 3.7.0 最终封板
+2026-08-20 | M | docs/README.md / mvp.md / crucible-3x.md / crucible-3x-plan.md / crucible-grok-client.md / packages/README.md | 发布线改为 3.7.0
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮封板条目
+
 2026-08-20 | M | server/src/uploads.js / routes.js | 熔炉附件类型限制、不回 absPath、会话校验、归档删会话清 inbox
 2026-08-20 | M | shared/index.js / FurnaceWorkspace.vue | 附件路径单行 + \\r\\n；TUI 首次挂载后 v-show；粘贴有字不抢附件
 2026-08-20 | M | FurnaceSprite.vue | 只读一次 prefers-reduced-motion，不挂 change 监听

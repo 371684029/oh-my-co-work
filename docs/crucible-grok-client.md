@@ -4,8 +4,8 @@
 |------|------|
 | 状态 | **当前实现说明**（对照代码，不是愿景） |
 | 日期 | 2026-08-20 |
-| 版本 | `3.5.x` |
-| 相关 | [crucible-3x.md](./crucible-3x.md) · [crucible-3.3.md](./crucible-3.3.md) · [crucible-3.5.md](./crucible-3.5.md) · [tui-2x.md](./tui-2x.md) |
+| 版本 | `3.7.0` |
+| 相关 | [crucible-3x.md](./crucible-3x.md) · [crucible-3.3.md](./crucible-3.3.md) · [crucible-3.5.md](./crucible-3.5.md) · [crucible-3.7.md](./crucible-3.7.md) · [tui-2x.md](./tui-2x.md) |
 
 一句话：**oh-my-co-work 没有自研一套 Grok HTTP / Chat API 客户端。**  
 熔炉把本机官方 **Grok Build CLI**（命令一般是 `grok`）当成普通交互脚本，塞进已经存在的 **node-pty 内嵌终端**。GUI 只是同一条 PTY 的去颜色视图。和 xAI 通话、登录、选模型，全是 `grok` 自己的事。
