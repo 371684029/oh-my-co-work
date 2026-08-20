@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | packages/win32 + linux zip | 覆盖只留 GUI 大头像的运行包
 2026-08-20 | M | FurnaceWorkspace.vue / App.vue / furnaceUi.js | 干活面只留 GUI 大头像，打开时藏桌宠
 2026-08-20 | M | README / crucible-3.5.md / crucible-3.7.md / frontend-components.md | 同步头像口径
 2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
