@@ -80,11 +80,11 @@
           </aside>
           <div class="furnace-log-main">
             <div v-if="!liveText" class="furnace-empty">
-              这是 Grok 的 GUI：把同一条终端画成屏幕后再取文字，不是把录像去色硬拼。菜单和快捷键请切 TUI。
-              下方输入会写进同一进程。附件不是 Grok 原生传文件，只是把工作目录相对路径写成一行再回车。
+              这是可读正文（同一条 Grok 进程）。框线、快捷键、模型条请切 TUI。
+              下方输入会写进该进程。附件不是官方传文件，只是把工作目录相对路径写成一行再回车。
             </div>
             <div v-if="liveText" class="screen">
-              <span class="bubble-label">GUI（去颜色）</span>
+              <span class="bubble-label">GUI（正文）</span>
               <pre>{{ liveText }}</pre>
             </div>
           </div>
@@ -168,7 +168,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, renderPtyPlainText } from '@acw/shared'
+import { buildFurnacePtyAttachText, furnaceGuiTranscript } from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
@@ -209,7 +209,7 @@ const fileInput = ref(null)
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const liveText = computed(() =>
-  renderPtyPlainText(props.terminal.replay || '', {
+  furnaceGuiTranscript(props.terminal.replay || '', {
     cols: props.terminal.cols || 120,
     rows: props.terminal.rows || 40,
     maxLines: 80,
@@ -263,7 +263,7 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? 'GUI 按终端屏幕取字 · 缩小后熔炉仍在中栏'
+      ? 'GUI 只显示可读正文 · 菜单请切 TUI'
       : '已在三栏中栏 · 可再铺满页面'
   }
   if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
@@ -605,10 +605,11 @@ onUnmounted(() => {
   padding: 14px 16px;
   border-radius: 16px;
   white-space: pre-wrap;
-  word-break: break-word;
-  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, 'Microsoft YaHei', monospace;
+  font-size: 14px;
+  line-height: 1.55;
   background: #fff;
   color: #1d1d1f;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
