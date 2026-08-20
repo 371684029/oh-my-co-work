@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | docs/assets/furnace-pet-frames/* | 桌宠分镜 PNG + compose.py，全部进 git
+2026-08-20 | A | web/src/assets/furnace-poke.gif | 戳一下短循环
+2026-08-20 | M | furnace-idle/working/waiting.gif+png / furnace-pet.gif | 更生动的循环立绘
+2026-08-20 | M | FurnaceSprite.vue | 戳一下切 poke GIF；立绘稍大不透明
+2026-08-20 | M | README / frontend-components / crucible-3x / CODE_CHANGE.md | 同步桌宠口径
+
 2026-08-20 | M | packages/win32 + linux zip | 覆盖 GUI 可读正文运行包
 2026-08-20 | A | docs/crucible-gui-plain.md | GUI 可读正文方案：去壳、不抄 TUI 框
 2026-08-20 | M | shared/ptyPlain.js / FurnaceWorkspace.vue / ptyPlain.test.js | furnaceGuiTranscript 去框线底栏
