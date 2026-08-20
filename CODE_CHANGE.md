@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | docs/assets/furnace-pet-frames/*.png | 桌宠分镜透明底原图进 git
+2026-08-20 | A | docs/assets/furnace-pet-frames/README.md | 分镜与 GIF 对照
+
 2026-08-20 | M | web/src/assets/furnace-idle.gif / furnace-working.gif / furnace-waiting.gif | 三态改为更有交互的循环动作
 2026-08-20 | A | web/src/assets/furnace-poke.gif | 戳一下跳跃反应
 2026-08-20 | M | web/src/assets/furnace-idle.png / furnace-working.png / furnace-waiting.png | 减少动效时的静帧与新立绘对齐
