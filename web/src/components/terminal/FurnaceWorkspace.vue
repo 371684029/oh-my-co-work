@@ -17,7 +17,6 @@
           </button>
           <span class="furnace-divider" />
           <div class="furnace-identity">
-            <FurnaceAvatar size="sm" :mood="buddyMood" :live="isRunning" title="熔炉" />
             <strong>熔炉</strong>
             <span class="furnace-state">{{ statusText }}</span>
           </div>
@@ -179,6 +178,7 @@ import {
   fullscreenElement,
   requestFullscreen,
 } from '../../composables/fullscreen'
+import { furnaceWorkspaceOpen } from '../../composables/furnaceUi.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -401,6 +401,7 @@ watch(surface, (mode) => {
 })
 
 onMounted(() => {
+  furnaceWorkspaceOpen.value = true
   document.addEventListener('fullscreenchange', syncFullscreenState)
   document.addEventListener('keydown', onKeydown)
   syncFullscreenState()
@@ -410,6 +411,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  furnaceWorkspaceOpen.value = false
   document.removeEventListener('fullscreenchange', syncFullscreenState)
   document.removeEventListener('keydown', onKeydown)
   document.documentElement.classList.remove('acw-terminal-pagefill')
@@ -751,7 +753,10 @@ onUnmounted(() => {
   }
 
   .furnace-buddy {
-    display: none;
+    position: static;
+    flex-direction: row;
+    text-align: left;
+    max-width: none;
   }
 }
 </style>

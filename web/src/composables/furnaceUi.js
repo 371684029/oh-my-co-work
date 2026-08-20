@@ -5,6 +5,8 @@ export { grokCanRun, grokSetupNeeded }
 
 /** 顶栏熔炉精灵三态：闲置 / 工作 / 等人 */
 export const furnaceSpriteState = ref('idle')
+/** 干活面打开时藏起桌宠，避免和 GUI 大头像重复 */
+export const furnaceWorkspaceOpen = ref(false)
 /** null=未知；false=本机还跑不了 Grok，精灵保持「等人」且不隐藏 */
 export const grokConfigured = ref(null)
 export const grokProbe = ref(null)

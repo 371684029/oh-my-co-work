@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | packages/win32 + linux zip | 覆盖只留 GUI 大头像的运行包
+2026-08-20 | M | FurnaceWorkspace.vue / App.vue / furnaceUi.js | 干活面只留 GUI 大头像，打开时藏桌宠
+2026-08-20 | M | README / crucible-3.5.md / crucible-3.7.md / frontend-components.md | 同步头像口径
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-20 | M | packages/oh-my-co-work-v3-win32-x64.zip / linux-x64.zip | 覆盖含 GUI 屏幕还原的 3.7.0 运行包
 2026-08-20 | A | shared/ptyPlain.js | GUI 按 VT 屏幕还原 PTY，避免去色硬拼乱码
 2026-08-20 | M | FurnaceWorkspace.vue / ptyPlain.test.js / crucible-3.5.md / crucible-grok-client.md | 干活面 GUI 改用屏幕文本
