@@ -81,7 +81,7 @@
           </aside>
           <div class="furnace-log-main">
             <div v-if="!liveText" class="furnace-empty">
-              这是 Grok 的 GUI（去颜色的 TUI 副本），不是多轮聊天气泡。菜单和快捷键请切 TUI。
+              这是 Grok 的 GUI：把同一条终端画成屏幕后再取文字，不是把录像去色硬拼。菜单和快捷键请切 TUI。
               下方输入会写进同一进程。附件不是 Grok 原生传文件，只是把工作目录相对路径写成一行再回车。
             </div>
             <div v-if="liveText" class="screen">
@@ -169,7 +169,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { stripAnsiTail, buildFurnacePtyAttachText } from '@acw/shared'
+import { buildFurnacePtyAttachText, renderPtyPlainText } from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
@@ -208,7 +208,13 @@ const uploadError = ref('')
 const fileInput = ref(null)
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
-const liveText = computed(() => stripAnsiTail(props.terminal.replay || ''))
+const liveText = computed(() =>
+  renderPtyPlainText(props.terminal.replay || '', {
+    cols: props.terminal.cols || 120,
+    rows: props.terminal.rows || 40,
+    maxLines: 80,
+  }),
+)
 const canSend = computed(
   () =>
     isRunning.value &&
@@ -257,7 +263,7 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? 'GUI 是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
+      ? 'GUI 按终端屏幕取字 · 缩小后熔炉仍在中栏'
       : '已在三栏中栏 · 可再铺满页面'
   }
   if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
