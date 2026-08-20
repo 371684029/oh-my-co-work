@@ -17,6 +17,7 @@
 | [crucible-3.5.md](./crucible-3.5.md) | **3.5 熔炉 GUI / TUI**：铺满页面 + 缩小；同一 grok 进程 |
 | [crucible-3.7.md](./crucible-3.7.md) | **3.7 3.x 最终封板**：GIF、头像、GUI 附件、PTY 宿主 |
 | [crucible-grok-client.md](./crucible-grok-client.md) | **Grok 客户端原理**：官方 CLI + node-pty，不是自研 Chat API |
+| [crucible-gui-plain.md](./crucible-gui-plain.md) | **GUI 可读正文**：去 TUI 框线/底栏，不把整屏抄进聊天区 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
 | [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |

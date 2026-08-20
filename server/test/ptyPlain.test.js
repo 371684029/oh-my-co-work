@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { renderPtyPlainText } from '@acw/shared'
+import { renderPtyPlainText, furnaceGuiTranscript } from '@acw/shared'
 
 test('carriage return overwrites the same line', () => {
   assert.equal(renderPtyPlainText('hello\rworld', { cols: 40, rows: 10 }), 'world')
@@ -22,4 +22,25 @@ test('cursor home plus wipe does not concatenate TUI frames', () => {
   assert.equal(text.includes('|||||'), false)
   assert.match(text, /新画面/)
   assert.match(text, /第二行/)
+})
+
+test('GUI transcript drops TUI chrome and keeps the answer', () => {
+  const raw = [
+    '┌──────────────┐',
+    '│ DeepSeek V4 Pro · always-approve',
+    'Logged in with API key | Beta',
+    'Enter:send  Alt+Enter:newline',
+    'Waiting for response... 0.0s',
+    '你好，我是 Grok。',
+    '可以帮你看代码。',
+    '6',
+    ':2 P',
+  ].join('\n')
+  const text = furnaceGuiTranscript(raw, { cols: 80, rows: 20 })
+  assert.match(text, /你好，我是 Grok/)
+  assert.match(text, /可以帮你看代码/)
+  assert.equal(text.includes('Enter:send'), false)
+  assert.equal(text.includes('always-approve'), false)
+  assert.equal(text.includes('Waiting for response'), false)
+  assert.equal(text.includes(':2 P'), false)
 })

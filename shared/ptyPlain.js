@@ -253,3 +253,62 @@ export function renderPtyPlainText(value, opts = {}) {
   const lines = [...screen.scrollback, ...screen.grid.map(rowToString)]
   return tidyLines(lines, maxLines)
 }
+
+const BOX_CHARS = /[\u2500-\u257F\u2580-\u259F]/g
+
+const CHROME_LINE = [
+  /enter\s*:\s*send/i,
+  /alt\s*\+\s*enter/i,
+  /shift\s*\+\s*tab/i,
+  /ctrl\s*\+\s*x\s*:/i,
+  /logged in with/i,
+  /always-approve/i,
+  /grok build beta/i,
+  /waiting for response/i,
+  /^\s*thinking\.\.\./i,
+  /api key\s*\|/i,
+  /^\s*beta\s*$/i,
+]
+
+function hasCjk(s) {
+  return /[\u3400-\u9fff]/.test(s)
+}
+
+function isChromeLine(line) {
+  const stripped = line.replace(BOX_CHARS, '').replace(/[-+|═\s]/g, '')
+  if (!stripped) return true
+  if (CHROME_LINE.some((re) => re.test(line))) return true
+  const trimmed = line.replace(BOX_CHARS, '').trim()
+  if (!trimmed) return true
+  if (!hasCjk(trimmed) && !/[a-zA-Z]{2,}/.test(trimmed) && trimmed.length < 12) return true
+  return false
+}
+
+/** 屏幕文本去掉 Grok TUI 壳，给 GUI 当正文 */
+export function sanitizeFurnaceGuiText(text) {
+  const src = String(text || '')
+  if (!src.trim()) return ''
+  const kept = []
+  for (const line of src.split('\n')) {
+    const noBox = line.replace(BOX_CHARS, ' ').replace(/[ \t]+/g, ' ').trim()
+    if (!noBox) continue
+    if (isChromeLine(line) || isChromeLine(noBox)) continue
+    kept.push(noBox)
+  }
+  const out = []
+  for (const line of kept) {
+    if (!line) {
+      if (out.length && out[out.length - 1] !== '') out.push('')
+      continue
+    }
+    out.push(line)
+  }
+  while (out.length && !out[0]) out.shift()
+  while (out.length && !out[out.length - 1]) out.pop()
+  return out.join('\n')
+}
+
+/** GUI 用：先画屏幕，再去壳 */
+export function furnaceGuiTranscript(value, opts = {}) {
+  return sanitizeFurnaceGuiText(renderPtyPlainText(value, opts))
+}

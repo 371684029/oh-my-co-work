@@ -8,6 +8,7 @@
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
 | 3.5 GUI / TUI | [crucible-3.5.md](./crucible-3.5.md) |
+| GUI 可读正文 | [crucible-gui-plain.md](./crucible-gui-plain.md) |
 | 3.7 封板 | [crucible-3.7.md](./crucible-3.7.md) |
 | Grok 客户端原理 | [crucible-grok-client.md](./crucible-grok-client.md) |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |

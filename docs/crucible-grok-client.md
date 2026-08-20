@@ -48,7 +48,7 @@ node-pty spawn(grok, [], { cwd, TERM: xterm-256color })
         │
         ├─ PTY 输出 ──► WebSocket terminal.data ──► 前端
         │                 ├─ TUI：xterm.js 原样画
-        │                 └─ GUI：renderPtyPlainText(replay) + 底部输入
+        │                 └─ GUI：furnaceGuiTranscript(replay) + 底部输入
         │
         └─ GUI 里 Enter ──► emit input ──► pty.write("…\r\n")
                               仍是同一进程，不是另开 HTTP 对话
@@ -124,7 +124,7 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | 皮 | 实现 |
 |----|------|
 | **TUI** | 现成 `TerminalView` + xterm.js；首次进入再挂载，之后 `v-show` 不拆 |
-| **GUI** | `renderPtyPlainText`（解释光标/擦行后再取字）；底部 textarea 把**一行**文本 `pty.write("…\\r\\n")` 进同一进程 |
+| **GUI** | `furnaceGuiTranscript`（屏幕还原 + 去 TUI 壳）；底部 textarea 把**一行**文本 `pty.write("…\\r\\n")` 进同一进程 |
 
 判断要不要用熔炉皮：`Workbench.vue` 的 `isFurnaceTuiContext`（熔炉成员、或命令行里像 `grok`）。普通脚本仍走 `TerminalWorkspace`。
 
