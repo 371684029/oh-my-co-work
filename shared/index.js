@@ -130,7 +130,9 @@ export function normalizeFurnaceSurface(v) {
     : FURNACE_SURFACE.CHAT
 }
 
-/** 去 CSI / OSC，给熔炉 GUI 读 PTY 回放 */
+export { renderPtyPlainText } from './ptyPlain.js'
+
+/** 去 CSI / OSC，给卡片预览用；GUI 请用 renderPtyPlainText */
 export function stripAnsi(value) {
   return String(value || '')
     .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')

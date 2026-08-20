@@ -8,7 +8,7 @@
 | 相关 | [crucible-3x.md](./crucible-3x.md) · [crucible-3.3.md](./crucible-3.3.md) · [crucible-3.5.md](./crucible-3.5.md) · [crucible-3.7.md](./crucible-3.7.md) · [tui-2x.md](./tui-2x.md) |
 
 一句话：**oh-my-co-work 没有自研一套 Grok HTTP / Chat API 客户端。**  
-熔炉把本机官方 **Grok Build CLI**（命令一般是 `grok`）当成普通交互脚本，塞进已经存在的 **node-pty 内嵌终端**。GUI 只是同一条 PTY 的去颜色视图。和 xAI 通话、登录、选模型，全是 `grok` 自己的事。
+熔炉把本机官方 **Grok Build CLI**（命令一般是 `grok`）当成普通交互脚本，塞进已经存在的 **node-pty 内嵌终端**。GUI 是同一条 PTY **画成屏幕后的文字**，不是把录像去色硬拼。和 xAI 通话、登录、选模型，全是 `grok` 自己的事。
 
 ---
 
@@ -48,7 +48,7 @@ node-pty spawn(grok, [], { cwd, TERM: xterm-256color })
         │
         ├─ PTY 输出 ──► WebSocket terminal.data ──► 前端
         │                 ├─ TUI：xterm.js 原样画
-        │                 └─ GUI：stripAnsiTail(replay) + 底部输入
+        │                 └─ GUI：renderPtyPlainText(replay) + 底部输入
         │
         └─ GUI 里 Enter ──► emit input ──► pty.write("…\r\n")
                               仍是同一进程，不是另开 HTTP 对话
@@ -124,7 +124,7 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | 皮 | 实现 |
 |----|------|
 | **TUI** | 现成 `TerminalView` + xterm.js；首次进入再挂载，之后 `v-show` 不拆 |
-| **GUI** | `stripAnsi` / `stripAnsiTail`；底部 textarea 把**一行**文本 `pty.write("…\\r\\n")` 进同一进程 |
+| **GUI** | `renderPtyPlainText`（解释光标/擦行后再取字）；底部 textarea 把**一行**文本 `pty.write("…\\r\\n")` 进同一进程 |
 
 判断要不要用熔炉皮：`Workbench.vue` 的 `isFurnaceTuiContext`（熔炉成员、或命令行里像 `grok`）。普通脚本仍走 `TerminalWorkspace`。
 
@@ -201,7 +201,7 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | `web/src/App.vue` | 桌宠、教程弹层、开熔炉 |
 | `web/src/components/terminal/FurnaceWorkspace.vue` | GUI / TUI |
 | `web/src/views/Workbench.vue` | 熔炉终端用熔炉皮，其它用普通终端工作区 |
-| `shared/index.js` | `grokCanRun`、`stripAnsiTail`、`buildFurnacePtyAttachText`、`FURNACE_*` |
+| `shared/index.js` | `grokCanRun`、`renderPtyPlainText`、`buildFurnacePtyAttachText`、`FURNACE_*` |
 | `server/src/uploads.js` | 熔炉 inbox、类型限制、公开元数据 |
 
 ---

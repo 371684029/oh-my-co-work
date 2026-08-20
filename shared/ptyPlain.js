@@ -1,0 +1,255 @@
+/**
+ * 把 PTY 字节流画成可见屏幕再导出文本。
+ * 只去 CSI 会丢掉光标/擦行语义，Grok TUI 的竖线和中文会叠成乱码。
+ */
+
+function clamp(n, lo, hi, fallback) {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return fallback
+  return Math.min(hi, Math.max(lo, Math.round(v)))
+}
+
+function wcwidth(cp) {
+  if (!cp) return 0
+  if (cp < 32 || (cp >= 0x7f && cp < 0xa0)) return 0
+  if (
+    cp >= 0x1100 &&
+    (cp <= 0x115f ||
+      cp === 0x2329 ||
+      cp === 0x232a ||
+      (cp >= 0x2e80 && cp <= 0xa4cf && cp !== 0x303f) ||
+      (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe10 && cp <= 0xfe19) ||
+      (cp >= 0xfe30 && cp <= 0xfe6f) ||
+      (cp >= 0xff00 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x1f300 && cp <= 0x1f64f) ||
+      (cp >= 0x1f900 && cp <= 0x1f9ff) ||
+      (cp >= 0x20000 && cp <= 0x3fffd))
+  ) {
+    return 2
+  }
+  return 1
+}
+
+function makeRow(cols) {
+  return Array.from({ length: cols }, () => ' ')
+}
+
+function rowToString(row) {
+  return row.join('').replace(/[ \t]+$/g, '')
+}
+
+function createScreen(cols, rows) {
+  return {
+    cols,
+    rows,
+    grid: Array.from({ length: rows }, () => makeRow(cols)),
+    scrollback: [],
+    cx: 0,
+    cy: 0,
+  }
+}
+
+function putChar(screen, ch) {
+  const w = wcwidth(ch.codePointAt(0))
+  if (w <= 0) return
+  if (screen.cx + w > screen.cols) newline(screen)
+  if (screen.cx + w > screen.cols) return
+  screen.grid[screen.cy][screen.cx] = ch
+  for (let i = 1; i < w && screen.cx + i < screen.cols; i += 1) {
+    screen.grid[screen.cy][screen.cx + i] = ''
+  }
+  screen.cx += w
+}
+
+function newline(screen) {
+  screen.cx = 0
+  screen.cy += 1
+  if (screen.cy < screen.rows) return
+  screen.scrollback.push(rowToString(screen.grid[0]))
+  screen.grid.shift()
+  screen.grid.push(makeRow(screen.cols))
+  screen.cy = screen.rows - 1
+}
+
+function setCursor(screen, x, y) {
+  screen.cx = Math.min(screen.cols - 1, Math.max(0, x))
+  screen.cy = Math.min(screen.rows - 1, Math.max(0, y))
+}
+
+function eraseLine(screen, mode) {
+  const row = screen.grid[screen.cy]
+  const from = mode === 1 ? 0 : screen.cx
+  const to = mode === 1 ? screen.cx + 1 : mode === 2 ? screen.cols : screen.cols
+  const start = mode === 2 ? 0 : from
+  for (let i = start; i < to; i += 1) row[i] = ' '
+}
+
+function eraseDisplay(screen, mode) {
+  if (mode === 2 || mode === 3) {
+    screen.grid = Array.from({ length: screen.rows }, () => makeRow(screen.cols))
+    screen.cx = 0
+    screen.cy = 0
+    if (mode === 3) screen.scrollback = []
+    return
+  }
+  if (mode === 0) {
+    eraseLine(screen, 0)
+    for (let y = screen.cy + 1; y < screen.rows; y += 1) screen.grid[y] = makeRow(screen.cols)
+    return
+  }
+  if (mode === 1) {
+    for (let y = 0; y < screen.cy; y += 1) screen.grid[y] = makeRow(screen.cols)
+    eraseLine(screen, 1)
+  }
+}
+
+function applyCsi(screen, priv, params, cmd) {
+  if (priv === '?') return
+  const p = params.split(';').map((n) => {
+    const v = Number.parseInt(n, 10)
+    return Number.isFinite(v) ? v : 0
+  })
+  const a = p[0] || 0
+  switch (cmd) {
+    case 'A':
+      setCursor(screen, screen.cx, screen.cy - (a || 1))
+      break
+    case 'B':
+      setCursor(screen, screen.cx, screen.cy + (a || 1))
+      break
+    case 'C':
+      setCursor(screen, screen.cx + (a || 1), screen.cy)
+      break
+    case 'D':
+      setCursor(screen, screen.cx - (a || 1), screen.cy)
+      break
+    case 'G':
+      setCursor(screen, Math.max(0, (a || 1) - 1), screen.cy)
+      break
+    case 'H':
+    case 'f': {
+      const row = Math.max(0, (p[0] || 1) - 1)
+      const col = Math.max(0, (p[1] || 1) - 1)
+      setCursor(screen, col, row)
+      break
+    }
+    case 'J':
+      eraseDisplay(screen, a)
+      break
+    case 'K':
+      eraseLine(screen, a)
+      break
+    case 'X': {
+      const n = a || 1
+      for (let i = 0; i < n && screen.cx + i < screen.cols; i += 1) {
+        screen.grid[screen.cy][screen.cx + i] = ' '
+      }
+      break
+    }
+    default:
+      break
+  }
+}
+
+function skipOsc(raw, i) {
+  const n = raw.length
+  let j = i + 2
+  while (j < n) {
+    const c = raw[j]
+    if (c === '\u0007') return j + 1
+    if (c === '\u001b' && raw[j + 1] === '\\') return j + 2
+    j += 1
+  }
+  return n
+}
+
+function parse(raw, screen) {
+  const n = raw.length
+  let i = 0
+  while (i < n) {
+    const ch = raw[i]
+    if (ch === '\u001b') {
+      const next = raw[i + 1]
+      if (next === ']') {
+        i = skipOsc(raw, i)
+        continue
+      }
+      if (next === '[') {
+        let j = i + 2
+        let priv = ''
+        if (raw[j] === '?' || raw[j] === '>') {
+          priv = raw[j]
+          j += 1
+        }
+        const start = j
+        while (j < n && ((raw[j] >= '0' && raw[j] <= '9') || raw[j] === ';')) j += 1
+        const params = raw.slice(start, j)
+        const cmd = raw[j] || ''
+        if (cmd) applyCsi(screen, priv, params, cmd)
+        i = cmd ? j + 1 : n
+        continue
+      }
+      if (next === '(' || next === ')' || next === '*' || next === '+') {
+        i += 3
+        continue
+      }
+      if (next === '7' || next === '8' || next === 'c' || next === 'M' || next === 'D' || next === 'E') {
+        i += 2
+        continue
+      }
+      i += next ? 2 : 1
+      continue
+    }
+    if (ch === '\r') {
+      screen.cx = 0
+      i += 1
+      continue
+    }
+    if (ch === '\n') {
+      newline(screen)
+      i += 1
+      continue
+    }
+    if (ch === '\b') {
+      setCursor(screen, screen.cx - 1, screen.cy)
+      i += 1
+      continue
+    }
+    if (ch === '\t') {
+      const next = Math.min(screen.cols - 1, (Math.floor(screen.cx / 8) + 1) * 8)
+      setCursor(screen, next, screen.cy)
+      i += 1
+      continue
+    }
+    if (ch === '\u0007') {
+      i += 1
+      continue
+    }
+    const cp = raw.codePointAt(i)
+    const glyph = String.fromCodePoint(cp)
+    putChar(screen, glyph)
+    i += glyph.length
+  }
+}
+
+function tidyLines(lines, maxLines) {
+  const out = lines.map((l) => l.replace(/[ \t]+$/g, ''))
+  while (out.length && !out[0]) out.shift()
+  while (out.length && !out[out.length - 1]) out.pop()
+  return out.slice(-maxLines).join('\n')
+}
+
+export function renderPtyPlainText(value, opts = {}) {
+  const cols = clamp(opts.cols, 20, 300, 120)
+  const rows = clamp(opts.rows, 8, 80, 40)
+  const maxLines = clamp(opts.maxLines, 8, 400, 80)
+  const raw = String(value || '')
+  if (!raw) return ''
+  const screen = createScreen(cols, rows)
+  parse(raw, screen)
+  const lines = [...screen.scrollback, ...screen.grid.map(rowToString)]
+  return tidyLines(lines, maxLines)
+}

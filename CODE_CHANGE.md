@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | shared/ptyPlain.js | GUI 按 VT 屏幕还原 PTY，避免去色硬拼乱码
+2026-08-20 | M | FurnaceWorkspace.vue / ptyPlain.test.js / crucible-3.5.md / crucible-grok-client.md | 干活面 GUI 改用屏幕文本
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-20 | M | scripts/pack-release.mjs | 运行包说明改为 README.txt，避免 Windows 中文文件名乱码
 2026-08-20 | M | packages/oh-my-co-work-v3-win32-x64.zip / linux-x64.zip | 去掉乱码「使用说明.txt」
 2026-08-20 | M | packages/README.md / CURRENT.txt | 同步包体积
