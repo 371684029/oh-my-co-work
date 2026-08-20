@@ -15,7 +15,7 @@
 | [crucible-3.2.md](./crucible-3.2.md) | **3.2 工作流 prompt 工程**：节点一览、当前节点合同、角色壳换挡 |
 | [crucible-3.3.md](./crucible-3.3.md) | **3.3 Grok Build 教程**：未安装/未登录/未配置时的下载登录配置 |
 | [crucible-3.5.md](./crucible-3.5.md) | **3.5 熔炉 GUI / TUI**：铺满页面 + 缩小；同一 grok 进程 |
-| [crucible-3.7.md](./crucible-3.7.md) | **3.7 3.x 最终封板**：GIF、头像、GUI 附件、PTY 宿主 |
+| [crucible-3.7.md](./crucible-3.7.md) | **3.7 3.x 最终封板**：循环 GIF、头像、GUI 可读正文、短合同开炉、PTY 宿主 |
 | [crucible-grok-client.md](./crucible-grok-client.md) | **Grok 客户端原理**：官方 CLI + node-pty，不是自研 Chat API |
 | [crucible-gui-plain.md](./crucible-gui-plain.md) | **GUI 可读正文**：去 TUI 框线/底栏，不把整屏抄进聊天区 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
