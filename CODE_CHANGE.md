@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | packages/oh-my-co-work-v3-linux-x64.zip | 3.7.0 Linux 运行包覆盖
+2026-08-20 | M | packages/README.md / CURRENT.txt | 同步 3.7.0 包大小
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮封板条目
+
 2026-08-20 | A | docs/crucible-3.7.md | 3.7.0 3.x 最终封板口径
 2026-08-20 | M | README.md / AGENT.md / about.json / package.json / workspaces | 版本 3.7.0 最终封板
 2026-08-20 | M | docs/README.md / mvp.md / crucible-3x.md / crucible-3x-plan.md / crucible-grok-client.md / packages/README.md | 发布线改为 3.7.0
