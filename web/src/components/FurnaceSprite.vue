@@ -47,7 +47,7 @@
       :aria-label="`${title} · 展开`"
       @click="minimized = false"
     >
-      <img :src="spriteSrc" alt="" draggable="false" />
+      <img :src="spriteSrc" alt="熔炉" draggable="false" />
     </button>
   </div>
 </template>
@@ -81,7 +81,7 @@ const POKE_LINES = ['嗯？', '别戳了……要开就点「开熔炉」。', '
 
 const hovered = ref(false)
 const poking = ref(false)
-const minimized = ref(true)
+const minimized = ref(false)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
 function defaultPos() {
@@ -260,7 +260,7 @@ onMounted(() => {
     } else {
       pos.value = defaultPos()
     }
-    minimized.value = localStorage.getItem(MIN_KEY) !== '0'
+    minimized.value = localStorage.getItem(MIN_KEY) === '1'
   } catch {
     pos.value = defaultPos()
   }
@@ -358,7 +358,7 @@ onUnmounted(() => {
   display: block;
   width: 72px;
   height: auto;
-  opacity: 0.58;
+  opacity: 0.95;
   filter: drop-shadow(0 4px 8px rgba(20, 16, 30, 0.12));
   transform-origin: 50% 100%;
 }
@@ -416,31 +416,32 @@ onUnmounted(() => {
 }
 
 .furnace-pet-peek {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 72px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 16px;
   overflow: hidden;
-  padding: 0;
+  padding: 4px 2px 0;
   cursor: pointer;
-  opacity: 0.72;
-  background: rgba(255, 255, 255, 0.72);
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 4px 10px rgba(20, 16, 28, 0.1);
 }
 
 .furnace-pet-peek:hover {
-  opacity: 1;
+  filter: brightness(1.04);
 }
 
 .furnace-pet-peek img {
-  width: 40px;
-  height: 54px;
-  object-fit: cover;
-  object-position: 50% 8%;
+  display: block;
+  width: 48px;
+  height: 68px;
+  object-fit: contain;
+  object-position: center bottom;
 }
 
 .furnace-pet.is-min {
-  width: 40px;
+  width: 52px;
 }
 
 @keyframes furnace-poke {
