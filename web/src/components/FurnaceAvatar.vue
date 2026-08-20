@@ -81,9 +81,9 @@ onUnmounted(() => {
 .furnace-avatar img {
   display: block;
   width: 100%;
-  height: 140%;
+  height: 100%;
   object-fit: cover;
-  object-position: 50% 6%;
+  object-position: 50% 18%;
   pointer-events: none;
 }
 
@@ -96,6 +96,11 @@ onUnmounted(() => {
   width: 108px;
   height: 108px;
   box-shadow: 0 10px 24px rgba(20, 16, 28, 0.14), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.furnace-avatar.is-lg img {
+  object-fit: contain;
+  object-position: center bottom;
 }
 
 .furnace-avatar.is-lg.live {
