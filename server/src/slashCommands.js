@@ -13,6 +13,7 @@ import {
 } from '@acw/shared'
 import { resolveShowScriptPopup, getAppSettings } from './appSettings.js'
 import { ensureFurnaceWorkspace } from './furnaceContext.js'
+import { resolveGrokWorkspaceDir, ensureGrokWorkspace } from './furnaceGrokInject.js'
 import {
   enrichScriptConfig,
   getScriptWorkDir,
@@ -27,8 +28,10 @@ function furnaceDefaultText() {
 }
 
 function furnaceGrokScript(command) {
-  const workDir = ensureFurnaceWorkspace()
-  const cmd = String(command || 'grok').trim() || 'grok'
+  const grok = getAppSettings().grok || {}
+  ensureFurnaceWorkspace()
+  const workDir = ensureGrokWorkspace(resolveGrokWorkspaceDir(grok))
+  const cmd = String(command || grok.command || 'grok').trim() || 'grok'
   return {
     mode: 'command',
     command: cmd,

@@ -154,6 +154,28 @@
         <el-form-item label="启动命令">
           <el-input v-model="grok.command" placeholder="grok" />
         </el-form-item>
+        <el-form-item label="Grok 工作目录">
+          <PathPicker
+            v-model="grok.workspaceDir"
+            mode="folder"
+            placeholder="默认 data/furnace（与 ACTIVE.md、GUI 附件同目录）"
+            hint="空则用熔炉目录。只改该目录 AGENTS.md 的标记块，绝不改全局 ~/.grok/AGENTS.md。"
+          />
+        </el-form-item>
+        <el-form-item label="写入本机 Grok 规则">
+          <el-switch v-model="grok.writeRules" />
+          <p class="prefs-resolved">
+            默认开。点开熔炉时写入 AGENTS.md 标记块，并用短 --prompt 点名本轮角色（主持 / 适配 / 审核）。关掉仍可开 GUI/TUI，但不注入合同。
+          </p>
+        </el-form-item>
+        <div class="prefs-actions" style="margin-bottom: 12px">
+          <el-button size="small" :loading="openingGrokDir" @click="openGrokWorkspace">
+            打开文件夹
+          </el-button>
+          <el-button size="small" :loading="removingGrokBlock" @click="removeGrokBlock">
+            移除标记块
+          </el-button>
+        </div>
         <el-form-item label="开熔炉默认">
           <el-radio-group v-model="grok.surface">
             <el-radio value="chat">铺满 GUI</el-radio>
@@ -262,6 +284,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
+import PathPicker from '../../components/PathPicker.vue'
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
@@ -293,9 +316,18 @@ const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const backingUp = ref(false)
-const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
+const grok = ref({
+  command: 'grok',
+  configured: true,
+  surface: 'chat',
+  workspaceDir: '',
+  writeRules: true,
+  rulesAcknowledged: false,
+})
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
+const openingGrokDir = ref(false)
+const removingGrokBlock = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -333,6 +365,9 @@ async function load() {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
+        workspaceDir: s.grok.workspaceDir || '',
+        writeRules: s.grok.writeRules !== false,
+        rulesAcknowledged: !!s.grok.rulesAcknowledged,
       }
     }
     adaptBackup.value = s.adapt?.backup !== false
@@ -517,11 +552,21 @@ async function saveAdmin() {
 async function saveGrok() {
   savingGrok.value = true
   try {
+    if (grok.value.writeRules !== false && !grok.value.rulesAcknowledged) {
+      await ElMessageBox.confirm(
+        '将只改该工作目录里 AGENTS.md 的 oh-my-co-work-furnace 标记块，以及 ACTIVE.md 和 .grok/rules/session.md。不会改你的全局 ~/.grok/AGENTS.md。',
+        '写入本机 Grok 规则',
+      )
+      grok.value.rulesAcknowledged = true
+    }
     const s = await api.appSettings.update({
       grok: {
         command: String(grok.value.command || 'grok').trim() || 'grok',
         configured: !!grok.value.configured,
         surface: grok.value.surface === 'tui' ? 'tui' : 'chat',
+        workspaceDir: String(grok.value.workspaceDir || '').trim(),
+        writeRules: grok.value.writeRules !== false,
+        rulesAcknowledged: !!grok.value.rulesAcknowledged,
       },
       adapt: { backup: adaptBackup.value !== false },
     })
@@ -530,14 +575,55 @@ async function saveGrok() {
         command: s.grok.command || 'grok',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
+        workspaceDir: s.grok.workspaceDir || '',
+        writeRules: s.grok.writeRules !== false,
+        rulesAcknowledged: !!s.grok.rulesAcknowledged,
       }
     }
     if (s.adapt) adaptBackup.value = s.adapt.backup !== false
     ElMessage.success('已保存 Grok 配置')
   } catch (e) {
-    ElMessage.error(e.message)
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(e.message || String(e))
   } finally {
     savingGrok.value = false
+  }
+}
+
+async function openGrokWorkspace() {
+  openingGrokDir.value = true
+  try {
+    await api.appSettings.update({
+      grok: {
+        command: String(grok.value.command || 'grok').trim() || 'grok',
+        configured: !!grok.value.configured,
+        surface: grok.value.surface === 'tui' ? 'tui' : 'chat',
+        workspaceDir: String(grok.value.workspaceDir || '').trim(),
+        writeRules: grok.value.writeRules !== false,
+        rulesAcknowledged: !!grok.value.rulesAcknowledged,
+      },
+    })
+    const r = await api.furnace.openGrokWorkspace()
+    ElMessage.success(`已打开 ${r.path || 'Grok 工作目录'}`)
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    openingGrokDir.value = false
+  }
+}
+
+async function removeGrokBlock() {
+  removingGrokBlock.value = true
+  try {
+    await ElMessageBox.confirm(
+      '将从该目录的 AGENTS.md 里删掉 oh-my-co-work-furnace 标记块，并删除 .grok/rules/session.md。块外手写会保留。',
+      '移除熔炉标记块',
+    )
+    const r = await api.furnace.removeGrokBlock()
+    ElMessage.success(r.mode === 'removed' || r.ok ? '已移除标记块' : '没有可移除的标记块')
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') ElMessage.error(e.message || String(e))
+  } finally {
+    removingGrokBlock.value = false
   }
 }
 

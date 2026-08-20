@@ -77,7 +77,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
@@ -163,6 +163,21 @@ function openFurnaceSession() {
   router.push({ path, query: { ...route.query, furnace: '1' } })
 }
 
+async function confirmGrokRulesWrite(s) {
+  const grok = s?.grok || {}
+  if (grok.writeRules === false || grok.rulesAcknowledged) return true
+  try {
+    await ElMessageBox.confirm(
+      '将把本轮熔炉规则写入 data/furnace/AGENTS.md 的标记块（以及 ACTIVE.md）。不改你的全局 ~/.grok/AGENTS.md。继续？',
+      '写入本机 Grok 规则',
+    )
+    await api.appSettings.update({ grok: { ...grok, rulesAcknowledged: true } })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** 本机已能跑 Grok 时，把熔炉成员接到 grok 命令，否则只开聊天回声 */
 async function ensureFurnaceGrokWired(s, probe) {
   if (!grokCanRun(probe) || s?.grok?.configured) return s
@@ -171,6 +186,10 @@ async function ensureFurnaceGrokWired(s, probe) {
       grok: {
         command: s?.grok?.command || probe?.command || 'grok',
         configured: true,
+        workspaceDir: s?.grok?.workspaceDir || '',
+        writeRules: s?.grok?.writeRules !== false,
+        rulesAcknowledged: !!s?.grok?.rulesAcknowledged,
+        surface: s?.grok?.surface === 'tui' ? 'tui' : 'chat',
       },
     })
     setFurnaceGrokGate({ probe })
@@ -188,14 +207,26 @@ async function onFurnaceClick() {
     return
   }
   grokGuideOpen.value = false
-  await ensureFurnaceGrokWired(s, probe)
+  const wired = await ensureFurnaceGrokWired(s, probe)
+  if (!(await confirmGrokRulesWrite(wired || s))) return
+  try {
+    await api.furnace.prepare({ acknowledge: true })
+  } catch (e) {
+    ElMessage.warning(e?.message || '熔炉规则写入未完成，仍尝试打开')
+  }
   openFurnaceSession()
 }
 
 async function openFurnaceAnyway() {
   grokGuideOpen.value = false
   const { s, probe } = await refreshGrokGate()
-  await ensureFurnaceGrokWired(s, probe)
+  const wired = await ensureFurnaceGrokWired(s, probe)
+  if (!(await confirmGrokRulesWrite(wired || s))) return
+  try {
+    await api.furnace.prepare({ acknowledge: true })
+  } catch {
+    /* 教程入口允许无规则开 TUI */
+  }
   openFurnaceSession()
 }
 

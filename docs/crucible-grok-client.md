@@ -132,17 +132,21 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 
 ### 3.5 上下文：写文件，不调 Chat Completions
 
-`server/src/furnaceContext.js` + `furnaceSituation.js`
+`server/src/furnaceContext.js` + `furnaceSituation.js` + `furnaceGrokInject.js`
 
 开聊 / 适配 / 审核时，引擎只装 **一套** 角色壳，拼上节点地图，写成：
 
 - `data/furnace/ACTIVE.md` — 本轮 prompt + 记忆 + 情境  
 - `data/furnace/SITUATION.md` — 情境副本  
+- `data/furnace/AGENTS.md` — 官方 Grok CLI 会读的**标记块**（`<!-- oh-my-co-work-furnace:begin/end -->`），不覆盖块外手写，**绝不写** `~/.grok/AGENTS.md`  
+- `data/furnace/.grok/rules/session.md` — 本轮短规则（可关）  
 - `data/furnace/memory/*.md` — 本机记忆（种子只复制一次）
+
+点开熔炉时还会给 `grok` 加一条短 `--prompt`，点名主持 / 成员适配 / 节点适配 / 系统审核。成员库里的命令仍是 `grok`，`--prompt` 只在启动时拼上。
 
 系统气泡只报「熔炉本轮：xxx」，**不把全文灌进群聊**。
 
-这是给 **坐在该 cwd 里的 Grok CLI** 读的 Markdown，不是工作台用秘钥去调模型。Grok Build 自己认哪些项目文件（例如它习惯的 `AGENTS.md`）由官方 CLI 决定；当前实现 **保证写的是 `ACTIVE.md`**，没有再包一层「代 Grok 调 API」。
+这是给 **坐在该 cwd 里的 Grok CLI** 读的 Markdown，不是工作台用秘钥去调模型。Grok cwd 默认就是 `data/furnace`（与 GUI `inbox/` 同目录）；设置里可改工作目录，但不要填成 `~/.grok` 本体。
 
 ---
 
@@ -198,6 +202,7 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | `server/src/appSettings.js` | `grok.command` / `configured` / `surface` |
 | `server/src/terminal/terminalService.js` | PTY 生命周期 |
 | `server/src/furnaceContext.js` | `ACTIVE.md` 角色壳 |
+| `server/src/furnaceGrokInject.js` | `AGENTS.md` 标记块 + 启动 `--prompt` |
 | `web/src/App.vue` | 桌宠、教程弹层、开熔炉 |
 | `web/src/components/terminal/FurnaceWorkspace.vue` | GUI / TUI |
 | `web/src/views/Workbench.vue` | 熔炉终端用熔炉皮，其它用普通终端工作区 |
@@ -211,5 +216,6 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 - **没有** 工作台侧的模型列表、流式 token、tool calling。那些若存在，在 `grok` TUI 里。  
 - **没有** 把群聊每条气泡自动 `write` 进 grok；要说话：GUI 输入框，或切 TUI 用 Grok 自己的键位。  
 - **GUI 可以放文件，不是原生传文件**：落到 `data/furnace/inbox/`，发送时把相对路径写成一行 `write` 进 grok。群聊附件仍不进 grok。  
-- 3.4 若另有「往项目里写 `AGENTS.md`」类注入，以合入 `main` 的代码为准；**本文描述的是 PTY 宿主模型**，不依赖那一层。  
+- 开熔炉会写入 `data/furnace/AGENTS.md` 标记块，并用 `--prompt` 点名本轮角色；**不写** `~/.grok/AGENTS.md`。  
+- 本文描述的是 PTY 宿主模型，没有自研 Grok HTTP 客户端。  
 - 独立托盘窗 / 真·Grok 桌面客户端：后置 4.x，不是现在这条路径。

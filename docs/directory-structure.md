@@ -67,7 +67,7 @@ oh-my-co-work/
 │   ├── logs/
 │   ├── journals/
 │   ├── backups/adapt/           # 适配备份 zip（不进 git）
-│   └── furnace/                 # ACTIVE.md + SITUATION.md + 本机记忆（不进 git）
+│   └── furnace/                 # ACTIVE.md + AGENTS.md 标记块 + SITUATION.md + inbox + 本机记忆（不进 git）
 │
 └── scripts/                     # 可选运维脚本
 ```

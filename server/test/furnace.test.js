@@ -46,11 +46,13 @@ test('getAppSettings exposes grok defaults without requiring configured', () => 
   assert.ok(s.grok.command.length > 0)
   assert.equal(typeof s.grok.configured, 'boolean')
   assert.equal(s.grok.surface, 'chat')
+  assert.equal(s.grok.writeRules, true)
 })
 
 test('grok.configured defaults on', () => {
   assert.equal(defaultGrokSettings().configured, true)
   assert.equal(defaultGrokSettings().surface, 'chat')
+  assert.equal(defaultGrokSettings().writeRules, true)
 })
 
 test('grok.surface tui persists', () => {

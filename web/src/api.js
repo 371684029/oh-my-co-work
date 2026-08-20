@@ -159,6 +159,15 @@ export const api = {
   grok: {
     status: () => req('/grok/status'),
   },
+  furnace: {
+    grokWorkspace: () => req('/furnace/grok-workspace'),
+    prepare: (body) =>
+      req('/furnace/prepare', { method: 'POST', body: JSON.stringify(body || {}) }),
+    openGrokWorkspace: () =>
+      req('/furnace/grok-workspace/open', { method: 'POST', body: '{}' }),
+    removeGrokBlock: () =>
+      req('/furnace/grok-block/remove', { method: 'POST', body: '{}' }),
+  },
   appSettings: {
     get: () => req('/settings/app'),
     update: (body) =>

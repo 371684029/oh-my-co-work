@@ -12,7 +12,10 @@
   "grok": {
     "command": "grok",
     "configured": false,
-    "surface": "chat"
+    "surface": "chat",
+    "workspaceDir": "",
+    "writeRules": true,
+    "rulesAcknowledged": false
   },
   "adapt": {
     "backup": true

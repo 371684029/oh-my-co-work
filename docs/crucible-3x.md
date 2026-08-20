@@ -172,7 +172,7 @@
 - 「改不了代码」：只读、二进制、过大、找不到源文件、备份失败 → 不改文件，只打步骤标记。  
 - 压缩包：`data/backups/adapt/<成员id>/adapt-<时间>.zip` + 同名 json 清单；只含即将改动的文件。  
 - 流程轨：步骤角标「适配」+ 右侧「适配」筛选 Tab（不是新页面）。  
-- 三套上下文：prompt 进仓库、记忆在 `data/furnace`、本轮只写 `ACTIVE.md`。  
+- 三套上下文：prompt 进仓库、记忆在 `data/furnace`、本轮写 `ACTIVE.md` + `AGENTS.md` 标记块。  
 - `unified_admin` 的内部 id 是否保留、只改展示名？  
 - 精灵点开时是否切换角色。  
 

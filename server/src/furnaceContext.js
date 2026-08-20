@@ -64,6 +64,7 @@ export function ensureFurnaceWorkspace() {
         '',
         '角色壳各有 prompt（仓库）和 memory（本目录）。',
         '`ACTIVE.md` = 当前角色 + 此刻在做什么。`SITUATION.md` 是情境副本。',
+        '`AGENTS.md` = 给官方 Grok CLI 的标记块（只动熔炉块，不改 ~/.grok/AGENTS.md）。',
         '`inbox/` = GUI 上传的附件，Grok 用相对路径打开。',
         '不要把多套角色 prompt 拼在一起。',
         '',
@@ -250,6 +251,7 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
     label: FURNACE_ROLE_LABEL[role] || role,
     activeMd,
     situationMd,
+    situationText: sitText,
     text: composed,
   }
 }
