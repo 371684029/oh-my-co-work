@@ -557,7 +557,7 @@ router.post('/sessions/:id/files', (req, res) => {
   })
 })
 
-/** 熔炉画面皮附件：落到 data/furnace/inbox/<session>/，Grok cwd 可直接读 */
+/** 熔炉 GUI 附件：落到 data/furnace/inbox/<session>/，Grok cwd 可直接读 */
 router.post('/sessions/:id/furnace-files', (req, res) => {
   furnaceUploadMiddleware(req, res, (err) => {
     if (err) {

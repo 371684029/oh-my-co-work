@@ -14,7 +14,7 @@
 | [crucible-3x-plan.md](./crucible-3x-plan.md) | **3.x 实施计划**：3.0 入口 → 3.1 适配 → 3.2 prompt → 3.3 Grok 教程 |
 | [crucible-3.2.md](./crucible-3.2.md) | **3.2 工作流 prompt 工程**：节点一览、当前节点合同、角色壳换挡 |
 | [crucible-3.3.md](./crucible-3.3.md) | **3.3 Grok Build 教程**：未安装/未登录/未配置时的下载登录配置 |
-| [crucible-3.5.md](./crucible-3.5.md) | **3.5 熔炉简易对话皮**：铺满页面 + 缩小；与 TUI 同一进程 |
+| [crucible-3.5.md](./crucible-3.5.md) | **3.5 熔炉 GUI / TUI**：铺满页面 + 缩小；同一 grok 进程 |
 | [crucible-grok-client.md](./crucible-grok-client.md) | **Grok 客户端原理**：官方 CLI + node-pty，不是自研 Chat API |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |

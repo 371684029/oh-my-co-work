@@ -118,7 +118,7 @@ export function grokSetupNeeded(probe) {
   return !grokCanRun(probe)
 }
 
-/** 熔炉干活面：气泡皮 / 原 TUI */
+/** 熔炉干活面：GUI（chat）/ TUI */
 export const FURNACE_SURFACE = {
   CHAT: 'chat',
   TUI: 'tui',
@@ -130,7 +130,7 @@ export function normalizeFurnaceSurface(v) {
     : FURNACE_SURFACE.CHAT
 }
 
-/** 去 CSI / OSC，给熔炉对话皮读 PTY 回放 */
+/** 去 CSI / OSC，给熔炉 GUI 读 PTY 回放 */
 export function stripAnsi(value) {
   return String(value || '')
     .replace(/\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g, '')
@@ -159,7 +159,7 @@ export function stripAnsiTail(
   return text.replace(/^\s+/, '').replace(/\s+$/, '')
 }
 
-/** 画面皮把附件路径写进 grok PTY 的正文 */
+/** GUI 把附件路径写进 grok PTY 的正文 */
 export function buildFurnacePtyAttachText(userText, files = []) {
   const lines = []
   const text = String(userText || '').trim()

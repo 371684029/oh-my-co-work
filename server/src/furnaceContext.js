@@ -64,7 +64,7 @@ export function ensureFurnaceWorkspace() {
         '',
         '角色壳各有 prompt（仓库）和 memory（本目录）。',
         '`ACTIVE.md` = 当前角色 + 此刻在做什么。`SITUATION.md` 是情境副本。',
-        '`inbox/` = 画面皮上传的附件，Grok 用相对路径打开。',
+        '`inbox/` = GUI 上传的附件，Grok 用相对路径打开。',
         '不要把多套角色 prompt 拼在一起。',
         '',
       ].join('\n'),

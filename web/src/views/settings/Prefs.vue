@@ -142,7 +142,7 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉默认铺满页面：简易对话皮（同一条 grok 进程）或原 TUI。可点「缩小」回到工作台三栏。
+        熔炉默认铺满页面：GUI 或 TUI（同一条 grok 进程）。可点「缩小」回到工作台三栏。
         仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
@@ -156,10 +156,10 @@
         </el-form-item>
         <el-form-item label="开熔炉默认">
           <el-radio-group v-model="grok.surface">
-            <el-radio value="chat">铺满对话</el-radio>
-            <el-radio value="tui">铺满终端</el-radio>
+            <el-radio value="chat">铺满 GUI</el-radio>
+            <el-radio value="tui">铺满 TUI</el-radio>
           </el-radio-group>
-          <p class="prefs-resolved">都是整页，不是小对话框。工具栏可随时切换，并「缩小」回三栏。</p>
+          <p class="prefs-resolved">都是整页。工具栏可随时在 GUI / TUI 之间切换，并「缩小」回三栏。</p>
         </el-form-item>
         <el-form-item label="改源文件前打压缩包备份">
           <el-switch v-model="adaptBackup" />

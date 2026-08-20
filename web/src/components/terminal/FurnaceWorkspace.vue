@@ -27,19 +27,19 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
-            title="去颜色的 Grok 画面 + 底部输入；菜单请用终端"
+            title="GUI：去颜色画面 + 底部输入；菜单请用 TUI"
             @click="surface = 'chat'"
           >
-            画面
+            GUI
           </button>
           <button
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'tui' }"
-            title="原 Grok TUI"
+            title="TUI：原 Grok 终端"
             @click="surface = 'tui'"
           >
-            终端
+            TUI
           </button>
           <button
             type="button"
@@ -81,11 +81,11 @@
           </aside>
           <div class="furnace-log-main">
             <div v-if="!liveText" class="furnace-empty">
-              这是 Grok 终端画面的去颜色副本，不是多轮聊天气泡。菜单和快捷键请切「终端」。
+              这是 Grok 的 GUI（去颜色的 TUI 副本），不是多轮聊天气泡。菜单和快捷键请切 TUI。
               下方输入会写进同一进程。
             </div>
             <div v-if="liveText" class="screen">
-              <span class="bubble-label">Grok 画面（去颜色）</span>
+              <span class="bubble-label">GUI（去颜色）</span>
               <pre>{{ liveText }}</pre>
             </div>
           </div>
@@ -159,7 +159,7 @@
       </div>
 
       <footer class="furnace-foot">
-        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? '去色画面' : 'TUI' }}</span>
+        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? 'GUI' : 'TUI' }}</span>
         <span v-if="terminal.cwd" class="furnace-cwd" :title="terminal.cwd">{{ terminal.cwd }}</span>
         <span>{{ footerHint }}</span>
       </footer>
@@ -255,12 +255,12 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? '画面是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
+      ? 'GUI 是去颜色的 TUI 尾部 · 缩小后熔炉仍在中栏'
       : '已在三栏中栏 · 可再铺满页面'
   }
-  if (focused.value) return '终端输入中 · Esc 退出焦点'
+  if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
   if (isPagefill.value) return '再按 Esc 缩小回工作台'
-  return '点画面继续输入'
+  return '点 TUI 继续输入'
 })
 
 function syncFullscreenState() {

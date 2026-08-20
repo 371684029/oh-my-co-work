@@ -7,7 +7,7 @@
 | 前置 | `2.x` 终端守护者已封（`2.6.0`）；JSONL Adapter 为融合契约 |
 | 实施计划 | [crucible-3x-plan.md](./crucible-3x-plan.md) |
 | 3.2 情境 | [crucible-3.2.md](./crucible-3.2.md) |
-| 3.5 对话皮 | [crucible-3.5.md](./crucible-3.5.md) |
+| 3.5 GUI / TUI | [crucible-3.5.md](./crucible-3.5.md) |
 | Grok 客户端原理 | [crucible-grok-client.md](./crucible-grok-client.md) |
 | 2.x 对照 | [tui-2x.md](./tui-2x.md) |
 
@@ -104,7 +104,7 @@
 落地顺序：
 
 1. 本机 **Grok TUI**（现有内嵌终端里跑官方 `grok` CLI，见 [crucible-grok-client.md](./crucible-grok-client.md)）  
-2. **铺满页面的简易对话皮**（3.5，与 TUI 同一进程）  
+2. **铺满页面的 GUI**（3.5，与 TUI 同一进程）  
 3. 托盘 / 独立小窗留给 4.x
 
 未配置时精灵仍在，提示下载并配置 Grok Build。
