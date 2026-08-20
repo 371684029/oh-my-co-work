@@ -616,7 +616,7 @@ async function mainAsync() {
     '数据目录：解压目录下的 data/',
     '',
   ].join('\n')
-  fs.writeFileSync(path.join(stage, '使用说明.txt'), userReadme, 'utf8')
+  fs.writeFileSync(path.join(stage, 'README.txt'), userReadme, 'utf8')
   fs.writeFileSync(path.join(stage, 'README.md'), userReadme, 'utf8')
   fs.writeFileSync(
     path.join(stage, 'VERSION.txt'),
