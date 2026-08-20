@@ -1,14 +1,29 @@
 /**
  * 从当前会话抽出熔炉情境包（槽位填充，不调模型）。
  */
+import path from 'node:path'
 import { getDb, parseJson } from './db.js'
-import { FURNACE_ROLE, nodeStatusLabel, stepTypeLabel } from '@acw/shared'
+import {
+  FURNACE_ROLE,
+  isFurnaceMember,
+  nodeStatusLabel,
+  stepTypeLabel,
+} from '@acw/shared'
 import {
   activateFurnaceRole,
   currentFurnaceRole,
   clipFurnaceText,
   SITUATION_LIMITS,
 } from './furnaceContext.js'
+import { getAppSettings } from './appSettings.js'
+import {
+  maybeInjectGrokFurnace,
+  resolveGrokWorkspaceDir,
+  ensureGrokWorkspace,
+  withGrokPrompt,
+  buildGrokLaunchPrompt,
+  grokRulesWriteAllowed,
+} from './furnaceGrokInject.js'
 
 function getMember(id) {
   if (!id) return null
@@ -144,16 +159,68 @@ export function collectFurnaceSituationFacts(sessionId, { nodeId } = {}) {
 
 export function syncFurnaceSessionContext(
   sessionId,
-  { role, nodeId, keepRole = false } = {},
+  { role, nodeId, keepRole = false, injectGrok } = {},
 ) {
   const facts = collectFurnaceSituationFacts(sessionId, { nodeId })
   if (!facts) return null
   const nextRole = role || (keepRole ? currentFurnaceRole() : FURNACE_ROLE.SESSION)
-  return activateFurnaceRole(nextRole, {
+  const pack = activateFurnaceRole(nextRole, {
     sessionId,
     nodeId: nodeId || null,
     situation: facts,
   })
+  const shouldInject =
+    injectGrok === true || (injectGrok !== false && Boolean(role) && !keepRole)
+  if (shouldInject && pack) {
+    pack.grok = maybeInjectGrokFurnace(pack)
+  }
+  return pack
+}
+
+/**
+ * 开熔炉 / 跑熔炉成员前：编译、按需写入 Grok cwd 的 AGENTS 标记块，拼短 --prompt。
+ * 默认 cwd 仍是 data/furnace。
+ */
+export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
+  const grok = getAppSettings().grok || {}
+  const cwd = ensureGrokWorkspace(resolveGrokWorkspaceDir(grok))
+  const allowed = grokRulesWriteAllowed(grok, { ready: grok.configured !== false })
+  let pack
+  if (sessionId) {
+    pack = syncFurnaceSessionContext(sessionId, { keepRole: true, injectGrok: allowed })
+  } else {
+    pack = activateFurnaceRole(currentFurnaceRole())
+    if (allowed) pack.grok = maybeInjectGrokFurnace(pack, { grok })
+  }
+  if (!pack) pack = activateFurnaceRole(currentFurnaceRole())
+  const prompt = grok.configured !== false ? buildGrokLaunchPrompt(pack.role) : ''
+  const command = withGrokPrompt(grok.command || 'grok', prompt)
+  return {
+    ok: true,
+    role: pack.role,
+    label: pack.label,
+    cwd,
+    command,
+    prompt,
+    writeRules: grok.writeRules !== false,
+    wrote: !!pack.grok?.wrote,
+    agentsMd: pack.grok?.agentsMd || path.join(cwd, 'AGENTS.md'),
+    activeMd: pack.grok?.activeMd || pack.activeMd,
+    skipped: pack.grok?.skipped || (grok.configured === false ? 'grok_not_ready' : null),
+    rulesAcknowledged: !!grok.rulesAcknowledged,
+  }
+}
+
+/** 熔炉成员开 TUI 时带上本轮 --prompt（不把 prompt 写进成员 DB） */
+export function applyFurnaceGrokRuntime({ member, sessionId, command } = {}) {
+  if (!isFurnaceMember(member)) return null
+  const prepared = prepareFurnaceGrokLaunch({ sessionId })
+  return {
+    command: withGrokPrompt(command || 'grok', prepared.prompt),
+    cwd: prepared.cwd,
+    prompt: prepared.prompt,
+    wrote: prepared.wrote,
+  }
 }
 
 /** 游标移动时刷新地图；失败不挡流程。 */

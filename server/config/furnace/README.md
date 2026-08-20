@@ -1,6 +1,6 @@
 # 熔炉上下文（进仓库）
 
-角色壳各一份 prompt、一份记忆种子。运行时只装当前这一套，并拼上会话情境，写成 `data/furnace/ACTIVE.md`。
+角色壳各一份 prompt、一份记忆种子。运行时只装当前这一套，并拼上会话情境，写成 `data/furnace/ACTIVE.md`。开熔炉时再写入同目录 `AGENTS.md` 标记块（官方 Grok CLI 会读），**不改** `~/.grok/AGENTS.md`。
 
 设计见 [docs/crucible-3.2.md](../../../docs/crucible-3.2.md)。
 

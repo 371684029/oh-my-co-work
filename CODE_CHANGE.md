@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | server/src/furnaceGrokInject.js | 开熔炉写入 data/furnace/AGENTS.md 标记块
+2026-08-20 | A | server/test/furnaceGrokInject.test.js | 标记块、拒写 ~/.grok、默认 cwd=熔炉目录
+2026-08-20 | M | server/src/furnaceSituation.js / slashCommands.js / runners.js / engine.js / routes.js / appSettings.js / furnaceContext.js | 开炉 prepare、启动 --prompt、角色切换注入
+2026-08-20 | M | web/src/App.vue / api.js / views/settings/Prefs.vue | 首次确认写入规则；设置可关 writeRules
+2026-08-20 | M | README.md | 开熔炉写入 AGENTS.md 标记块
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-20 | M | packages/win32 + linux zip | 覆盖 GUI 可读正文运行包
 2026-08-20 | A | docs/crucible-gui-plain.md | GUI 可读正文方案：去壳、不抄 TUI 框
 2026-08-20 | M | shared/ptyPlain.js / FurnaceWorkspace.vue / ptyPlain.test.js | furnaceGuiTranscript 去框线底栏

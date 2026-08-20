@@ -17,10 +17,12 @@ import {
   getParamsMap,
   formatScriptUserSummary,
   injectCallArgsParam,
+  isFurnaceMember,
 } from '@acw/shared'
 import { resolveShowScriptPopup } from './appSettings.js'
 import { decodeConsoleBytes, consoleChildEnv } from './consoleEncoding.js'
 import { runTerminal } from './terminal/terminalService.js'
+import { applyFurnaceGrokRuntime } from './furnaceSituation.js'
 
 /**
  * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
@@ -499,7 +501,14 @@ export async function runMember(
       }
     }
 
-    const cwd = resolveCwdForScript(script, mode === 'file' ? filePath : null)
+    let cwd = resolveCwdForScript(script, mode === 'file' ? filePath : null)
+    if (isFurnaceMember(member)) {
+      const fx = applyFurnaceGrokRuntime({ member, sessionId, command })
+      if (fx) {
+        if (mode !== 'file') command = fx.command
+        cwd = fx.cwd
+      }
+    }
     if (!cwd) {
       return {
         ok: false,
