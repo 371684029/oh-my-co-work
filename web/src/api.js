@@ -136,6 +136,19 @@ export const api = {
       if (!res.ok) throw new Error(data.error || res.statusText)
       return data
     },
+    uploadFurnaceFiles: async (id, fileList) => {
+      const fd = new FormData()
+      for (const f of fileList) fd.append('files', f)
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${id}/furnace-files`, {
+        method: 'POST',
+        headers: { 'X-ACW-Token': token },
+        body: fd,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || res.statusText)
+      return data
+    },
   },
   support: () => req('/support'),
   about: () => req('/about'),

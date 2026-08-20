@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | server/src/uploads.js 熔炉 inbox + POST /sessions/:id/furnace-files | 画面皮附件落到 Grok cwd
+2026-08-20 | M | FurnaceWorkspace.vue / Workbench.vue / web/src/api.js | 附件、粘贴、拖放，发送写相对路径
+2026-08-20 | A | server/test/furnaceInbox.test.js | inbox 路径与 PTY 正文
+2026-08-20 | M | shared/index.js | buildFurnacePtyAttachText
+2026-08-20 | M | frontend-components.md | 画面皮附件栏
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-20 | M | docs/crucible-grok-client.md | 用户如何选画面/TUI；进程共存、屏幕不同时铺开
 2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
 

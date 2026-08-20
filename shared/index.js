@@ -159,6 +159,19 @@ export function stripAnsiTail(
   return text.replace(/^\s+/, '').replace(/\s+$/, '')
 }
 
+/** 画面皮把附件路径写进 grok PTY 的正文 */
+export function buildFurnacePtyAttachText(userText, files = []) {
+  const lines = []
+  const text = String(userText || '').trim()
+  if (text) lines.push(text)
+  const list = Array.isArray(files) ? files.filter((f) => f?.relPath) : []
+  if (list.length) {
+    lines.push('请查看这些文件（相对当前工作目录）：')
+    for (const f of list) lines.push(f.relPath)
+  }
+  return lines.join('\n')
+}
+
 /** 产品宗旨（口号放关于页；日常控件用功能名） */
 export const PRODUCT_MISSION = {
   tagline: '人机协同 · 万物归元 · 皆可 Workflow',

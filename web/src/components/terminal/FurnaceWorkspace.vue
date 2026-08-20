@@ -96,14 +96,52 @@
             item.text
           }}</span>
         </div>
-        <form class="furnace-composer" @submit.prevent="sendChat">
-          <textarea
-            v-model="draft"
-            rows="3"
-            :disabled="!isRunning"
-            placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行"
-            @keydown="onComposerKey"
+        <form
+          class="furnace-composer"
+          @submit.prevent="sendChat"
+          @dragover.prevent
+          @drop.prevent="onDrop"
+        >
+          <input
+            ref="fileInput"
+            type="file"
+            multiple
+            class="furnace-file-input"
+            @change="onFileInputChange"
           />
+          <div class="furnace-compose-main">
+            <textarea
+              v-model="draft"
+              rows="3"
+              :disabled="!isRunning"
+              placeholder="写入 Grok 进程… Enter 发送，Shift+Enter 换行；可点附件或粘贴文件"
+              @keydown="onComposerKey"
+              @paste="onPaste"
+            />
+            <div v-if="pendingFiles.length" class="furnace-pending">
+              <span
+                v-for="(f, i) in pendingFiles"
+                :key="f.id || f.relPath"
+                class="furnace-pending-chip"
+              >
+                {{ f.name }}
+                <button type="button" title="去掉" @click="removePending(i)">×</button>
+              </span>
+            </div>
+            <div class="furnace-compose-bar">
+              <button
+                type="button"
+                class="furnace-btn"
+                :disabled="!isRunning || uploading || !sessionId"
+                title="文件落到熔炉工作目录 inbox/，发送时把路径写进 Grok"
+                @click="pickFiles"
+              >
+                {{ uploading ? '上传中…' : '附件' }}
+              </button>
+              <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
+              <span class="furnace-compose-hint">最多 8 个，单文件 20MB</span>
+            </div>
+          </div>
           <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
         </form>
       </div>
@@ -131,7 +169,9 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { stripAnsiTail } from '@acw/shared'
+import { stripAnsiTail, buildFurnacePtyAttachText } from '@acw/shared'
+import { ElMessage } from 'element-plus'
+import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import {
@@ -147,6 +187,7 @@ const props = defineProps({
   prefs: { type: Object, default: () => ({}) },
   defaultPagefill: { type: Boolean, default: true },
   defaultSurface: { type: String, default: 'chat' },
+  sessionId: { type: String, default: '' },
 })
 
 const emit = defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
@@ -159,10 +200,19 @@ const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
 const focused = ref(false)
 const draft = ref('')
 const sent = ref([])
+const pendingFiles = ref([])
+const uploading = ref(false)
+const uploadError = ref('')
+const fileInput = ref(null)
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
 const liveText = computed(() => stripAnsiTail(props.terminal.replay || ''))
-const canSend = computed(() => isRunning.value && !!draft.value.trim())
+const canSend = computed(
+  () =>
+    isRunning.value &&
+    !uploading.value &&
+    (!!draft.value.trim() || pendingFiles.value.length > 0),
+)
 
 /** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
 const buddyMood = computed(() => {
@@ -231,12 +281,70 @@ function onFocusChange(value) {
 }
 
 function sendChat() {
-  const text = draft.value.trim()
-  if (!text || !isRunning.value) return
-  sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text })
-  emit('input', `${text}\r`)
+  const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
+  if (!payload || !isRunning.value || uploading.value) return
+  sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
+  emit('input', `${payload}\r`)
   draft.value = ''
+  pendingFiles.value = []
   nextTick(scrollLog)
+}
+
+function pickFiles() {
+  if (!props.sessionId) {
+    ElMessage.warning('没有会话，没法落到熔炉目录')
+    return
+  }
+  fileInput.value?.click()
+}
+
+function removePending(i) {
+  pendingFiles.value.splice(i, 1)
+}
+
+async function addLocalFiles(fileList) {
+  uploadError.value = ''
+  if (!props.sessionId) {
+    ElMessage.warning('没有会话，没法上传')
+    return
+  }
+  const arr = [...fileList].filter(Boolean)
+  if (!arr.length) return
+  if (pendingFiles.value.length + arr.length > 8) {
+    ElMessage.warning('一次最多 8 个附件')
+    return
+  }
+  uploading.value = true
+  try {
+    const r = await api.sessions.uploadFurnaceFiles(props.sessionId, arr)
+    const files = r.files || []
+    pendingFiles.value = [...pendingFiles.value, ...files]
+    ElMessage.success(`已放入熔炉目录 ${files.length} 个文件`)
+  } catch (e) {
+    uploadError.value = e.message || '上传失败'
+    ElMessage.error(uploadError.value)
+  } finally {
+    uploading.value = false
+  }
+}
+
+function onFileInputChange(e) {
+  const files = e.target?.files
+  if (files?.length) addLocalFiles(files)
+  if (e.target) e.target.value = ''
+}
+
+function onPaste(ev) {
+  const items = ev.clipboardData?.files
+  if (items?.length) {
+    ev.preventDefault()
+    addLocalFiles(items)
+  }
+}
+
+function onDrop(ev) {
+  const files = ev.dataTransfer?.files
+  if (files?.length) addLocalFiles(files)
 }
 
 function onComposerKey(ev) {
@@ -529,8 +637,21 @@ onUnmounted(() => {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.furnace-file-input {
+  display: none;
+}
+
+.furnace-compose-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .furnace-composer textarea {
   flex: 1;
+  width: 100%;
   resize: none;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 14px;
@@ -538,6 +659,50 @@ onUnmounted(() => {
   font: inherit;
   font-size: 15px;
   min-height: 72px;
+  box-sizing: border-box;
+}
+
+.furnace-pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.furnace-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 16rem;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.furnace-pending-chip button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #6e6e73;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.furnace-compose-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.furnace-compose-hint,
+.furnace-upload-err {
+  font-size: 11px;
+  color: #6e6e73;
+}
+
+.furnace-upload-err {
+  color: #ff3b30;
 }
 
 .furnace-send {

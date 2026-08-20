@@ -57,6 +57,8 @@ import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
+  furnaceUploadMiddleware,
+  furnaceFileMeta,
   filePublicMeta,
   resolveStoredFile,
   MAX_SIZE,
@@ -551,6 +553,25 @@ router.post('/sessions/:id/files', (req, res) => {
     const files = req.files || []
     if (!files.length) return res.status(400).json({ error: '未选择文件' })
     const list = files.map((f) => filePublicMeta(req.params.id, f))
+    res.status(201).json({ files: list })
+  })
+})
+
+/** 熔炉画面皮附件：落到 data/furnace/inbox/<session>/，Grok cwd 可直接读 */
+router.post('/sessions/:id/furnace-files', (req, res) => {
+  furnaceUploadMiddleware(req, res, (err) => {
+    if (err) {
+      const msg =
+        err.code === 'LIMIT_FILE_SIZE'
+          ? `单文件不能超过 ${Math.round(MAX_SIZE / 1024 / 1024)}MB`
+          : err.code === 'LIMIT_FILE_COUNT'
+            ? `一次最多 ${MAX_FILES} 个文件`
+            : err.message || '上传失败'
+      return res.status(400).json({ error: msg })
+    }
+    const files = req.files || []
+    if (!files.length) return res.status(400).json({ error: '未选择文件' })
+    const list = files.map((f) => furnaceFileMeta(req.params.id, f))
     res.status(201).json({ files: list })
   })
 })
