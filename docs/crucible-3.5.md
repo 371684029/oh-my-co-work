@@ -29,7 +29,7 @@
 
 设置 → Grok Build →「开熔炉默认」：铺满对话 / 铺满终端。工具栏随时切换。
 
-不新开成员类型，不第二份 SQLite，不调另一套 Chat API，不解析屏幕当 Adapter。
+不新开成员类型，不第二份 SQLite，不调另一套 Chat API，不解析屏幕当 Adapter。原理：[crucible-grok-client.md](./crucible-grok-client.md)。
 
 ## 3. 不做
 

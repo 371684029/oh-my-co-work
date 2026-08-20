@@ -23,7 +23,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 ## 变更记录
 
 2026-08-20 | A | docs/crucible-grok-client.md | 写清熔炉 Grok：PTY 托管官方 CLI，不调 Chat API
-2026-08-20 | M | README.md / docs/README.md / crucible-3x.md / AGENT.md | 链到 Grok 客户端原理
+2026-08-20 | M | README.md / docs/README.md / crucible-3x.md / crucible-3.3.md / crucible-3.5.md / AGENT.md | 链到 Grok 客户端原理
 2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
 
 2026-08-19 | A | web/src/components/FurnaceAvatar.vue | 熔炉干活面卡通头像，三态 GIF
