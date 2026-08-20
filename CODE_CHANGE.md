@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | A | docs/assets/furnace-pet-frames/* | 桌宠分镜 PNG + compose.py，全部进 git
+2026-08-20 | A | web/src/assets/furnace-poke.gif | 戳一下短循环
+2026-08-20 | M | furnace-idle/working/waiting.gif+png / furnace-pet.gif | 更生动的循环立绘
+2026-08-20 | M | FurnaceSprite.vue | 戳一下切 poke GIF；立绘稍大不透明
+2026-08-20 | M | README / frontend-components / crucible-3x / CODE_CHANGE.md | 同步桌宠口径
+
 2026-08-20 | M | shared/ptyPlain.js / index.js | 备用屏；GUI 只取当前屏；furnaceGuiReadable
 2026-08-20 | M | furnaceGrokInject.js / furnaceSituation / runners | grok 用 argv --prompt，开炉 120×40
 2026-08-20 | M | TerminalView / FurnaceWorkspace / Workbench | 隐藏 TUI 不缩 PTY；欢迎卡看正文；发送只用 \\r

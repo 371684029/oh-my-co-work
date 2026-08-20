@@ -57,6 +57,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import imgIdleGif from '../assets/furnace-idle.gif'
 import imgWorkingGif from '../assets/furnace-working.gif'
 import imgWaitingGif from '../assets/furnace-waiting.gif'
+import imgPokeGif from '../assets/furnace-poke.gif'
 import imgIdlePng from '../assets/furnace-idle.png'
 import imgWorkingPng from '../assets/furnace-working.png'
 import imgWaitingPng from '../assets/furnace-waiting.png'
@@ -74,10 +75,10 @@ const props = defineProps({
 })
 defineEmits(['click'])
 
-const IDLE_LINES = ['有事叫我～', '点两下开熔炉。', '今天先适配，还是先聊？', '我就在这儿。']
+const IDLE_LINES = ['有事叫我～', '点两下开熔炉。', '我就在这儿哦。', '今天先适配，还是先聊？']
 const WORK_LINES = ['在干活，稍等。', '改完再叫你。', '这边正忙着呢。']
-const WAIT_LINES = ['等人拍板。', '轮到你了。', '配好 Grok 就能开。']
-const POKE_LINES = ['嗯？', '别戳了……要开就点「开熔炉」。', '我在听。', '再戳也还是我。']
+const WAIT_LINES = ['等人拍板。', '轮到你了哦。', '我等你开口。']
+const POKE_LINES = ['嗯？', '再戳就认真了。', '要开就点「开熔炉」。', '我在听。']
 
 const hovered = ref(false)
 const poking = ref(false)
@@ -108,6 +109,7 @@ const reduceMotion = ref(false)
 
 const spriteSrc = computed(() => {
   const still = reduceMotion.value
+  if (!still && poking.value) return imgPokeGif
   if (props.state === 'working') return still ? imgWorkingPng : imgWorkingGif
   if (props.state === 'waiting') return still ? imgWaitingPng : imgWaitingGif
   return still ? imgIdlePng : imgIdleGif
@@ -164,7 +166,7 @@ function poke() {
   window.clearTimeout(pokeTimer)
   pokeTimer = window.setTimeout(() => {
     poking.value = false
-  }, 520)
+  }, 920)
   const line = POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]
   say(line, 2800)
 }
@@ -356,17 +358,17 @@ onUnmounted(() => {
 
 .furnace-pet-img {
   display: block;
-  width: 72px;
+  width: 80px;
   height: auto;
-  opacity: 0.95;
-  filter: drop-shadow(0 4px 8px rgba(20, 16, 30, 0.12));
+  opacity: 1;
+  filter: drop-shadow(0 6px 10px rgba(20, 16, 30, 0.16));
   transform-origin: 50% 100%;
 }
 
 .furnace-pet.is-hover .furnace-pet-img,
 .furnace-pet.is-working .furnace-pet-img,
 .furnace-pet.is-waiting .furnace-pet-img {
-  opacity: 0.92;
+  opacity: 1;
 }
 
 .furnace-pet.is-hover .furnace-pet-img {
