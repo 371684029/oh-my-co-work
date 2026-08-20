@@ -82,7 +82,7 @@
           <div class="furnace-log-main">
             <div v-if="!liveText" class="furnace-empty">
               这是 Grok 的 GUI（去颜色的 TUI 副本），不是多轮聊天气泡。菜单和快捷键请切 TUI。
-              下方输入会写进同一进程。
+              下方输入会写进同一进程。附件不是 Grok 原生传文件，只是把工作目录相对路径写成一行再回车。
             </div>
             <div v-if="liveText" class="screen">
               <span class="bubble-label">GUI（去颜色）</span>
@@ -133,20 +133,20 @@
                 type="button"
                 class="furnace-btn"
                 :disabled="!isRunning || uploading || !sessionId"
-                title="文件落到熔炉工作目录 inbox/，发送时把路径写进 Grok"
+                title="文件落到熔炉工作目录 inbox/；发送时把相对路径写成一行写进 grok，不是官方附件通道"
                 @click="pickFiles"
               >
                 {{ uploading ? '上传中…' : '附件' }}
               </button>
               <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
-              <span class="furnace-compose-hint">最多 8 个，单文件 20MB</span>
+              <span class="furnace-compose-hint">图片/文档/源码 · 最多 8 个 · 单文件 20MB</span>
             </div>
           </div>
           <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
         </form>
       </div>
 
-      <div v-if="surface === 'tui'" class="furnace-tui">
+      <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
         <TerminalView
           :key="terminal.id"
           :terminal="terminal"
@@ -197,6 +197,8 @@ const logEl = ref(null)
 const isFullscreen = ref(false)
 const isPagefill = ref(props.defaultPagefill !== false)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
+/** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
+const tuiEverShown = ref(surface.value === 'tui')
 const focused = ref(false)
 const draft = ref('')
 const sent = ref([])
@@ -284,7 +286,7 @@ function sendChat() {
   const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
   if (!payload || !isRunning.value || uploading.value) return
   sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
-  emit('input', `${payload}\r`)
+  emit('input', `${payload}\r\n`)
   draft.value = ''
   pendingFiles.value = []
   nextTick(scrollLog)
@@ -335,10 +337,11 @@ function onFileInputChange(e) {
 }
 
 function onPaste(ev) {
-  const items = ev.clipboardData?.files
-  if (items?.length) {
+  const files = ev.clipboardData?.files
+  const text = String(ev.clipboardData?.getData('text') || '')
+  if (files?.length && !text.trim()) {
     ev.preventDefault()
-    addLocalFiles(items)
+    addLocalFiles(files)
   }
 }
 
@@ -386,6 +389,7 @@ watch(isPagefill, async (on) => {
 watch(liveText, () => nextTick(scrollLog))
 
 watch(surface, (mode) => {
+  if (mode === 'tui') tuiEverShown.value = true
   if (mode === 'chat') emit('resize', { cols: 120, rows: 40 })
   nextTick(() => window.dispatchEvent(new Event('resize')))
 })

@@ -248,13 +248,7 @@ watch(
 
 onMounted(() => {
   try {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    reduceMotion.value = mq.matches
-    const onMotion = () => {
-      reduceMotion.value = mq.matches
-    }
-    if (mq.addEventListener) mq.addEventListener('change', onMotion)
-    else mq.addListener(onMotion)
+    reduceMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   } catch {
     /* ignore */
   }

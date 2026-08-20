@@ -159,17 +159,16 @@ export function stripAnsiTail(
   return text.replace(/^\s+/, '').replace(/\s+$/, '')
 }
 
-/** GUI 把附件路径写进 grok PTY 的正文 */
+/** GUI 把附件路径写成一行，一次回车交给 grok */
 export function buildFurnacePtyAttachText(userText, files = []) {
-  const lines = []
   const text = String(userText || '').trim()
-  if (text) lines.push(text)
-  const list = Array.isArray(files) ? files.filter((f) => f?.relPath) : []
-  if (list.length) {
-    lines.push('请查看这些文件（相对当前工作目录）：')
-    for (const f of list) lines.push(f.relPath)
-  }
-  return lines.join('\n')
+  const list = Array.isArray(files)
+    ? files.map((f) => String(f?.relPath || '').trim()).filter(Boolean)
+    : []
+  if (!text && !list.length) return ''
+  if (!list.length) return text
+  const note = `请阅读工作目录文件 ${list.join(' ')}`
+  return text ? `${text} ${note}` : note
 }
 
 /** 产品宗旨（口号放关于页；日常控件用功能名） */

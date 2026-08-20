@@ -13,6 +13,9 @@ const {
   safeSessionFolder,
   writeFurnaceInboxFile,
   furnaceInboxDir,
+  furnaceInboxAllowed,
+  furnaceFilePublicMeta,
+  clearFurnaceInbox,
 } = await import('../src/uploads.js')
 
 test('safe names strip traversal', () => {
@@ -30,9 +33,42 @@ test('inbox file lands under data/furnace/inbox and relPath is cwd-relative', ()
   assert.ok(meta.absPath.startsWith(furnaceInboxDir('s1')))
 })
 
-test('pty attach text lists relative paths', () => {
+test('public meta omits absPath', () => {
+  const meta = writeFurnaceInboxFile('s1', 'note.txt', Buffer.from('hi'), 'text/plain')
+  const pub = furnaceFilePublicMeta('s1', {
+    originalname: meta.name,
+    filename: meta.storedName,
+    size: meta.size,
+    mimetype: meta.mime,
+  })
+  assert.equal(pub.relPath, meta.relPath)
+  assert.equal(pub.absPath, undefined)
+})
+
+test('blocks executables and allows images', () => {
+  assert.equal(furnaceInboxAllowed({ originalname: 'a.exe', mimetype: 'application/octet-stream' }), false)
+  assert.equal(furnaceInboxAllowed({ originalname: 'shot.png', mimetype: 'image/png' }), true)
+  assert.throws(
+    () => writeFurnaceInboxFile('s1', 'run.bat', Buffer.from('echo'), 'application/octet-stream'),
+    /仅支持/,
+  )
+})
+
+test('pty attach text is one line with relative paths', () => {
   const text = buildFurnacePtyAttachText('看图', [{ relPath: 'inbox/s1/a.png' }])
-  assert.match(text, /^看图\n/)
-  assert.match(text, /inbox\/s1\/a\.png/)
+  assert.equal(text, '看图 请阅读工作目录文件 inbox/s1/a.png')
+  assert.equal(text.includes('\n'), false)
+  assert.equal(
+    buildFurnacePtyAttachText('', [{ relPath: 'inbox/s1/a.png' }, { relPath: 'inbox/s1/b.md' }]),
+    '请阅读工作目录文件 inbox/s1/a.png inbox/s1/b.md',
+  )
   assert.equal(buildFurnacePtyAttachText('  ', []), '')
+})
+
+test('clearFurnaceInbox removes session files', () => {
+  const meta = writeFurnaceInboxFile('s-clean', 'a.png', Buffer.from('x'), 'image/png')
+  assert.ok(fs.existsSync(meta.absPath))
+  const { removed } = clearFurnaceInbox('s-clean')
+  assert.ok(removed >= 1)
+  assert.equal(fs.existsSync(meta.absPath), false)
 })

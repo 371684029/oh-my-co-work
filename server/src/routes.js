@@ -58,7 +58,8 @@ import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
   furnaceUploadMiddleware,
-  furnaceFileMeta,
+  furnaceFilePublicMeta,
+  clearFurnaceInbox,
   filePublicMeta,
   resolveStoredFile,
   MAX_SIZE,
@@ -411,12 +412,14 @@ router.post('/sessions/:id/pin', (req, res) => {
   }
 })
 router.delete('/sessions/:id', (req, res) => {
+  clearFurnaceInbox(req.params.id)
   deleteSession(req.params.id)
   forgetSessionTerminals(req.params.id)
   res.status(204).end()
 })
 router.post('/sessions/:id/archive', (req, res) => {
   archiveSession(req.params.id, req.body?.reason || 'manual')
+  clearFurnaceInbox(req.params.id)
   res.json(getSessionDetail(req.params.id)?.session)
 })
 /** 解档：同一会话继续，不新建群聊 */
@@ -557,8 +560,11 @@ router.post('/sessions/:id/files', (req, res) => {
   })
 })
 
-/** 熔炉 GUI 附件：落到 data/furnace/inbox/<session>/，Grok cwd 可直接读 */
+/** 熔炉 GUI 附件：落到 data/furnace/inbox/<session>/；响应不含 absPath */
 router.post('/sessions/:id/furnace-files', (req, res) => {
+  if (!getSessionDetail(req.params.id)) {
+    return res.status(404).json({ error: '会话不存在' })
+  }
   furnaceUploadMiddleware(req, res, (err) => {
     if (err) {
       const msg =
@@ -571,7 +577,7 @@ router.post('/sessions/:id/furnace-files', (req, res) => {
     }
     const files = req.files || []
     if (!files.length) return res.status(400).json({ error: '未选择文件' })
-    const list = files.map((f) => furnaceFileMeta(req.params.id, f))
+    const list = files.map((f) => furnaceFilePublicMeta(req.params.id, f))
     res.status(201).json({ files: list })
   })
 })

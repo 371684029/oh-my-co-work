@@ -50,7 +50,7 @@ node-pty spawn(grok, [], { cwd, TERM: xterm-256color })
         │                 ├─ TUI：xterm.js 原样画
         │                 └─ GUI：stripAnsiTail(replay) + 底部输入
         │
-        └─ GUI 里 Enter ──► emit input ──► pty.write("…\r")
+        └─ GUI 里 Enter ──► emit input ──► pty.write("…\r\n")
                               仍是同一进程，不是另开 HTTP 对话
 ```
 
@@ -123,8 +123,8 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 
 | 皮 | 实现 |
 |----|------|
-| **终端** | 现成 `TerminalView` + xterm.js，完整 TUI（菜单、快捷键） |
-| **GUI** | `stripAnsi` / `stripAnsiTail`；底部 textarea 把文本 `pty.write` 进同一进程 |
+| **TUI** | 现成 `TerminalView` + xterm.js；首次进入再挂载，之后 `v-show` 不拆 |
+| **GUI** | `stripAnsi` / `stripAnsiTail`；底部 textarea 把**一行**文本 `pty.write("…\\r\\n")` 进同一进程 |
 
 判断要不要用熔炉皮：`Workbench.vue` 的 `isFurnaceTuiContext`（熔炉成员、或命令行里像 `grok`）。普通脚本仍走 `TerminalWorkspace`。
 
@@ -166,10 +166,10 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | | GUI | TUI |
 |--|--------|----------------|
 | 交互 | 顶栏按钮，不是多标签页 | 同上 |
-| 输入 | 底部文本框 → `pty.write`；附件落入 `inbox/` | xterm 键盘 / 粘贴（可确认） |
+| 输入 | 底部文本框 → `pty.write("…\\r\\n")`；附件落入 `inbox/` | xterm 键盘 / 粘贴（可确认） |
 | 菜单、快捷键、Grok 自己的文件/图片能力 | **没有包一层** | 有的话走 **Grok TUI 自己的操作**（我们只是把键鼠送到 PTY） |
 
-**GUI 可以上传文件。** 点「附件」、粘贴或拖进输入区，文件落到 `data/furnace/inbox/<会话>/`。发送时把**相对路径**写进同一条 PTY。单文件 20MB，一次最多 8 个。这不是群聊气泡附件，两条通道不要混。
+**GUI 可以放文件，但不是 Grok 原生附件通道。** 点「附件」、只含文件的粘贴、或拖进输入区，文件落到 `data/furnace/inbox/<会话>/`（图片 / 文档 / 常见源码；拒绝 exe 等）。发送时把相对路径写成**一行**「请阅读工作目录文件 …」再一次回车。接口 JSON **不回**本机 `absPath`。归档 / 删会话会清该会话 inbox。这不是群聊气泡附件，两条通道不要混。有文字的粘贴仍按普通文本粘贴，不抢附件。
 
 群聊粘贴上传仍只进 SQLite 气泡，**不会**自动进 grok。要给 Grok 看，用 GUI 附件，或切 TUI 用 CLI 自己的方式。
 
@@ -201,7 +201,8 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 | `web/src/App.vue` | 桌宠、教程弹层、开熔炉 |
 | `web/src/components/terminal/FurnaceWorkspace.vue` | GUI / TUI |
 | `web/src/views/Workbench.vue` | 熔炉终端用熔炉皮，其它用普通终端工作区 |
-| `shared/index.js` | `grokCanRun`、`stripAnsiTail`、`FURNACE_*` |
+| `shared/index.js` | `grokCanRun`、`stripAnsiTail`、`buildFurnacePtyAttachText`、`FURNACE_*` |
+| `server/src/uploads.js` | 熔炉 inbox、类型限制、公开元数据 |
 
 ---
 
@@ -209,6 +210,6 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 
 - **没有** 工作台侧的模型列表、流式 token、tool calling。那些若存在，在 `grok` TUI 里。  
 - **没有** 把群聊每条气泡自动 `write` 进 grok；要说话：GUI 输入框，或切 TUI 用 Grok 自己的键位。  
-- **GUI 可以传文件**：落到 `data/furnace/inbox/`，发送时把相对路径 `write` 进 grok。群聊附件仍不进 grok。  
+- **GUI 可以放文件，不是原生传文件**：落到 `data/furnace/inbox/`，发送时把相对路径写成一行 `write` 进 grok。群聊附件仍不进 grok。  
 - 3.4 若另有「往项目里写 `AGENTS.md`」类注入，以合入 `main` 的代码为准；**本文描述的是 PTY 宿主模型**，不依赖那一层。  
 - 独立托盘窗 / 真·Grok 桌面客户端：后置 4.x，不是现在这条路径。

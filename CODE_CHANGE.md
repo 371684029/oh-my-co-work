@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-20 | M | server/src/uploads.js / routes.js | 熔炉附件类型限制、不回 absPath、会话校验、归档删会话清 inbox
+2026-08-20 | M | shared/index.js / FurnaceWorkspace.vue | 附件路径单行 + \\r\\n；TUI 首次挂载后 v-show；粘贴有字不抢附件
+2026-08-20 | M | FurnaceSprite.vue | 只读一次 prefers-reduced-motion，不挂 change 监听
+2026-08-20 | M | furnaceInbox.test.js / crucible-grok-client.md / crucible-3.5.md / frontend-components.md | 单行正文、公开元数据、附件口径
+2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-20 | M | FurnaceWorkspace.vue / Prefs.vue | 两张皮用户名改为 GUI / TUI
 2026-08-20 | M | README / about.json / crucible-3.5.md / crucible-grok-client.md | 同步 GUI / TUI 叫法
 2026-08-20 | M | CODE_CHANGE.md | 追加本轮条目
