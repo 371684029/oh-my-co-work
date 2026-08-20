@@ -2,7 +2,7 @@
 
 | 属性 | 内容 |
 |------|------|
-| 状态 | **已决 · 落地中** |
+| 状态 | **已落地** |
 | 日期 | 2026-08-20 |
 | 版本 | `3.7.x` |
 | 相关 | [crucible-3.5.md](./crucible-3.5.md) · [crucible-grok-client.md](./crucible-grok-client.md) · [crucible-3.7.md](./crucible-3.7.md) |
