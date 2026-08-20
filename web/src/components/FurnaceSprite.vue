@@ -57,6 +57,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import imgIdleGif from '../assets/furnace-idle.gif'
 import imgWorkingGif from '../assets/furnace-working.gif'
 import imgWaitingGif from '../assets/furnace-waiting.gif'
+import imgPokeGif from '../assets/furnace-poke.gif'
 import imgIdlePng from '../assets/furnace-idle.png'
 import imgWorkingPng from '../assets/furnace-working.png'
 import imgWaitingPng from '../assets/furnace-waiting.png'
@@ -108,6 +109,7 @@ const reduceMotion = ref(false)
 
 const spriteSrc = computed(() => {
   const still = reduceMotion.value
+  if (!still && poking.value) return imgPokeGif
   if (props.state === 'working') return still ? imgWorkingPng : imgWorkingGif
   if (props.state === 'waiting') return still ? imgWaitingPng : imgWaitingGif
   return still ? imgIdlePng : imgIdleGif
@@ -164,7 +166,7 @@ function poke() {
   window.clearTimeout(pokeTimer)
   pokeTimer = window.setTimeout(() => {
     poking.value = false
-  }, 520)
+  }, 900)
   const line = POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]
   say(line, 2800)
 }

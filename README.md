@@ -23,7 +23,7 @@
 > Workflow 负责串起过程，人可以确认、拒绝、插队、绕行，也可以随时回来继续。
 
 <p align="center">
-  <img src="./docs/assets/furnace-pet.gif" alt="熔炉桌宠：黑裙双马尾少女，轻微浮动" width="88" height="170" />
+  <img src="./docs/assets/furnace-pet.gif" alt="熔炉桌宠：黑裙双马尾，闲置时晃腰摆发" width="88" height="170" />
 </p>
 
 <img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，口号含终端守护者与熔炉连接一切" width="100%" />
