@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | compose.py + furnace-*.gif/png | 桌宠每套两帧、1 秒一拍、多停少动；去掉眨眼和大挥手
+2026-08-21 | M | FurnaceSprite.vue | 戳一下不再弹跳放大，动画更长
+2026-08-21 | M | README / crucible-3x / crucible-3.7 / mvp / frontend-components / pet-frames README | 同步两帧慢循环口径
+2026-08-21 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖失败态 GUI 说明卡运行包
 2026-08-21 | M | FurnaceWorkspace.vue | 启动失败切回 GUI 说明卡，不再留空黑屏
 2026-08-21 | M | terminalService.js | spawn 失败写入 replay 和 lastError

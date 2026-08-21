@@ -166,9 +166,9 @@ function poke() {
   window.clearTimeout(pokeTimer)
   pokeTimer = window.setTimeout(() => {
     poking.value = false
-  }, 2800)
+  }, 7000)
   const line = POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]
-  say(line, 2800)
+  say(line, 4200)
 }
 
 function onEnter() {
@@ -376,7 +376,7 @@ onUnmounted(() => {
 }
 
 .furnace-pet.is-poke .furnace-pet-img {
-  animation: furnace-poke 0.4s ease;
+  animation: furnace-poke 0.9s ease;
 }
 
 .furnace-pet-meta {
@@ -450,8 +450,8 @@ onUnmounted(() => {
   0% {
     transform: scale(1);
   }
-  40% {
-    transform: translateY(-3px) scale(1.02);
+  35% {
+    transform: translateY(-1px);
   }
   100% {
     transform: scale(1);
