@@ -413,10 +413,18 @@ router.post('/sessions/:id/pin', (req, res) => {
   }
 })
 router.delete('/sessions/:id', (req, res) => {
-  clearFurnaceInbox(req.params.id)
-  deleteSession(req.params.id)
-  forgetSessionTerminals(req.params.id)
-  res.status(204).end()
+  try {
+    const result = deleteSession(req.params.id)
+    if (!result?.deleted) {
+      res.status(404).json({ error: '会话不存在' })
+      return
+    }
+    clearFurnaceInbox(req.params.id)
+    forgetSessionTerminals(req.params.id)
+    res.status(204).end()
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 router.post('/sessions/:id/archive', (req, res) => {
   archiveSession(req.params.id, req.body?.reason || 'manual')

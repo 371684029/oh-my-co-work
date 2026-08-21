@@ -66,7 +66,7 @@ export const api = {
     rename: (id, title) => req(`/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
     pin: (id, pinned = true) =>
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
-    remove: (id) => req(`/sessions/${id}`, { method: 'DELETE' }),
+    remove: (id) => req(`/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
     /** 恢复：仍在本会话，可无限归档 */
     unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),

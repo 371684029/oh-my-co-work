@@ -185,7 +185,7 @@
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button size="default" text bg type="danger" @click="doDelete">删除</el-button>
+            <el-button size="default" text bg type="danger" @click="doDelete()">删除</el-button>
           </div>
         </div>
 
@@ -3498,9 +3498,14 @@ async function rename() {
   }
 }
 
+/** 只接受字符串会话 id。Vue 把 @click="doDelete" 的 MouseEvent 当第一参时必须忽略，否则会 DELETE /sessions/[object PointerEvent] */
+function resolveSessionId(targetId) {
+  return typeof targetId === 'string' && targetId ? targetId : activeId.value
+}
+
 /** @param {string} [targetId] 侧栏菜单可传指定会话 id；顶栏按钮不传则删当前 */
 async function doDelete(targetId) {
-  const id = targetId || activeId.value
+  const id = resolveSessionId(targetId)
   if (!id) {
     ElMessage.warning('没有可删除的会话')
     return
@@ -3514,11 +3519,14 @@ async function doDelete(targetId) {
   } catch {
     return
   }
+  const wasActive = activeId.value === id
   try {
     await api.sessions.remove(id)
-    if (activeId.value === id) {
+    await loadLists()
+    if (wasActive || activeId.value === id) {
       detail.value = null
-      activeId.value = null
+      terminalSessions.value = []
+      activeTerminalId.value = null
       if (ws) {
         try {
           ws.close()
@@ -3527,9 +3535,9 @@ async function doDelete(targetId) {
         }
         ws = null
       }
+      activeId.value = ''
       router.replace('/workbench')
     }
-    await loadLists()
     ElMessage.success('已删除')
   } catch (e) {
     ElMessage.error(e.message || '删除失败')
