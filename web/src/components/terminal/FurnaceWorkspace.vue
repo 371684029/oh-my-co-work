@@ -79,7 +79,21 @@
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
           <div class="furnace-log-main">
-            <div v-if="showWelcome" class="furnace-welcome">
+            <div v-if="showFail" class="furnace-welcome is-fail">
+              <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
+              <h3>Grok 没在跑，所以这里是空的</h3>
+              <p>{{ failHint }}</p>
+              <ul>
+                <li>先确认本机终端能直接运行 <code>grok</code>（已安装并在 PATH 里）</li>
+                <li>Windows 运行包请关掉窗口后重开，让新 PATH 生效</li>
+                <li>没登录时点桌宠会出 Grok 教程；已停的这一轮不能再往进程里打字</li>
+              </ul>
+              <div class="furnace-chips">
+                <button type="button" class="furnace-chip" @click="surface = 'tui'">看 TUI 报错</button>
+                <button type="button" class="furnace-chip" @click="$emit('close')">返回群聊</button>
+              </div>
+            </div>
+            <div v-else-if="showWelcome" class="furnace-welcome">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
               <h3>本机 Grok 已接进协同台</h3>
               <p>
@@ -240,6 +254,9 @@ const quickChips = [
 ]
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
+const isStopped = computed(() =>
+  ['exited', 'failed', 'killed', 'timed_out'].includes(props.terminal.status),
+)
 const liveText = computed(() =>
   furnaceGuiTranscript(props.terminal.replay || '', {
     cols: props.terminal.cols || 120,
@@ -248,7 +265,19 @@ const liveText = computed(() =>
   }),
 )
 const showBody = computed(() => furnaceGuiReadable(liveText.value))
-const showWelcome = computed(() => !showBody.value)
+const showFail = computed(() => isStopped.value && !showBody.value)
+const showWelcome = computed(() => !showBody.value && !showFail.value)
+const failHint = computed(() => {
+  const err = String(props.terminal.lastError || props.terminal.error?.message || '').trim()
+  if (err) return err
+  if (props.terminal.status === 'failed') {
+    return '本机没有把 grok 跑起来。常见原因：没装 Grok、没进 PATH、或还没登录。'
+  }
+  if (props.terminal.exitCode != null && Number(props.terminal.exitCode) !== 0) {
+    return `进程已退出（exit ${props.terminal.exitCode}）。`
+  }
+  return '这轮已经停了，所以没有新画面，也不能往进程里打字。'
+})
 const canSend = computed(
   () =>
     isRunning.value &&
@@ -458,6 +487,14 @@ watch(surface, (mode) => {
   nextTick(() => window.dispatchEvent(new Event('resize')))
 })
 
+watch(
+  () => [isStopped.value, showBody.value],
+  () => {
+    if (isStopped.value && !showBody.value) surface.value = 'chat'
+  },
+  { immediate: true },
+)
+
 watch(isRunning, (on) => {
   if (on && surface.value === 'chat') {
     nextTick(() => composerEl.value?.focus?.())
@@ -659,6 +696,11 @@ onUnmounted(() => {
   background: #fff;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
   color: #1d1d1f;
+}
+
+.furnace-welcome.is-fail {
+  background: #fff6f6;
+  box-shadow: 0 1px 10px rgba(255, 59, 48, 0.08);
 }
 
 .furnace-welcome-kicker {

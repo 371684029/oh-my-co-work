@@ -166,6 +166,23 @@ test('log files redact tokens while live replay stays raw', async () => {
   assert.ok(logText.includes('UNIQUE_REDACT_MARKER'))
 })
 
+test('missing command marks failed and keeps the error in replay', async () => {
+  const sessionId = 'missing-cmd'
+  const result = await terminalService.runTerminal({
+    launch: { cmd: 'definitely-not-a-binary-acw-xyz', args: [], shell: false, label: 'missing' },
+    cwd: process.cwd(),
+    env: { ...process.env },
+    sessionId,
+    memberId: 'm-missing',
+    label: 'missing',
+    successCodes: [0],
+  })
+  assert.equal(result.ok, false)
+  const terminal = terminalService.listSessionTerminals(sessionId)[0]
+  assert.ok(['failed', 'exited'].includes(terminal.status))
+  assert.ok(terminal.lastError || Number(terminal.exitCode) !== 0)
+})
+
 test('keepAlive terminals resolve immediately and stay running', async () => {
   const sessionId = 'keepalive-shell'
   const started = Date.now()

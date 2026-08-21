@@ -137,6 +137,7 @@ function publicTerminal(entry, { includeReplay = false } = {}) {
     logTruncated: entry.logTruncated,
     replayTruncated: entry.replayTruncated,
     adapter: entry.adapterType || null,
+    lastError: entry.lastError || null,
     ...(includeReplay ? { replay: entry.replay } : {}),
   }
 }
@@ -340,6 +341,7 @@ export function runTerminal({
       entry.exitCode = Number.isFinite(Number(exitCode)) ? Number(exitCode) : -1
       entry.signal = signal || entry.signal || null
       entry.finishedAt = nowIso()
+      if (error) entry.lastError = String(error.message || error)
       entry.status = error
         ? 'failed'
         : entry.status === 'killed' || entry.status === 'timed_out'
@@ -502,6 +504,9 @@ export function runTerminal({
         return
       }
     } catch (error) {
+      const msg = String(error?.message || error || 'spawn failed')
+      queueOutput(entry, `\r\n[oh-my-co-work] 启动失败：${msg}\r\n`)
+      flushOutput(entry)
       finish({ error })
     }
   })

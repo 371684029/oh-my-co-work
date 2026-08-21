@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | FurnaceWorkspace.vue | 启动失败切回 GUI 说明卡，不再留空黑屏
+2026-08-21 | M | terminalService.js | spawn 失败写入 replay 和 lastError
+2026-08-21 | M | terminalService.test.js | 缺命令启动失败
+2026-08-21 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖日常慢动作桌宠运行包
 2026-08-21 | M | furnace-*.gif/png + pet-frames | 桌宠改回日常慢动作：招手、看书、点头
 2026-08-21 | D | idle-04 / work-04 / wait-04 | 少分镜，避免动作过多过快
