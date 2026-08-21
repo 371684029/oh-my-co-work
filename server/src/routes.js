@@ -75,6 +75,7 @@ import {
   deleteTerminalLog,
   readTerminalLogPath,
 } from './terminal/terminalService.js'
+import { closeFurnace, reopenFurnace } from './furnaceLifecycle.js'
 
 const router = Router()
 
@@ -521,6 +522,20 @@ router.post('/sessions/:id/terminals/:terminalId/kill', (req, res) => {
     return res.status(404).json({ error: '终端不存在' })
   }
   res.json({ ok: killTerminal(req.params.terminalId, 'user') })
+})
+router.post('/sessions/:id/furnace/close', (req, res) => {
+  try {
+    res.json(closeFurnace(req.params.id))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.post('/sessions/:id/furnace/reopen', async (req, res) => {
+  try {
+    res.json(await reopenFurnace(req.params.id))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 router.get('/sessions/:id/terminals/:terminalId/log', (req, res) => {
   const file = readTerminalLogPath(req.params.id, req.params.terminalId)

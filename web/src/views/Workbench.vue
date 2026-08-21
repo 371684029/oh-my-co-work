@@ -200,6 +200,8 @@
           :session-id="activeId"
           @close="activeTerminalId = null"
           @kill="killTerminal"
+          @close-furnace="closeFurnaceProcess"
+          @reopen="reopenFurnaceProcess"
           @input="sendTerminalInput"
           @resize="resizeTerminal"
           @select="openTerminal"
@@ -1817,7 +1819,14 @@ async function launchFurnaceFromSprite() {
       return
     }
     startTarget.value = `m:${m.id}`
-    await startChat()
+    const s = await startChat()
+    if (s?.reused) {
+      const live = (terminalSessions.value || []).some(
+        (t) =>
+          isFurnaceTuiContext(t) && ['starting', 'running'].includes(t.status),
+      )
+      if (!live) await reopenFurnaceProcess()
+    }
     if (route.query.furnace) {
       const q = { ...route.query }
       delete q.furnace
@@ -2544,6 +2553,31 @@ async function killTerminal(terminalId) {
   }
 }
 
+async function closeFurnaceProcess() {
+  if (!activeId.value) return
+  try {
+    await api.sessions.closeFurnace(activeId.value)
+    await loadTerminals(activeId.value)
+    ElMessage.success('已关闭熔炉')
+  } catch (e) {
+    ElMessage.error(e.message || '关闭熔炉失败')
+  }
+}
+
+async function reopenFurnaceProcess() {
+  if (!activeId.value) return
+  try {
+    const r = await api.sessions.reopenFurnace(activeId.value)
+    await loadTerminals(activeId.value)
+    const tid = r?.terminalId
+    if (tid) revealFurnaceTui(tid)
+    if (r?.ok) ElMessage.success('已新开熔炉，Grok 对话已清空')
+    else ElMessage.warning(r?.summary || '新开熔炉未成功')
+  } catch (e) {
+    ElMessage.error(e.message || '新开熔炉失败')
+  }
+}
+
 function adapterChoices(m) {
   return Array.isArray(m?.content?.choices) ? m.content.choices.filter(Boolean) : []
 }
@@ -2799,6 +2833,7 @@ async function startChat() {
           : '已与成员开聊'
         : '已开聊',
     )
+    return s
   } catch (e) {
     // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」
     ElMessage.warning(e?.message || '开聊失败，请稍后重试')

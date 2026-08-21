@@ -40,7 +40,7 @@ app.use(ElementPlusX)
 | 壳层顶栏 | `App.vue` + `AppLogo` | 品牌 Logo + 分段导航 |
 | 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；两帧慢循环 GIF（偶尔招手 / 捧书 / 交叠）+ 戳一下；收起后仍是整个人 |
 | 熔炉干活面头像 | `FurnaceAvatar` | 仅 GUI 大头；开干活面时藏桌宠 |
-| 熔炉 GUI 附件 | `FurnaceWorkspace` 附件栏 | 落到 `inbox/`，发送写成一行相对路径进 PTY（非 Grok 原生附件） |
+| 熔炉干活面 | `FurnaceWorkspace` | GUI/TUI 一张皮；**返回群聊**只关皮；**关闭熔炉 / 新开熔炉**杀或重开 Grok |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |
