@@ -38,7 +38,7 @@ app.use(ElementPlusX)
 | 区域 | 组件 | 说明 |
 |------|------|------|
 | 壳层顶栏 | `App.vue` + `AppLogo` | 品牌 Logo + 分段导航 |
-| 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；三态循环 GIF + 戳一下；收起后仍是整个人 |
+| 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；慢循环 GIF（招手 / 看书 / 点头）+ 戳一下；收起后仍是整个人 |
 | 熔炉干活面头像 | `FurnaceAvatar` | 仅 GUI 大头；开干活面时藏桌宠 |
 | 熔炉 GUI 附件 | `FurnaceWorkspace` 附件栏 | 落到 `inbox/`，发送写成一行相对路径进 PTY（非 Grok 原生附件） |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [brand-logo.md](./brand-logo.md) |

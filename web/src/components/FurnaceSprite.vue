@@ -75,10 +75,10 @@ const props = defineProps({
 })
 defineEmits(['click'])
 
-const IDLE_LINES = ['有事叫我～', '点两下开熔炉。', '我就在这儿哦。', '今天先适配，还是先聊？']
-const WORK_LINES = ['在干活，稍等。', '改完再叫你。', '这边正忙着呢。']
-const WAIT_LINES = ['等人拍板。', '轮到你了哦。', '我等你开口。']
-const POKE_LINES = ['嗯？', '再戳就认真了。', '要开就点「开熔炉」。', '我在听。']
+const IDLE_LINES = ['有事叫我。', '点两下开熔炉。', '我就在这儿。', '先适配，还是先聊？']
+const WORK_LINES = ['在看书改东西，稍等。', '改完再叫你。', '这边忙着呢。']
+const WAIT_LINES = ['等人拍板。', '轮到你了。', '我等你开口。']
+const POKE_LINES = ['嗯？', '要开就点「开熔炉」。', '我在听。']
 
 const hovered = ref(false)
 const poking = ref(false)
@@ -166,7 +166,7 @@ function poke() {
   window.clearTimeout(pokeTimer)
   pokeTimer = window.setTimeout(() => {
     poking.value = false
-  }, 920)
+  }, 2800)
   const line = POKE_LINES[Math.floor(Math.random() * POKE_LINES.length)]
   say(line, 2800)
 }
@@ -372,11 +372,11 @@ onUnmounted(() => {
 }
 
 .furnace-pet.is-hover .furnace-pet-img {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .furnace-pet.is-poke .furnace-pet-img {
-  animation: furnace-poke 0.5s ease;
+  animation: furnace-poke 0.4s ease;
 }
 
 .furnace-pet-meta {
@@ -450,8 +450,8 @@ onUnmounted(() => {
   0% {
     transform: scale(1);
   }
-  35% {
-    transform: translateY(-10px) scale(1.06) rotate(-4deg);
+  40% {
+    transform: translateY(-3px) scale(1.02);
   }
   100% {
     transform: scale(1);

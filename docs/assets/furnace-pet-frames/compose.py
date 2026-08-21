@@ -15,10 +15,10 @@ WEB = Path(__file__).resolve().parents[3] / "web" / "src" / "assets"
 DOCS = Path(__file__).resolve().parents[1]
 
 SETS = {
-    "idle": (["idle-01.png", "idle-02.png", "idle-03.png", "idle-04.png"], 7, True, "furnace-idle.png"),
-    "working": (["work-01.png", "work-02.png", "work-03.png", "work-04.png"], 11, True, "furnace-working.png"),
-    "waiting": (["wait-01.png", "wait-02.png", "wait-03.png", "wait-04.png"], 6, True, "furnace-waiting.png"),
-    "poke": (["poke-01.png", "poke-02.png", "poke-03.png"], 8, False, None),
+    "idle": (["idle-01.png", "idle-02.png", "idle-03.png"], 2, True, "furnace-idle.png"),
+    "working": (["work-01.png", "work-02.png", "work-03.png"], 2, True, "furnace-working.png"),
+    "waiting": (["wait-01.png", "wait-02.png", "wait-03.png"], 2, True, "furnace-waiting.png"),
+    "poke": (["poke-01.png", "poke-02.png", "poke-03.png"], 2, False, None),
 }
 
 CANVAS_W, CANVAS_H = 420, 810
@@ -62,9 +62,10 @@ def fit_canvas(im: Image.Image) -> Image.Image:
 
 
 def pingpong(frames: list[Image.Image], loop_back: bool) -> list[Image.Image]:
+    held = [frames[0], frames[0], *frames]
     if not loop_back or len(frames) < 3:
-        return frames
-    return frames + frames[-2:0:-1]
+        return held
+    return held + frames[-2:0:-1]
 
 
 def ffmpeg_gif(frames: list[Image.Image], dest: Path, fps: int) -> None:

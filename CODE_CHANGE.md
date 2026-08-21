@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | furnace-*.gif/png + pet-frames | 桌宠改回日常慢动作：招手、看书、点头
+2026-08-21 | D | idle-04 / work-04 / wait-04 | 少分镜，避免动作过多过快
+2026-08-21 | M | FurnaceSprite.vue | 放慢戳一下；气泡更日常
+2026-08-21 | M | README / crucible-3x / frontend-components / CODE_CHANGE.md | 同步慢循环口径
+
 2026-08-20 | M | packages/linux + win32 + darwin zip | 覆盖 3.7.0 三平台运行包（循环桌宠 + GUI 短合同）
 2026-08-20 | M | README / AGENT / crucible-3.7 / mvp | 同步桌宠 GIF、欢迎卡与短合同开炉
 2026-08-20 | A | docs/assets/furnace-pet-frames/* | 桌宠分镜 PNG + compose.py，全部进 git
