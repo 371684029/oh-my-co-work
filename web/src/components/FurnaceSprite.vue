@@ -375,10 +375,6 @@ onUnmounted(() => {
   transform: translateY(-1px);
 }
 
-.furnace-pet.is-poke .furnace-pet-img {
-  animation: furnace-poke 0.9s ease;
-}
-
 .furnace-pet-meta {
   display: flex;
   align-items: center;
@@ -444,18 +440,6 @@ onUnmounted(() => {
 
 .furnace-pet.is-min {
   width: 52px;
-}
-
-@keyframes furnace-poke {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: translateY(-1px);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 @keyframes furnace-bubble-in {

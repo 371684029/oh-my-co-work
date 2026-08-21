@@ -22,6 +22,16 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | furnaceLifecycle.js | 新开熔炉必须绑熔炉节点；关闭只杀该成员还在跑的 PTY
+2026-08-21 | M | services.js | 删会话时清 terminal_sessions
+2026-08-21 | M | FurnaceWorkspace.vue | 新开/关闭收到「进程」菜单
+2026-08-21 | M | Workbench.vue | 运行中新开要确认；桌宠开炉不再连弹两条
+2026-08-21 | M | FurnaceSprite.vue | 戳一下只播 GIF，去掉位移动画
+2026-08-21 | M | compose.py | 合成 GIF 不再覆盖分镜源 PNG
+2026-08-21 | M | furnaceLifecycle.test.js / memberReuse.test.js | 绑节点、无熔炉节点拒绝、清终端行
+2026-08-21 | M | README / frontend-components / crucible-grok-client / pet-frames README | 同步进程菜单与确认
+2026-08-21 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-21 | A | server/src/furnaceLifecycle.js | 关闭熔炉 / 新开熔炉：杀 Grok 进程才能清对话上下文
 2026-08-21 | M | server/src/routes.js | POST sessions/:id/furnace/close 与 reopen
 2026-08-21 | M | web/src/api.js | closeFurnace / reopenFurnace

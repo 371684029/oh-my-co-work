@@ -61,23 +61,20 @@
           >
             {{ isFullscreen ? '退出全屏' : '全屏' }}
           </button>
-          <button
-            type="button"
-            class="furnace-btn"
-            title="结束当前 Grok，再开一条新进程。工作台会话还在，模型对话清空。"
-            @click="$emit('reopen')"
-          >
-            新开熔炉
-          </button>
-          <button
-            v-if="isRunning"
-            type="button"
-            class="furnace-btn danger"
-            title="结束 Grok 进程，对话上下文丢掉。工作台会话还在。"
-            @click="$emit('close-furnace')"
-          >
-            关闭熔炉
-          </button>
+          <details class="furnace-more">
+            <summary class="furnace-btn" title="关掉或新开 Grok 进程；返回群聊只关皮">进程</summary>
+            <div class="furnace-more-menu">
+              <button type="button" class="furnace-more-item" @click="$emit('reopen')">新开熔炉</button>
+              <button
+                v-if="isRunning"
+                type="button"
+                class="furnace-more-item danger"
+                @click="$emit('close-furnace')"
+              >
+                关闭熔炉
+              </button>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -636,6 +633,60 @@ onUnmounted(() => {
 }
 
 .furnace-btn.danger {
+  color: #ff3b30;
+}
+
+.furnace-more {
+  position: relative;
+}
+
+.furnace-more summary {
+  list-style: none;
+}
+
+.furnace-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.furnace-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 5;
+  min-width: 132px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(20, 16, 28, 0.16);
+}
+
+.furnace-workspace:not(.is-chat) .furnace-more-menu {
+  background: #2a2d36;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.furnace-more-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.furnace-more-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.furnace-workspace:not(.is-chat) .furnace-more-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.furnace-more-item.danger {
   color: #ff3b30;
 }
 

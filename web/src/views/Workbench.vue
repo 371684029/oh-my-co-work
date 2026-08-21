@@ -1819,13 +1819,21 @@ async function launchFurnaceFromSprite() {
       return
     }
     startTarget.value = `m:${m.id}`
-    const s = await startChat()
-    if (s?.reused) {
+    const s = await startChat({ quiet: true })
+    if (!s) return
+    if (s.reused) {
       const live = (terminalSessions.value || []).some(
         (t) =>
           isFurnaceTuiContext(t) && ['starting', 'running'].includes(t.status),
       )
-      if (!live) await reopenFurnaceProcess()
+      if (!live) {
+        await reopenFurnaceProcess({ skipConfirm: true, quiet: true })
+        ElMessage.success('已新开熔炉，Grok 对话已清空')
+      } else {
+        ElMessage.success('已打开熔炉')
+      }
+    } else {
+      ElMessage.success('已打开熔炉')
     }
     if (route.query.furnace) {
       const q = { ...route.query }
@@ -2556,6 +2564,15 @@ async function killTerminal(terminalId) {
 async function closeFurnaceProcess() {
   if (!activeId.value) return
   try {
+    await ElMessageBox.confirm('结束 Grok 进程，这一轮对话会丢掉。工作台会话还在。', '关闭熔炉', {
+      type: 'warning',
+      confirmButtonText: '关闭',
+      cancelButtonText: '取消',
+    })
+  } catch {
+    return
+  }
+  try {
     await api.sessions.closeFurnace(activeId.value)
     await loadTerminals(activeId.value)
     ElMessage.success('已关闭熔炉')
@@ -2564,13 +2581,32 @@ async function closeFurnaceProcess() {
   }
 }
 
-async function reopenFurnaceProcess() {
+async function reopenFurnaceProcess({ skipConfirm = false, quiet = false } = {}) {
   if (!activeId.value) return
+  const live = (terminalSessions.value || []).some(
+    (t) => isFurnaceTuiContext(t) && ['starting', 'running'].includes(t.status),
+  )
+  if (live && !skipConfirm) {
+    try {
+      await ElMessageBox.confirm(
+        '会结束当前 Grok，再开一条空对话。工作台会话还在。',
+        '新开熔炉',
+        {
+          type: 'warning',
+          confirmButtonText: '新开',
+          cancelButtonText: '取消',
+        },
+      )
+    } catch {
+      return
+    }
+  }
   try {
     const r = await api.sessions.reopenFurnace(activeId.value)
     await loadTerminals(activeId.value)
     const tid = r?.terminalId
     if (tid) revealFurnaceTui(tid)
+    if (quiet) return
     if (r?.ok) ElMessage.success('已新开熔炉，Grok 对话已清空')
     else ElMessage.warning(r?.summary || '新开熔炉未成功')
   } catch (e) {
@@ -2809,7 +2845,8 @@ function bindWs(sessionId) {
   )
 }
 
-async function startChat() {
+async function startChat(opts = {}) {
+  const quiet = !!(opts && typeof opts === 'object' && !(opts instanceof Event) && opts.quiet)
   const raw = String(startTarget.value || '')
   const kind = raw.slice(0, 2)
   const id = raw.slice(2)
@@ -2826,13 +2863,15 @@ async function startChat() {
         : await api.groups.startSession(id, {})
     await loadLists()
     await selectSession(s.id)
-    ElMessage.success(
-      kind === 'm:'
-        ? s.reused
-          ? '已回到与该成员的会话'
-          : '已与成员开聊'
-        : '已开聊',
-    )
+    if (!quiet) {
+      ElMessage.success(
+        kind === 'm:'
+          ? s.reused
+            ? '已回到与该成员的会话'
+            : '已与成员开聊'
+          : '已开聊',
+      )
+    }
     return s
   } catch (e) {
     // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」

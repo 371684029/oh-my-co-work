@@ -134,8 +134,7 @@ def main() -> None:
         l, t = min(b[0] for b in boxes), min(b[1] for b in boxes)
         r, btm = max(b[2] for b in boxes), max(b[3] for b in boxes)
         cropped = [fit_canvas(src.crop((l, t, r, btm))) for src in keyed]
-        for fn, placed in zip(files, cropped):
-            placed.save(ROOT / fn, optimize=True)
+        # 分镜 PNG 只读，不写回源文件，避免越合成边越漂
         if png_name:
             cropped[0].save(WEB / png_name)
         dest = WEB / f"furnace-{name}.gif"

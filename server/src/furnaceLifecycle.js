@@ -21,13 +21,20 @@ function requireSession(sessionId) {
   return row
 }
 
-function furnaceNodeId(sessionId, memberId) {
+function isLiveStatus(status) {
+  return status === 'running' || status === 'starting'
+}
+
+/** 只绑熔炉成员那一格；没有就返回 null，不要默默绑最后一步。 */
+export function furnaceNodeId(sessionId, memberId) {
+  if (!sessionId || !memberId) return null
   const nodes = getDb()
-    .prepare(`SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index DESC`)
+    .prepare(`SELECT * FROM node_instances WHERE session_id = ? ORDER BY step_index ASC`)
     .all(sessionId)
-  if (!nodes.length) return null
-  const hit = nodes.find((n) => parseJson(n.input_json, {}).memberId === memberId)
-  return hit?.id || nodes[0].id
+  const hit = nodes.find(
+    (n) => n.member_id === memberId || parseJson(n.input_json, {}).memberId === memberId,
+  )
+  return hit?.id || null
 }
 
 export function closeFurnace(sessionId) {
@@ -36,10 +43,9 @@ export function closeFurnace(sessionId) {
   if (!member) throw new Error('未找到熔炉成员')
   let killed = 0
   for (const t of listSessionTerminals(sessionId, { includeReplay: false })) {
-    if (t.memberId && t.memberId !== member.id) continue
-    if (t.memberId === member.id || isFurnaceMember({ display_name: t.label, name: t.label })) {
-      if (killTerminal(t.id, 'furnace_close')) killed += 1
-    }
+    if (t.memberId !== member.id) continue
+    if (!isLiveStatus(t.status)) continue
+    if (killTerminal(t.id, 'furnace_close')) killed += 1
   }
   try {
     const extra = killMemberProcesses(sessionId, member.id, { includeDetach: true })
@@ -57,6 +63,10 @@ export async function reopenFurnace(sessionId) {
   if (member.kind !== MEMBER_KIND.SCRIPT) {
     throw new Error('熔炉还没接到 Grok，请先在设置里打开 Grok Build')
   }
+  const nodeInstanceId = furnaceNodeId(sessionId, member.id)
+  if (!nodeInstanceId) {
+    throw new Error('这场会话还没有熔炉节点，请先从流程里开一次熔炉')
+  }
   const group = session.group_id ? getGroup(session.group_id) : null
   const ctx = parseJson(session.context_json, {})
   try {
@@ -64,7 +74,6 @@ export async function reopenFurnace(sessionId) {
   } catch (e) {
     console.warn('[acw] furnace reopen context', e?.message || e)
   }
-  const nodeInstanceId = furnaceNodeId(sessionId, member.id)
   const result = await runMember(member, {
     group,
     sessionContext: {
@@ -81,6 +90,7 @@ export async function reopenFurnace(sessionId) {
     ok: !!result?.ok,
     summary: result?.summary || '',
     terminalId: result?.terminalId || result?.data?.terminalId || null,
+    nodeInstanceId,
     replaced: true,
   }
 }

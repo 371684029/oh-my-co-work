@@ -491,6 +491,11 @@ export function deleteSession(id) {
   const db = getDb()
   db.prepare('DELETE FROM messages WHERE session_id = ?').run(id)
   db.prepare('DELETE FROM node_instances WHERE session_id = ?').run(id)
+  try {
+    db.prepare('DELETE FROM terminal_sessions WHERE session_id = ?').run(id)
+  } catch {
+    /* 旧库可能还没有这张表 */
+  }
   db.prepare('DELETE FROM sessions WHERE id = ?').run(id)
   if (row.group_id) {
     const remaining = db.prepare('SELECT COUNT(*) AS c FROM sessions WHERE group_id = ?').get(row.group_id)

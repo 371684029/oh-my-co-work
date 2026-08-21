@@ -9,7 +9,7 @@ process.env.ACW_DATA_ROOT = dataRoot
 
 const { parseProjectParams, appendProjectParams, MAX_PROJECT_PARAMS, MEMBER_KIND } =
   await import('@acw/shared')
-const { initDb } = await import('../src/db.js')
+const { initDb, getDb } = await import('../src/db.js')
 initDb()
 const { createMember, createSessionFromMember, getSessionDetail, deleteSession, listGroups } =
   await import('../src/services.js')
@@ -73,4 +73,26 @@ test('deleteSession actually removes the chat; missing id is not success', () =>
   assert.ok(again?.id)
   assert.notEqual(again.id, first.id)
   assert.equal(again.reused, undefined)
+})
+
+test('deleteSession also drops terminal_sessions rows', () => {
+  const member = createMember({
+    name: `echo-term-${Date.now()}`,
+    displayName: '终端行',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'ok' },
+  })
+  const session = createSessionFromMember(member.id)
+  getDb()
+    .prepare(
+      `INSERT INTO terminal_sessions (id, session_id, status, started_at)
+       VALUES (?, ?, 'exited', datetime('now'))`,
+    )
+    .run(`term_${session.id}`, session.id)
+  assert.equal(deleteSession(session.id).deleted, true)
+  const left = getDb()
+    .prepare('SELECT COUNT(*) AS c FROM terminal_sessions WHERE session_id = ?')
+    .get(session.id)
+  assert.equal(left.c, 0)
 })

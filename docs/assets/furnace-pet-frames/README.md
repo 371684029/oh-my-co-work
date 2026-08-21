@@ -11,7 +11,7 @@
 | `wait-01.png` + `wait-02.png` | `furnace-waiting.gif` 等人：双手交叠，偶尔轻轻点头 |
 | `poke-01.png` + `poke-02.png` | `furnace-poke.gif` 戳一下：愣一下再轻轻抬手 |
 
-改动作时先换这些 PNG（绿幕或透明均可），再跑：
+改动作时先换这些 PNG（绿幕或透明均可），再跑合成脚本。**脚本不会覆盖这些分镜源文件。**
 
 ```bash
 python3 docs/assets/furnace-pet-frames/compose.py
