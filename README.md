@@ -25,6 +25,7 @@
 <p align="center">
   <img src="./docs/assets/furnace-pet.gif" alt="熔炉桌宠：黑裙双马尾少女，闲置时偶尔轻轻招手" width="88" height="170" />
 </p>
+<p align="center"><sub>闲置两帧慢循环：大半时间站着，大约七秒才轻轻招一下手。</sub></p>
 
 <img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，口号含终端守护者与熔炉连接一切" width="100%" />
 
@@ -133,7 +134,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。
+运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。桌宠动画打在前端里：要看新的慢循环，请重新下载 zip 解压覆盖，不要沿用旧文件夹。
 
 ### 从源码启动
 
