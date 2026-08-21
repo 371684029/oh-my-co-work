@@ -521,7 +521,18 @@
                         class="file-input-hidden"
                         @change="onFileInputChange"
                       />
-                      <span class="composer-toolbar-hint">{{ composerToolbarHint }}</span>
+                      <span class="composer-toolbar-spacer"></span>
+                      <el-tooltip
+                        placement="top"
+                        :show-after="200"
+                        :content="composerToolbarHint"
+                      >
+                        <span
+                          class="composer-hint-star"
+                          role="img"
+                          :aria-label="composerToolbarHint"
+                        >*</span>
+                      </el-tooltip>
                       <div v-if="pendingGate" class="composer-gate-actions">
                         <template v-if="pendingGate.content?.mode === 'session_start'">
                           <el-button type="danger" @click="approveSessionStart(pendingGate)">
@@ -4642,11 +4653,31 @@ loadLists().then(() => {
   display: none;
 }
 
-.composer-toolbar-hint {
+.composer-toolbar-spacer {
   flex: 1;
   min-width: 0;
-  font-size: 11.5px;
-  color: var(--ecw-text-3, #8b8f9a);
+}
+
+.composer-hint-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-right: 2px;
+  color: #e24b4a;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+
+.composer-hint-star:hover {
+  opacity: 1;
 }
 
 /* 附件区（参考 Plus-X 发送区附件卡片） */
