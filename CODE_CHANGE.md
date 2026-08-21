@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | web/src/views/Workbench.vue | 顶栏删除忽略 MouseEvent，只删当前会话 id，成功后清中间栏
+2026-08-21 | M | web/src/api.js | DELETE 会话路径 encodeURIComponent
+2026-08-21 | M | server/src/services.js | 会话不存在不假装删成功；空单聊临时群一并清掉
+2026-08-21 | M | server/src/routes.js | DELETE /sessions/:id 不存在返回 404
+2026-08-21 | M | server/test/memberReuse.test.js | 覆盖删除后不再复用旧会话
+2026-08-21 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖失败态 GUI 说明卡运行包
 2026-08-21 | M | FurnaceWorkspace.vue | 启动失败切回 GUI 说明卡，不再留空黑屏
 2026-08-21 | M | terminalService.js | spawn 失败写入 replay 和 lastError

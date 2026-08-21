@@ -481,14 +481,27 @@ export function saveSessionNotes(id, notes) {
 }
 
 export function deleteSession(id) {
+  const row = getDb().prepare('SELECT * FROM sessions WHERE id = ?').get(id)
+  if (!row) return { deleted: false }
   try {
     killSessionProcesses(id)
   } catch {
     /* ignore */
   }
-  getDb().prepare('DELETE FROM messages WHERE session_id = ?').run(id)
-  getDb().prepare('DELETE FROM node_instances WHERE session_id = ?').run(id)
-  getDb().prepare('DELETE FROM sessions WHERE id = ?').run(id)
+  const db = getDb()
+  db.prepare('DELETE FROM messages WHERE session_id = ?').run(id)
+  db.prepare('DELETE FROM node_instances WHERE session_id = ?').run(id)
+  db.prepare('DELETE FROM sessions WHERE id = ?').run(id)
+  if (row.group_id) {
+    const remaining = db.prepare('SELECT COUNT(*) AS c FROM sessions WHERE group_id = ?').get(row.group_id)
+    if (!remaining?.c) {
+      const g = getGroup(row.group_id)
+      if (g?.config?.adhoc) {
+        db.prepare('DELETE FROM groups WHERE id = ?').run(row.group_id)
+      }
+    }
+  }
+  return { deleted: true }
 }
 
 export {

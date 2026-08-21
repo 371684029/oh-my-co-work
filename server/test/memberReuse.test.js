@@ -11,9 +11,8 @@ const { parseProjectParams, appendProjectParams, MAX_PROJECT_PARAMS, MEMBER_KIND
   await import('@acw/shared')
 const { initDb } = await import('../src/db.js')
 initDb()
-const { createMember, createSessionFromMember, getSessionDetail } = await import(
-  '../src/services.js'
-)
+const { createMember, createSessionFromMember, getSessionDetail, deleteSession, listGroups } =
+  await import('../src/services.js')
 
 test('project params cap at #99', () => {
   const many = Array.from({ length: 120 }, (_, i) => `p${i + 1}`).join(' ')
@@ -49,4 +48,29 @@ test('opening a member chat reuses the same session and skips start gate', async
   const second = createSessionFromMember(member.id)
   assert.equal(second.id, first.id)
   assert.equal(second.reused, true)
+})
+
+test('deleteSession actually removes the chat; missing id is not success', () => {
+  const member = createMember({
+    name: `echo-delete-${Date.now()}`,
+    displayName: '删除成员',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'ok' },
+  })
+  const first = createSessionFromMember(member.id)
+  assert.ok(first?.id)
+  const gone = deleteSession(first.id)
+  assert.equal(gone.deleted, true)
+  assert.equal(getSessionDetail(first.id), null)
+  assert.equal(deleteSession(first.id).deleted, false)
+  const leftover = listGroups({ includeAdhoc: true, includeDemo: true }).filter(
+    (g) => g.config?.fromMemberId === member.id,
+  )
+  assert.equal(leftover.length, 0)
+
+  const again = createSessionFromMember(member.id)
+  assert.ok(again?.id)
+  assert.notEqual(again.id, first.id)
+  assert.equal(again.reused, undefined)
 })
