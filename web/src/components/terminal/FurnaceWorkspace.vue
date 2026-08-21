@@ -10,7 +10,7 @@
           <button
             type="button"
             class="furnace-btn"
-            title="关掉这层皮，回到群聊。Grok 进程还在，可点终端卡再进来。"
+            title="关掉这层皮，回到群聊。Grok 进程还在，对话也会继续堆；要清上下文请关熔炉或新开。"
             @click="$emit('close')"
           >
             返回群聊
@@ -62,12 +62,21 @@
             {{ isFullscreen ? '退出全屏' : '全屏' }}
           </button>
           <button
+            type="button"
+            class="furnace-btn"
+            title="结束当前 Grok，再开一条新进程。工作台会话还在，模型对话清空。"
+            @click="$emit('reopen')"
+          >
+            新开熔炉
+          </button>
+          <button
             v-if="isRunning"
             type="button"
             class="furnace-btn danger"
-            @click="$emit('kill', terminal.id)"
+            title="结束 Grok 进程，对话上下文丢掉。工作台会话还在。"
+            @click="$emit('close-furnace')"
           >
-            停止进程
+            关闭熔炉
           </button>
         </div>
       </header>
@@ -86,10 +95,11 @@
               <ul>
                 <li>先确认本机终端能直接运行 <code>grok</code>（已安装并在 PATH 里）</li>
                 <li>Windows 运行包请关掉窗口后重开，让新 PATH 生效</li>
-                <li>没登录时点桌宠会出 Grok 教程；已停的这一轮不能再往进程里打字</li>
+                <li>聊太长、模型发懵时点「新开熔炉」：杀掉这条 Grok，再开一条空对话</li>
               </ul>
               <div class="furnace-chips">
                 <button type="button" class="furnace-chip" @click="surface = 'tui'">看 TUI 报错</button>
+                <button type="button" class="furnace-chip" @click="$emit('reopen')">新开熔炉</button>
                 <button type="button" class="furnace-chip" @click="$emit('close')">返回群聊</button>
               </div>
             </div>
@@ -98,7 +108,7 @@
               <h3>本机 Grok 已接进协同台</h3>
               <p>
                 同一条进程：这里读回答，菜单和模型在 TUI。细节在工作目录
-                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。
+                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。聊太长就「新开熔炉」。
               </p>
               <ul>
                 <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
@@ -228,7 +238,7 @@ const props = defineProps({
   sessionId: { type: String, default: '' },
 })
 
-const emit = defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
+const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'input', 'resize', 'select', 'download-log', 'gap'])
 
 const workspaceRoot = ref(null)
 const logEl = ref(null)
@@ -330,7 +340,7 @@ const statusText = computed(() => {
 })
 
 const footerHint = computed(() => {
-  if (!isRunning.value) return '进程已结束 · 返回群聊保留记录，进程需用停止或归档结束'
+  if (!isRunning.value) return '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮'
   if (surface.value === 'chat') {
     return isPagefill.value
       ? '可读正文 · 长合同在文件里 · 菜单请切 TUI'

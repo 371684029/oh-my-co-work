@@ -76,6 +76,8 @@ export const api = {
         method: 'POST',
         body: '{}',
       }),
+    closeFurnace: (id) => req(`/sessions/${id}/furnace/close`, { method: 'POST', body: '{}' }),
+    reopenFurnace: (id) => req(`/sessions/${id}/furnace/reopen`, { method: 'POST', body: '{}' }),
     downloadTerminalLog: async (id, terminalId) => {
       const token = await accessToken()
       const res = await fetch(`${BASE}/sessions/${id}/terminals/${terminalId}/log`, {

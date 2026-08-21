@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | A | server/src/furnaceLifecycle.js | 关闭熔炉 / 新开熔炉：杀 Grok 进程才能清对话上下文
+2026-08-21 | M | server/src/routes.js | POST sessions/:id/furnace/close 与 reopen
+2026-08-21 | M | web/src/api.js | closeFurnace / reopenFurnace
+2026-08-21 | M | FurnaceWorkspace.vue / Workbench.vue | 顶栏新开熔炉、关闭熔炉；返回群聊仍只关皮
+2026-08-21 | A | server/test/furnaceLifecycle.test.js | 无进程关闭不报错
+2026-08-21 | M | crucible-grok-client.md / README / frontend-components / CODE_CHANGE.md | 写清关皮 vs 关进程
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖失败态 GUI 说明卡运行包
 2026-08-21 | M | FurnaceWorkspace.vue | 启动失败切回 GUI 说明卡，不再留空黑屏
 2026-08-21 | M | terminalService.js | spawn 失败写入 replay 和 lastError
