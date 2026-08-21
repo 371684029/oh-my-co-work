@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖输入工具栏星标提示
 2026-08-21 | M | Workbench.vue | 工具栏 Enter/闸门提示改成星标悬停，不再折行灰字
 2026-08-21 | M | docs/frontend-components.md | 同步 Composer 星标提示
 2026-08-21 | M | CODE_CHANGE.md | 追加本轮条目
