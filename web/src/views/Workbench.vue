@@ -521,7 +521,19 @@
                         class="file-input-hidden"
                         @change="onFileInputChange"
                       />
-                      <span class="composer-toolbar-hint">{{ composerToolbarHint }}</span>
+                      <el-tooltip
+                        :content="composerToolbarHint"
+                        placement="top"
+                        :show-after="200"
+                      >
+                        <button
+                          type="button"
+                          class="composer-kbd-star"
+                          aria-label="输入快捷说明"
+                        >
+                          *
+                        </button>
+                      </el-tooltip>
                       <div v-if="pendingGate" class="composer-gate-actions">
                         <template v-if="pendingGate.content?.mode === 'session_start'">
                           <el-button type="danger" @click="approveSessionStart(pendingGate)">
@@ -4642,11 +4654,27 @@ loadLists().then(() => {
   display: none;
 }
 
-.composer-toolbar-hint {
+.composer-kbd-star {
   flex: 1;
-  min-width: 0;
-  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 22px;
+  height: 22px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
   color: var(--ecw-text-3, #8b8f9a);
+  cursor: help;
+}
+
+.composer-kbd-star:hover {
+  color: var(--ecw-text-2, #6e6e73);
 }
 
 /* 附件区（参考 Plus-X 发送区附件卡片） */

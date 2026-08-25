@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | M | Workbench.vue | 工具栏「Enter=发消息」灰字改成星号，悬停看说明
+2026-08-25 | M | frontend-components.md | 记输入框星号提示
+2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖审查修复：真删除、关闭/新开熔炉、绑对节点
 2026-08-21 | M | README.md | 会话治理写明顶栏删除会从列表拿掉并清终端行
 2026-08-21 | M | furnaceLifecycle.js | 新开熔炉必须绑熔炉节点；关闭只杀该成员还在跑的 PTY
