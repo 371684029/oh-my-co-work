@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | M | README.md | 运行包说明与 3.7 口径改为 chatgpt-pets 李慕婉图集，不再写慢循环 GIF
+2026-08-25 | M | about.json / docs/README.md / crucible-3.7.md | 同步桌宠图集文案
+2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-25 | A | web/src/assets/pets/li-muwan/* | 接入 chatgpt-pets 李慕婉 v2 图集
 2026-08-25 | A | web/src/assets/pets/NOTICE.md / LICENSE | 标明 MIT 来源
 2026-08-25 | A | web/src/composables/furnacePetAtlas.js | v2 图集行/帧/注视方向

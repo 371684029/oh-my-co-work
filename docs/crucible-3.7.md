@@ -8,7 +8,7 @@
 | 前置 | 3.3 教程 · 3.5 铺满 GUI/TUI |
 | 相关 | [crucible-3x.md](./crucible-3x.md) · [crucible-3.5.md](./crucible-3.5.md) · [crucible-grok-client.md](./crucible-grok-client.md) |
 
-`3.6` 未单独发版。3.5 之后的桌宠 GIF、干活面头像、GUI 附件与 Grok 原理说明，一并收进 **3.7.0**。托盘独立窗仍后置 4.x。
+`3.6` 未单独发版。3.5 之后的 chatgpt-pets 桌宠图集、干活面头像、GUI 附件与 Grok 原理说明，一并收进 **3.7.0**。托盘独立窗仍后置 4.x。
 
 ## 1. 相对 3.5 多了什么
 

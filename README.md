@@ -134,7 +134,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。桌宠动画打在前端里：要看新的慢循环，请重新下载 zip 解压覆盖，不要沿用旧文件夹。
+运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。
 
 ### 从源码启动
 
@@ -207,7 +207,7 @@ packages/  可直接运行的三平台压缩包
 | [3.x 熔炉设计](./docs/crucible-3x.md) | Grok Agent + 提示词适配；加人改代码 / 加适配节点；桌面亦名熔炉 |
 | [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.7 阶段与完成定义 |
 | [3.5 熔炉 GUI / TUI](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、GUI 与 TUI 同一进程 |
-| [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：GIF、头像、GUI 附件、PTY 宿主 |
+| [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：chatgpt-pets 桌宠图集、头像、GUI 附件、PTY 宿主 |
 | [熔炉 GUI 可读正文](./docs/crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -228,7 +228,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
 - [x] 3.3.0：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；群聊完成即归档
 - [x] 3.5.0：熔炉铺满 GUI（可缩小回三栏、可切 TUI）
-- [x] 3.7.0 最终封板：桌宠循环 GIF、干活面头像、GUI 可读正文与短合同开炉、GUI 附件（路径写入 PTY）、Grok 原理文档
+- [x] 3.7.0 最终封板：chatgpt-pets 桌宠图集（李慕婉）、干活面头像、GUI 可读正文与短合同开炉、GUI 附件（路径写入 PTY）、Grok 原理文档
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

@@ -17,7 +17,7 @@
       "date": "2026-08-20",
       "title": "3.7.0 最终封板：熔炉干活面",
       "items": [
-        "桌宠三态 GIF；干活面顶栏与 GUI 右侧卡通头像随进程换表情。",
+        "桌宠改用 chatgpt-pets 李慕婉 v2 图集（idle/running/waiting，戳一下挥手，悬停注视）；干活面头像同一张图集。",
         "GUI 附件落到 inbox/，发送写成一行相对路径写入同一 grok 进程（不是原生传文件）。",
         "两张皮叫 GUI / TUI；TUI 首次挂载后切皮不拆终端。",
         "没有自研 Grok HTTP 客户端：node-pty 托管本机官方 grok CLI。",
