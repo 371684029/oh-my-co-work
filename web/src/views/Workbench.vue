@@ -521,20 +521,17 @@
                         class="file-input-hidden"
                         @change="onFileInputChange"
                       />
+                      <span class="composer-toolbar-spacer"></span>
                       <el-tooltip
                         :content="composerToolbarHint"
                         placement="top"
                         :show-after="200"
                       >
-                        <button
-                          type="button"
-                          class="composer-hint-i"
-                          aria-label="输入快捷说明"
-                        >
-                          <el-icon :size="16" class="composer-hint-i-icon">
-                            <InfoFilled />
-                          </el-icon>
-                        </button>
+                        <span
+                          class="gate-info-dot composer-hint-i"
+                          role="img"
+                          :aria-label="composerToolbarHint"
+                        >i</span>
                       </el-tooltip>
                       <div v-if="pendingGate" class="composer-gate-actions">
                         <template v-if="pendingGate.content?.mode === 'session_start'">
@@ -1110,7 +1107,6 @@
 import { ref, computed, watch, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
 import {
   formatBusinessIo,
   digestBusinessIo,
@@ -4657,27 +4653,14 @@ loadLists().then(() => {
   display: none;
 }
 
-.composer-hint-i {
+.composer-toolbar-spacer {
   flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 22px;
-  height: 22px;
-  margin: 0;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--ecw-text-3, #8b8f9a);
-  cursor: help;
+  min-width: 0;
 }
 
-.composer-hint-i-icon {
-  display: flex;
-}
-
-.composer-hint-i:hover {
-  color: var(--ecw-text-2, #6e6e73);
+.composer-hint-i {
+  flex-shrink: 0;
+  margin-right: 2px;
 }
 
 /* 附件区（参考 Plus-X 发送区附件卡片） */

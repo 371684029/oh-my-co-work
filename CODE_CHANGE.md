@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | M | Workbench.vue | 输入快捷说明改成圆形 i，贴在「通过」左侧
+2026-08-25 | M | frontend-components.md | 记圆形 i 悬停说明
+2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-25 | M | packages/linux + win32 + darwin zip | 覆盖输入框星号提示
 2026-08-25 | M | Workbench.vue | 工具栏「Enter=发消息」灰字改成星号，悬停看说明
 2026-08-25 | M | frontend-components.md | 记输入框星号提示
