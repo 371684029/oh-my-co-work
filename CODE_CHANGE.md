@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | M | docs/assets/screenshots/chat-terminal-collaboration.webp | README 对话同屏截图换成李慕婉桌宠
+2026-08-25 | M | docs/assets/screenshots/terminal-member-settings.webp | README 成员 TUI 设置截图换成李慕婉桌宠
+2026-08-25 | M | README.md | 两张 2.0 展示图 alt 标明李慕婉桌宠
+2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
+
 2026-08-25 | M | docs/assets/screenshots/workbench-home.webp | README 首页截图换成李慕婉桌宠
 2026-08-25 | M | docs/assets/screenshots/workbench-overview.webp | README 工作台截图换成李慕婉桌宠
 2026-08-25 | M | docs/assets/screenshots/furnace-grok-guide.webp | README 教程弹层截图带新桌宠
