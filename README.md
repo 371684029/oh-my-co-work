@@ -27,9 +27,9 @@
 </p>
 <p align="center"><sub>桌宠来自 chatgpt-pets 的李慕婉 v2 图集：闲置呼吸、干活忙碌、等人询问；戳一下挥手，悬停会看向指针。</sub></p>
 
-<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，口号含终端守护者与熔炉连接一切" width="100%" />
+<img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，右侧李慕婉桌宠" width="100%" />
 
-<img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台" width="100%" />
+<img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台，右侧为 chatgpt-pets 李慕婉桌宠" width="100%" />
 
 ## 为什么做它
 
