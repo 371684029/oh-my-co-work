@@ -528,10 +528,12 @@
                       >
                         <button
                           type="button"
-                          class="composer-kbd-star"
+                          class="composer-hint-i"
                           aria-label="输入快捷说明"
                         >
-                          *
+                          <el-icon :size="16" class="composer-hint-i-icon">
+                            <InfoFilled />
+                          </el-icon>
                         </button>
                       </el-tooltip>
                       <div v-if="pendingGate" class="composer-gate-actions">
@@ -1108,6 +1110,7 @@
 import { ref, computed, watch, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { InfoFilled } from '@element-plus/icons-vue'
 import {
   formatBusinessIo,
   digestBusinessIo,
@@ -4654,7 +4657,7 @@ loadLists().then(() => {
   display: none;
 }
 
-.composer-kbd-star {
+.composer-hint-i {
   flex: 1;
   display: inline-flex;
   align-items: center;
@@ -4665,15 +4668,15 @@ loadLists().then(() => {
   padding: 0 4px;
   border: 0;
   background: transparent;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
   color: var(--ecw-text-3, #8b8f9a);
   cursor: help;
 }
 
-.composer-kbd-star:hover {
+.composer-hint-i-icon {
+  display: flex;
+}
+
+.composer-hint-i:hover {
   color: var(--ecw-text-2, #6e6e73);
 }
 
