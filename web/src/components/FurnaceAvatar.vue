@@ -4,18 +4,19 @@
     :class="[`is-${size}`, `is-${mood}`, { live }]"
     :title="title"
   >
-    <img :src="src" :alt="title" draggable="false" />
+    <span class="furnace-avatar-sheet" :style="sheetStyle" :aria-label="title" role="img" />
   </span>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import imgIdleGif from '../assets/furnace-idle.gif'
-import imgWorkingGif from '../assets/furnace-working.gif'
-import imgWaitingGif from '../assets/furnace-waiting.gif'
-import imgIdlePng from '../assets/furnace-idle.png'
-import imgWorkingPng from '../assets/furnace-working.png'
-import imgWaitingPng from '../assets/furnace-waiting.png'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
+import {
+  PET_CLIPS,
+  atlasCellStyle,
+  clipForFurnace,
+  frameDuration,
+} from '../composables/furnacePetAtlas.js'
 
 const props = defineProps({
   mood: {
@@ -33,14 +34,38 @@ const props = defineProps({
 })
 
 const reduceMotion = ref(false)
+const frame = ref(0)
 let mq
 let onMotion
+let animTimer = 0
 
-const src = computed(() => {
-  const still = reduceMotion.value
-  if (props.mood === 'working') return still ? imgWorkingPng : imgWorkingGif
-  if (props.mood === 'waiting') return still ? imgWaitingPng : imgWaitingGif
-  return still ? imgIdlePng : imgIdleGif
+const clipId = computed(() => clipForFurnace({ state: props.mood }))
+const displayWidth = computed(() => (props.size === 'lg' ? 96 : 56))
+
+const sheetStyle = computed(() => {
+  const clip = PET_CLIPS[clipId.value] || PET_CLIPS.idle
+  const col = reduceMotion.value ? 0 : frame.value % clip.frames
+  return atlasCellStyle({
+    row: clip.row,
+    col,
+    displayWidth: displayWidth.value,
+    sheetUrl,
+  })
+})
+
+function scheduleFrame() {
+  window.clearTimeout(animTimer)
+  if (reduceMotion.value) return
+  const clip = PET_CLIPS[clipId.value] || PET_CLIPS.idle
+  animTimer = window.setTimeout(() => {
+    frame.value = (frame.value + 1) % clip.frames
+    scheduleFrame()
+  }, frameDuration(clipId.value, frame.value))
+}
+
+watch(clipId, () => {
+  frame.value = 0
+  scheduleFrame()
 })
 
 onMounted(() => {
@@ -48,16 +73,18 @@ onMounted(() => {
     mq = window.matchMedia('(prefers-reduced-motion: reduce)')
     onMotion = () => {
       reduceMotion.value = mq.matches
+      scheduleFrame()
     }
     onMotion()
     if (mq.addEventListener) mq.addEventListener('change', onMotion)
     else mq.addListener(onMotion)
   } catch {
-    /* ignore */
+    scheduleFrame()
   }
 })
 
 onUnmounted(() => {
+  window.clearTimeout(animTimer)
   if (!mq || !onMotion) return
   if (mq.removeEventListener) mq.removeEventListener('change', onMotion)
   else mq.removeListener(onMotion)
@@ -69,6 +96,8 @@ onUnmounted(() => {
   display: inline-flex;
   flex-shrink: 0;
   overflow: hidden;
+  align-items: flex-end;
+  justify-content: center;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 4px 12px rgba(20, 16, 28, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -78,29 +107,26 @@ onUnmounted(() => {
   box-shadow: 0 0 0 2px #34c759, 0 4px 12px rgba(20, 16, 28, 0.12);
 }
 
-.furnace-avatar img {
+.furnace-avatar-sheet {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 18%;
   pointer-events: none;
+  flex-shrink: 0;
 }
 
 .furnace-avatar.is-sm {
   width: 32px;
   height: 32px;
+  align-items: flex-start;
+}
+
+.furnace-avatar.is-sm .furnace-avatar-sheet {
+  margin-top: -4px;
 }
 
 .furnace-avatar.is-lg {
   width: 108px;
   height: 108px;
   box-shadow: 0 10px 24px rgba(20, 16, 28, 0.14), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
-.furnace-avatar.is-lg img {
-  object-fit: contain;
-  object-position: center bottom;
 }
 
 .furnace-avatar.is-lg.live {

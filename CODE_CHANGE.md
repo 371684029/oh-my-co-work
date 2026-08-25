@@ -22,6 +22,17 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | A | web/src/assets/pets/li-muwan/* | 接入 chatgpt-pets 李慕婉 v2 图集
+2026-08-25 | A | web/src/assets/pets/NOTICE.md / LICENSE | 标明 MIT 来源
+2026-08-25 | A | web/src/composables/furnacePetAtlas.js | v2 图集行/帧/注视方向
+2026-08-25 | M | FurnaceSprite.vue / FurnaceAvatar.vue | 用图集播 idle/running/waiting，戳一下挥手，悬停注视
+2026-08-25 | D | web/src/assets/furnace-*.gif / furnace-*.png | 旧两帧 GIF 立绘不再使用
+2026-08-25 | M | docs/assets/furnace-pet.gif | README 预览改为李慕婉 idle
+2026-08-25 | A | server/test/furnacePetAtlas.test.js | 三态映射与注视角
+2026-08-25 | M | README / AGENT / frontend-components / crucible-3x / crucible-3.7 / mvp / pet-frames README | 同步桌宠口径
+2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
+
+
 2026-08-21 | M | packages/linux + win32 + darwin zip | 覆盖审查修复：真删除、关闭/新开熔炉、绑对节点
 2026-08-21 | M | README.md | 会话治理写明顶栏删除会从列表拿掉并清终端行
 2026-08-21 | M | furnaceLifecycle.js | 新开熔炉必须绑熔炉节点；关闭只杀该成员还在跑的 PTY

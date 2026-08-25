@@ -1,0 +1,19 @@
+{
+  "id": "li-muwan",
+  "displayName": "李慕婉",
+  "description": "为 ChatGPT 打造的 Q 版李慕婉桌宠，采用中国仙侠女主角风格。",
+  "spriteVersionNumber": 2,
+  "spritesheetPath": "spritesheet.webp",
+  "version": "2.0.0",
+  "author": "xxcoding",
+  "license": "MIT",
+  "tags": ["chibi", "xianxia", "hanfu", "heroine", "chinese"],
+  "atlas": {
+    "columns": 8,
+    "rows": 11,
+    "cellWidth": 192,
+    "cellHeight": 208,
+    "width": 1536,
+    "height": 2288
+  }
+}
