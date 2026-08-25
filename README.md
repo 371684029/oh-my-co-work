@@ -79,11 +79,11 @@
 <table>
   <tr>
     <td width="50%">
-      <img src="./docs/assets/screenshots/chat-terminal-collaboration.webp" alt="对话、闸门与右侧流程轨同屏" />
+      <img src="./docs/assets/screenshots/chat-terminal-collaboration.webp" alt="对话、闸门与右侧流程轨同屏，桌宠为李慕婉" />
       <p align="center"><b>对话、闸门与流程同屏</b></p>
     </td>
     <td width="50%">
-      <img src="./docs/assets/screenshots/terminal-member-settings.webp" alt="可配置的内嵌终端成员" />
+      <img src="./docs/assets/screenshots/terminal-member-settings.webp" alt="可配置的内嵌终端成员，设置页右侧为李慕婉桌宠" />
       <p align="center"><b>脚本成员按需启用 TUI</b></p>
     </td>
   </tr>
