@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-25 | M | packages/linux zip | 覆盖 chatgpt-pets 李慕婉图集的 3.7.0 Linux 运行包
 2026-08-25 | M | README.md | 运行包说明与 3.7 口径改为 chatgpt-pets 李慕婉图集，不再写慢循环 GIF
 2026-08-25 | M | about.json / docs/README.md / crucible-3.7.md | 同步桌宠图集文案
 2026-08-25 | M | CODE_CHANGE.md | 追加本轮条目
