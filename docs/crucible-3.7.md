@@ -14,7 +14,7 @@
 
 | 项 | 口径 |
 |----|------|
-| 桌宠 | 三态两帧慢循环 **GIF**（多停少动）+ 戳一下；减少动效时回退 PNG |
+| 桌宠 | [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) v2 图集（闲置 / 干活 / 等人）+ 戳一下挥手 + 悬停注视；减少动效时停在 idle 第一帧 |
 | 干活面头像 | 只留 GUI 大头；开干活面时不重复桌宠 |
 | 两张皮叫法 | 用户侧 **GUI / TUI**（存盘仍是 `grok.surface`：`chat` \| `tui`） |
 | GUI 附件 | 文件落到 `data/furnace/inbox/<会话>/`；发送写成一行相对路径再回车。**不是** Grok 原生传文件 |
