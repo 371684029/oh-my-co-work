@@ -521,19 +521,20 @@
                         class="file-input-hidden"
                         @change="onFileInputChange"
                       />
+                      <div class="composer-toolbar-end">
                       <el-tooltip
+                        v-if="showComposerHintI"
                         :content="composerToolbarHint"
                         placement="top"
+                        :trigger="['hover', 'focus', 'click']"
                         :show-after="200"
                       >
                         <button
                           type="button"
-                          class="composer-hint-i"
-                          aria-label="输入快捷说明"
+                          class="gate-info-dot composer-hint-i"
+                          :aria-label="composerToolbarHint"
                         >
-                          <el-icon :size="16" class="composer-hint-i-icon">
-                            <InfoFilled />
-                          </el-icon>
+                          i
                         </button>
                       </el-tooltip>
                       <div v-if="pendingGate" class="composer-gate-actions">
@@ -598,6 +599,7 @@
                             拒绝
                           </el-button>
                         </template>
+                      </div>
                       </div>
                     </div>
                     <XSender
@@ -1110,7 +1112,6 @@
 import { ref, computed, watch, onUnmounted, nextTick, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { InfoFilled } from '@element-plus/icons-vue'
 import {
   formatBusinessIo,
   digestBusinessIo,
@@ -2060,6 +2061,15 @@ const composerToolbarHint = computed(() => {
     return 'Enter=附言 · 点同意/拒绝定局'
   }
   return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
+})
+
+/** 同意/拒绝旁已有闸门详情 i，不再并排第二个 */
+const showComposerHintI = computed(() => {
+  if (!pendingGate.value) return true
+  const mode = pendingGate.value.content?.mode
+  return ['session_start', 'human_input', 'need_params', 'adapter_question', 'interrupted'].includes(
+    mode,
+  )
 })
 
 const composerFooterHint = computed(() => {
@@ -4377,11 +4387,18 @@ loadLists().then(() => {
   padding-top: 2px;
 }
 
+.composer-toolbar-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .composer-gate-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -4657,27 +4674,10 @@ loadLists().then(() => {
   display: none;
 }
 
-.composer-hint-i {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 22px;
-  height: 22px;
+button.composer-hint-i {
   margin: 0;
-  padding: 0 4px;
   border: 0;
-  background: transparent;
-  color: var(--ecw-text-3, #8b8f9a);
-  cursor: help;
-}
-
-.composer-hint-i-icon {
-  display: flex;
-}
-
-.composer-hint-i:hover {
-  color: var(--ecw-text-2, #6e6e73);
+  font: inherit;
 }
 
 /* 附件区（参考 Plus-X 发送区附件卡片） */
