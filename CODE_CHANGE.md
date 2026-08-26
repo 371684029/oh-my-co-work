@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | .github/workflows/pack-release.yml | 上传三平台运行包及构建旁证，供 Windows 生产包回收并覆盖旧精灵版本
+2026-08-26 | M | CODE_CHANGE.md | 追加 Windows 生产包精灵更新条目
+
 2026-08-26 | M | FurnaceSprite.vue | 按图集人物区裁掉单帧左右透明留白，放大右栏精灵且收起态保留全身
 2026-08-26 | M | frontend-components.md | 补充桌宠图集必须按人物可见区展示的样式约定
 2026-08-26 | M | CODE_CHANGE.md | 追加熔炉精灵可见尺寸修复条目

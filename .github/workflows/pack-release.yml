@@ -35,13 +35,13 @@ jobs:
         run: npm run pack
 
       - name: Upload artifact
-        if: false
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: oh-my-co-work-${{ matrix.os }}
-          path: packages/oh-my-co-work-v*.zip
-          if-no-files-found: warn
+          path: |
+            packages/oh-my-co-work-v*.zip
+            packages/oh-my-co-work-v*.build.json
+          if-no-files-found: error
           retention-days: 3
 
       - name: Commit packages zip to git (main)
