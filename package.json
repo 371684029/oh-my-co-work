@@ -17,6 +17,7 @@
     "start:server": "npm run start -w server",
     "backup": "node scripts/backup.mjs",
     "pack": "node scripts/pack-release.mjs",
+    "validate:packages": "node scripts/validate-release-packages.mjs",
     "build": "npm run build -w web",
     "test": "npm run test -w server"
   },

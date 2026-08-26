@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | .github/workflows/pack-release.yml | 三平台包推送失败即终止，latest 发布前强制校验同源与新熔炉图集
+2026-08-26 | M | scripts/pack-release.mjs / package.json | 运行包写 BUILD_INFO 与旁证元数据，并提供生产包校验命令
+2026-08-26 | A | scripts/validate-release-packages.mjs | 校验三平台版本、源码提交、旁证及桌宠资源一致性
+2026-08-26 | A | server/test/releasePackages.test.js | 覆盖新图集、旧资源拒绝和三平台同源规则
+2026-08-26 | M | README.md / packages/README.md / docs/RELEASE-USER.md | 同步生产包一致性门禁与 BUILD_INFO 排障说明
+2026-08-26 | M | CODE_CHANGE.md | 追加生产包一致性修复条目
 2026-08-26 | M | FurnaceAvatar.vue | 头像 title 附带 chatgpt-pets 版权短声明
 2026-08-26 | M | FurnaceSprite.vue / FurnaceWorkspace.vue | 桌宠立绘旁展示 chatgpt-pets MIT 版权短声明
 2026-08-26 | M | About.vue / about.json | 关于页写明立绘从 chatgpt-pets git 复制

@@ -57,6 +57,7 @@ jobs:
           MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
           FILE="oh-my-co-work-v${MAJOR}-${PLAT}.zip"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          PUSHED=0
           # 多平台并行：rebase 后若 README/CURRENT 冲突，按目录内 zip 重写清单再继续
           for i in 1 2 3 4 5 6; do
             if ! git pull --rebase origin main; then
@@ -79,17 +80,21 @@ jobs:
               node scripts/pack-release.mjs --manifest-only
             fi
             git add packages/
-            if git diff --staged --quiet; then
-              echo "[pack] packages/ unchanged"
-              break
+            if ! git diff --staged --quiet; then
+              git commit -m "chore(packages): 更新 ${FILE} (${VER})" || true
+            else
+              echo "[pack] no new staged package changes"
             fi
-            if git commit -m "chore(packages): 更新 ${FILE} (${VER})"; then
-              if git push origin HEAD:main; then
-                break
-              fi
+            if git push origin HEAD:main; then
+              PUSHED=1
+              break
             fi
             sleep $((i * 4))
           done
+          if [ "$PUSHED" -ne 1 ]; then
+            echo "[pack] failed to push ${FILE} after retries" >&2
+            exit 1
+          fi
 
   release:
     needs: pack
@@ -108,12 +113,17 @@ jobs:
             git pull origin main
             COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
             echo "[release] zip count=$COUNT"
-            if [ "$COUNT" -ge 1 ]; then
+            if [ "$COUNT" -ge 3 ]; then
               break
             fi
             sleep 15
           done
           ls -la packages/*.zip
+
+      - name: Validate three platform packages
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
 
       - name: Publish GitHub Release
         env:

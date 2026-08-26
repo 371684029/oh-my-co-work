@@ -39,9 +39,9 @@ function sh(cmd, args, opts = {}) {
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed: ${r.status}`)
 }
 
-function gitShort() {
+function gitCommit() {
   try {
-    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT })
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT })
       .toString()
       .trim()
   } catch {
@@ -400,7 +400,7 @@ function majorFromZipName(name) {
 function pruneOlderMajorZips(keepMajor) {
   if (!fs.existsSync(PACKAGES_DIR)) return
   for (const name of fs.readdirSync(PACKAGES_DIR)) {
-    if (!name.endsWith('.zip')) continue
+    if (!name.endsWith('.zip') && !name.endsWith('.build.json')) continue
     const m = majorFromZipName(name)
     if (m == null || m === keepMajor) continue
     const full = path.join(PACKAGES_DIR, name)
@@ -409,7 +409,21 @@ function pruneOlderMajorZips(keepMajor) {
   }
 }
 
-function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
+function buildMetaPathForZip(zipName) {
+  return path.join(PACKAGES_DIR, `${zipName.slice(0, -4)}.build.json`)
+}
+
+function readBuildMetaForZip(zipName) {
+  const p = buildMetaPathForZip(zipName)
+  if (!fs.existsSync(p)) return null
+  try {
+    return readJson(p)
+  } catch {
+    return null
+  }
+}
+
+function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, size }) {
   const curPath = path.join(PACKAGES_DIR, 'CURRENT.txt')
   const prev = fs.existsSync(curPath)
     ? parseCurrentTxt(fs.readFileSync(curPath, 'utf8'))
@@ -426,24 +440,26 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
     const p = platformFromZipName(f)
     if (!p) continue
     const full = path.join(PACKAGES_DIR, f)
+    const meta = readBuildMetaForZip(f)
     byPlat[p] = {
       file: f,
       size: fs.statSync(full).size,
-      commit: prev[`commit.${p}`] || prev.commit || '',
-      built: prev[`built.${p}`] || '',
+      commit: meta?.sourceCommit || prev[`commit.${p}`] || prev.commit || '',
+      built: meta?.builtAt || prev[`built.${p}`] || '',
     }
   }
   byPlat[plat] = {
     file: gitZipName,
     size,
     commit: sha,
-    built: new Date().toISOString(),
+    built: builtAt,
   }
 
   const platOrder = Object.keys(byPlat).sort()
   const tableRows = platOrder.map((p) => {
     const b = byPlat[p]
-    return `| ${p} | [\`${b.file}\`](./${b.file}) | ${b.size} |`
+    const commit = b.commit ? `\`${String(b.commit).slice(0, 12)}\`` : '—'
+    return `| ${p} | [\`${b.file}\`](./${b.file}) | ${b.size} | ${commit} | ${b.built || '—'} |`
   })
 
   const lines = [
@@ -457,11 +473,12 @@ function writePackagesManifest({ ver, major, sha, plat, gitZipName, size }) {
     '- **同大版本**：覆盖替换同平台 zip（小版本只留最新）',
     '- **新大版本**：只保留当前大版本包，旧大版本 zip 全部删除',
     '- **多平台**：linux / win32 / darwin 各一份（当前大版本内互不覆盖）',
+    '- **发布门禁**：三平台包内 `BUILD_INFO.json` 的版本、源码提交必须一致，并包含当前熔炉图集；任一不符则不发布 latest',
     '',
     '## 仓库内文件',
     '',
-    '| 平台 | 文件 | 大小 |',
-    '|------|------|------|',
+    '| 平台 | 文件 | 大小 | 源码提交 | 构建时间 |',
+    '|------|------|------|----------|----------|',
     ...tableRows,
     '',
     `版本：\`${ver}\`（大版本 v${major}）`,
@@ -529,7 +546,8 @@ async function mainAsync() {
     /* ignore */
   }
   const major = majorOf(ver)
-  const sha = gitShort()
+  const sha = gitCommit()
+  const builtAt = new Date().toISOString()
   const plat = platformTag()
   const folderName = `oh-my-co-work-v${major}-${plat}`
   const stage = path.join(OUT_ROOT, folderName)
@@ -627,10 +645,27 @@ async function mainAsync() {
       `major=${major}`,
       `platform=${plat}`,
       `commit=${sha}`,
-      `built=${new Date().toISOString()}`,
+      `built=${builtAt}`,
       `needsNpmInstall=false`,
       `autoExit=default-off`,
     ].join('\n') + '\n',
+    'utf8',
+  )
+  const buildInfo = {
+    schemaVersion: 1,
+    name: 'oh-my-co-work',
+    kind: 'runtime-bundle',
+    version: ver,
+    major,
+    platform: plat,
+    sourceCommit: sha,
+    builtAt,
+    needsNpmInstall: false,
+    requiredAssets: ['web/dist/assets/spritesheet-*.webp'],
+  }
+  fs.writeFileSync(
+    path.join(stage, 'BUILD_INFO.json'),
+    JSON.stringify(buildInfo, null, 2) + '\n',
     'utf8',
   )
 
@@ -672,11 +707,16 @@ async function mainAsync() {
     console.log('[pack] removed legacy', legacy)
   }
   fs.copyFileSync(zipPath, gitZipPath)
+  fs.writeFileSync(
+    buildMetaPathForZip(gitZipName),
+    JSON.stringify(buildInfo, null, 2) + '\n',
+    'utf8',
+  )
   // 一个大版本只留当前最新：删掉其它大版本的全部运行包
   pruneOlderMajorZips(major)
 
   const size = fs.statSync(gitZipPath).size
-  writePackagesManifest({ ver, major, sha, plat, gitZipName, size })
+  writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, size })
 
   console.log('[pack] ok', gitZipPath, `(${size} bytes)`)
   console.log('[pack] user: unzip → start.bat / ./start.sh （无需 npm install）')
@@ -711,7 +751,6 @@ function regenerateManifestOnly() {
     }
   }
   const major = majorOf(ver)
-  const sha = gitShort()
   const plat = platformTag()
   pruneOlderMajorZips(major)
   const files = fs.existsSync(PACKAGES_DIR)
@@ -725,10 +764,12 @@ function regenerateManifestOnly() {
   const mine =
     files.find((f) => f.includes(`-${plat}.`)) || files[files.length - 1]
   const size = fs.statSync(path.join(PACKAGES_DIR, mine)).size
+  const meta = readBuildMetaForZip(mine)
   writePackagesManifest({
     ver,
     major,
-    sha,
+    sha: meta?.sourceCommit || '',
+    builtAt: meta?.builtAt || '',
     plat: platformFromZipName(mine) || plat,
     gitZipName: mine,
     size,
