@@ -25,7 +25,7 @@
 <p align="center">
   <img src="./docs/assets/furnace-pet.gif" alt="熔炉桌宠：李慕婉 idle（chatgpt-pets v2 图集）" width="116" />
 </p>
-<p align="center"><sub>桌宠来自 chatgpt-pets 的李慕婉 v2 图集：闲置呼吸、干活忙碌、等人询问；戳一下挥手，悬停会看向指针。</sub></p>
+<p align="center"><sub>桌宠立绘复制自 <a href="https://github.com/xiongxianzhu/chatgpt-pets">chatgpt-pets</a>（MIT © 2026 zhuxiongxian / 贡献者）：李慕婉 v2 图集，闲置呼吸、干活忙碌、等人询问；戳一下挥手，悬停会看向指针。</sub></p>
 
 <img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，右侧李慕婉桌宠" width="100%" />
 
@@ -99,7 +99,7 @@
 
 <img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：去颜色画面、底部输入、可缩小回三栏" width="100%" />
 
-- 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。
+- 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。立绘从该 git 复制，**MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者**（见 `web/src/assets/pets/LICENSE`）。
 - 默认 **GUI**：欢迎卡说明能干啥；Grok 开口后只显示当前屏可读正文（去 TUI 框线和底栏）。底部输入、短指令芯片。附件落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程（不是 Grok 原生传文件）。只留一张大卡通头像。
 - 开炉写入 `data/furnace/AGENTS.md` 短规则 + 约百字 `--prompt`（Windows 走 argv，不经 cmd 拼中文）。长文在 `ACTIVE.md`，禁止复述。不写 `~/.grok/AGENTS.md`。
 - **TUI**：原 Grok 终端。菜单和快捷键走这里。隐藏时不把 PTY 缩成几列。首次进入后切皮不拆终端。

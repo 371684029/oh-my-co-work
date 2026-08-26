@@ -82,6 +82,7 @@
         <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
           <aside class="furnace-buddy">
             <FurnaceAvatar size="lg" :mood="buddyMood" :live="isRunning" :title="buddyTitle" />
+            <p class="furnace-buddy-credit" :title="PET_COPYRIGHT">{{ PET_CREDIT_SHORT }}</p>
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
           <div class="furnace-log-main">
@@ -218,6 +219,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
+import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import {
   exitFullscreen,
   fullscreenElement,
@@ -304,9 +306,13 @@ const buddyMood = computed(() => {
 })
 
 const buddyTitle = computed(() => {
-  if (buddyMood.value === 'working') return '熔炉 · 在干活'
-  if (buddyMood.value === 'waiting') return '熔炉 · 等人'
-  return '熔炉 · 闲置'
+  const base =
+    buddyMood.value === 'working'
+      ? '熔炉 · 在干活'
+      : buddyMood.value === 'waiting'
+        ? '熔炉 · 等人'
+        : '熔炉 · 闲置'
+  return `${base} · ${PET_CREDIT_SHORT}`
 })
 
 const buddyLine = computed(() => {
@@ -727,6 +733,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   text-align: center;
+}
+
+.furnace-buddy-credit {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #8e8ea0;
 }
 
 .furnace-buddy-line {

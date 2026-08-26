@@ -19,6 +19,16 @@
             <div v-if="data.livingLine" class="about-living">{{ data.livingLine }}</div>
           </div>
         </div>
+        <p class="about-credit">
+          熔炉桌宠立绘（李慕婉）复制自
+          <el-link
+            href="https://github.com/xiongxianzhu/chatgpt-pets"
+            type="primary"
+            target="_blank"
+            rel="noopener"
+          >chatgpt-pets</el-link>
+          git 仓库。© 2026 zhuxiongxian / chatgpt-pets 贡献者 · MIT。
+        </p>
         <div class="about-version-row">
           <span class="about-label">当前版本</span>
           <el-tag type="info" effect="plain" round class="version-tag">v{{ data.version }}</el-tag>
@@ -184,6 +194,13 @@ onMounted(async () => {
   line-height: 1.45;
   color: #9a6414;
   max-width: 36em;
+}
+
+.about-credit {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--el-text-color-secondary);
 }
 
 .about-version-row {

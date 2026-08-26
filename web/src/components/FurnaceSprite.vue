@@ -25,15 +25,16 @@
       <button
         type="button"
         class="furnace-pet-hit"
-        :title="title"
-        :aria-label="title"
+        :title="hitTitle"
+        :aria-label="hitTitle"
         @pointerdown="onDragStart"
         @dblclick.stop="$emit('click')"
       >
         <span class="furnace-pet-sheet-wrap" :style="sheetWrapStyle">
-          <span class="furnace-pet-sheet" :style="sheetStyle" :aria-label="title" role="img" />
+          <span class="furnace-pet-sheet" :style="sheetStyle" :aria-label="hitTitle" role="img" />
         </span>
       </button>
+      <p class="furnace-pet-credit" :title="creditTitle">{{ PET_CREDIT_SHORT }}</p>
       <div v-show="hovered" class="furnace-pet-meta">
         <span class="furnace-pet-name">熔炉</span>
         <span class="furnace-pet-state">{{ stateLabel }}</span>
@@ -46,8 +47,8 @@
       v-else
       type="button"
       class="furnace-pet-peek"
-      :title="title"
-      :aria-label="`${title} · 展开`"
+      :title="hitTitle"
+      :aria-label="`${hitTitle} · 展开`"
       @click="minimized = false"
     >
       <span class="furnace-pet-sheet-wrap is-peek" :style="peekWrapStyle">
@@ -63,6 +64,8 @@ import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
 import {
   PET_ATLAS,
   PET_CLIPS,
+  PET_COPYRIGHT,
+  PET_CREDIT_SHORT,
   atlasCellStyle,
   clipForFurnace,
   frameDuration,
@@ -82,6 +85,9 @@ const props = defineProps({
   title: { type: String, default: '熔炉' },
 })
 defineEmits(['click'])
+
+const creditTitle = computed(() => PET_COPYRIGHT)
+const hitTitle = computed(() => `${props.title} · ${PET_CREDIT_SHORT}`)
 
 const IDLE_LINES = ['有事叫我。', '点两下开熔炉。', '我就在这儿。', '先适配，还是先聊？']
 const WORK_LINES = ['在改东西，稍等。', '改完再叫你。', '这边忙着呢。']
@@ -473,6 +479,18 @@ onUnmounted(() => {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+.furnace-pet-credit {
+  margin: 0;
+  max-width: 140px;
+  text-align: center;
+  font-size: 9.5px;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: #8e8ea0;
+  user-select: none;
+  pointer-events: none;
 }
 
 .furnace-pet-name {

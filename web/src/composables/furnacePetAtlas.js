@@ -1,4 +1,13 @@
 /** ChatGPT / Codex 桌宠 v2 图集（chatgpt-pets）：1536×2288，8×11，单格 192×208。 */
+
+export const PET_SOURCE_REPO = 'https://github.com/xiongxianzhu/chatgpt-pets'
+export const PET_SOURCE_NAME = 'chatgpt-pets'
+export const PET_CHARACTER = '李慕婉'
+/** MIT 要求保留的版权行；素材从该 git 仓库复制。 */
+export const PET_COPYRIGHT =
+  '© 2026 zhuxiongxian / chatgpt-pets 贡献者 · MIT · 李慕婉图集来自 github.com/xiongxianzhu/chatgpt-pets'
+export const PET_CREDIT_SHORT = '© chatgpt-pets · MIT'
+
 export const PET_ATLAS = {
   columns: 8,
   rows: 11,

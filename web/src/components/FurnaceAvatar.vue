@@ -2,9 +2,9 @@
   <span
     class="furnace-avatar"
     :class="[`is-${size}`, `is-${mood}`, { live }]"
-    :title="title"
+    :title="displayTitle"
   >
-    <span class="furnace-avatar-sheet" :style="sheetStyle" :aria-label="title" role="img" />
+    <span class="furnace-avatar-sheet" :style="sheetStyle" :aria-label="displayTitle" role="img" />
   </span>
 </template>
 
@@ -13,6 +13,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
 import {
   PET_CLIPS,
+  PET_CREDIT_SHORT,
   atlasCellStyle,
   clipForFurnace,
   frameDuration,
@@ -40,6 +41,7 @@ let onMotion
 let animTimer = 0
 
 const clipId = computed(() => clipForFurnace({ state: props.mood }))
+const displayTitle = computed(() => `${props.title} · ${PET_CREDIT_SHORT}`)
 const displayWidth = computed(() => (props.size === 'lg' ? 96 : 56))
 
 const sheetStyle = computed(() => {
