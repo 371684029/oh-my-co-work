@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 合并到 main 后从同一提交重打三平台包，三者源码提交完全一致，通过发布同源校验；本机启动烟雾测试确认 Linux 包可正常起服务（better-sqlite3 驱动，非降级 node:sqlite）
+2026-08-26 | M | CODE_CHANGE.md | 追加三平台同源重打与烟雾测试条目
+
 2026-08-26 | A | .github/workflows/ci.yml | 新增仅 ubuntu-latest 的轻量测试工作流，给所有分支/PR 快速信号，不再靠三平台打包当 CI
 2026-08-26 | M | .github/workflows/pack-release.yml | 三平台打包收紧为只在 push 到 main 时触发（不再每个 cursor/** 分支每次提交都跑）；三平台全部改用 ubuntu-latest + ACW_PACK_TARGET 交叉打包，不再需要 windows-latest(2×)/macos-latest(10×) 计费 runner；加 concurrency 去重
 2026-08-26 | M | packages/oh-my-co-work-v3-darwin-arm64.zip / packages 清单 | 用 Linux 交叉打包重建 macOS 生产包（同 Windows 一样卡在 8/21 旧提交，未随李慕婉图集更新）
