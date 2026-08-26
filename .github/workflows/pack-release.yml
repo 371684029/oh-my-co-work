@@ -1,12 +1,22 @@
 name: Pack release zip
 
+# 只在 push 到 main 时打三平台包：
+# - 三个平台全部用 ubuntu-latest + ACW_PACK_TARGET 交叉打包（node-pty / better-sqlite3
+#   靠 prebuild-install 按 npm_config_platform/arch 拉对应平台预编译产物，不需要真实
+#   windows-latest / macos-latest 跑一遍）。
+# - 这样只消耗 ubuntu 的 1x 分钟数，不再触发 windows-latest(2x) / macos-latest(10x)，
+#   避免账号 Actions 额度被跑爆导致三平台包（尤其 windows/macos）卡在旧构建不更新。
+# - 不再在每个 cursor/** 分支的每次 push 上打包；日常测试信号见 ci.yml。
 on:
   push:
-    branches: [main, 'cursor/**']
+    branches: [main]
     paths-ignore:
       - 'packages/**'
-  pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: pack-release-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -16,8 +26,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        target: [linux-x64, win32-x64, darwin-arm64]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,12 +42,14 @@ jobs:
         run: npm ci
 
       - name: Pack runtime bundle
+        env:
+          ACW_PACK_TARGET: ${{ matrix.target }}
         run: npm run pack
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: oh-my-co-work-${{ matrix.os }}
+          name: oh-my-co-work-${{ matrix.target }}
           path: |
             packages/oh-my-co-work-v*.zip
             packages/oh-my-co-work-v*.build.json
@@ -49,11 +61,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLAT: ${{ matrix.target }}
         run: |
           set -euo pipefail
           git config user.name "wll"
           git config user.email "371684029@qq.com"
-          PLAT="$(node -p "process.platform+'-'+process.arch")"
           MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
           FILE="oh-my-co-work-v${MAJOR}-${PLAT}.zip"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"

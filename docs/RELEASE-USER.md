@@ -75,6 +75,27 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 
 当前运行包版本以 [`packages/CURRENT.txt`](../packages/CURRENT.txt) 为准（大版本 v3，小版本随同平台 zip 覆盖）。排障时同时看 `commit.<平台>`；正常发布后三个平台提交应一致。每个 zip 根目录还有 `BUILD_INFO.json`，可确认该包实际使用的源码提交和构建时间。
 
+## CI 打包卡住怎么排查（三平台构建来自哪）
+
+`packages/CURRENT.txt` 里每个平台单独记录 `commit.<平台>` / `built.<平台>`。若某平台明显落后于其它平台（提交更旧、构建时间更早），说明该平台在 GitHub Actions 上没有成功重建，仓库里的 zip 还是旧的——**这是仓库自身的发布流水线问题，不是熔炉精灵代码的问题**。
+
+排查顺序：
+
+1. 看 [Actions 页面](https://github.com/371684029/oh-my-co-work/actions/workflows/pack-release.yml) 最近一次 `main` 推送的运行结果；若三个 job 都直接失败且提示 `recent account payments have failed or your spending limit needs to be increased`，说明 **GitHub Actions 分钟数/额度用尽或欠费**，所有平台（包括 `ubuntu-latest`）都跑不起来，与代码无关。
+2. 私有仓库的 GitHub Actions 分钟数按月限额，且 `windows-latest` 记 **2×**、`macos-latest` 记 **10×** 消耗倍率；旧版 `pack-release.yml` 在**每个 `cursor/**` 分支的每次 push**上都跑一次三平台矩阵，很容易在几天内把免费额度提前烧光，进而卡住 Windows/macOS 包的更新（Linux 因为体量小，历史上多次是靠人工在开发机上重新打包顶上，而不是 CI 自动完成的）。
+3. 现版本 `pack-release.yml` 已收紧：只在 **push 到 `main`** 时才打三平台包（`cursor/**` 分支上的每次提交不再触发），并且三平台**全部改用 `ubuntu-latest` + `ACW_PACK_TARGET` 交叉打包**（`better-sqlite3` / `node-pty` 靠 `prebuild-install` 按目标平台下载预编译产物，不需要真机 `windows-latest` / `macos-latest`）。日常测试信号改由单独的 `ci.yml`（仅 `ubuntu-latest`，跑 `npm test` + 前端构建）负责，成本极低。
+
+## 长期解决方案（不只是充值）
+
+除了给 GitHub Actions 账户加钱／提高消费上限，还有几种不花钱、能根治「额度用尽卡住三平台包」的办法，按见效速度排序：
+
+| 方案 | 效果 | 代价 |
+|------|------|------|
+| **收紧触发范围 + 单 runner 交叉打包**（已落地，见上一节） | 把每次三平台构建的耗时从「1×+2×+10× ≈ 13×」降到「3×1× = 3×」，且只在合并到 `main` 时跑一次，而不是每个分支每次提交都跑 | 无；已随本次修复生效 |
+| **仓库转为 Public** | 公开仓库的 GitHub-hosted Actions 分钟数**完全免费、不限量**，彻底不受额度/账单影响 | 需要接受源码公开（README 已按开源项目风格维护，若本来就打算开源，这是最彻底的方案） |
+| **自托管 Runner（self-hosted runner）** | 用自己的电脑/服务器注册 Actions runner，跑多少分钟都不计入 GitHub 账单，且可以装 VS Build Tools 后走原生 `windows-latest` 一样的路径 | 需要一台常开的机器，并在仓库 Settings → Actions → Runners 里添加 |
+| **手动交叉打包兜底** | 出问题时，任何人（或本项目里的云端 Agent）可以在一台 Linux 机器上执行 `ACW_PACK_TARGET=win32-x64 npm run pack` / `ACW_PACK_TARGET=darwin-arm64 npm run pack`，本地生成对应平台的 zip 后直接提交，不依赖 Actions 是否可用 | 需要人工触发，不是自动化 |
+
 ## 注意
 
 - 包内是 **前端 dist + 后端 bundle + 内置 node_modules**，不是完整源码树

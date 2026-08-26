@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | A | .github/workflows/ci.yml | 新增仅 ubuntu-latest 的轻量测试工作流，给所有分支/PR 快速信号，不再靠三平台打包当 CI
+2026-08-26 | M | .github/workflows/pack-release.yml | 三平台打包收紧为只在 push 到 main 时触发（不再每个 cursor/** 分支每次提交都跑）；三平台全部改用 ubuntu-latest + ACW_PACK_TARGET 交叉打包，不再需要 windows-latest(2×)/macos-latest(10×) 计费 runner；加 concurrency 去重
+2026-08-26 | M | packages/oh-my-co-work-v3-darwin-arm64.zip / packages 清单 | 用 Linux 交叉打包重建 macOS 生产包（同 Windows 一样卡在 8/21 旧提交，未随李慕婉图集更新）
+2026-08-26 | A | packages/oh-my-co-work-v3-darwin-arm64.build.json | 新增 macOS 包构建身份旁证
+2026-08-26 | M | docs/RELEASE-USER.md | 补充「CI 打包卡住怎么排查」与「长期解决方案（不只是充值）」：收紧触发范围+交叉打包、转公开仓库、自托管 runner、手动交叉打包兜底
+2026-08-26 | M | CODE_CHANGE.md | 追加 CI 分钟数长期治理条目
+
 2026-08-26 | M | packages/oh-my-co-work-v3-win32-x64.zip / packages 清单 | 重建 Windows 3.7.0 生产包，内置李慕婉图集与 Windows x64 原生模块
 2026-08-26 | A | packages/oh-my-co-work-v3-win32-x64.build.json | 新增 Windows 包构建身份旁证
 

@@ -1,0 +1,34 @@
+name: CI
+
+# 只跑测试，不打包：给所有分支/PR 一个便宜、快速的信号。
+# 三平台运行包只在 push 到 main 时由 pack-release.yml 触发（见该文件顶部注释）。
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build web (sanity)
+        run: npm run build -w web
