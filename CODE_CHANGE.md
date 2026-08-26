@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | packages/oh-my-co-work-v3-win32-x64.zip / packages 清单 | 重建 Windows 3.7.0 生产包，内置李慕婉图集与 Windows x64 原生模块
+2026-08-26 | A | packages/oh-my-co-work-v3-win32-x64.build.json | 新增 Windows 包构建身份旁证
+
 2026-08-26 | M | scripts/pack-release.mjs | 支持 ACW_PACK_TARGET 跨平台打包，在 CI 额度不可用时从 Linux 重建 Windows 运行包
 2026-08-26 | M | docs/demo.md | 补充 Windows 跨平台打包命令及原生模块、BUILD_INFO 验证要求
 2026-08-26 | M | CODE_CHANGE.md | 追加 Windows 跨平台生产包修复条目

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "oh-my-co-work",
+  "kind": "runtime-bundle",
+  "version": "3.7.0",
+  "major": 3,
+  "platform": "win32-x64",
+  "sourceCommit": "b47360a178fbd5f8bcc0a2e4cb36fdff3ce3671d",
+  "builtAt": "2026-08-26T09:14:47.599Z",
+  "needsNpmInstall": false,
+  "requiredAssets": [
+    "web/dist/assets/spritesheet-*.webp"
+  ]
+}
