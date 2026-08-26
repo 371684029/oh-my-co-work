@@ -242,3 +242,11 @@ packages/  可直接运行的三平台压缩包
 
 如果这个项目让你的脚本、Agent 或 TUI 更容易协作，欢迎点一个 **Star**。
 它会帮助更多正在解决同类问题的人看到这个项目。
+
+## 点赞支持
+
+完全自愿，不影响任何功能。若你愿意，期待一点点小惊喜 ✨
+
+| 微信 | 微信 | 支付宝 |
+|:---:|:---:|:---:|
+| <img src="./web/public/sponsor-wechat-1.png" alt="微信赞赏码" width="180" /> | <img src="./web/public/sponsor-wechat-2.png" alt="微信赞赏码" width="180" /> | <img src="./web/public/sponsor-alipay.png" alt="支付宝收款码" width="180" /> |
