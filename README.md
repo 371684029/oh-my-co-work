@@ -247,6 +247,6 @@ packages/  可直接运行的三平台压缩包
 
 完全自愿，不影响任何功能。若你愿意，期待一点点小惊喜 ✨
 
-| 微信 | 微信 | 支付宝 |
-|:---:|:---:|:---:|
-| <img src="./web/public/sponsor-wechat-1.png" alt="微信赞赏码" width="180" /> | <img src="./web/public/sponsor-wechat-2.png" alt="微信赞赏码" width="180" /> | <img src="./web/public/sponsor-alipay.png" alt="支付宝收款码" width="180" /> |
+| 微信 | 微信 | 支付宝 | 添加好友 |
+|:---:|:---:|:---:|:---:|
+| <img src="./web/public/sponsor-wechat-1.png" alt="微信赞赏码" width="180" height="244" /> | <img src="./web/public/sponsor-wechat-2.png" alt="微信收款码" width="180" height="244" /> | <img src="./web/public/sponsor-alipay.png" alt="支付宝收款码" width="180" height="244" /> | <img src="./web/public/sponsor-wechat-friend.png" alt="添加微信好友" width="180" height="244" /> |

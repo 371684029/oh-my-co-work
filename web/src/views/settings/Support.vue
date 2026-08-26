@@ -42,14 +42,11 @@
         {{ data.sponsorSubHint || '若你愿意，期待一点点小惊喜 ✨' }}
       </p>
 
-      <div v-if="data.sponsorQrPaths?.length" class="qr-list">
-        <img
-          v-for="(src, i) in data.sponsorQrPaths"
-          :key="i"
-          :src="src"
-          class="qr-img"
-          alt="支持码"
-        />
+      <div v-if="qrItems.length" class="qr-list">
+        <figure v-for="item in qrItems" :key="item.src" class="qr-item">
+          <figcaption class="qr-label">{{ item.label }}</figcaption>
+          <img :src="item.src" class="qr-img" :alt="item.label" />
+        </figure>
       </div>
       <p v-else class="like-placeholder">
         心意通道稍后再开 · 先聊技术也完全 OK
@@ -59,11 +56,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 
 const data = ref({})
+
+const QR_LABELS = {
+  '/sponsor-wechat-1.png': '微信',
+  '/sponsor-wechat-2.png': '微信',
+  '/sponsor-alipay.png': '支付宝',
+  '/sponsor-wechat-friend.png': '添加好友',
+}
+
+const qrItems = computed(() => {
+  const paths = [...(data.value.sponsorQrPaths || [])]
+  const friend = data.value.wechatQrPath
+  if (friend && !paths.includes(friend)) paths.push(friend)
+  return paths.map((src) => ({
+    src,
+    label: labelFor(src),
+  }))
+})
+
+function labelFor(src) {
+  if (QR_LABELS[src]) return QR_LABELS[src]
+  const name = String(src).toLowerCase()
+  if (name.includes('alipay') || name.includes('zhifubao')) return '支付宝'
+  if (name.includes('friend') || name.includes('add')) return '添加好友'
+  return '微信'
+}
 
 function copy(t) {
   navigator.clipboard.writeText(t || '')
@@ -77,7 +99,7 @@ onMounted(async () => {
 
 <style scoped>
 .support-page {
-  max-width: 560px;
+  max-width: 920px;
 }
 
 .page-head {
@@ -159,18 +181,39 @@ onMounted(async () => {
 }
 
 .qr-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.qr-item {
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+}
+
+.qr-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
 }
 
 .qr-img {
-  width: 148px;
-  height: 148px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 828 / 1124;
+  height: auto;
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--el-border-color-lighter);
   background: #fff;
+}
+
+@media (max-width: 720px) {
+  .qr-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>
