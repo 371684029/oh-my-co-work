@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | FurnaceSprite.vue | 按图集人物区裁掉单帧左右透明留白，放大右栏精灵且收起态保留全身
+2026-08-26 | M | frontend-components.md | 补充桌宠图集必须按人物可见区展示的样式约定
+2026-08-26 | M | CODE_CHANGE.md | 追加熔炉精灵可见尺寸修复条目
+
 2026-08-26 | M | FurnaceAvatar.vue | 头像 title 附带 chatgpt-pets 版权短声明
 2026-08-26 | M | FurnaceSprite.vue / FurnaceWorkspace.vue | 桌宠立绘旁展示 chatgpt-pets MIT 版权短声明
 2026-08-26 | M | About.vue / about.json | 关于页写明立绘从 chatgpt-pets git 复制
