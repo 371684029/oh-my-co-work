@@ -14,7 +14,7 @@
 2. 解压 → 双击 `start.bat`（或 `./start.sh`）→ 自动开浏览器  
 3. 关闭浏览器 **不会**停服务；**关闭启动窗口或 Ctrl+C** 即可结束服务  
 
-开发者本地打运行包：`npm run pack`（写入 `packages/oh-my-co-work-v{N}-{平台}-{架构}.zip`；同大版本覆盖，新大版本会删掉旧大版本包）。
+开发者本地打运行包：`npm run pack`（写入 `packages/oh-my-co-work-v{N}-{平台}-{架构}.zip`；同大版本覆盖，新大版本会删掉旧大版本包）。CI 不可用时，可在 Linux 用 `ACW_PACK_TARGET=win32-x64 npm run pack` 生成 Windows 包；脚本会按目标平台安装原生依赖，产出后仍须检查 `.node` 文件格式与 `BUILD_INFO.json`。
 
 ---
 

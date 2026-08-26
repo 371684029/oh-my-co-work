@@ -60,6 +60,22 @@ function platformTag() {
   return `${p}-${a}`
 }
 
+function packTarget() {
+  const tag = String(process.env.ACW_PACK_TARGET || platformTag()).trim()
+  const match = tag.match(/^(win32|linux|darwin)-(x64|arm64)$/)
+  if (!match) {
+    throw new Error(
+      `ACW_PACK_TARGET=${tag} 无效，应为 win32|linux|darwin 与 x64|arm64 的组合`,
+    )
+  }
+  return {
+    tag,
+    platform: match[1],
+    arch: match[2],
+    cross: tag !== platformTag(),
+  }
+}
+
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.copyFileSync(src, dest)
@@ -548,13 +564,20 @@ async function mainAsync() {
   const major = majorOf(ver)
   const sha = gitCommit()
   const builtAt = new Date().toISOString()
-  const plat = platformTag()
+  const target = packTarget()
+  const plat = target.tag
   const folderName = `oh-my-co-work-v${major}-${plat}`
   const stage = path.join(OUT_ROOT, folderName)
   const gitZipName = `${folderName}.zip`
   const gitZipPath = path.join(PACKAGES_DIR, gitZipName)
 
-  console.log('[pack] kind=runtime-bundle platform=', plat, 'version=', ver)
+  console.log(
+    '[pack] kind=runtime-bundle platform=',
+    plat,
+    'version=',
+    ver,
+    target.cross ? `(cross-pack from ${platformTag()})` : '',
+  )
 
   console.log('[pack] build web…')
   sh('npm', ['run', 'build', '-w', 'web'])
@@ -603,7 +626,15 @@ async function mainAsync() {
   )
 
   console.log('[pack] install runtime deps inside package (prebake node_modules)…')
-  sh('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], { cwd: stage })
+  sh('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], {
+    cwd: stage,
+    env: target.cross
+      ? {
+          npm_config_platform: target.platform,
+          npm_config_arch: target.arch,
+        }
+      : {},
+  })
 
   writeStartMjs(path.join(stage, 'start.mjs'))
   writeStartBat(path.join(stage, 'start.bat'))
