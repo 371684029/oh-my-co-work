@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | appSettings.js / furnace.test.js / furnaceLifecycle.test.js | 测试使用隔离设置文件，避免测试污染仓库配置
 2026-08-26 | M | .github/workflows/pack-release.yml | 三平台包推送失败即终止，latest 发布前强制校验同源与新熔炉图集
 2026-08-26 | M | scripts/pack-release.mjs / package.json | 运行包写 BUILD_INFO 与旁证元数据，并提供生产包校验命令
 2026-08-26 | A | scripts/validate-release-packages.mjs | 校验三平台版本、源码提交、旁证及桌宠资源一致性

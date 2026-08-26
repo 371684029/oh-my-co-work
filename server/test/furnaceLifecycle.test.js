@@ -6,6 +6,7 @@ import test from 'node:test'
 
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-furnace-life-'))
 process.env.ACW_DATA_ROOT = dataRoot
+process.env.ACW_APP_SETTINGS_PATH = path.join(dataRoot, 'app-settings.json')
 
 const { initDb } = await import('../src/db.js')
 initDb()
