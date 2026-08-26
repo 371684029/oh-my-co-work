@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-26 | M | packages/oh-my-co-work-v3-linux-x64.zip / packages 清单 | 从主线重打含 BUILD_INFO 与新版熔炉图集的 Linux 3.7.0 生产包
 2026-08-26 | M | appSettings.js / furnace.test.js / furnaceLifecycle.test.js | 测试使用隔离设置文件，避免测试污染仓库配置
 2026-08-26 | M | .github/workflows/pack-release.yml | 三平台包推送失败即终止，latest 发布前强制校验同源与新熔炉图集
 2026-08-26 | M | scripts/pack-release.mjs / package.json | 运行包写 BUILD_INFO 与旁证元数据，并提供生产包校验命令
