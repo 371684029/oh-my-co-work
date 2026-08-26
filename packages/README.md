@@ -8,14 +8,15 @@
 - **同大版本**：覆盖替换同平台 zip（小版本只留最新）
 - **新大版本**：只保留当前大版本包，旧大版本 zip 全部删除
 - **多平台**：linux / win32 / darwin 各一份（当前大版本内互不覆盖）
+- **发布门禁**：三平台包内 `BUILD_INFO.json` 的版本、源码提交必须一致，并包含当前熔炉图集；任一不符则不发布 latest
 
 ## 仓库内文件
 
-| 平台 | 文件 | 大小 |
-|------|------|------|
-| darwin-arm64 | [`oh-my-co-work-v3-darwin-arm64.zip`](./oh-my-co-work-v3-darwin-arm64.zip) | 22125521 |
-| linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 24041139 |
-| win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 22120374 |
+| 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
+|------|------|------|----------|----------|
+| darwin-arm64 | [`oh-my-co-work-v3-darwin-arm64.zip`](./oh-my-co-work-v3-darwin-arm64.zip) | 22125521 | `8a83a64` | 2026-08-21T02:05:17.000Z |
+| linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 24041698 | `605c008bdf3a` | 2026-08-26T07:50:48.962Z |
+| win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 22120374 | `8a83a64` | 2026-08-21T02:05:17.000Z |
 
 版本：`3.7.0`（大版本 v3）
 

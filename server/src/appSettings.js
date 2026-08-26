@@ -4,7 +4,9 @@ import { ROOT, getDb, parseJson } from './db.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { defaultStepFlow, normalizeFurnaceSurface } from '@acw/shared'
 
-const SETTINGS_PATH = path.join(ROOT, 'server/config/app-settings.json')
+const SETTINGS_PATH = process.env.ACW_APP_SETTINGS_PATH
+  ? path.resolve(process.env.ACW_APP_SETTINGS_PATH)
+  : path.join(ROOT, 'server/config/app-settings.json')
 
 const DEMO_MEMBER_NAMES = new Set(['echo', 'script_cmd'])
 const DEMO_GROUP_TITLES = new Set(['演示流'])

@@ -11,6 +11,7 @@
 | **同大版本 + 同平台** | **覆盖替换** 对应 zip（小版本只留最新） |
 | **新大版本** | 只保留当前大版本包，**旧大版本 zip 全部删除** |
 | **多平台** | 当前大版本内 linux / win32 / darwin 各一份 |
+| **一致性门禁** | latest 发布前会检查三平台包内 `BUILD_INFO.json`：版本和源码提交必须一致，且必须含当前熔炉图集；任一平台旧包或缺包都会阻止发布 |
 
 按本机系统选：
 
@@ -72,7 +73,7 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 
 运行后会在解压目录生成 `data/`（SQLite、日志、群报告等）。
 
-当前运行包版本以 [`packages/CURRENT.txt`](../packages/CURRENT.txt) 为准（大版本 v3，小版本随同平台 zip 覆盖）。
+当前运行包版本以 [`packages/CURRENT.txt`](../packages/CURRENT.txt) 为准（大版本 v3，小版本随同平台 zip 覆盖）。排障时同时看 `commit.<平台>`；正常发布后三个平台提交应一致。每个 zip 根目录还有 `BUILD_INFO.json`，可确认该包实际使用的源码提交和构建时间。
 
 ## 注意
 
