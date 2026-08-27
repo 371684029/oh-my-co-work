@@ -27,6 +27,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | CODE_CHANGE.md | 追加临时协助成员标签条目
 2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.2 → 3.7.3，收拢临时协助折叠态成员标签改动；about.json 新增 3.7.3 changelog
 2026-08-27 | M | README.md / docs/README.md | 版本徽标与路线图/版本表补 3.7.3
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从 3.7.3 提交重打三平台包，verify-pack.mjs 与三平台同源校验通过，Linux 包真机烟雾测试正常
 
 2026-08-27 | M | server/src/furnaceGrokInject.js | 修复熔炉启动报错「unexpected argument '--prompt' found」：官方 grok CLI 根本没有 --prompt 参数（-p/--single/--prompt-file/--prompt-json 都是单轮问答就退出的无头模式，会话式熔炉用不了）；删掉 withGrokPrompt 与 grokPtyLaunch 里拼 --prompt 的逻辑，短启动词改跟短合同一起写进 AGENTS.md + .grok/rules/session.md，交给 grok 自己按目录发现
 2026-08-27 | M | server/src/furnaceSituation.js | prepareFurnaceGrokLaunch/applyFurnaceGrokRuntime 不再依赖 withGrokPrompt/prompt 字段，command 直接用配置里的裸命令
