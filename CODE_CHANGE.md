@@ -27,6 +27,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | docs/README.md | 版本表补 3.7.1 行；「当前发布线」措辞改为 3.7.x
 2026-08-27 | M | docs/RELEASE-USER.md | verify-pack.mjs 示例命令版本号同步到 3.7.1
 2026-08-27 | M | CODE_CHANGE.md | 追加版本号提升条目
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从 3.7.1 版本号提升提交重打三平台包，BUILD_INFO/健康检查确认版本号为 3.7.1，verify-pack.mjs 与三平台同源校验通过，Linux 包真机烟雾测试正常
 
 2026-08-27 | M | web/src/components/FurnaceAvatar.vue | 修复大号头像（干活面 GUI「buddy」头像）脚部被圆形裁掉：贴底对齐（flex-end）时人物脚落在圆弧收窄到近零宽的切点上，改成居中对齐（align-items: center），只影响 lg；用临时调试页 `/__debug/avatar`（已删除，未进正式路由）实测头顶脚都完整可见后才提交，sm 尺寸目前全仓库未被实际使用，未一并调整
 2026-08-27 | M | CODE_CHANGE.md | 追加熔炉头像脚部裁切修复条目
