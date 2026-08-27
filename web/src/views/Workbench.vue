@@ -666,14 +666,6 @@
         <button
           type="button"
           class="wb-right-tab"
-          :class="{ active: rightTab === 'adapt' }"
-          @click="rightTab = 'adapt'"
-        >
-          适配
-        </button>
-        <button
-          type="button"
-          class="wb-right-tab"
           :class="{ active: rightTab === 'announce' }"
           @click="rightTab = 'announce'"
         >
@@ -681,8 +673,8 @@
         </button>
       </div>
 
-      <!-- Tab：流程 -->
-      <div v-show="rightTab === 'flow' || rightTab === 'adapt'" class="wb-right-pane">
+      <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
+      <div v-show="rightTab === 'flow'" class="wb-right-pane">
         <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
           已归档
           <template v-if="archiveOutcomeTag">
@@ -697,8 +689,8 @@
         <p v-else-if="offsiteActive" class="flow-offsite-hint">
           临时协助进行中
         </p>
-        <template v-if="visibleFlowEntries.length">
-          <template v-for="entry in visibleFlowEntries" :key="entry.key">
+        <template v-if="flowEntries.length">
+          <template v-for="entry in flowEntries" :key="entry.key">
             <div
               v-if="entry.type === 'skipped'"
               class="flow-skipped-group"
@@ -926,8 +918,7 @@
           </div>
         </template>
         <div v-else class="flow-empty">
-          <p v-if="rightTab === 'adapt'">本会话还没有带适配标记的步骤</p>
-          <p v-else>开聊后显示流程步骤</p>
+          <p>开聊后显示流程步骤</p>
         </div>
       </div>
 
@@ -3233,16 +3224,6 @@ const flowEntries = computed(() => {
 function nodeHasAdapt(n) {
   return !!(n?.input?.adapt || n?.output?.adapt)
 }
-
-const visibleFlowEntries = computed(() => {
-  if (rightTab.value !== 'adapt') return flowEntries.value
-  return flowEntries.value
-    .map((entry) => ({
-      ...entry,
-      nodes: (entry.nodes || []).filter((n) => nodeHasAdapt(n)),
-    }))
-    .filter((entry) => entry.nodes.length)
-})
 
 function isSkippedFlowGroupExpanded(entry) {
   return !!expandedSkippedFlowGroups.value[entry.key]

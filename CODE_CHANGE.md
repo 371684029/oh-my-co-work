@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | web/src/views/Workbench.vue | 收回右栏独立「适配」筛选 Tab：适配步骤在「流程」里节点标题上打角标即可认出来，不必再切一个 Tab；删掉 visibleFlowEntries 按 rightTab 过滤的逻辑，模板改用 flowEntries
+2026-08-27 | M | docs/frontend-components.md / crucible-3x.md | 同步「适配」不再单开筛选 Tab 的口径
+2026-08-27 | M | CODE_CHANGE.md | 追加收回适配筛选 Tab 条目
+
 2026-08-27 | M | server/src/terminal/terminalService.js | 修复熔炉 Windows 启动失败「File not found」：新增 resolveWindowsExecutable，spawn 前用 where 把裸命令解成带扩展名的绝对路径（node-pty 在 win32 上不像 cmd.exe 那样按 PATHEXT 补 .exe/.cmd 后缀，裸名找不到文件；GET /api/grok/status 用 where 探测「已装」和 pty.spawn 实际能不能起来，判断口径本来不一致）
 2026-08-27 | M | server/test/terminalService.test.js | 新增 5 个用例覆盖非 Windows 不变、已是路径跳过查找、命中/未命中/异常兜底
 2026-08-27 | M | docs/crucible-grok-client.md | §3.3 补记这条 Windows PATHEXT 坑与修复方式
