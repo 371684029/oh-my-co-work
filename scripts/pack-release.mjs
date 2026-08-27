@@ -76,6 +76,84 @@ function packTarget() {
   }
 }
 
+/**
+ * 原生 .node 文件的平台魔数（前几个字节），用来分辨「这份二进制到底是哪个平台的」。
+ * 交叉打包时，node-pty 等包的 install 脚本会按打包机（宿主）平台判断是否需要
+ * node-gyp 本地编译，与目标平台无关；结果 build/Release 里可能混进宿主平台的
+ * 二进制（例：在 Linux 上交叉打 win32 包，build/Release/pty.node 却是 ELF）。
+ * node-pty 运行时按 build/Release → build/Debug → prebuilds/<平台> 顺序 require，
+ * 错误架构的文件会 require 失败后静默 fallback 到正确的 prebuilds 副本，
+ * 功能上不算立即出错，但属于「蒙对」而不是「保证对」，交叉打包后必须清掉。
+ */
+const NATIVE_MAGIC_CHECK = {
+  linux: (buf) =>
+    buf.length >= 4 && buf[0] === 0x7f && buf[1] === 0x45 && buf[2] === 0x4c && buf[3] === 0x46,
+  win32: (buf) => buf.length >= 2 && buf[0] === 0x4d && buf[1] === 0x5a,
+  darwin: (buf) => {
+    if (buf.length < 4) return false
+    const magic = buf.readUInt32BE(0)
+    // 32/64-bit Mach-O，大端/小端两种字节序，以及 fat/universal 二进制
+    return [0xfeedface, 0xcefaedfe, 0xfeedfacf, 0xcffaedfe, 0xcafebabe, 0xbebafeca].includes(
+      magic,
+    )
+  },
+}
+
+function nativeBinaryMatchesPlatform(filePath, platform) {
+  const check = NATIVE_MAGIC_CHECK[platform]
+  if (!check) return true
+  const fd = fs.openSync(filePath, 'r')
+  try {
+    const buf = Buffer.alloc(4)
+    fs.readSync(fd, buf, 0, 4, 0)
+    return check(buf)
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+
+/**
+ * 只清「build/Release」「build/Debug」这两个 loadNativeModule 会最先尝试的目录里、
+ * 魔数与目标平台不符的 .node 文件；不动 prebuilds/** 下其它平台的副本（那些是
+ * node-pty 本身就会在任意平台随包携带的多平台预编译，无害，也不是本次目标）。
+ */
+function pruneMismatchedNativeBuilds(stageDir, platform) {
+  const nodeModulesDir = path.join(stageDir, 'node_modules')
+  if (!fs.existsSync(nodeModulesDir)) return
+  const stack = [nodeModulesDir]
+  while (stack.length) {
+    const dir = stack.pop()
+    let entries
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const full = path.join(dir, entry.name)
+      if (entry.name === 'build') {
+        for (const sub of ['Release', 'Debug']) {
+          const subDir = path.join(full, sub)
+          if (!fs.existsSync(subDir)) continue
+          for (const f of fs.readdirSync(subDir)) {
+            if (!f.endsWith('.node')) continue
+            const nodeFile = path.join(subDir, f)
+            if (!nativeBinaryMatchesPlatform(nodeFile, platform)) {
+              console.log(
+                `[pack] 清理交叉打包混入的宿主平台原生模块: ${path.relative(stageDir, nodeFile)}`,
+              )
+              fs.rmSync(nodeFile)
+            }
+          }
+        }
+      } else {
+        stack.push(full)
+      }
+    }
+  }
+}
+
 function copyFile(src, dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true })
   fs.copyFileSync(src, dest)
@@ -635,6 +713,11 @@ async function mainAsync() {
         }
       : {},
   })
+
+  if (target.cross) {
+    console.log('[pack] 交叉打包，核对原生模块架构（避免混入宿主平台二进制）…')
+    pruneMismatchedNativeBuilds(stage, target.platform)
+  }
 
   writeStartMjs(path.join(stage, 'start.mjs'))
   writeStartBat(path.join(stage, 'start.bat'))

@@ -85,6 +85,20 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 2. 私有仓库的 GitHub Actions 分钟数按月限额，且 `windows-latest` 记 **2×**、`macos-latest` 记 **10×** 消耗倍率；旧版 `pack-release.yml` 在**每个 `cursor/**` 分支的每次 push**上都跑一次三平台矩阵，很容易在几天内把免费额度提前烧光，进而卡住 Windows/macOS 包的更新（Linux 因为体量小，历史上多次是靠人工在开发机上重新打包顶上，而不是 CI 自动完成的）。
 3. 现版本 `pack-release.yml` 已收紧：只在 **push 到 `main`** 时才打三平台包（`cursor/**` 分支上的每次提交不再触发），并且三平台**全部改用 `ubuntu-latest` + `ACW_PACK_TARGET` 交叉打包**（`better-sqlite3` / `node-pty` 靠 `prebuild-install` 按目标平台下载预编译产物，不需要真机 `windows-latest` / `macos-latest`）。日常测试信号改由单独的 `ci.yml`（仅 `ubuntu-latest`，跑 `npm test` + 前端构建）负责，成本极低。
 
+## 打包即验：怎么保证每次都能打出可用包
+
+三层拦截，坏包不会悄悄混过去：
+
+1. **打包时清架构**：`scripts/pack-release.mjs` 交叉打包（`ACW_PACK_TARGET` 与宿主平台不同）时，会自动核对 `node_modules/**/build/{Release,Debug}` 下每个 `.node` 文件的魔数是否匹配目标平台，删掉宿主平台混进来的错误二进制（例如在 Linux 上交叉打 Windows 包时，`node-pty` 的 `node-gyp rebuild` 只认宿主平台，会在 `build/Release` 留下一份 Linux 版 `pty.node`——不删的话运行时靠 fallback 侥幸能用，但不是「保证对」）。
+2. **打完立刻验**：`pack-release.yml` 每个平台打完包后立刻跑 `scripts/verify-pack.mjs`，检查 `BUILD_INFO.json`、图集字节是否与源码一致、是否还含旧素材、包内 `.node` 文件架构是否匹配目标平台——**验证失败就不会提交进 git**，坏包连 `packages/` 都进不去（不像以前，打完直接 commit，坏的话要等三平台同源校验才发现，而那时已经进了 main）。
+3. **烟雾测试真起服务**：`linux-x64` 是唯一能在 `ubuntu-latest` 上真机跑起来的目标，打完包后会自动解压、`node start.mjs` 启动、curl `/api/health`，确认解压即用，不是文件格式对但实际起不来。`ci.yml` 里对每个 PR/分支也跑一次同样的 dry-run（不 commit），**在代码改动合并到 main 之前就能发现「打不出可用包」**，而不是等合并后才暴露。
+
+`scripts/verify-pack.mjs` 也可以单独手动跑：
+
+```bash
+node scripts/verify-pack.mjs --zip packages/oh-my-co-work-v3-win32-x64.zip --platform win32-x64 --version 3.7.0
+```
+
 ## 长期解决方案（不只是充值）
 
 除了给 GitHub Actions 账户加钱／提高消费上限，还有几种不花钱、能根治「额度用尽卡住三平台包」的办法，按见效速度排序：

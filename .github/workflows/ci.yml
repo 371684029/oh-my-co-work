@@ -1,7 +1,9 @@
 name: CI
 
-# 只跑测试，不打包：给所有分支/PR 一个便宜、快速的信号。
-# 三平台运行包只在 push 到 main 时由 pack-release.yml 触发（见该文件顶部注释）。
+# 给所有分支/PR 一个便宜、快速的信号：跑测试 + 打包 dry-run。
+# 三平台包正式提交只在 push 到 main 时由 pack-release.yml 做（见该文件顶部注释）；
+# 这里只在 ubuntu-latest 上打一次 linux-x64 包做验证，不 commit，纯粹为了在合并
+# 到 main 之前就抓到「代码改了但打不出可用包」的问题，而不是等合并后才发现。
 on:
   push:
   pull_request:
@@ -32,3 +34,36 @@ jobs:
 
       - name: Build web (sanity)
         run: npm run build -w web
+
+      # 合并前就抓「打不出可用包」：dry-run 打 linux-x64 包，验证结构 + 真机起服务，
+      # 不 commit（本 job 的 packages/ 改动只存在于这次 runner 的临时工作区）。
+      - name: Pack + smoke test (dry run, not committed)
+        run: |
+          set -euo pipefail
+          npm run pack
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          node scripts/verify-pack.mjs \
+            --zip "packages/oh-my-co-work-v${MAJOR}-linux-x64.zip" \
+            --platform linux-x64 \
+            --version "$VER"
+          STAGE="/tmp/acw-ci-pack-smoke"
+          rm -rf "$STAGE" && mkdir -p "$STAGE"
+          unzip -q "packages/oh-my-co-work-v${MAJOR}-linux-x64.zip" -d "$STAGE"
+          cd "$STAGE/oh-my-co-work-v${MAJOR}-linux-x64"
+          ACW_PORT=3799 node start.mjs > /tmp/acw-ci-pack-smoke.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3799/api/health > /tmp/acw-ci-pack-smoke-health.json 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          kill "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
+          if [ ! -s /tmp/acw-ci-pack-smoke-health.json ]; then
+            echo "[smoke] /api/health 未返回，日志如下：" >&2
+            cat /tmp/acw-ci-pack-smoke.log >&2
+            exit 1
+          fi
+          cat /tmp/acw-ci-pack-smoke-health.json

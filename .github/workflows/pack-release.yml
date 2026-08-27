@@ -46,6 +46,46 @@ jobs:
           ACW_PACK_TARGET: ${{ matrix.target }}
         run: npm run pack
 
+      - name: Verify packed zip
+        run: |
+          set -euo pipefail
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          node scripts/verify-pack.mjs \
+            --zip "packages/oh-my-co-work-v${MAJOR}-${{ matrix.target }}.zip" \
+            --platform "${{ matrix.target }}" \
+            --version "$VER"
+
+      # linux-x64 是唯一能在 ubuntu-latest 上真机跑起来的目标（win32/darwin 是交叉打包，
+      # 二进制格式对但换不了操作系统去执行）；借这个目标顺手做端到端烟雾测试，
+      # 确认打出来的包解压即用，不是只有文件格式对但实际起不来。
+      - name: Smoke test packed zip (linux-x64 only)
+        if: matrix.target == 'linux-x64'
+        run: |
+          set -euo pipefail
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          STAGE="/tmp/acw-pack-smoke"
+          rm -rf "$STAGE" && mkdir -p "$STAGE"
+          unzip -q "packages/oh-my-co-work-v${MAJOR}-linux-x64.zip" -d "$STAGE"
+          cd "$STAGE/oh-my-co-work-v${MAJOR}-linux-x64"
+          ACW_PORT=3799 node start.mjs > /tmp/acw-pack-smoke.log 2>&1 &
+          PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3799/api/health > /tmp/acw-pack-smoke-health.json 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          kill "$PID" 2>/dev/null || true
+          wait "$PID" 2>/dev/null || true
+          if [ ! -s /tmp/acw-pack-smoke-health.json ]; then
+            echo "[smoke] /api/health 未返回，日志如下：" >&2
+            cat /tmp/acw-pack-smoke.log >&2
+            exit 1
+          fi
+          cat /tmp/acw-pack-smoke-health.json
+          node -e "const h=require('/tmp/acw-pack-smoke-health.json'); if (!h.ok) { console.error('health ok=false'); process.exit(1); } console.log('[smoke] sqliteDriver=' + h.sqliteDriver);"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

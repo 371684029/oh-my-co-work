@@ -22,6 +22,14 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | A | scripts/verify-pack.mjs | 单个刚打好的 zip 立即验证：BUILD_INFO、图集字节与源码一致、无旧素材、.node 原生模块架构与目标平台匹配
+2026-08-27 | M | scripts/pack-release.mjs | 新增 pruneMismatchedNativeBuilds：交叉打包后清掉 build/Release|Debug 里混入的宿主平台原生二进制（发现 node-pty 在 Linux 上交叉打 win32/darwin 包时会留一份 Linux pty.node，虽靠运行时 fallback 侥幸能用但不是保证对）
+2026-08-27 | A | server/test/verifyPack.test.js | 覆盖架构不符、图集字节不一致、旧素材未清、正常包通过四种场景
+2026-08-27 | M | .github/workflows/pack-release.yml | 每个平台打完包立刻跑 verify-pack.mjs，验证失败不再提交进 git；linux-x64 额外做真机烟雾测试（解压→起服务→curl /api/health）
+2026-08-27 | M | .github/workflows/ci.yml | 每个 PR/分支跑一次 linux-x64 打包 dry-run + 验证 + 烟雾测试（不 commit），合并前就能发现打包回归
+2026-08-27 | M | docs/RELEASE-USER.md | 补充「打包即验」三层拦截说明
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 用带原生模块架构清理的新脚本重打三平台包，三者同源、验证通过
+
 2026-08-26 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 合并到 main 后从同一提交重打三平台包，三者源码提交完全一致，通过发布同源校验；本机启动烟雾测试确认 Linux 包可正常起服务（better-sqlite3 驱动，非降级 node:sqlite）
 2026-08-26 | M | CODE_CHANGE.md | 追加三平台同源重打与烟雾测试条目
 
