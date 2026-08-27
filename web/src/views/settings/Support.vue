@@ -29,6 +29,11 @@
         <span>{{ data.wechat || '—' }}</span>
         <el-button v-if="data.wechat" link type="primary" @click="copy(data.wechat)">复制</el-button>
       </div>
+      <div class="contact-row">
+        <span class="contact-label">邮箱</span>
+        <el-link type="primary" :href="'mailto:' + data.email">{{ data.email || '—' }}</el-link>
+        <el-button v-if="data.email" link type="primary" @click="copy(data.email)">复制</el-button>
+      </div>
     </el-card>
 
     <el-card shadow="never" class="support-card support-card--like">
