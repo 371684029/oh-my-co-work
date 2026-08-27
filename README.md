@@ -28,8 +28,10 @@
 <p align="center"><sub>桌宠立绘复制自 <a href="https://github.com/xiongxianzhu/chatgpt-pets">chatgpt-pets</a>（MIT © 2026 zhuxiongxian / 贡献者）：李慕婉 v2 图集，闲置呼吸、干活忙碌、等人询问；戳一下挥手，悬停会看向指针。</sub></p>
 
 <img src="./docs/assets/screenshots/workbench-home.webp" alt="oh-my-co-work 工作台首页：居中欢迎区，右侧李慕婉桌宠" width="100%" />
+<p align="center"><sub>首页欢迎区 · 一键开聊演示流 · 右侧熔炉桌宠</sub></p>
 
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台，右侧为 chatgpt-pets 李慕婉桌宠" width="100%" />
+<p align="center"><sub>三栏工作台：左会话、中对话与闸门、右流程轨</sub></p>
 
 ## 为什么做它
 
@@ -115,7 +117,7 @@
 | 熔炉 | 右侧桌宠；干活面 GUI/TUI 同一条 grok；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清对话；短 AGENTS + rules 文件（不经命令行传 prompt）；GUI 附件写路径进同一进程 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
-| 场外协助 | `@成员` 临时插队，完成后回到主流程 |
+| 场外协助 | `@成员` 临时插队，完成后回到主流程；折叠态直接标出实际用了哪个成员 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown |
 | 会话治理 | 置顶、改名、删除（顶栏删除会从列表拿掉并清终端行）、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
@@ -148,6 +150,13 @@ npm run dev:server
 
 # 终端 2：Vue 工作台
 npm run dev:web
+```
+
+也可以一键启动（检查依赖、构建前端、起服务并打开浏览器）：
+
+```bash
+node start.mjs
+# Windows 也可双击 start.bat；macOS / Linux：./start.sh
 ```
 
 打开 <http://127.0.0.1:5173>，选择内置的「演示流」并点击开聊。工作台会通过 `/api/bootstrap` 领取本机令牌；`/api/health` 无需令牌，其余 `/api` 与 WebSocket 需要令牌。请用 `127.0.0.1`，少用 `localhost`。
@@ -243,6 +252,8 @@ packages/  可直接运行的三平台压缩包
 1. 先描述使用场景和希望解决的问题。
 2. 行为变化同步更新文档。
 3. 新执行体优先保持可插拔，不把具体工具写死在 Workflow 内核。
+
+技术交流也可到工作台 **设置 → 支持与交流**，邮箱 `371684029@qq.com`。
 
 如果这个项目让你的脚本、Agent 或 TUI 更容易协作，欢迎点一个 **Star**。
 它会帮助更多正在解决同类问题的人看到这个项目。
