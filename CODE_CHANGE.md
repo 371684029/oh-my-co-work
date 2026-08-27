@@ -28,6 +28,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | README.md / docs/README.md / docs/crucible-grok-client.md | 同步文档：短启动词经文件传，不经命令行；补充官方 CLI 无头模式与交互模式的区别说明
 2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.1 → 3.7.2，收拢本轮 grok --prompt 启动报错修复；about.json 新增 3.7.2 changelog
 2026-08-27 | M | CODE_CHANGE.md | 追加 grok --prompt 启动报错修复条目
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从 3.7.2 grok --prompt 修复提交重打三平台包，verify-pack.mjs 与三平台同源校验通过，Linux 包真机烟雾测试（含假 grok 二进制端到端验证）正常
 
 2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.0 → 3.7.1，收拢本轮熔炉桌宠/头像裁切、Windows 内嵌终端启动失败、适配 Tab 收回、打包流水线加固几项修复；about.json 新增 3.7.1 changelog
 2026-08-27 | M | README.md | 版本徽标与路线图补 3.7.1 条目
