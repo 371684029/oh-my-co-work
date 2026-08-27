@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "3.7.0",
+  "version": "3.7.1",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,18 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "3.7.1",
+      "date": "2026-08-27",
+      "title": "3.7.1：熔炉桌宠/头像裁切修复、Windows 内嵌终端启动失败修复",
+      "items": [
+        "熔炉桌宠图集按人物可见区裁掉透明边，右栏精灵不再显得过小。",
+        "熔炉干活面大号头像修复：贴底对齐让脚部落在圆形头像收窄的切点上被裁掉，改居中对齐。",
+        "修复 Windows 上内嵌终端「File not found」启动失败：node-pty 裸命令名解析不认 .exe/.cmd 后缀，spawn 前用 where 解成绝对路径（不止影响熔炉 grok，任何裸命令名脚本成员都受益）。",
+        "收回右栏独立「适配」筛选 Tab：适配步骤在流程轨节点标题上的角标已经够用。",
+        "三平台生产包发布流水线加固：打包后立即验证（含原生模块架构核对），CI 只在合并到 main 时打包并改用免计费倍率的 ubuntu-latest 交叉编译。"
+      ]
+    },
     {
       "version": "3.7.0",
       "date": "2026-08-20",

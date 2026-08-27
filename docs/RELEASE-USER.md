@@ -96,7 +96,7 @@ ACW_HEADLESS_BROWSER=1 node start.mjs
 `scripts/verify-pack.mjs` 也可以单独手动跑：
 
 ```bash
-node scripts/verify-pack.mjs --zip packages/oh-my-co-work-v3-win32-x64.zip --platform win32-x64 --version 3.7.0
+node scripts/verify-pack.mjs --zip packages/oh-my-co-work-v3-win32-x64.zip --platform win32-x64 --version 3.7.1
 ```
 
 ## 长期解决方案（不只是充值）
