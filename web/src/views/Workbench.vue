@@ -852,6 +852,9 @@
                     </div>
                     <div class="flow-step-meta">
                       {{ stepTypeLabel(n.step_type) }} · {{ statusLabel(n.status) || n.status }}
+                      <span v-if="offsiteInvokedLabel(n)" class="meta-offsite-member">
+                        · {{ offsiteInvokedLabel(n) }}
+                      </span>
                       <span v-if="reviewLabel(n)" class="meta-review" :class="'is-' + reviewAction(n)">
                         · {{ reviewLabel(n) }}
                       </span>
@@ -2323,6 +2326,37 @@ function offsiteEntryLabel(n) {
     offsiteMode.value
   if (mode === 'planned') return '计划'
   return '插队'
+}
+
+/**
+ * 临时协助实际 @ 到的成员——从结构化的 output.lastInvoked / output.assists[].invoked
+ * 里取真实成员名，不去猜 input.text 里的 "@xxx" 文字。可能有多轮、多个成员，去重后
+ * 按出现顺序返回，供展开前的标题/meta 行直接标出「用了哪个工具」。
+ */
+function offsiteInvokedMembers(n) {
+  if (!n || n.step_type !== 'offsite') return []
+  const out = n.output || {}
+  const names = []
+  const seen = new Set()
+  const collect = (list) => {
+    for (const item of Array.isArray(list) ? list : []) {
+      const name = String(item?.memberName || '').trim()
+      if (name && !seen.has(name)) {
+        seen.add(name)
+        names.push(name)
+      }
+    }
+  }
+  for (const assist of Array.isArray(out.assists) ? out.assists : []) {
+    collect(assist?.invoked)
+  }
+  collect(out.lastInvoked)
+  return names
+}
+
+function offsiteInvokedLabel(n) {
+  const names = offsiteInvokedMembers(n)
+  return names.length ? names.map((name) => `@${name}`).join('、') : ''
 }
 
 /** 审核三态：pending | approve | reject */
@@ -4417,6 +4451,11 @@ loadLists().then(() => {
 
 .meta-gate {
   color: var(--ecw-text-3, #8e8ea0);
+}
+
+.meta-offsite-member {
+  color: var(--el-color-primary, #409eff);
+  font-weight: 550;
 }
 
 .meta-review.is-pending {
