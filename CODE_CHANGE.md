@@ -28,7 +28,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | .github/workflows/pack-release.yml | 每个平台打完包立刻跑 verify-pack.mjs，验证失败不再提交进 git；linux-x64 额外做真机烟雾测试（解压→起服务→curl /api/health）
 2026-08-27 | M | .github/workflows/ci.yml | 每个 PR/分支跑一次 linux-x64 打包 dry-run + 验证 + 烟雾测试（不 commit），合并前就能发现打包回归
 2026-08-27 | M | docs/RELEASE-USER.md | 补充「打包即验」三层拦截说明
-2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 用带原生模块架构清理的新脚本重打三平台包，三者同源、验证通过
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 用带原生模块架构清理的新脚本重打三平台包，三者同源、verify-pack.mjs 与三平台同源校验均通过；Linux 包真机烟雾测试确认 /api/health 正常
 
 2026-08-26 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 合并到 main 后从同一提交重打三平台包，三者源码提交完全一致，通过发布同源校验；本机启动烟雾测试确认 Linux 包可正常起服务（better-sqlite3 驱动，非降级 node:sqlite）
 2026-08-26 | M | CODE_CHANGE.md | 追加三平台同源重打与烟雾测试条目
