@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | web/src/components/FurnaceAvatar.vue | 修复大号头像（干活面 GUI「buddy」头像）脚部被圆形裁掉：贴底对齐（flex-end）时人物脚落在圆弧收窄到近零宽的切点上，改成居中对齐（align-items: center），只影响 lg；用临时调试页 `/__debug/avatar`（已删除，未进正式路由）实测头顶脚都完整可见后才提交，sm 尺寸目前全仓库未被实际使用，未一并调整
+2026-08-27 | M | CODE_CHANGE.md | 追加熔炉头像脚部裁切修复条目
+
 2026-08-27 | M | scripts/verify-pack.mjs | 修复原生模块架构校验的盲区：新增 resolveLoadedNativeEntries，按 node-pty loadNativeModule 的真实优先级（build/Release→build/Debug→prebuilds/<平台>）挑出「运行时实际会加载」的 .node 文件再验证；此前交叉打包把 build/Release 里错误二进制清掉后，node-pty 真正加载的 prebuilds/<目标平台> 文件完全没被校验过
 2026-08-27 | M | server/test/verifyPack.test.js | 新增 resolveLoadedNativeEntries 单测 + 「prebuilds 里架构不符也能被抓出来」回归用例，复现并锁死上面这个此前会漏检的场景
 2026-08-27 | M | server/src/terminal/terminalService.js | resolveWindowsExecutable 的 where 超时从 4000ms 收紧到 1500ms，降低慢速 PATH 环境下阻塞事件循环的最坏情况；normalizePtyLaunch 导出并支持注入 platform/resolveExecutable，补上"win32 分支真的接上了 resolveWindowsExecutable"这层此前完全没测过的接线

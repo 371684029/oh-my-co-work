@@ -128,6 +128,9 @@ onUnmounted(() => {
 .furnace-avatar.is-lg {
   width: 108px;
   height: 108px;
+  /* 圆形头像贴底对齐时，人物脚部正好落在圆弧收窄到几乎零宽的切点附近，会被
+     border-radius 裁掉；改居中对齐，让脚部落在弦宽还够用的位置。 */
+  align-items: center;
   box-shadow: 0 10px 24px rgba(20, 16, 28, 0.14), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
