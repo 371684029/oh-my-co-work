@@ -8,8 +8,13 @@
  *   2. web/dist/assets/spritesheet-*.webp 存在，且与本仓库当前源素材字节一致
  *      （不是硬编码某个哈希——图集以后换代，这条检查依然有效）
  *   3. 不含已退役的 furnace-idle GIF/PNG
- *   4. 包内每个 .node 原生模块的魔数都符合目标平台（防交叉打包混入宿主平台二进制；
- *      与 pack-release.mjs 里的 pruneMismatchedNativeBuilds 互为验证）
+ *   4. 每个原生模块「运行时实际会加载」的那份 .node 魔数都符合目标平台（防交叉打包
+ *      混入宿主平台二进制；与 pack-release.mjs 里的 pruneMismatchedNativeBuilds
+ *      互为验证）。判断哪份会被加载，严格照抄 node-pty 的 loadNativeModule 顺序：
+ *      build/Release → build/Debug → prebuilds/<platform>-<arch>。
+ *      交叉打包会把 build/Release|Debug 里宿主平台的错误二进制删掉，这时"实际会
+ *      加载"的就变成 prebuilds/<目标平台> 那份——必须查它，不能因为它路径里带
+ *      prebuilds 就当成"别的平台的东西，不用管"跳过。
  *
  * 用法：node scripts/verify-pack.mjs --zip packages/xxx.zip --platform win32-x64
  */
@@ -54,6 +59,40 @@ function platformOf(tag) {
   return m[1]
 }
 
+// 匹配 .../node_modules/<pkg 或 @scope/pkg>/<build/Release|build/Debug|prebuilds/xxx>/<name>.node
+const NATIVE_MODULE_RE =
+  /^(.*\/node_modules\/(?:@[^/]+\/)?[^/]+)\/(build\/(?:Release|Debug)|prebuilds\/[^/]+)\/([^/]+\.node)$/
+
+/**
+ * 按 node-pty utils.js `loadNativeModule` 的真实优先级（build/Release → build/Debug →
+ * prebuilds/<platform>-<arch>），从包内条目里挑出每个原生模块「运行时实际会加载」的那一份。
+ * 同一个 <pkg>/<name>.node 可能在 build 和 prebuilds 下都有候选，只有排位最高的那份才会被用到。
+ * @param {string[]} entries
+ * @param {string} platformTag 例如 win32-x64
+ */
+export function resolveLoadedNativeEntries(entries, platformTag) {
+  const groups = new Map()
+  for (const entry of entries) {
+    const m = entry.match(NATIVE_MODULE_RE)
+    if (!m) continue
+    const [, pkgRoot, subpath, basename] = m
+    const key = `${pkgRoot}::${basename}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push({ entry, subpath })
+  }
+  const loaded = []
+  for (const candidates of groups.values()) {
+    const pick =
+      candidates.find((c) => c.subpath === 'build/Release') ||
+      candidates.find((c) => c.subpath === 'build/Debug') ||
+      candidates.find((c) => c.subpath === `prebuilds/${platformTag}`)
+    // 三个位置都没有目标平台的候选：这个原生模块在目标平台本来就加载不到任何文件，
+    // 交给运行时自己报错，这里不重复判断「该不该支持这个平台」。
+    if (pick) loaded.push(pick.entry)
+  }
+  return loaded
+}
+
 export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   if (!fs.existsSync(zipPath)) throw new Error(`找不到 zip: ${zipPath}`)
   const platform = platformOf(platformTag)
@@ -93,12 +132,9 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   }
 
   const nativeCheck = NATIVE_MAGIC_CHECK[platform]
-  const nativeEntries = entries.filter((e) => e.endsWith('.node'))
+  const loadedNativeEntries = resolveLoadedNativeEntries(entries, platformTag)
   const mismatched = []
-  for (const entry of nativeEntries) {
-    // build/Release、build/Debug 是运行时优先加载的路径；prebuilds/<其它平台>/ 只是
-    // node-pty 自带的多平台预编译，本来就不该、也不会在目标平台被加载，跳过不查。
-    if (!/\/(build\/(Release|Debug))\//.test(`/${entry}`)) continue
+  for (const entry of loadedNativeEntries) {
     const bytes = unzipBytes(zipPath, entry)
     if (!nativeCheck(bytes.subarray(0, 4))) {
       mismatched.push(entry)

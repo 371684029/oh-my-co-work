@@ -22,6 +22,16 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | scripts/verify-pack.mjs | 修复原生模块架构校验的盲区：新增 resolveLoadedNativeEntries，按 node-pty loadNativeModule 的真实优先级（build/Release→build/Debug→prebuilds/<平台>）挑出「运行时实际会加载」的 .node 文件再验证；此前交叉打包把 build/Release 里错误二进制清掉后，node-pty 真正加载的 prebuilds/<目标平台> 文件完全没被校验过
+2026-08-27 | M | server/test/verifyPack.test.js | 新增 resolveLoadedNativeEntries 单测 + 「prebuilds 里架构不符也能被抓出来」回归用例，复现并锁死上面这个此前会漏检的场景
+2026-08-27 | M | server/src/terminal/terminalService.js | resolveWindowsExecutable 的 where 超时从 4000ms 收紧到 1500ms，降低慢速 PATH 环境下阻塞事件循环的最坏情况；normalizePtyLaunch 导出并支持注入 platform/resolveExecutable，补上"win32 分支真的接上了 resolveWindowsExecutable"这层此前完全没测过的接线
+2026-08-27 | M | server/test/terminalService.test.js | 新增 3 个 normalizePtyLaunch 用例：win32 下正确接线、非 win32 走默认解析器不报错、shell 模式两平台产物独立于 resolveExecutable
+2026-08-27 | M | web/src/composables/furnacePetAtlas.js | 把 FurnaceSprite.vue 里内联的裁切算式（PET_CROP、croppedCellStyles）提到共享模块，便于用已有的 node:test 基础设施覆盖（该模块此前已有测试先例）
+2026-08-27 | M | web/src/components/FurnaceSprite.vue | 改用共享的 croppedCellStyles，去掉本地重复实现与未用到的 PET_ATLAS 引用；数值不变，纯重构
+2026-08-27 | M | server/test/furnacePetAtlas.test.js | 新增裁切回归测试：拿 ffmpeg 实测的每个可达帧人物边界（idle/running/waiting/waving/look）核对 PET_CROP 裁切窗口没有裁掉手脚——此前这段计算完全没有自动化测试保护
+2026-08-27 | M | docs/crucible-3x-plan.md / crucible-3x.md | 修一处遗漏：收回适配筛选 Tab 时漏更新的「流程轨 Tab」措辞
+2026-08-27 | M | CODE_CHANGE.md | 追加本轮 code review 整改条目
+
 2026-08-27 | M | web/src/views/Workbench.vue | 收回右栏独立「适配」筛选 Tab：适配步骤在「流程」里节点标题上打角标即可认出来，不必再切一个 Tab；删掉 visibleFlowEntries 按 rightTab 过滤的逻辑，模板改用 flowEntries
 2026-08-27 | M | docs/frontend-components.md / crucible-3x.md | 同步「适配」不再单开筛选 Tab 的口径
 2026-08-27 | M | CODE_CHANGE.md | 追加收回适配筛选 Tab 条目

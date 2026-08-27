@@ -236,6 +236,49 @@ test('resolveWindowsExecutable falls back to the bare command when `where` throw
   )
 })
 
+test('normalizePtyLaunch on win32 actually wires through resolveWindowsExecutable (not just tested in isolation)', () => {
+  const calls = []
+  const resolveExecutable = (cmd, opts) => {
+    calls.push([cmd, opts])
+    return 'C:\\Users\\a\\AppData\\Roaming\\npm\\grok.cmd'
+  }
+  const spec = terminalService.normalizePtyLaunch(
+    { cmd: 'grok', args: ['--prompt', 'hi'], shell: false },
+    { platform: 'win32', resolveExecutable },
+  )
+  assert.equal(spec.file, 'C:\\Users\\a\\AppData\\Roaming\\npm\\grok.cmd')
+  assert.deepEqual(spec.args, ['--prompt', 'hi'])
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][0], 'grok')
+  assert.equal(calls[0][1].platform, 'win32')
+})
+
+test('normalizePtyLaunch delegates to the real resolveWindowsExecutable by default, which no-ops off win32', () => {
+  // 不传 resolveExecutable：走生产默认值 resolveWindowsExecutable，它自己会按
+  // platform 判断要不要发起 `where` 查找；非 win32 时应该原样返回，不抛错。
+  const spec = terminalService.normalizePtyLaunch(
+    { cmd: 'grok', args: [], shell: false },
+    { platform: 'linux' },
+  )
+  assert.equal(spec.file, 'grok')
+})
+
+test('normalizePtyLaunch shell mode picks cmd.exe on win32 and $SHELL elsewhere, independent of resolveExecutable', () => {
+  const winSpec = terminalService.normalizePtyLaunch(
+    { cmd: 'echo hi', shell: true },
+    { platform: 'win32' },
+  )
+  assert.equal(winSpec.file, process.env.ComSpec || 'cmd.exe')
+  assert.deepEqual(winSpec.args, ['/d', '/s', '/c', 'echo hi'])
+
+  const unixSpec = terminalService.normalizePtyLaunch(
+    { cmd: 'echo hi', shell: true },
+    { platform: 'linux' },
+  )
+  assert.equal(unixSpec.file, process.env.SHELL || '/bin/sh')
+  assert.deepEqual(unixSpec.args, ['-lc', 'echo hi'])
+})
+
 test('keepAlive terminals resolve immediately and stay running', async () => {
   const sessionId = 'keepalive-shell'
   const started = Date.now()

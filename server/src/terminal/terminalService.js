@@ -201,12 +201,17 @@ function queueOutput(entry, data) {
  * `where` 解析出带扩展名的绝对路径，node-pty 收到绝对路径就不会走那段裸名搜索。
  * `run` 可注入，便于跨平台单测；解析失败或非 win32 时原样返回，不改变行为。
  */
+// `where` 正常几毫秒就回；4s 只是极端兜底。但 spawnSync 会阻塞事件循环，
+// 太长的超时在 PATH 里挂了慢速网络盘之类的少见环境下会拖住整个服务端。
+// 1.5s 依然远超正常耗时，同时把最坏情况的阻塞窗口收紧到能接受的范围。
+const WINDOWS_WHERE_TIMEOUT_MS = 1500
+
 export function resolveWindowsExecutable(cmd, { platform = process.platform, run = spawnSync } = {}) {
   if (platform !== 'win32') return cmd
   const raw = String(cmd || '').trim()
   if (!raw || raw.includes('/') || raw.includes('\\')) return cmd
   try {
-    const r = run('where', [raw], { encoding: 'utf8', timeout: 4000 })
+    const r = run('where', [raw], { encoding: 'utf8', timeout: WINDOWS_WHERE_TIMEOUT_MS })
     if (r?.status === 0) {
       const first = String(r.stdout || '')
         .split(/\r?\n/)
@@ -220,11 +225,19 @@ export function resolveWindowsExecutable(cmd, { platform = process.platform, run
   return cmd
 }
 
-function normalizePtyLaunch(launch) {
+/**
+ * `platform` / `resolveExecutable` 可注入，便于单测直接验证 win32 分支真的调用了
+ * resolveWindowsExecutable（而不是只测 resolveWindowsExecutable 本身，却从没验证过
+ * 这里真的接上了它）。生产路径不传参数，行为与之前完全一致。
+ */
+export function normalizePtyLaunch(
+  launch,
+  { platform = process.platform, resolveExecutable = resolveWindowsExecutable } = {},
+) {
   if (launch?.shell !== true) {
-    return { file: resolveWindowsExecutable(launch.cmd), args: launch.args || [] }
+    return { file: resolveExecutable(launch.cmd, { platform }), args: launch.args || [] }
   }
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     return {
       file: process.env.ComSpec || 'cmd.exe',
       args: ['/d', '/s', '/c', String(launch.cmd || '')],

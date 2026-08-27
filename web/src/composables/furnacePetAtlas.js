@@ -75,3 +75,38 @@ export function atlasCellStyle({ row, col, displayWidth, sheetUrl }) {
     backgroundPosition: `-${col * cw * scale}px -${row * ch * scale}px`,
   }
 }
+
+/**
+ * 图集单格（192px）左右各留了透明边；桌宠展示时按人物可见区裁掉这圈透明，
+ * 不然整格直接缩小会显得人物特别小（v1 曾经这样，见 CODE_CHANGE 2026-08-26）。
+ * x/width 是拿 ffmpeg alphaextract+bbox 量过 idle/running/waving/waiting/look
+ * 这几个 clipForFurnace() 实际会用到的行、每一帧的不透明像素范围后定出来的：
+ * 所有可达帧的 x1 都 ≥ 35、x2 都 ≤ 156，[32, 160] 留了几像素安全边。
+ * `jumping` / `failed` / `review` 三行更宽（部分帧 x2 到 173），但 clipForFurnace
+ * 永远不会返回这三个 clip，所以不用扩大裁切窗口去迁就它们。
+ */
+export const PET_CROP = {
+  x: 32,
+  width: 128,
+}
+
+/**
+ * 算出「裁到只剩人物可见区」之后，外层容器（wrap）和实际渲染的整格背景图（sheet）
+ * 各自要用的内联样式。wrap 配 overflow:hidden，sheet 用 marginLeft 把裁掉的左边
+ * 那部分透明区推出容器外，只露出中间 PET_CROP.width（等比缩放后）这一截。
+ */
+export function croppedCellStyles({ row, col, viewWidth, sheetUrl }) {
+  const scale = viewWidth / PET_CROP.width
+  const fullCellWidth = PET_ATLAS.cellWidth * scale
+  const height = Math.round(PET_ATLAS.cellHeight * scale)
+  return {
+    wrap: {
+      width: `${viewWidth}px`,
+      height: `${height}px`,
+    },
+    sheet: {
+      ...atlasCellStyle({ row, col, displayWidth: fullCellWidth, sheetUrl }),
+      marginLeft: `${-PET_CROP.x * scale}px`,
+    },
+  }
+}

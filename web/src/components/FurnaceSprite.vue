@@ -62,12 +62,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
 import {
-  PET_ATLAS,
   PET_CLIPS,
   PET_COPYRIGHT,
   PET_CREDIT_SHORT,
-  atlasCellStyle,
   clipForFurnace,
+  croppedCellStyles,
   frameDuration,
   lookCell,
   lookIndexFromPointer,
@@ -94,10 +93,8 @@ const WORK_LINES = ['在改东西，稍等。', '改完再叫你。', '这边忙
 const WAIT_LINES = ['等人拍板。', '轮到你了。', '我等你开口。']
 const POKE_LINES = ['嗯？', '要开就点「开熔炉」。', '我在听。']
 
-// 图集单格左右各留了约 1/6 透明区；桌宠展示按中间 128px 可见视口缩放，
-// 避免把 192px 整格压进容器后人物只剩约 48px 宽。
-const CELL_VIEW_X = 32
-const CELL_VIEW_W = 128
+// 裁切参数（PET_CROP）在 furnacePetAtlas.js 里统一定义并有回归测试守着，
+// 这里只决定「裁完之后展开态/收起态各显示多宽」。
 const DISPLAY_W = 128
 const PEEK_W = 56
 
@@ -148,33 +145,12 @@ const cell = computed(() => {
   return { row: clip.row, col }
 })
 
-/*
- * 保持图集定位由 atlasCellStyle 统一计算；这里只裁掉每格的透明边，
- * 不裁人物高度，因此展开和收起都能看到完整角色。
- */
-function croppedCellStyles(viewWidth) {
-  const scale = viewWidth / CELL_VIEW_W
-  const fullCellWidth = PET_ATLAS.cellWidth * scale
-  const height = Math.round(PET_ATLAS.cellHeight * scale)
-  return {
-    wrap: {
-      width: `${viewWidth}px`,
-      height: `${height}px`,
-    },
-    sheet: {
-      ...atlasCellStyle({
-        row: cell.value.row,
-        col: cell.value.col,
-        displayWidth: fullCellWidth,
-        sheetUrl,
-      }),
-      marginLeft: `${-CELL_VIEW_X * scale}px`,
-    },
-  }
-}
-
-const displayCellStyles = computed(() => croppedCellStyles(DISPLAY_W))
-const peekCellStyles = computed(() => croppedCellStyles(PEEK_W))
+const displayCellStyles = computed(() =>
+  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: DISPLAY_W, sheetUrl }),
+)
+const peekCellStyles = computed(() =>
+  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: PEEK_W, sheetUrl }),
+)
 const sheetWrapStyle = computed(() => displayCellStyles.value.wrap)
 const peekWrapStyle = computed(() => peekCellStyles.value.wrap)
 const sheetStyle = computed(() => displayCellStyles.value.sheet)
