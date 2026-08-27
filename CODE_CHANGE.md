@@ -31,6 +31,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | server/test/furnacePetAtlas.test.js | 新增裁切回归测试：拿 ffmpeg 实测的每个可达帧人物边界（idle/running/waiting/waving/look）核对 PET_CROP 裁切窗口没有裁掉手脚——此前这段计算完全没有自动化测试保护
 2026-08-27 | M | docs/crucible-3x-plan.md / crucible-3x.md | 修一处遗漏：收回适配筛选 Tab 时漏更新的「流程轨 Tab」措辞
 2026-08-27 | M | CODE_CHANGE.md | 追加本轮 code review 整改条目
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从 code review 整改提交重打三平台包，修复后的 verify-pack.mjs 校验通过，三平台同源，Linux 包真机烟雾测试正常
 
 2026-08-27 | M | web/src/views/Workbench.vue | 收回右栏独立「适配」筛选 Tab：适配步骤在「流程」里节点标题上打角标即可认出来，不必再切一个 Tab；删掉 visibleFlowEntries 按 rightTab 过滤的逻辑，模板改用 flowEntries
 2026-08-27 | M | docs/frontend-components.md / crucible-3x.md | 同步「适配」不再单开筛选 Tab 的口径
