@@ -20,8 +20,6 @@ import {
   maybeInjectGrokFurnace,
   resolveGrokWorkspaceDir,
   ensureGrokWorkspace,
-  withGrokPrompt,
-  buildGrokLaunchPrompt,
   grokRulesWriteAllowed,
   grokPtyLaunch,
 } from './furnaceGrokInject.js'
@@ -190,14 +188,12 @@ export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
     if (allowed) pack.grok = maybeInjectGrokFurnace(pack, { grok })
   }
   if (!pack) pack = activateFurnaceRole(currentFurnaceRole())
-  const prompt = grok.configured !== false ? buildGrokLaunchPrompt(pack.role) : ''
   return {
     ok: true,
     role: pack.role,
     label: pack.label,
     cwd,
-    command: withGrokPrompt(grok.command || 'grok', prompt),
-    prompt,
+    command: grok.command || 'grok',
     wrote: !!pack.grok?.wrote,
     agentsMd: pack.grok?.agentsMd || path.join(cwd, 'AGENTS.md'),
     activeMd: pack.grok?.activeMd || pack.activeMd,
@@ -210,10 +206,9 @@ export function applyFurnaceGrokRuntime({ member, sessionId, command } = {}) {
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
   const rawCmd = String(command || 'grok').trim() || 'grok'
   return {
-    command: withGrokPrompt(rawCmd, prepared.prompt),
-    launch: grokPtyLaunch(rawCmd, prepared.prompt),
+    command: rawCmd,
+    launch: grokPtyLaunch(rawCmd),
     cwd: prepared.cwd,
-    prompt: prepared.prompt,
     wrote: prepared.wrote,
   }
 }

@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | server/src/furnaceGrokInject.js | 修复熔炉启动报错「unexpected argument '--prompt' found」：官方 grok CLI 根本没有 --prompt 参数（-p/--single/--prompt-file/--prompt-json 都是单轮问答就退出的无头模式，会话式熔炉用不了）；删掉 withGrokPrompt 与 grokPtyLaunch 里拼 --prompt 的逻辑，短启动词改跟短合同一起写进 AGENTS.md + .grok/rules/session.md，交给 grok 自己按目录发现
+2026-08-27 | M | server/src/furnaceSituation.js | prepareFurnaceGrokLaunch/applyFurnaceGrokRuntime 不再依赖 withGrokPrompt/prompt 字段，command 直接用配置里的裸命令
+2026-08-27 | M | server/test/furnaceGrokInject.test.js | 更新测试匹配新行为：启动词断言出现在 AGENTS.md/rules 文件里而不是 argv；grokPtyLaunch 不再拼 --prompt
+2026-08-27 | M | README.md / docs/README.md / docs/crucible-grok-client.md | 同步文档：短启动词经文件传，不经命令行；补充官方 CLI 无头模式与交互模式的区别说明
+2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.1 → 3.7.2，收拢本轮 grok --prompt 启动报错修复；about.json 新增 3.7.2 changelog
+2026-08-27 | M | CODE_CHANGE.md | 追加 grok --prompt 启动报错修复条目
+
 2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.0 → 3.7.1，收拢本轮熔炉桌宠/头像裁切、Windows 内嵌终端启动失败、适配 Tab 收回、打包流水线加固几项修复；about.json 新增 3.7.1 changelog
 2026-08-27 | M | README.md | 版本徽标与路线图补 3.7.1 条目
 2026-08-27 | M | docs/README.md | 版本表补 3.7.1 行；「当前发布线」措辞改为 3.7.x

@@ -14,7 +14,6 @@ const {
   FURNACE_AGENTS_BEGIN,
   upsertMarkedBlock,
   maybeInjectGrokFurnace,
-  withGrokPrompt,
   buildGrokLaunchPrompt,
   defaultGrokWorkspaceDir,
   resolveGrokWorkspaceDir,
@@ -31,7 +30,7 @@ test('launch prompt stays short so grok does not eat ACTIVE.md', () => {
   }
 })
 
-test('inject writes a compact AGENTS block', () => {
+test('inject writes a compact AGENTS block, including the launch instruction (no CLI --prompt anymore)', () => {
   const pack = activateFurnaceRole(FURNACE_ROLE.SESSION, {
     situation: { intent: '先把数据拉下来', groupTitle: '采集' },
   })
@@ -46,7 +45,12 @@ test('inject writes a compact AGENTS block', () => {
   assert.ok(agents.includes('oh-my-co-work'))
   assert.ok(agents.includes('先把数据拉下来'))
   assert.ok(!agents.includes('## Prompt'))
-  assert.ok(withGrokPrompt('grok', buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)).includes('--prompt'))
+  // 官方 grok CLI 没有能给交互式会话预填第一句话的参数（-p/--single/
+  // --prompt-file/--prompt-json 都是单轮问答就退出的无头模式），短启动词
+  // 只能跟着规则一起写进 AGENTS.md，交给 grok 自己按目录发现。
+  assert.ok(agents.includes(buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)))
+  const sessionRule = fs.readFileSync(path.join(cwd, '.grok', 'rules', 'session.md'), 'utf8')
+  assert.ok(sessionRule.includes(buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)))
 })
 
 test('refuses ~/.grok and respects writeRules off', () => {
@@ -75,13 +79,18 @@ test('upsert keeps handwritten notes', () => {
   assert.equal(text.includes('\na\n'), false)
 })
 
-test('grok spawn uses argv so prompt is not passed through cmd.exe', () => {
-  const prompt = buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)
-  const spec = grokPtyLaunch('grok', prompt)
+test('grok spawn uses argv, no --prompt (real CLI has no such flag; it errors "unexpected argument")', () => {
+  const spec = grokPtyLaunch('grok')
   assert.equal(spec.shell, false)
   assert.equal(spec.cmd, 'grok')
-  assert.deepEqual(spec.args, ['--prompt', prompt])
-  assert.equal(tokenizeCommand('grok --prompt "a b"').join('|'), 'grok|--prompt|a b')
+  assert.deepEqual(spec.args, [])
+  assert.equal(tokenizeCommand('grok --allow read').join('|'), 'grok|--allow|read')
+})
+
+test('grokPtyLaunch keeps any user-configured extra args (e.g. --cwd) untouched', () => {
+  const spec = grokPtyLaunch('grok --cwd "/my project"')
+  assert.equal(spec.cmd, 'grok')
+  assert.deepEqual(spec.args, ['--cwd', '/my project'])
 })
 
 test('default cwd is furnace home', () => {

@@ -143,7 +143,7 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 - `data/furnace/AGENTS.md` — **短合同**标记块（角色 + 用户能干什么 + 一两行此刻）；**不写** `~/.grok/AGENTS.md`  
 - `data/furnace/memory/*.md` — 本机记忆（种子只复制一次）
 
-开熔炉时给 `grok` 一条 **短 `--prompt`**（约百字）：点名角色，让她用不超过四句介绍能力，然后停。**不要把 ACTIVE 全文灌进启动词或聊天。**
+开熔炉时把一条**短启动词**（约百字：点名角色，让她用不超过四句介绍能力，然后停）跟着短合同一起写进 `AGENTS.md` + `.grok/rules/session.md`，交给 grok 自己按目录发现——**不经命令行传**。官方 grok CLI 没有能给交互式会话预填第一句话的参数：`-p`/`--single`/`--prompt-file`/`--prompt-json` 都是「单轮问答，答完就退出」的无头模式，会话式熔炉用不了；早期版本以为存在的裸 `--prompt <text>` 参数其实根本不存在（真机上会报 `error: unexpected argument '--prompt' found`）。**不要把 ACTIVE 全文灌进启动词或聊天。**
 
 系统气泡只报「熔炉本轮：xxx」，**不把全文灌进群聊**。
 

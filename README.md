@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-3.7.1-409eff?style=flat-square" alt="version 3.7.1" />
+  <img src="https://img.shields.io/badge/version-3.7.2-409eff?style=flat-square" alt="version 3.7.2" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -101,7 +101,7 @@
 
 - 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。立绘从该 git 复制，**MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者**（见 `web/src/assets/pets/LICENSE`）。
 - 默认 **GUI**：欢迎卡说明能干啥；Grok 开口后只显示当前屏可读正文（去 TUI 框线和底栏）。底部输入、短指令芯片。附件落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程（不是 Grok 原生传文件）。只留一张大卡通头像。
-- 开炉写入 `data/furnace/AGENTS.md` 短规则 + 约百字 `--prompt`（Windows 走 argv，不经 cmd 拼中文）。长文在 `ACTIVE.md`，禁止复述。不写 `~/.grok/AGENTS.md`。
+- 开炉写入 `data/furnace/AGENTS.md` 短规则 + `.grok/rules/session.md`（官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起写进去，由 grok 自己按目录发现）。长文在 `ACTIVE.md`，禁止复述。不写 `~/.grok/AGENTS.md`。
 - **TUI**：原 Grok 终端。菜单和快捷键走这里。隐藏时不把 PTY 缩成几列。首次进入后切皮不拆终端。
 - **缩小到三栏**：熔炉仍在中栏；**返回群聊**只关这层皮，进程还在。
 - 设置「开熔炉默认」：铺满 GUI / 铺满 TUI。顶栏切换只改这一轮，不写回设置。
@@ -112,7 +112,7 @@
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
 | 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
-| 熔炉 | 右侧桌宠；干活面 GUI/TUI 同一条 grok；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清对话；短 AGENTS + `--prompt`；GUI 附件写路径进同一进程 |
+| 熔炉 | 右侧桌宠；干活面 GUI/TUI 同一条 grok；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清对话；短 AGENTS + rules 文件（不经命令行传 prompt）；GUI 附件写路径进同一进程 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程 |
@@ -230,6 +230,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 3.5.0：熔炉铺满 GUI（可缩小回三栏、可切 TUI）
 - [x] 3.7.0 最终封板：chatgpt-pets 桌宠图集（李慕婉）、干活面头像、GUI 可读正文与短合同开炉、GUI 附件（路径写入 PTY）、Grok 原理文档
 - [x] 3.7.1：熔炉桌宠/头像裁切修复、修复 Windows 内嵌终端「File not found」启动失败、收回适配筛选 Tab、三平台生产包发布流水线加固（打包即验 + CI 成本收紧）
+- [x] 3.7.2：修复熔炉启动报错 `unexpected argument '--prompt'`——官方 grok CLI 没有 --prompt 参数，短启动词改经 AGENTS.md/rules 文件传，不再走命令行
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

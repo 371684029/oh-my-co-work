@@ -1,6 +1,12 @@
 /**
- * 把短合同写入 Grok cwd 的 AGENTS 标记块；启动只用短 --prompt。
- * 长文在 ACTIVE.md，对话里不复述。禁止写 ~/.grok/AGENTS.md。
+ * 把短合同写入 Grok cwd 的 AGENTS 标记块 + .grok/rules/session.md。
+ * 官方 grok CLI 没有能给交互式会话预填第一句话的参数——`-p`/`--single`/
+ * `--prompt-file`/`--prompt-json` 都是「单轮问答，答完就退出」的无头模式，
+ * 会话式熔炉不能用；早期版本以为存在的 `--prompt <text>` 参数其实根本不
+ * 存在（真机验证时报 error: unexpected argument '--prompt' found）。
+ * 短启动词现在跟着 AGENTS 标记块一起写进 rules 文件，由 grok 自己按目录
+ * 发现（同 `grok inspect` 列出的 rules/skills/plugins/hooks 机制），不再
+ * 经命令行传。长文仍在 ACTIVE.md，对话里不复述。禁止写 ~/.grok/AGENTS.md。
  */
 import fs from 'node:fs'
 import os from 'node:os'
@@ -52,15 +58,7 @@ export function ensureGrokWorkspace(dir) {
   return cwd
 }
 
-export function withGrokPrompt(command, prompt) {
-  const base = String(command || 'grok').trim() || 'grok'
-  const text = String(prompt || '').trim()
-  if (!text) return base
-  if (/(^|\s)--prompt(\s|=)/.test(base)) return base
-  return `${base} --prompt ${JSON.stringify(text)}`
-}
-
-/** 把 grok 命令拆成可 spawn 的 argv，避免 Windows cmd 把中文 --prompt 弄乱。 */
+/** 把 grok 命令拆成可 spawn 的 argv（Windows 上避免走 cmd 转义）。 */
 export function tokenizeCommand(command) {
   const s = String(command || '').trim()
   const out = []
@@ -90,13 +88,10 @@ export function tokenizeCommand(command) {
   return out
 }
 
-export function grokPtyLaunch(command, prompt) {
+export function grokPtyLaunch(command) {
   const tokens = tokenizeCommand(command || 'grok')
   const exe = tokens[0] || 'grok'
   const args = tokens.slice(1)
-  const text = String(prompt || '').trim()
-  const hasPrompt = args.some((a) => a === '--prompt' || String(a).startsWith('--prompt='))
-  if (text && !hasPrompt) args.push('--prompt', text)
   return { cmd: exe, args, shell: false, label: 'grok' }
 }
 
@@ -170,6 +165,9 @@ function composeAgentsInner(pack) {
     '用户可以：问进度/缺什么、适配接到工作台、过闸只说通过或拒绝、打开 inbox/ 相对路径附件。',
     '菜单和模型在 TUI。需要细节再读 ACTIVE.md，不要把全文贴进对话。',
     sit ? `此刻：${sit}` : '',
+    // 官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起
+    // 写进来，交给 grok 自己按目录发现（见本文件头注释），不再经命令行传。
+    `启动：${buildGrokLaunchPrompt(pack?.role)}`,
   ]
     .filter(Boolean)
     .join('\n')
