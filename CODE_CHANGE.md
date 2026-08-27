@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | README.md | 按当前界面重拍全部 README 截图：去掉已收回的「适配」Tab、内嵌 TUI 改为真实满屏（不再用旧 Release Copilot 示意）、熔炉干活面改为 GUI 欢迎卡+头像；alt 文案同步
+2026-08-27 | M | docs/assets/screenshots/*.webp | 重拍 workbench-home / overview / chat-terminal-collaboration / embedded-tui-fullscreen / terminal-member-settings / furnace-grok-guide / furnace-workspace-chat
+2026-08-27 | M | docs/assets/furnace-pet.gif | 桌宠示意 GIF 改为 chatgpt-pets 李慕婉 idle 图集（裁掉单格左右透明边）
+2026-08-27 | M | .gitattributes | webp/gif/jpeg 标为 binary，避免文档截图被当成文本做换行转换
+2026-08-27 | M | CODE_CHANGE.md | 追加 README 截图重拍条目
+
 2026-08-27 | M | server/config/support.json | 支持与交流页补上邮箱 371684029@qq.com（真实运行配置，example 模板文件保持留空不动）
 2026-08-27 | M | web/src/views/settings/Support.vue | 技术交流卡新增「邮箱」一行：mailto 链接 + 复制按钮，与手机/微信同款交互
 2026-08-27 | M | CODE_CHANGE.md | 追加支持与交流补邮箱条目

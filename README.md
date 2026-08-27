@@ -65,7 +65,7 @@
 
 ## 2.0：真实 TUI，不是终端模拟
 
-<img src="./docs/assets/screenshots/embedded-tui-fullscreen.webp" alt="oh-my-co-work 内嵌 TUI 全屏工作区" width="100%" />
+<img src="./docs/assets/screenshots/embedded-tui-fullscreen.webp" alt="oh-my-co-work 内嵌 TUI 满屏工作区" width="100%" />
 
 服务端使用 `node-pty`，前端使用 `xterm.js`。普通命令继续走原有 pipe 模式；交互式 CLI 可选择内嵌终端：
 
@@ -97,7 +97,7 @@
 
 <img src="./docs/assets/screenshots/furnace-grok-guide.webp" alt="点熔炉桌宠后弹出的 Grok Build 教程" width="100%" />
 
-<img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：去颜色画面、底部输入、可缩小回三栏" width="100%" />
+<img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：GUI 欢迎卡、李慕婉头像、底部输入、可缩小回三栏" width="100%" />
 
 - 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。立绘从该 git 复制，**MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者**（见 `web/src/assets/pets/LICENSE`）。
 - 默认 **GUI**：欢迎卡说明能干啥；Grok 开口后只显示当前屏可读正文（去 TUI 框线和底栏）。底部输入、短指令芯片。附件落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程（不是 Grok 原生传文件）。只留一张大卡通头像。
