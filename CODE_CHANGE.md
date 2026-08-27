@@ -26,6 +26,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | server/test/terminalService.test.js | 新增 5 个用例覆盖非 Windows 不变、已是路径跳过查找、命中/未命中/异常兜底
 2026-08-27 | M | docs/crucible-grok-client.md | §3.3 补记这条 Windows PATHEXT 坑与修复方式
 2026-08-27 | M | CODE_CHANGE.md | 追加熔炉 Windows 启动失败修复条目
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从熔炉 Windows 启动失败修复提交重打三平台包，verify-pack.mjs 与三平台同源校验通过，Linux 包真机烟雾测试正常
 
 2026-08-27 | A | scripts/verify-pack.mjs | 单个刚打好的 zip 立即验证：BUILD_INFO、图集字节与源码一致、无旧素材、.node 原生模块架构与目标平台匹配
 2026-08-27 | M | scripts/pack-release.mjs | 新增 pruneMismatchedNativeBuilds：交叉打包后清掉 build/Release|Debug 里混入的宿主平台原生二进制（发现 node-pty 在 Linux 上交叉打 win32/darwin 包时会留一份 Linux pty.node，虽靠运行时 fallback 侥幸能用但不是保证对）
