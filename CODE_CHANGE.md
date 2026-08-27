@@ -27,6 +27,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 2026-08-27 | M | CODE_CHANGE.md | 追加支持与交流补邮箱条目
 2026-08-27 | M | package.json / web/package.json / server/package.json / shared/package.json / server/config/about.json | 版本号 3.7.3 → 3.7.4，收拢支持与交流补邮箱改动；about.json 新增 3.7.4 changelog
 2026-08-27 | M | README.md / docs/README.md | 版本徽标与路线图/版本表补 3.7.4
+2026-08-27 | M | packages/oh-my-co-work-v3-*.zip / packages 清单 | 从 3.7.4 提交重打三平台包，verify-pack.mjs 与三平台同源校验通过，Linux 包真机烟雾测试正常
 
 2026-08-27 | M | web/src/views/Workbench.vue | 临时协助节点折叠状态也标出实际 @ 的成员：新增 offsiteInvokedMembers/offsiteInvokedLabel，读 output.assists[].invoked / output.lastInvoked 结构化数据（不猜 input.text 里的 "@xxx"），meta 行显示成「临时协助 · @成员 · 完成 · 通过」，不用展开就知道用了哪个工具；真机触发一次 @示例回声 临时协助截图确认
 2026-08-27 | M | docs/frontend-components.md | 补充场外协助折叠态标成员的口径

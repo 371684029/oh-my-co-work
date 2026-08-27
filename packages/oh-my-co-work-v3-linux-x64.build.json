@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "name": "oh-my-co-work",
   "kind": "runtime-bundle",
-  "version": "3.7.3",
+  "version": "3.7.4",
   "major": 3,
   "platform": "linux-x64",
-  "sourceCommit": "9a6ef1cf13aa6959d22336f220db9978f9a68cdf",
-  "builtAt": "2026-08-27T09:40:58.017Z",
+  "sourceCommit": "9cb15600d2ec51667104700ccb54632a350bf184",
+  "builtAt": "2026-08-27T09:50:53.973Z",
   "needsNpmInstall": false,
   "requiredAssets": [
     "web/dist/assets/spritesheet-*.webp"
