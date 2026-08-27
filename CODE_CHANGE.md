@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-27 | M | server/src/terminal/terminalService.js | 修复熔炉 Windows 启动失败「File not found」：新增 resolveWindowsExecutable，spawn 前用 where 把裸命令解成带扩展名的绝对路径（node-pty 在 win32 上不像 cmd.exe 那样按 PATHEXT 补 .exe/.cmd 后缀，裸名找不到文件；GET /api/grok/status 用 where 探测「已装」和 pty.spawn 实际能不能起来，判断口径本来不一致）
+2026-08-27 | M | server/test/terminalService.test.js | 新增 5 个用例覆盖非 Windows 不变、已是路径跳过查找、命中/未命中/异常兜底
+2026-08-27 | M | docs/crucible-grok-client.md | §3.3 补记这条 Windows PATHEXT 坑与修复方式
+2026-08-27 | M | CODE_CHANGE.md | 追加熔炉 Windows 启动失败修复条目
+
 2026-08-27 | A | scripts/verify-pack.mjs | 单个刚打好的 zip 立即验证：BUILD_INFO、图集字节与源码一致、无旧素材、.node 原生模块架构与目标平台匹配
 2026-08-27 | M | scripts/pack-release.mjs | 新增 pruneMismatchedNativeBuilds：交叉打包后清掉 build/Release|Debug 里混入的宿主平台原生二进制（发现 node-pty 在 Linux 上交叉打 win32/darwin 包时会留一份 Linux pty.node，虽靠运行时 fallback 侥幸能用但不是保证对）
 2026-08-27 | A | server/test/verifyPack.test.js | 覆盖架构不符、图集字节不一致、旧素材未清、正常包通过四种场景

@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import * as pty from 'node-pty'
 import { uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
@@ -191,9 +192,37 @@ function queueOutput(entry, data) {
   }
 }
 
+/**
+ * Windows 上 node-pty（ConPTY/winpty）解析裸命令名时只按 PATH 逐目录找**完全同名**
+ * 的文件，不像 cmd.exe / `where` 那样按 PATHEXT 补 .exe/.cmd/.bat 后缀去试。
+ * 很多全局 CLI（grok、npm 装的工具等）在 Windows 上其实是 grok.exe / xxx.cmd，
+ * 裸名 "grok" 直接扔给 pty.spawn（shell:false）会报 "File not found: "——
+ * JS 侧 `where grok` 却能找到，两边判断不一致。这里在真正 spawn 前，用同一套
+ * `where` 解析出带扩展名的绝对路径，node-pty 收到绝对路径就不会走那段裸名搜索。
+ * `run` 可注入，便于跨平台单测；解析失败或非 win32 时原样返回，不改变行为。
+ */
+export function resolveWindowsExecutable(cmd, { platform = process.platform, run = spawnSync } = {}) {
+  if (platform !== 'win32') return cmd
+  const raw = String(cmd || '').trim()
+  if (!raw || raw.includes('/') || raw.includes('\\')) return cmd
+  try {
+    const r = run('where', [raw], { encoding: 'utf8', timeout: 4000 })
+    if (r?.status === 0) {
+      const first = String(r.stdout || '')
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)[0]
+      if (first) return first
+    }
+  } catch {
+    /* 找不到就保留原样，交给 pty 报错，不掩盖问题 */
+  }
+  return cmd
+}
+
 function normalizePtyLaunch(launch) {
   if (launch?.shell !== true) {
-    return { file: launch.cmd, args: launch.args || [] }
+    return { file: resolveWindowsExecutable(launch.cmd), args: launch.args || [] }
   }
   if (process.platform === 'win32') {
     return {

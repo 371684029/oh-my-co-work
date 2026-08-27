@@ -183,6 +183,59 @@ test('missing command marks failed and keeps the error in replay', async () => {
   assert.ok(terminal.lastError || Number(terminal.exitCode) !== 0)
 })
 
+test('resolveWindowsExecutable leaves non-Windows launches untouched', () => {
+  assert.equal(
+    terminalService.resolveWindowsExecutable('grok', { platform: 'linux' }),
+    'grok',
+  )
+  assert.equal(
+    terminalService.resolveWindowsExecutable('grok', { platform: 'darwin' }),
+    'grok',
+  )
+})
+
+test('resolveWindowsExecutable skips lookup for paths that already contain a separator', () => {
+  const run = () => {
+    throw new Error('should not call `where` for an already-resolved path')
+  }
+  assert.equal(
+    terminalService.resolveWindowsExecutable('C:\\Program Files\\grok\\grok.exe', {
+      platform: 'win32',
+      run,
+    }),
+    'C:\\Program Files\\grok\\grok.exe',
+  )
+})
+
+test('resolveWindowsExecutable resolves a bare command to the first `where` match, extension and all', () => {
+  const calls = []
+  const run = (cmd, args) => {
+    calls.push([cmd, args])
+    return { status: 0, stdout: 'C:\\Users\\a\\AppData\\Roaming\\npm\\grok.cmd\r\nC:\\other\\grok.cmd\r\n' }
+  }
+  const resolved = terminalService.resolveWindowsExecutable('grok', { platform: 'win32', run })
+  assert.equal(resolved, 'C:\\Users\\a\\AppData\\Roaming\\npm\\grok.cmd')
+  assert.deepEqual(calls, [['where', ['grok']]])
+})
+
+test('resolveWindowsExecutable falls back to the bare command when `where` finds nothing', () => {
+  const run = () => ({ status: 1, stdout: '' })
+  assert.equal(
+    terminalService.resolveWindowsExecutable('grok-not-installed', { platform: 'win32', run }),
+    'grok-not-installed',
+  )
+})
+
+test('resolveWindowsExecutable falls back to the bare command when `where` throws', () => {
+  const run = () => {
+    throw new Error('where not found')
+  }
+  assert.equal(
+    terminalService.resolveWindowsExecutable('grok', { platform: 'win32', run }),
+    'grok',
+  )
+})
+
 test('keepAlive terminals resolve immediately and stay running', async () => {
   const sessionId = 'keepalive-shell'
   const started = Date.now()

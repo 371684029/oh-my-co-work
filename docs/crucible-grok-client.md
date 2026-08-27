@@ -115,6 +115,8 @@ Grok CLI 出了 PTY 之后，自己去读 `~/.grok/auth.json`、`config.toml` �
 输出进 replay / 日志，经 WebSocket 推到工作台。  
 停止、归档、配额、脱敏与其它内嵌终端 **同一套治理**。
 
+**Windows 坑（已修）**：node-pty 在 Windows 上解析裸命令名时只按 PATH 逐目录找**完全同名**文件，不像 `cmd.exe` / `where` 那样按 `PATHEXT` 补 `.exe`/`.cmd`/`.bat`。`grok`（以及很多全局装的 CLI）在 Windows 上其实是 `grok.exe` 或 `grok.cmd`，`GET /api/grok/status` 用 `where grok` 能探测到「已装」，但裸名交给 `pty.spawn(shell:false)` 会报 `启动失败：File not found: `——两边判断口径不一致。`normalizePtyLaunch` 在真正 spawn 前用同一套 `where` 解出带扩展名的绝对路径（`resolveWindowsExecutable`），再交给 node-pty，这样它拿到的是确切文件，不用再走那段裸名搜索。非 Windows、已经是绝对路径、或 `where` 找不到时原样传，不改变行为。
+
 工作目录固定在 `data/furnace`（`ensureFurnaceWorkspace()`），这样 Grok 的「当前项目」就是熔炉本机上下文，而不是随便一个业务仓库根。
 
 ### 3.4 两张皮，一条进程
