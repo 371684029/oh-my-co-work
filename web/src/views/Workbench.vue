@@ -119,16 +119,11 @@
                   >{{ item.label }}</span
                 >
                 <span
-                  v-if="item.archiveOutcome === 'success'"
-                  class="conv-badge conv-badge--ok"
-                  title="归档成功"
-                  >成</span
-                >
-                <span
-                  v-else-if="item.archiveOutcome === 'failed'"
-                  class="conv-badge conv-badge--fail"
-                  title="归档失败"
-                  >败</span
+                  v-if="item.archiveOutcome"
+                  class="conv-badge conv-badge--archive"
+                  :class="archiveConvBadgeClass(item.archiveOutcome)"
+                  :title="archiveConvBadgeTitle(item.archiveOutcome)"
+                  >{{ archiveConvBadgeText(item.archiveOutcome) }}</span
                 >
               </span>
             </el-tooltip>
@@ -681,7 +676,7 @@
             ·
             <span
               class="flow-archive-outcome"
-              :class="archiveOutcomeTag.ok ? 'is-ok' : 'is-fail'"
+              :class="archiveOutcomeTag.outcomeClass"
               >{{ archiveOutcomeTag.label }}</span
             >
           </template>
@@ -1871,16 +1866,35 @@ const needsHuman = computed(() => {
   return !!pendingGate.value
 })
 
+/** archive_reason 表示会话级归档失败（非单步脚本失败） */
+const ARCHIVE_REASON_FAILED = new Set([
+  'failed',
+  'rejected',
+  'error',
+  'fail',
+  'cancelled',
+  'interrupted_discard',
+])
+
+function nodeCountsAsArchiveInvolvedFailure(n) {
+  if (!n || n.status !== 'failed') return false
+  if (n.step_type === 'archive') return false
+  return true
+}
+
 /**
- * 归档结果：success | failed | null
- * 依据 archive_reason；详情页可结合节点失败态
+ * 归档结果：success | involved | failed | null
+ * - failed：archive_reason 为失败/拒绝等
+ * - involved：已确认归档，但时间轴上仍有失败步骤（常见：闸门同意后继续）
+ * - success：其余
  */
 function archiveOutcomeOf(session, nodes) {
   if (!session || session.status !== 'archived') return null
   const r = String(session.archive_reason || '').toLowerCase()
-  if (['failed', 'rejected', 'error', 'fail'].includes(r)) return 'failed'
-  if (Array.isArray(nodes) && nodes.some((n) => n.status === 'failed')) return 'failed'
-  // auto_completed / completed / manual / timeout / 其它 → 成功归档
+  if (ARCHIVE_REASON_FAILED.has(r)) return 'failed'
+  if (Array.isArray(nodes) && nodes.some(nodeCountsAsArchiveInvolvedFailure)) {
+    return 'involved'
+  }
   return 'success'
 }
 
@@ -1888,9 +1902,36 @@ const archiveOutcomeTag = computed(() => {
   if (!detail.value?.session) return null
   const o = archiveOutcomeOf(detail.value.session, detail.value.nodes)
   if (!o) return null
-  if (o === 'failed') return { label: '失败', type: 'danger', ok: false }
-  return { label: '成功', type: 'success', ok: true }
+  if (o === 'failed') {
+    return { label: '失败', type: 'danger', outcomeClass: 'is-fail', ok: false }
+  }
+  if (o === 'involved') {
+    return { label: '介入归档', type: 'warning', outcomeClass: 'is-involved', ok: false }
+  }
+  return { label: '正常归档', type: 'success', outcomeClass: 'is-ok', ok: true }
 })
+
+/** 侧栏已归档会话角标（强调「归档」，不用易误解的「成」） */
+function archiveConvBadgeText(outcome) {
+  if (outcome === 'failed') return '失败'
+  if (outcome === 'involved') return '介入'
+  if (outcome === 'success') return '归档'
+  return ''
+}
+
+function archiveConvBadgeTitle(outcome) {
+  if (outcome === 'failed') return '已归档 · 归档失败'
+  if (outcome === 'involved') return '已归档 · 介入归档（含失败步骤或人工放行）'
+  if (outcome === 'success') return '已归档 · 正常结束'
+  return ''
+}
+
+function archiveConvBadgeClass(outcome) {
+  if (outcome === 'failed') return 'conv-badge--fail'
+  if (outcome === 'involved') return 'conv-badge--involved'
+  if (outcome === 'success') return 'conv-badge--ok'
+  return ''
+}
 
 /** 群报告：启动说明 */
 const announceKickoff = computed(() => {
@@ -3793,10 +3834,12 @@ loadLists().then(() => {
 }
 .conv-badge {
   flex-shrink: 0;
-  width: 16px;
+  box-sizing: border-box;
+  min-width: 16px;
   height: 16px;
+  padding: 0 4px;
   border-radius: 5px;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   line-height: 16px;
   text-align: center;
@@ -3804,11 +3847,19 @@ loadLists().then(() => {
   color: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
+.conv-badge--archive {
+  max-width: 36px;
+  overflow: hidden;
+  white-space: nowrap;
+}
 .conv-badge--ok {
   background: linear-gradient(145deg, #85ce61, #67c23a);
 }
 .conv-badge--fail {
   background: linear-gradient(145deg, #f78989, #f56c6c);
+}
+.conv-badge--involved {
+  background: linear-gradient(145deg, #f0c78a, #e6a23c);
 }
 
 /* —— 会话顶栏（mac 标题栏气质） —— */
@@ -5464,6 +5515,10 @@ button.composer-hint-i {
 }
 .flow-archive-outcome.is-fail {
   color: var(--el-color-danger);
+  font-weight: 600;
+}
+.flow-archive-outcome.is-involved {
+  color: var(--el-color-warning);
   font-weight: 600;
 }
 .flow-step-actions {
