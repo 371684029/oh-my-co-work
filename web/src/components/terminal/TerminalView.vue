@@ -21,8 +21,6 @@ const props = defineProps({
   prefs: { type: Object, default: () => ({}) },
   /** 隐藏时禁止 fit，避免把 PTY 缩成几列 */
   active: { type: Boolean, default: true },
-  /** 熔炉：吞掉备用屏，清屏前把当前画面推进滚动历史，才能上翻看到更早的话 */
-  preserveHistory: { type: Boolean, default: false },
 })
 
 const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
@@ -33,43 +31,6 @@ let xterm = null
 let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
-const historyDisposables = []
-
-function paramAt(params, index) {
-  if (!params) return 0
-  if (typeof params.get === 'function') {
-    const v = params.get(index)
-    return Array.isArray(v) ? v[0] : Number(v) || 0
-  }
-  const v = params[index]
-  return Array.isArray(v) ? v[0] : Number(v) || 0
-}
-
-function paramsHas(params, code) {
-  const n = Number(params?.length) || 0
-  for (let i = 0; i < n; i += 1) {
-    if (paramAt(params, i) === code) return true
-  }
-  return false
-}
-
-/** 不进备用屏，对话才能留在主缓冲的 scrollback 里；禁止在 CSI 回调里 write，避免回放时把画面冲掉 */
-function attachHistoryPreservation(term) {
-  const parser = term.parser
-  if (!parser?.registerCsiHandler) return
-  historyDisposables.push(
-    parser.registerCsiHandler({ prefix: '?', final: 'h' }, (params) => {
-      if (paramsHas(params, 1049) || paramsHas(params, 1047) || paramsHas(params, 47)) return true
-      return false
-    }),
-  )
-  historyDisposables.push(
-    parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
-      if (paramsHas(params, 1049) || paramsHas(params, 1047) || paramsHas(params, 47)) return true
-      return false
-    }),
-  )
-}
 
 function fit() {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
@@ -107,15 +68,12 @@ onMounted(async () => {
     fontSize: Number(prefs.fontSize) || 13,
     lineHeight: 1.3,
     letterSpacing: 0,
-    scrollback: props.preserveHistory
-      ? Math.max(Number(prefs.scrollback) || 5000, 8000)
-      : Number(prefs.scrollback) || 5000,
+    scrollback: Number(prefs.scrollback) || 5000,
     theme,
   })
   fitAddon = new FitAddon()
   xterm.loadAddon(fitAddon)
   xterm.open(host.value)
-  if (props.preserveHistory) attachHistoryPreservation(xterm)
   xterm.onData((data) => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
@@ -165,7 +123,6 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  historyDisposables.splice(0).forEach((d) => d?.dispose?.())
   resizeObserver?.disconnect()
   resizeObserver = null
   xterm?.dispose()
@@ -188,23 +145,8 @@ onBeforeUnmount(() => {
 }
 
 .terminal-view :deep(.xterm-viewport) {
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
-  scrollbar-color: rgba(255, 255, 255, 0.42) rgba(255, 255, 255, 0.06);
-  scrollbar-width: auto;
-}
-
-.terminal-view :deep(.xterm-viewport::-webkit-scrollbar) {
-  width: 10px;
-}
-
-.terminal-view :deep(.xterm-viewport::-webkit-scrollbar-thumb) {
-  background: rgba(255, 255, 255, 0.38);
-  border-radius: 8px;
-}
-
-.terminal-view :deep(.xterm-viewport::-webkit-scrollbar-track) {
-  background: rgba(255, 255, 255, 0.06);
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-width: thin;
 }
 
 .terminal-view.is-dead {

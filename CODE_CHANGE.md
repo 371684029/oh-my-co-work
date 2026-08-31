@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-31 | M | web/src/components/terminal/TerminalView.vue | 撤回熔炉吞备用屏 / 强制 overflow-y:scroll：这两项会让 Grok 鼠标协议和可点按钮失效
+2026-08-31 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 恢复铺满原生终端；对话记录改为可选右侧栏（默认关），不再垫在终端上方挤占高度
+2026-08-31 | M | docs/crucible-gui-plain.md | TUI 口径改回完整 Grok（可点按钮）；历史上翻在 GUI
+2026-08-31 | M | docs/frontend-components.md | 干活面 TUI 说明改为完整 Grok 可点按钮
+2026-08-31 | M | CODE_CHANGE.md | 追加熔炉 TUI 鼠标/按钮修复条目
+
 2026-08-31 | M | shared/ptyPlain.js | 熔炉 GUI 累积清屏/备用屏前的可读正文，不再只导出当前一屏；新增 takeFurnaceAssistantDelta / buildFurnaceChatTurns
 2026-08-31 | M | shared/index.js | 导出熔炉对话轮次辅助函数
 2026-08-31 | M | server/test/ptyPlain.test.js | 覆盖跨屏历史、去重、用户原文切轮
