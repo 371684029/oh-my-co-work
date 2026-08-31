@@ -130,7 +130,14 @@ export function normalizeFurnaceSurface(v) {
     : FURNACE_SURFACE.CHAT
 }
 
-export { renderPtyPlainText, furnaceGuiTranscript, sanitizeFurnaceGuiText, furnaceGuiReadable } from './ptyPlain.js'
+export {
+  renderPtyPlainText,
+  furnaceGuiTranscript,
+  sanitizeFurnaceGuiText,
+  furnaceGuiReadable,
+  takeFurnaceAssistantDelta,
+  buildFurnaceChatTurns,
+} from './ptyPlain.js'
 
 /** 去 CSI / OSC，给卡片预览用；GUI 请用 furnaceGuiTranscript */
 export function stripAnsi(value) {

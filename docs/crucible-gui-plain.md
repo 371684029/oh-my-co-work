@@ -34,14 +34,15 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 
 ## 2. 已决口径
 
-**GUI = 可读正文 + 底部输入。**  
-菜单、快捷键、模型条、登录态 **只在 TUI**。
+**GUI = 对话框（可上翻的历史气泡）+ 底部输入。**  
+菜单、快捷键、模型条、登录态 **只在 TUI**。TUI 同样保留滚动历史（吞备用屏，清屏前把当前画面推进 scrollback）。
 
 | 层 | 做什么 |
 |----|--------|
 | 1. 屏幕 | 继续 `renderPtyPlainText`（光标、擦行、中文宽度） |
 | 2. 去壳 | 去掉框线字符、纯装饰行、Grok 底栏/状态条惯用句 |
-| 3. 排版 | 正文用普通换行；**不再按终端列宽画表格** |
+| 3. 历史 | 清屏 / 进备用屏之前把可读帧并进累积正文，不再只留当前一屏 |
+| 4. 排版 | 用户右气泡、Grok 左气泡；普通换行，不按终端列宽画表格 |
 
 不做：
 
@@ -73,17 +74,16 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 
 ## 4. 排版
 
-- `<pre>`：**不要** `word-break: break-word` 去拆 120 列框（框已经去掉）。
-- 使用 `pre-wrap` 只为长句在气泡里换行，按词/按中文即可。
-- 标签改为「Grok · 可读正文」；空态为欢迎卡（能干什么），不把长 prompt 贴进对话。
+- 对话气泡：用户右对齐蓝泡，Grok 左对齐白泡；空态仍为欢迎卡。
+- 消息区 `overflow-y: scroll` 且滚动条常显，避免历史被裁成一屏却看不出能滚。
 
 ---
 
 ## 5. 验收
 
-- 发「你好」之后，GUI 里能读到回答，**不应**再出现底栏 `Enter:send` 整行。
-- **不应**再出现断开的 ASCII 盒子把字切开。
-- 切 TUI，原 Grok 菜单和快捷键仍在。
+- 发两轮「你好」之后，GUI **两轮都在**，能上翻，不是只剩当前屏一块 `<pre>`。
+- **不应**再出现底栏 `Enter:send` 整行、断开的 ASCII 盒子。
+- 切 TUI，原 Grok 菜单和快捷键仍在；右侧滚动条可上翻更早画面。
 - 附件路径仍是一行写入同一进程。
 
 ---
@@ -92,6 +92,7 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 
 | 文件 | 职责 |
 |------|------|
-| `shared/ptyPlain.js` | `renderPtyPlainText` + `furnaceGuiTranscript`（去壳） |
-| `FurnaceWorkspace.vue` | GUI 用 transcript；样式按 §4 |
-| `server/test/ptyPlain.test.js` | 去壳用例 |
+| `shared/ptyPlain.js` | `furnaceGuiTranscript` 累积清屏前可读帧；`takeFurnaceAssistantDelta` / `buildFurnaceChatTurns` |
+| `FurnaceWorkspace.vue` | GUI 对话框气泡 + 常显滚动条 |
+| `TerminalView.vue` | 熔炉 `preserveHistory`：备用屏不进 alt buffer，清屏前推入 scrollback |
+| `server/test/ptyPlain.test.js` | 去壳、跨屏历史、对话轮次 |

@@ -85,7 +85,7 @@
             <p class="furnace-buddy-credit" :title="PET_COPYRIGHT">{{ PET_CREDIT_SHORT }}</p>
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
-          <div class="furnace-log-main">
+          <div class="furnace-thread">
             <div v-if="showFail" class="furnace-welcome is-fail">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
               <h3>Grok 没在跑，所以这里是空的</h3>
@@ -105,7 +105,7 @@
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
               <h3>本机 Grok 已接进协同台</h3>
               <p>
-                同一条进程：这里读回答，菜单和模型在 TUI。细节在工作目录
+                同一条进程：这里是对话框，菜单和模型在 TUI。细节在工作目录
                 <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。聊太长就「新开熔炉」。
               </p>
               <ul>
@@ -127,18 +127,29 @@
                 </button>
               </div>
             </div>
-            <div v-if="showBody" class="screen">
-              <span class="bubble-label">Grok · 可读正文</span>
-              <pre>{{ liveText }}</pre>
+            <div
+              v-for="turn in chatTurns"
+              :key="turn.id"
+              class="furnace-turn"
+              :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
+            >
+              <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+              <div class="furnace-bubble">{{ turn.text }}</div>
+            </div>
+            <div v-if="awaitingReply" class="furnace-turn is-assistant is-pending">
+              <span class="furnace-turn-label">Grok</span>
+              <div class="furnace-bubble is-pending">正在写…</div>
             </div>
           </div>
         </div>
-        <div v-if="sent.length" class="furnace-sent">
-          <span class="furnace-sent-label">已写入进程</span>
-          <span v-for="item in sent.slice(-3)" :key="item.id" class="furnace-sent-chip">{{
-            item.text
-          }}</span>
-        </div>
+        <button
+          v-if="!stickBottom && chatTurns.length"
+          type="button"
+          class="furnace-jump-latest"
+          @click="jumpToLatest"
+        >
+          回到最新
+        </button>
         <form
           class="furnace-composer"
           @submit.prevent="sendChat"
@@ -196,6 +207,7 @@
           :terminal="terminal"
           :prefs="prefs"
           :active="surface === 'tui'"
+          preserve-history
           @input="$emit('input', $event)"
           @resize="$emit('resize', $event)"
           @gap="$emit('gap', $event)"
@@ -214,7 +226,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable } from '@acw/shared'
+import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable, takeFurnaceAssistantDelta } from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
@@ -249,6 +261,7 @@ const tuiEverShown = ref(surface.value === 'tui')
 const focused = ref(false)
 const draft = ref('')
 const sent = ref([])
+const chatTurns = ref([])
 const pendingFiles = ref([])
 const uploading = ref(false)
 const uploadError = ref('')
@@ -270,12 +283,16 @@ const liveText = computed(() =>
   furnaceGuiTranscript(props.terminal.replay || '', {
     cols: props.terminal.cols || 120,
     rows: props.terminal.rows || 40,
-    maxLines: 40,
+    maxLines: 2000,
   }),
 )
-const showBody = computed(() => furnaceGuiReadable(liveText.value))
+const showBody = computed(() => furnaceGuiReadable(liveText.value) || chatTurns.value.length > 0)
 const showFail = computed(() => isStopped.value && !showBody.value)
 const showWelcome = computed(() => !showBody.value && !showFail.value)
+const awaitingReply = computed(() => {
+  if (!isRunning.value || !chatTurns.value.length) return false
+  return chatTurns.value[chatTurns.value.length - 1].role === 'user'
+})
 const failHint = computed(() => {
   const err = String(props.terminal.lastError || props.terminal.error?.message || '').trim()
   if (err) return err
@@ -316,9 +333,9 @@ const buddyTitle = computed(() => {
 })
 
 const buddyLine = computed(() => {
-  if (!isRunning.value) return '这轮停了。记录还在。'
+  if (!isRunning.value) return '这轮停了。记录还在，可上翻。'
   if (!showBody.value) return '她准备好后会先介绍，再等你。'
-  return '同一条 Grok。问当前格即可。'
+  return '同一条 Grok。问当前格即可。可上翻看更早的话。'
 })
 
 const welcomeKicker = computed(() => {
@@ -346,11 +363,11 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? '可读正文 · 长合同在文件里 · 菜单请切 TUI'
+      ? '对话框可上翻 · 长合同在文件里 · 菜单请切 TUI'
       : '已在三栏中栏 · 可再铺满页面'
   }
-  if (focused.value) return 'TUI 输入中 · Esc 退出焦点'
-  if (isPagefill.value) return '再按 Esc 缩小回工作台'
+  if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 右侧滚动条可上翻历史'
+  if (isPagefill.value) return '再按 Esc 缩小回工作台 · 右侧滚动条可上翻历史'
   return '点 TUI 继续输入'
 })
 
@@ -371,10 +388,49 @@ function onFocusChange(value) {
   focused.value = !!value
 }
 
+function nextTurnId() {
+  return `${Date.now()}-${chatTurns.value.length}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function priorAssistantText() {
+  const items = chatTurns.value
+  const last = items[items.length - 1]
+  return items
+    .filter((t, i) => t.role === 'assistant' && !(last?.role === 'assistant' && i === items.length - 1))
+    .map((t) => t.text)
+    .join('\n')
+}
+
+function stripUserEchoes(text) {
+  let next = String(text || '')
+  for (const item of sent.value) {
+    const u = String(item.text || '').trim()
+    if (!u) continue
+    next = next.split(u).join('')
+  }
+  return next.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function syncAssistantFromTranscript() {
+  const text = liveText.value
+  if (!furnaceGuiReadable(text)) return
+  const last = chatTurns.value[chatTurns.value.length - 1]
+  const body = stripUserEchoes(takeFurnaceAssistantDelta(text, priorAssistantText()))
+  if (!body || !furnaceGuiReadable(body)) return
+  if (last?.role === 'assistant') last.text = body
+  else chatTurns.value.push({ id: nextTurnId(), role: 'assistant', text: body })
+}
+
+function jumpToLatest() {
+  stickBottom.value = true
+  nextTick(scrollLog)
+}
+
 function sendChat() {
   const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
   if (!payload || !isRunning.value || uploading.value) return
   sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
+  chatTurns.value.push({ id: nextTurnId(), role: 'user', text: payload })
   emit('input', `${payload}\r`)
   draft.value = ''
   pendingFiles.value = []
@@ -489,7 +545,19 @@ watch(isPagefill, async (on) => {
   requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
 })
 
-watch(liveText, () => nextTick(scrollLog))
+watch(liveText, () => {
+  syncAssistantFromTranscript()
+  nextTick(scrollLog)
+})
+
+watch(
+  () => props.terminal.id,
+  () => {
+    chatTurns.value = []
+    sent.value = []
+    nextTick(() => syncAssistantFromTranscript())
+  },
+)
 
 watch(surface, (mode) => {
   if (mode === 'tui') tuiEverShown.value = true
@@ -521,6 +589,7 @@ onMounted(() => {
   syncFullscreenState()
   if (isPagefill.value) document.documentElement.classList.add('acw-terminal-pagefill')
   if (surface.value === 'chat') emit('resize', { cols: 120, rows: 40 })
+  syncAssistantFromTranscript()
   nextTick(scrollLog)
 })
 
@@ -708,21 +777,45 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .furnace-tui {
   background: #17191f;
 }
 
+.furnace-tui :deep(.terminal-view) {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
 .furnace-log {
   flex: 1;
   min-height: 0;
-  overflow: auto;
-  padding: 20px 6% 12px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(60, 60, 67, 0.45) transparent;
+  padding: 20px 4% 16px;
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr);
   gap: 20px 16px;
   align-items: start;
+}
+
+.furnace-log::-webkit-scrollbar {
+  width: 10px;
+}
+
+.furnace-log::-webkit-scrollbar-thumb {
+  background: rgba(60, 60, 67, 0.38);
+  border-radius: 8px;
+}
+
+.furnace-log::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .furnace-buddy {
@@ -750,8 +843,13 @@ onUnmounted(() => {
   color: #6e6e73;
 }
 
-.furnace-log-main {
+.furnace-thread {
   min-width: 0;
+  max-width: 46rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
 }
 
 .furnace-empty {
@@ -764,7 +862,7 @@ onUnmounted(() => {
 
 .furnace-welcome {
   max-width: 40rem;
-  margin: 4vh 0 0;
+  margin: 0;
   padding: 18px 20px 16px;
   border-radius: 18px;
   background: #fff;
@@ -835,58 +933,74 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.screen {
-  max-width: min(56rem, 100%);
-  margin: 0 auto 16px;
+.furnace-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
 }
 
-.bubble-label {
-  display: block;
+.furnace-turn.is-user {
+  align-items: flex-end;
+}
+
+.furnace-turn.is-assistant {
+  align-items: flex-start;
+}
+
+.furnace-turn-label {
   font-size: 11px;
   font-weight: 650;
   color: #6e6e73;
-  margin-bottom: 6px;
+  padding: 0 6px;
 }
 
-.screen pre {
+.furnace-bubble {
+  max-width: min(40rem, 100%);
   margin: 0;
-  padding: 16px 18px;
-  border-radius: 16px;
+  padding: 12px 16px;
+  border-radius: 18px;
   white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-break: normal;
-  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, system-ui, sans-serif;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font-size: 15px;
   line-height: 1.7;
-  background: #fff;
-  color: #1d1d1f;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
-.furnace-sent {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 8% 0;
+.furnace-turn.is-assistant .furnace-bubble {
+  background: #fff;
+  color: #1d1d1f;
+  border-bottom-left-radius: 6px;
 }
 
-.furnace-sent-label {
-  font-size: 11px;
+.furnace-turn.is-user .furnace-bubble {
+  background: #007aff;
+  color: #fff;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 1px 8px rgba(0, 122, 255, 0.22);
+}
+
+.furnace-bubble.is-pending {
   color: #6e6e73;
-  flex-shrink: 0;
+  font-style: italic;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.72);
 }
 
-.furnace-sent-chip {
-  max-width: 28rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-  padding: 4px 10px;
+.furnace-jump-latest {
+  position: absolute;
+  right: 22px;
+  bottom: 118px;
+  z-index: 3;
+  border: 0;
   border-radius: 999px;
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(29, 29, 31, 0.82);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
 .furnace-composer {

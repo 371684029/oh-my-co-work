@@ -22,6 +22,15 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-31 | M | shared/ptyPlain.js | 熔炉 GUI 累积清屏/备用屏前的可读正文，不再只导出当前一屏；新增 takeFurnaceAssistantDelta / buildFurnaceChatTurns
+2026-08-31 | M | shared/index.js | 导出熔炉对话轮次辅助函数
+2026-08-31 | M | server/test/ptyPlain.test.js | 覆盖跨屏历史、去重、用户原文切轮
+2026-08-31 | M | web/src/components/terminal/FurnaceWorkspace.vue | GUI 改成左右对话框气泡，消息区常显滚动条，本地记下用户轮次
+2026-08-31 | M | web/src/components/terminal/TerminalView.vue | 熔炉 preserveHistory：吞备用屏、清屏前把当前画面推进 scrollback，滚动条加粗常显
+2026-08-31 | M | docs/crucible-gui-plain.md | 口径改为可上翻的对话框历史
+2026-08-31 | M | docs/frontend-components.md | 干活面说明改为 GUI 气泡 / TUI 可上翻
+2026-08-31 | M | CODE_CHANGE.md | 追加熔炉历史与对话框布局条目
+
 2026-08-27 | M | README.md | 补截图说明、源码一键启动（node start.mjs / start.bat / start.sh）、场外协助折叠标成员、支持与交流邮箱
 2026-08-27 | M | CODE_CHANGE.md | 追加 README 正文修订条目
 
