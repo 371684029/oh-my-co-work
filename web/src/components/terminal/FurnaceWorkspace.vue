@@ -202,6 +202,18 @@
       </div>
 
       <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
+        <div v-if="chatTurns.length" ref="tuiHistEl" class="furnace-tui-history">
+          <div class="furnace-tui-history-head">可上翻的对话记录（同一条进程）</div>
+          <div
+            v-for="turn in chatTurns"
+            :key="`tui-${turn.id}`"
+            class="furnace-tui-line"
+            :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
+          >
+            <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+            <pre>{{ turn.text }}</pre>
+          </div>
+        </div>
         <TerminalView
           :key="terminal.id"
           :terminal="terminal"
@@ -253,6 +265,7 @@ const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'input', '
 
 const workspaceRoot = ref(null)
 const logEl = ref(null)
+const tuiHistEl = ref(null)
 const isFullscreen = ref(false)
 const isPagefill = ref(props.defaultPagefill !== false)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
@@ -401,6 +414,16 @@ function priorAssistantText() {
     .join('\n')
 }
 
+function collapseDupBlocks(text) {
+  const parts = String(text || '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+  const out = []
+  for (const p of parts) {
+    if (out[out.length - 1] === p) continue
+    out.push(p)
+  }
+  return out.join('\n\n')
+}
+
 function stripUserEchoes(text) {
   let next = String(text || '')
   for (const item of sent.value) {
@@ -408,14 +431,18 @@ function stripUserEchoes(text) {
     if (!u) continue
     next = next.split(u).join('')
   }
-  return next.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  next = next
+    .split('\n')
+    .filter((line) => !/^\s*你[：:]\s*/.test(line))
+    .join('\n')
+  return collapseDupBlocks(next.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim())
 }
 
 function syncAssistantFromTranscript() {
   const text = liveText.value
   if (!furnaceGuiReadable(text)) return
   const last = chatTurns.value[chatTurns.value.length - 1]
-  const body = stripUserEchoes(takeFurnaceAssistantDelta(text, priorAssistantText()))
+  const body = collapseDupBlocks(stripUserEchoes(takeFurnaceAssistantDelta(text, priorAssistantText())))
   if (!body || !furnaceGuiReadable(body)) return
   if (last?.role === 'assistant') last.text = body
   else chatTurns.value.push({ id: nextTurnId(), role: 'assistant', text: body })
@@ -521,6 +548,12 @@ function scrollLog() {
   el.scrollTop = el.scrollHeight
 }
 
+function scrollTuiHistory() {
+  const el = tuiHistEl.value
+  if (!el) return
+  el.scrollTop = el.scrollHeight
+}
+
 function onKeydown(ev) {
   if (ev.key !== 'Escape') return
   if (surface.value === 'chat' && document.activeElement?.tagName === 'TEXTAREA') {
@@ -548,6 +581,7 @@ watch(isPagefill, async (on) => {
 watch(liveText, () => {
   syncAssistantFromTranscript()
   nextTick(scrollLog)
+  nextTick(scrollTuiHistory)
 })
 
 watch(
@@ -784,6 +818,55 @@ onUnmounted(() => {
   background: #17191f;
 }
 
+.furnace-tui-history {
+  flex: 0 1 42%;
+  min-height: 120px;
+  max-height: 46%;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.06);
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.furnace-tui-history-head {
+  font-size: 11px;
+  color: #8b909a;
+  margin-bottom: 8px;
+}
+
+.furnace-tui-line {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.furnace-tui-line span {
+  color: #8b909a;
+  font-size: 11px;
+  padding-top: 2px;
+}
+
+.furnace-tui-line.is-user span {
+  color: #64a9ff;
+}
+
+.furnace-tui-line pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #e7e9ee;
+  font-family: inherit;
+}
+
+.furnace-tui-line.is-user pre {
+  color: #c9ddff;
+}
+
 .furnace-tui :deep(.terminal-view) {
   flex: 1;
   min-height: 0;
@@ -797,12 +880,12 @@ onUnmounted(() => {
   overflow-x: hidden;
   scrollbar-gutter: stable;
   scrollbar-width: auto;
-  scrollbar-color: rgba(60, 60, 67, 0.45) transparent;
-  padding: 20px 4% 16px;
+  scrollbar-color: rgba(60, 60, 67, 0.55) rgba(0, 0, 0, 0.06);
+  padding: 16px 3% 12px;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
-  gap: 20px 16px;
-  align-items: start;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 16px 14px;
+  align-items: stretch;
 }
 
 .furnace-log::-webkit-scrollbar {
@@ -845,11 +928,13 @@ onUnmounted(() => {
 
 .furnace-thread {
   min-width: 0;
-  max-width: 46rem;
+  max-width: 44rem;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 8px;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-bottom: 4px;
 }
 
 .furnace-empty {

@@ -15,7 +15,6 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
-import { sanitizeFurnaceGuiText } from '@acw/shared'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -34,8 +33,6 @@ let xterm = null
 let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
-let lastHistoryPush = ''
-let pushingHistory = false
 const historyDisposables = []
 
 function paramAt(params, index) {
@@ -56,32 +53,7 @@ function paramsHas(params, code) {
   return false
 }
 
-function readViewportText(term) {
-  const buf = term.buffer?.active
-  if (!buf) return ''
-  const lines = []
-  const top = Number(buf.viewportY) || 0
-  for (let i = 0; i < term.rows; i += 1) {
-    const line = buf.getLine(top + i)
-    lines.push(line ? line.translateToString(true) : '')
-  }
-  return lines.join('\n')
-}
-
-function pushViewportToScrollback(term) {
-  if (!term || pushingHistory) return
-  const clean = sanitizeFurnaceGuiText(readViewportText(term))
-  if (!clean || clean === lastHistoryPush) return
-  lastHistoryPush = clean
-  pushingHistory = true
-  try {
-    const n = Math.max(1, Number(term.rows) || 24)
-    term.write(`\x1b[${n};1H${'\r\n'.repeat(n)}`)
-  } finally {
-    pushingHistory = false
-  }
-}
-
+/** 不进备用屏，对话才能留在主缓冲的 scrollback 里；禁止在 CSI 回调里 write，避免回放时把画面冲掉 */
 function attachHistoryPreservation(term) {
   const parser = term.parser
   if (!parser?.registerCsiHandler) return
@@ -94,13 +66,6 @@ function attachHistoryPreservation(term) {
   historyDisposables.push(
     parser.registerCsiHandler({ prefix: '?', final: 'l' }, (params) => {
       if (paramsHas(params, 1049) || paramsHas(params, 1047) || paramsHas(params, 47)) return true
-      return false
-    }),
-  )
-  historyDisposables.push(
-    parser.registerCsiHandler({ final: 'J' }, (params) => {
-      const mode = paramAt(params, 0) || 0
-      if (mode === 2 || mode === 3) pushViewportToScrollback(term)
       return false
     }),
   )
@@ -124,7 +89,6 @@ function fit() {
 
 function resetToReplay(value) {
   if (!xterm) return
-  lastHistoryPush = ''
   const text = String(value || '')
   xterm.reset()
   if (text) xterm.write(text)
