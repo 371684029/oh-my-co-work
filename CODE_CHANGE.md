@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-08-31 | M | web/src/components/terminal/TerminalView.vue | 按产品取舍：TUI 继续吞备用屏以保住上翻历史；Grok 画面内可点按钮不做了
+2026-08-31 | M | web/src/components/terminal/FurnaceWorkspace.vue | 撤回「记录」侧栏方案，TUI 仍是上方对话记录 + 下方终端
+2026-08-31 | M | docs/crucible-gui-plain.md | 写明 TUI 可点按钮可能不准，以键盘为准
+2026-08-31 | M | CODE_CHANGE.md | 追加「点不了就算了、把历史上翻加回 TUI」条目
+
 2026-08-31 | M | web/src/components/terminal/TerminalView.vue | 撤回熔炉吞备用屏 / 强制 overflow-y:scroll：这两项会让 Grok 鼠标协议和可点按钮失效
 2026-08-31 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 恢复铺满原生终端；对话记录改为可选右侧栏（默认关），不再垫在终端上方挤占高度
 2026-08-31 | M | docs/crucible-gui-plain.md | TUI 口径改回完整 Grok（可点按钮）；历史上翻在 GUI

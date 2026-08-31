@@ -41,16 +41,6 @@
             TUI
           </button>
           <button
-            v-if="surface === 'tui'"
-            type="button"
-            class="furnace-btn"
-            :class="{ on: tuiShowLog }"
-            title="侧栏看 GUI 攒下的对话。默认关上，避免挡住 Grok 的可点按钮。"
-            @click="tuiShowLog = !tuiShowLog"
-          >
-            记录
-          </button>
-          <button
             type="button"
             class="furnace-btn"
             :title="
@@ -212,33 +202,29 @@
       </div>
 
       <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
+        <div v-if="chatTurns.length" ref="tuiHistEl" class="furnace-tui-history">
+          <div class="furnace-tui-history-head">可上翻的对话记录（同一条进程）</div>
+          <div
+            v-for="turn in chatTurns"
+            :key="`tui-${turn.id}`"
+            class="furnace-tui-line"
+            :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
+          >
+            <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+            <pre>{{ turn.text }}</pre>
+          </div>
+        </div>
         <TerminalView
           :key="terminal.id"
           :terminal="terminal"
           :prefs="prefs"
           :active="surface === 'tui'"
+          preserve-history
           @input="$emit('input', $event)"
           @resize="$emit('resize', $event)"
           @gap="$emit('gap', $event)"
           @focus-change="onFocusChange"
         />
-        <aside v-if="tuiShowLog && chatTurns.length" class="furnace-tui-log">
-          <div class="furnace-tui-log-head">
-            <span>对话记录</span>
-            <button type="button" class="furnace-btn" @click="tuiShowLog = false">关闭</button>
-          </div>
-          <div ref="tuiHistEl" class="furnace-tui-log-body">
-            <div
-              v-for="turn in chatTurns"
-              :key="`tui-${turn.id}`"
-              class="furnace-tui-line"
-              :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
-            >
-              <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
-              <pre>{{ turn.text }}</pre>
-            </div>
-          </div>
-        </aside>
       </div>
 
       <footer class="furnace-foot">
@@ -285,7 +271,6 @@ const isPagefill = ref(props.defaultPagefill !== false)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
 /** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
 const tuiEverShown = ref(surface.value === 'tui')
-const tuiShowLog = ref(false)
 const focused = ref(false)
 const draft = ref('')
 const sent = ref([])
@@ -391,10 +376,10 @@ const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮'
   if (surface.value === 'chat') {
     return isPagefill.value
-      ? '对话框可上翻 · 长合同在文件里 · 菜单请切 TUI'
+      ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
       : '已在三栏中栏 · 可再铺满页面'
   }
-  if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 菜单可点 · 对话历史上翻在 GUI'
+  if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 上方可上翻记录 · 菜单用键盘'
   if (isPagefill.value) return '再按 Esc 缩小回工作台'
   return '点 TUI 继续输入'
 })
@@ -581,11 +566,6 @@ function onKeydown(ev) {
     focused.value = false
     return
   }
-  if (tuiShowLog.value) {
-    ev.preventDefault()
-    tuiShowLog.value = false
-    return
-  }
   if (isPagefill.value) {
     ev.preventDefault()
     isPagefill.value = false
@@ -612,10 +592,6 @@ watch(
     nextTick(() => syncAssistantFromTranscript())
   },
 )
-
-watch(tuiShowLog, (on) => {
-  if (on) nextTick(scrollTuiHistory)
-})
 
 watch(surface, (mode) => {
   if (mode === 'tui') tuiEverShown.value = true
@@ -840,41 +816,24 @@ onUnmounted(() => {
 
 .furnace-tui {
   background: #17191f;
-  position: relative;
 }
 
-.furnace-tui-log {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  bottom: 8px;
-  z-index: 4;
-  width: min(22rem, 38%);
-  display: flex;
-  flex-direction: column;
-  border-radius: 12px;
-  background: rgba(22, 24, 30, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  pointer-events: auto;
-}
-
-.furnace-tui-log-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  color: #cfd4de;
+.furnace-tui-history {
+  flex: 0 1 42%;
+  min-height: 120px;
+  max-height: 46%;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.06);
+  padding: 8px 12px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.furnace-tui-log-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 8px 10px 10px;
+.furnace-tui-history-head {
+  font-size: 11px;
+  color: #8b909a;
+  margin-bottom: 8px;
 }
 
 .furnace-tui-line {

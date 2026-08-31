@@ -35,7 +35,7 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 ## 2. 已决口径
 
 **GUI = 对话框（可上翻的历史气泡）+ 底部输入。**  
-菜单、快捷键、模型条、登录态、**可点的 TUI 按钮** **只在 TUI**。TUI 必须是完整 Grok 终端（备用屏 + 鼠标协议），不要吞 CSI、不要把历史垫在终端上面挤占高度。对话历史上翻在 **GUI**；TUI 顶栏「记录」是可选侧栏，默认关。
+菜单、快捷键、模型条、登录态 **只在 TUI**。TUI 上方保留同一份可滚动对话记录（终端仍铺在下面）。为了能上翻，会吞备用屏；Grok 画面里那些可点按钮可能点不准，**以键盘快捷键为准**，不必再为点击去拆历史。
 
 | 层 | 做什么 |
 |----|--------|
@@ -83,8 +83,7 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 
 - 发两轮「你好」之后，GUI **两轮都在**，能上翻，不是只剩当前屏一块 `<pre>`。
 - **不应**再出现底栏 `Enter:send` 整行、断开的 ASCII 盒子。
-- 切 TUI，原 Grok 菜单、快捷键和可点按钮仍在（铺满终端，不被历史层挡住）。
-- 对话历史上翻在 GUI；TUI 可用「记录」侧栏，默认关。
+- 切 TUI：上方可上翻对话记录，下方是活终端。画面里的可点按钮可能点不准，用键盘（Shift+Tab / Ctrl+x 等）。
 - 附件路径仍是一行写入同一进程。
 
 ---
@@ -94,6 +93,6 @@ TUI 皮（xterm）已经能画对。GUI 若继续「整屏抄过来」，用户�
 | 文件 | 职责 |
 |------|------|
 | `shared/ptyPlain.js` | `furnaceGuiTranscript` 累积清屏前可读帧；`takeFurnaceAssistantDelta` / `buildFurnaceChatTurns` |
-| `FurnaceWorkspace.vue` | GUI 对话框气泡；TUI 铺满原生终端，可选「记录」侧栏 |
-| `TerminalView.vue` | 原样 xterm（不吞备用屏，不强制 overflow 抢鼠标） |
+| `FurnaceWorkspace.vue` | GUI 对话框气泡 + 常显滚动条 |
+| `TerminalView.vue` | 熔炉 `preserveHistory`：备用屏不进 alt buffer，清屏前推入 scrollback |
 | `server/test/ptyPlain.test.js` | 去壳、跨屏历史、对话轮次 |
