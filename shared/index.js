@@ -467,7 +467,7 @@ export function isMentionAssistOnly(text, memberList = []) {
     rest = rest.replace(re, ' ')
   }
   if (!names.length) {
-    rest = rest.replace(/@[\w\u4e00-\u9fff·.\-]+/g, ' ')
+    rest = rest.replace(/@[\w\u4e00-\u9fff·.-]+/g, ' ')
   }
   return !rest.replace(/[\s,，、]/g, '').length
 }

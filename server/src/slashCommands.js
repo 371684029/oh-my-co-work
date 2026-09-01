@@ -293,7 +293,7 @@ function mirrorSlashScriptWorkDir(next) {
 }
 
 /** 保存时补全 scriptWorkDir；斜杠指令自动推断，桌面快捷键仅保留用户填写 */
-function enrichSlashCommand(cmd, { persist = false } = {}) {
+function enrichSlashCommand(cmd, { persist: _persist = false } = {}) {
   if (!cmd || cmd.kind !== 'shell') return cmd
   const next = { ...cmd }
   const anchor = next.scriptPath || extractScriptPathFromCommand(next.command)

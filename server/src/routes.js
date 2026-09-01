@@ -51,7 +51,6 @@ import { getAppSettings,
   updateAppSettings,
   purgeDemoData,
   resolveGlobalAdminMember,
-  resolveGroupAdmin,
 } from './appSettings.js'
 import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'

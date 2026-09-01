@@ -408,7 +408,6 @@ export function launchArchiveControlWindow({ sessionId, runId, title, apiBase })
     apiBase || `http://127.0.0.1:${process.env.ACW_PORT || process.env.ECW_PORT || 3780}`
   ).replace(/\/$/, '')
   const safeTitle = String(title || '会话进程').replace(/[<>&"]/g, '')
-  const rid = String(runId || '').replace(/"/g, '')
 
   const html = `<!DOCTYPE html>
 <html>

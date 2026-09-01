@@ -29,8 +29,14 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Test
         run: npm test
+
+      - name: Test web (pure logic)
+        run: npm run test:web
 
       - name: Build web (sanity)
         run: npm run build -w web

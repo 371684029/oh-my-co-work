@@ -1,4 +1,4 @@
-import { initDb, getDb } from './db.js'
+import { initDb } from './db.js'
 import { createMember, createGroup, listMembers, listGroups } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 

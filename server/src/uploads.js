@@ -44,7 +44,6 @@ export const uploadMiddleware = multer({
 
 export function filePublicMeta(sessionId, file) {
   const name = file.originalname || file.filename
-  const rel = path.posix.join('uploads', sessionId, path.basename(file.filename || file.path))
   return {
     id: uid('att'),
     name,

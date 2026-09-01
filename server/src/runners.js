@@ -5,7 +5,6 @@ import { DATA_ROOT } from './db.js'
 import {
   registerProcess,
   unregisterProcess,
-  killProcessTree,
   killMemberProcesses,
   launchArchiveControlWindow,
   writeRunTargetPid,
@@ -402,7 +401,7 @@ export function resolveLaunchSpec({ filePath, command, shell, runtime, args = []
  */
 export async function runMember(
   member,
-  { group, sessionContext, humanInput, sessionId, nodeInstanceId, params } = {},
+  { group: _group, sessionContext, humanInput, sessionId, nodeInstanceId, params } = {},
 ) {
   const kind = member.kind
   const config =

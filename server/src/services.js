@@ -5,7 +5,6 @@ import {
   uid,
   cloneName,
   MEMBER_KIND,
-  defaultStepFlow,
   normalizeStepFlow,
   flowNeedsWait,
 } from '@acw/shared'
