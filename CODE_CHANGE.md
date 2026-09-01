@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-01 | A | docs/docs-4x-plan.md | 新增 4.x 协同文档中心实施计划：并入现有服务（不起新端口）、渲染不执行 HTML、编辑只开公告、群模板排序默认可切时间、4.0/4.1 切分与安全护栏
+2026-09-01 | M | .github/workflows/pack-release.yml | fix(ci)：打包提交改为先自检 sourceCommit + 先提交本平台 zip 再 rebase；删除冲突分支里 checkout HEAD 覆盖新 zip 的两行销毁逻辑（win32 包连续多日未真正入库的根因）
+2026-09-01 | M | .gitattributes | 补 *.zip binary 规则
+2026-09-01 | M | docs/README.md | 文档索引与版本表：3.8 已实施、4.x 规划条目
+2026-09-01 | M | README.md | 3.8 路线图状态改为已实施；新增 4.0.0/4.1.0 待办；文档表补 4.x 计划入口
+2026-09-01 | M | CODE_CHANGE.md | 追加 4.x 计划与 CI 修复条目
+
 2026-09-01 | A | docs/refactor-3.8-plan.md | 新增 3.8 重构与加固实施计划（引擎拆分/工作台拆分/工程加固三阶段 + 不动项 + 风险对策 + 封板口径）
 2026-09-01 | M | docs/README.md | 文档索引与版本纪律表补 3.8.x 条目
 2026-09-01 | A | server/test/engineAdvance.test.js | 3.8.0 表征测试：拆分前锁定 advance 主循环行为（6 例：human 闸门/场外暂停+前跳/缺参拦截/审核票/拒绝/聊天附言）
