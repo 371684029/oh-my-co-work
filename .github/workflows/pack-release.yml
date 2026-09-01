@@ -110,32 +110,32 @@ jobs:
           FILE="oh-my-co-work-v${MAJOR}-${PLAT}.zip"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           PUSHED=0
-          # 多平台并行：rebase 后若 README/CURRENT 冲突，按目录内 zip 重写清单再继续
+          # 2026-09-01 修复：此前先 pull 后提交，脏工作树 + rebase/autostash 会把刚构建的
+          # zip 冲掉而文本清单留存，导致 win32 包连续多日未真正入库、release 校验必挂。
+          # 现改为：先自检 + 先把本平台 zip 提交成本地提交，再 rebase 追其它平台提交。
+          # 自检：zip 内 BUILD_INFO 必须来自本次构建的提交，宁可失败也不提交旧包。
+          BUILT_SHA="$(unzip -p "packages/${FILE}" '*/BUILD_INFO.json' \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(String(JSON.parse(s).sourceCommit||'')))")"
+          if [ "$BUILT_SHA" != "$GITHUB_SHA" ]; then
+            echo "[pack] zip 内 sourceCommit=${BUILT_SHA} != 本次构建 ${GITHUB_SHA}，拒绝提交旧包" >&2
+            exit 1
+          fi
+          node scripts/pack-release.mjs --manifest-only
+          # 只提交本平台 zip + 本平台 sidecar + 共享清单，避免碰其它平台的文件
+          git add "packages/${FILE}" "packages/oh-my-co-work-v${MAJOR}-${PLAT}.build.json" packages/README.md packages/CURRENT.txt
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(packages): 更新 ${FILE} (${VER})"
+          fi
+          # 多平台并行：rebase 若与其它平台的共享清单冲突，按磁盘上的 zip 重写清单再继续
           for i in 1 2 3 4 5 6; do
             if ! git pull --rebase origin main; then
-              if [ -f packages/README.md ] && grep -q '<<<<<<' packages/README.md packages/CURRENT.txt 2>/dev/null; then
-                git checkout --ours packages/README.md packages/CURRENT.txt || true
-                git checkout --theirs packages/README.md packages/CURRENT.txt || true
-                # 保留所有已跟踪 zip，按磁盘内容重写清单
-                git checkout --ours -- 'packages/*.zip' 2>/dev/null || true
-                git checkout HEAD -- 'packages/*.zip' 2>/dev/null || true
-                node scripts/pack-release.mjs --manifest-only
-                git add packages/README.md packages/CURRENT.txt packages/*.zip || true
-                GIT_EDITOR=true git rebase --continue || true
-              else
-                git rebase --abort || true
-                git pull --rebase --autostash origin main || true
-              fi
+              node scripts/pack-release.mjs --manifest-only
+              git add packages/README.md packages/CURRENT.txt packages/*.zip packages/*.build.json || true
+              GIT_EDITOR=true git rebase --continue || true
             fi
             # 清掉残留冲突标记后再提交
             if grep -R -l '<<<<<<' packages/README.md packages/CURRENT.txt 2>/dev/null; then
               node scripts/pack-release.mjs --manifest-only
-            fi
-            git add packages/
-            if ! git diff --staged --quiet; then
-              git commit -m "chore(packages): 更新 ${FILE} (${VER})" || true
-            else
-              echo "[pack] no new staged package changes"
             fi
             if git push origin HEAD:main; then
               PUSHED=1

@@ -26,3 +26,4 @@
 *.ico binary
 *.sqlite binary
 *.node binary
+*.zip binary
