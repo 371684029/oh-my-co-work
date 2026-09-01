@@ -15,6 +15,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
+import { isTerminalRunning } from '../../composables/terminalStatus'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -25,7 +26,7 @@ const props = defineProps({
   preserveHistory: { type: Boolean, default: false },
 })
 
-const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
+const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 
 const emit = defineEmits(['input', 'resize', 'gap', 'focus-change'])
 const host = ref(null)

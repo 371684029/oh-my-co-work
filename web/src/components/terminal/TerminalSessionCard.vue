@@ -44,6 +44,7 @@
 <script setup>
 import { computed } from 'vue'
 import { stripAnsi } from '@acw/shared'
+import { isTerminalRunning, terminalStatusText } from '../../composables/terminalStatus'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -54,20 +55,9 @@ defineEmits(['open', 'kill'])
 // 预览保留的最大行数：足够铺满放大后的卡片，超出部分进全屏终端看
 const PREVIEW_LINES = 40
 
-const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
+const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 
-const statusText = computed(() => {
-  const map = {
-    starting: '启动中',
-    running: '运行中',
-    exited: '已完成',
-    failed: '启动失败',
-    killed: '已停止',
-    timed_out: '已超时',
-    interrupted: '已中断',
-  }
-  return map[props.terminal.status] || props.terminal.status || '未知'
-})
+const statusText = computed(() => terminalStatusText(props.terminal.status, 'card') || '未知')
 
 const previewLines = computed(() =>
   stripAnsi(props.terminal.previewReplay || props.terminal.replay)

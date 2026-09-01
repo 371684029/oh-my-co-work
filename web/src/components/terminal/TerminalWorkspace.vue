@@ -94,13 +94,14 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import TerminalView from './TerminalView.vue'
 import {
-  exitFullscreen,
-  fullscreenElement,
-  requestFullscreen,
-} from '../../composables/fullscreen'
+  isTerminalRunning,
+  terminalStatusText,
+  connectionStatusText,
+} from '../../composables/terminalStatus'
+import { usePagefill } from '../../composables/pagefill'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -113,10 +114,24 @@ const props = defineProps({
 defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
 
 const workspaceRoot = ref(null)
-const isFullscreen = ref(false)
-const isPagefill = ref(!!props.defaultPagefill)
-const focused = ref(true)
-const isRunning = computed(() => ['starting', 'running'].includes(props.terminal.status))
+
+const {
+  isFullscreen,
+  isPagefill,
+  focused,
+  toggleFullscreen: toggleTerminalFullscreen,
+  togglePagefill,
+  setFocused,
+} = usePagefill(workspaceRoot, {
+  initialFocused: true,
+  initialPagefill: !!props.defaultPagefill,
+})
+
+function onFocusChange(value) {
+  setFocused(value)
+}
+
+const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
   if (props.connectionStatus !== 'open') return '连接中断，PTY 仍在跑 · 重连后会补回放'
@@ -126,37 +141,9 @@ const footerHint = computed(() => {
 })
 const statusText = computed(() => {
   if (props.connectionStatus !== 'open') {
-    return props.connectionStatus === 'connecting' ? '连接中' : '重连中'
+    return connectionStatusText(props.connectionStatus)
   }
-  const map = {
-    starting: '启动中',
-    running: '交互中',
-    exited: '已结束',
-    failed: '启动失败',
-    killed: '已停止',
-    timed_out: '已超时',
-    interrupted: '已中断',
-  }
-  return map[props.terminal.status] || props.terminal.status
-})
-
-function syncFullscreenState() {
-  isFullscreen.value = fullscreenElement() === workspaceRoot.value
-}
-
-async function toggleTerminalFullscreen() {
-  if (isFullscreen.value) await exitFullscreen()
-  else await requestFullscreen(workspaceRoot.value)
-}
-
-function togglePagefill() {
-  isPagefill.value = !isPagefill.value
-}
-
-watch(isPagefill, async (on) => {
-  document.documentElement.classList.toggle('acw-terminal-pagefill', on)
-  await nextTick()
-  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
+  return terminalStatusText(props.terminal.status, 'workspace')
 })
 
 watch(
@@ -165,40 +152,6 @@ watch(
     if (on) isPagefill.value = true
   },
 )
-
-function onFocusChange(value) {
-  focused.value = !!value
-}
-
-function onKeydown(ev) {
-  if (ev.key !== 'Escape') return
-  if (focused.value) {
-    ev.preventDefault()
-    document.activeElement?.blur?.()
-    focused.value = false
-    return
-  }
-  if (isPagefill.value) {
-    ev.preventDefault()
-    isPagefill.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('fullscreenchange', syncFullscreenState)
-  document.addEventListener('keydown', onKeydown)
-  syncFullscreenState()
-  if (isPagefill.value) {
-    document.documentElement.classList.add('acw-terminal-pagefill')
-    nextTick(() => requestAnimationFrame(() => window.dispatchEvent(new Event('resize'))))
-  }
-})
-
-onUnmounted(() => {
-  document.removeEventListener('fullscreenchange', syncFullscreenState)
-  document.removeEventListener('keydown', onKeydown)
-  document.documentElement.classList.remove('acw-terminal-pagefill')
-})
 </script>
 
 <style scoped>

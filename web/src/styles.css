@@ -234,6 +234,23 @@ html.acw-terminal-pagefill body {
   z-index: 1;
 }
 
+/* 居中内容列（中栏消息区与输入区共用） */
+.wb-chat-col {
+  width: 100%;
+  max-width: var(--ecw-stage-max, 780px);
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 有内嵌终端时放宽消息列，给终端卡片更多空间。
+   只作用于消息区：输入框保持原有阅读宽度，避免整屏排版跳动 */
+.wb-chat-col.is-wide {
+  max-width: var(--ecw-stage-max-wide, 1180px);
+}
+
 /* 右栏：流程轨 */
 .wb-right {
   width: var(--ecw-rail-w);
