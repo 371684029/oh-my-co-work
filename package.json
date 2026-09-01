@@ -2,6 +2,7 @@
   "name": "oh-my-co-work",
   "version": "3.7.4",
   "private": true,
+  "type": "module",
   "description": "群聊式多智能体协同台 MVP",
   "workspaces": [
     "shared",
@@ -19,13 +20,18 @@
     "pack": "node scripts/pack-release.mjs",
     "validate:packages": "node scripts/validate-release-packages.mjs",
     "build": "npm run build -w web",
-    "test": "npm run test -w server"
+    "lint": "eslint .",
+    "test": "npm run test -w server",
+    "test:web": "node --test web/test/*.test.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^9.33.0",
+    "globals": "^17.11.0",
     "playwright": "^1.61.1"
   }
 }
