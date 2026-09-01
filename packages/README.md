@@ -16,7 +16,7 @@
 |------|------|------|----------|----------|
 | darwin-arm64 | [`oh-my-co-work-v3-darwin-arm64.zip`](./oh-my-co-work-v3-darwin-arm64.zip) | 23888140 | `4f539be72854` | 2026-09-01T10:27:19.499Z |
 | linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 24046285 | `4f539be72854` | 2026-09-01T10:27:21.296Z |
-| win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 23879275 | `4f539be72854` | 2026-09-01T10:27:21.889Z |
+| win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 23882402 | `7f178308775c` | 2026-09-01T10:59:35.355Z |
 
 版本：`3.7.4`（大版本 v3）
 
