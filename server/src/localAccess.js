@@ -68,10 +68,17 @@ export function bootstrapLocalAccess(req, res) {
   res.json({ token: API_TOKEN })
 }
 
-export function requestToken(req) {
+/**
+ * 提取访问令牌：
+ * - REST（requireLocalAccess）只认 Authorization / X-ACW-Token 头，
+ *   避免令牌泄入浏览器历史、日志与 Referer（3.8.2 收紧）。
+ * - WebSocket 握手无法携带自定义头，allowQuery=true 时保留查询串令牌。
+ */
+export function requestToken(req, { allowQuery = true } = {}) {
   const authorization = String(req.headers.authorization || '')
   if (authorization.startsWith('Bearer ')) return authorization.slice(7)
   if (req.headers['x-acw-token']) return req.headers['x-acw-token']
+  if (!allowQuery) return ''
   if (req.query?.token) return req.query.token
   try {
     return new URL(req.url || '', 'http://127.0.0.1').searchParams.get('token') || ''
@@ -80,13 +87,13 @@ export function requestToken(req) {
   }
 }
 
-export function hasValidAccessToken(req) {
-  return safeEqual(requestToken(req), API_TOKEN)
+export function hasValidAccessToken(req, { allowQuery = true } = {}) {
+  return safeEqual(requestToken(req, { allowQuery }), API_TOKEN)
 }
 
 export function requireLocalAccess(req, res, next) {
   if (req.path === '/health') return next()
-  if (!hasValidAccessToken(req)) {
+  if (!hasValidAccessToken(req, { allowQuery: false })) {
     return res.status(401).json({ error: '本地访问令牌无效', code: 'LOCAL_ACCESS_REQUIRED' })
   }
   next()

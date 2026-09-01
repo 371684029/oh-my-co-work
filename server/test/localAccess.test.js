@@ -72,3 +72,53 @@ test('bootstrap requires a trusted Origin and then issues a token', () => {
     true,
   )
 })
+
+test('REST auth rejects query-string tokens; WebSocket keeps them (3.8.2)', () => {
+  const boot = jsonRes()
+  bootstrapLocalAccess({ headers: { origin: 'http://127.0.0.1:5173' } }, boot)
+  const token = boot.out.body.token
+
+  // WebSocket 风格（默认 allowQuery=true）：查询串令牌仍然有效
+  assert.equal(
+    hasValidAccessToken({
+      headers: {},
+      url: `/ws?sessionId=test&token=${encodeURIComponent(token)}`,
+    }),
+    true,
+  )
+  // REST（allowQuery=false）：查询串令牌一律拒绝
+  assert.equal(
+    hasValidAccessToken(
+      { headers: {}, url: `/api/sessions?token=${encodeURIComponent(token)}` },
+      { allowQuery: false },
+    ),
+    false,
+  )
+  assert.equal(
+    hasValidAccessToken({ headers: {}, query: { token } }, { allowQuery: false }),
+    false,
+  )
+  // 头部令牌在 REST 上不受影响
+  assert.equal(
+    hasValidAccessToken(
+      { headers: { authorization: `Bearer ${token}` }, url: '/api/sessions' },
+      { allowQuery: false },
+    ),
+    true,
+  )
+  assert.equal(
+    hasValidAccessToken(
+      { headers: { 'x-acw-token': token }, query: { token: 'bad' } },
+      { allowQuery: false },
+    ),
+    true,
+  )
+  // 错误令牌仍被拒
+  assert.equal(
+    hasValidAccessToken(
+      { headers: { 'x-acw-token': `${token}x` }, url: '/api/sessions' },
+      { allowQuery: false },
+    ),
+    false,
+  )
+})
