@@ -160,7 +160,13 @@ test('log files redact tokens while live replay stays raw', async () => {
   assert.ok(terminal.replay.includes(token))
   assert.ok(terminal.replay.includes('UNIQUE_REDACT_MARKER'))
   const logPath = path.join(dataRoot, 'logs', terminal.log)
-  const logText = fs.readFileSync(logPath, 'utf8')
+  // 日志按 OUTPUT_BATCH_MS 批量落盘；轮询等待最后一拍写入，避免与刷盘竞态
+  let logText = ''
+  for (let i = 0; i < 80; i++) {
+    logText = fs.readFileSync(logPath, 'utf8')
+    if (logText.includes('UNIQUE_REDACT_MARKER')) break
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
   assert.equal(logText.includes(token), false)
   assert.match(logText, /\[REDACTED\]/)
   assert.ok(logText.includes('UNIQUE_REDACT_MARKER'))
