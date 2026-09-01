@@ -18,6 +18,7 @@
 | [crucible-3.7.md](./crucible-3.7.md) | **3.7 3.x 最终封板**：chatgpt-pets 图集、头像、GUI 可读正文、短合同开炉、PTY 宿主 |
 | [crucible-grok-client.md](./crucible-grok-client.md) | **Grok 客户端原理**：官方 CLI + node-pty，不是自研 Chat API |
 | [crucible-gui-plain.md](./crucible-gui-plain.md) | **GUI 可读正文**：去 TUI 框线/底栏，不把整屏抄进聊天区 |
+| [refactor-3.8-plan.md](./refactor-3.8-plan.md) | **3.8 重构与加固计划**：引擎拆分 / 工作台拆分 / lint 与令牌收紧（规划中） |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
 | [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |
@@ -55,3 +56,4 @@
 | 3.7.2 | 修复熔炉启动报错 `unexpected argument '--prompt'`：官方 grok CLI 没有 --prompt 参数，短启动词改经 AGENTS.md/rules 文件传，不走命令行。 |
 | 3.7.3 | 临时协助节点折叠状态标出实际 @ 的成员（读 output.assists/lastInvoked 结构化数据）。 |
 | 3.7.4 | 支持与交流补邮箱联系方式（371684029@qq.com）。 |
+| 3.8.x | 规划中：重构与加固——engine/Workbench 拆分、复制逻辑单一来源、ESLint 进 CI、REST 收紧 `?token=`、web 纯逻辑测试。详见 [refactor-3.8-plan.md](./refactor-3.8-plan.md)。 |

@@ -22,6 +22,52 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-01 | A | docs/refactor-3.8-plan.md | 新增 3.8 重构与加固实施计划（引擎拆分/工作台拆分/工程加固三阶段 + 不动项 + 风险对策 + 封板口径）
+2026-09-01 | M | docs/README.md | 文档索引与版本纪律表补 3.8.x 条目
+2026-09-01 | A | server/test/engineAdvance.test.js | 3.8.0 表征测试：拆分前锁定 advance 主循环行为（6 例：human 闸门/场外暂停+前跳/缺参拦截/审核票/拒绝/聊天附言）
+2026-09-01 | A | server/test/engineGates.test.js | 3.8.0 表征测试：闸门语义（8 例：幂等键回放/ARCHIVED/重复同意幂等/NOT_WAITING/取消启动/adapter 提问路由/同意附言/中断拦截与放弃）
+2026-09-01 | A | server/src/engine/store.js | 3.8.0 引擎公共原语层：会话/节点/消息读写、persistNodeIo、resolveParamsMap、bindGateHumanInput、syncAutoSessionTitle（解除循环依赖所需）
+2026-09-01 | A | server/src/engine/offsite.js | 3.8.0 场外协助模块：插入/复用/回归主线归档/节点聊天累积
+2026-09-01 | A | server/src/engine/archive.js | 3.8.0 归档与台账模块：归档/解档、归档尾节点簿记、群报告刷新/保存、processDueArchives、markInterruptedOnBoot
+2026-09-01 | A | server/src/engine/adapterEvents.js | 3.8.0 JSONL adapter 事件模块
+2026-09-01 | A | server/src/engine/advance.js | 3.8.0 主循环模块：advance + openFlowGate + finishMainlineIfComplete
+2026-09-01 | A | server/src/engine/sessionLifecycle.js | 3.8.0 会话生命周期模块：创建（群/单聊）/克隆续跑/从节点继续/中断恢复
+2026-09-01 | A | server/src/engine/gates.js | 3.8.0 闸门模块：handleGateAction/Core + 幂等
+2026-09-01 | A | server/src/engine/mentions.js | 3.8.0 @协助模块：mention 解析 + 串行执行队列
+2026-09-01 | A | server/src/engine/userInput.js | 3.8.0 群聊消息入口模块：postUserMessage/appendPendingGateNote/recordUserChatInput
+2026-09-01 | M | server/src/engine.js | 3.8.0 降为门面（4090→46 行）：re-export engine/ 模块，导出名与调用方不变
+2026-09-01 | A | web/src/composables/terminalStatus.js | 3.8.1 终端状态文案与 isRunning 单一来源（workspace/card/furnace 三 variant 保留历史措辞差异）
+2026-09-01 | A | web/src/composables/pagefill.js | 3.8.1 满屏/全屏/Esc 折叠单一来源（usePagefill）
+2026-09-01 | A | web/src/composables/localUploads.js | 3.8.1 本地文件选择/上传单一来源（useLocalUploads）
+2026-09-01 | A | web/src/views/workbench/components/SessionRail.vue | 3.8.1 左栏会话轨组件（自 Workbench.vue 迁出）
+2026-09-01 | A | web/src/views/workbench/components/FlowRail.vue | 3.8.1 右栏流程轨组件（自 Workbench.vue 迁出）
+2026-09-01 | A | web/src/views/workbench/components/ComposerPanel.vue | 3.8.1 中栏输入区组件（自 Workbench.vue 迁出）
+2026-09-01 | A | web/src/views/workbench/composables/useSessionDetail.js | 3.8.1 会话详情/闸门/流程轨/群报告状态单例
+2026-09-01 | A | web/src/views/workbench/composables/useTerminalSessions.js | 3.8.1 终端会话/WS 重连/replay 单例
+2026-09-01 | A | web/src/views/workbench/composables/useFurnaceSync.js | 3.8.1 桌宠三态同步 + ?furnace=1 开炉
+2026-09-01 | A | web/src/composables/useFurnaceWorkspace.js | 3.8.1 熔炉干活面 GUI/TUI 对话逻辑抽出（计划外新增，为达成 ≤900 行验收）
+2026-09-01 | M | web/src/views/Workbench.vue | 3.8.1 拆分布局壳（5657→799 行）；删未引用死 CSS @keyframes welcome-rise
+2026-09-01 | M | web/src/components/terminal/FurnaceWorkspace.vue | 3.8.1 对话逻辑入 useFurnaceWorkspace（1210→899 行）；改引 terminalStatus/pagefill/localUploads
+2026-09-01 | M | web/src/components/terminal/TerminalWorkspace.vue | 3.8.1 改引 terminalStatus/pagefill 单一来源
+2026-09-01 | M | web/src/components/terminal/TerminalSessionCard.vue | 3.8.1 改引 terminalStatus 单一来源
+2026-09-01 | M | web/src/components/terminal/TerminalView.vue | 3.8.1 改引 isTerminalRunning
+2026-09-01 | M | web/src/styles.css | 3.8.1 跨组件共享的 .wb-chat-col 收进全局
+2026-09-01 | A | web/test/petAtlas.test.mjs | 3.8.2 web 纯逻辑测试：图集几何/clip 映射/16 向 look/裁切数学（7 例）
+2026-09-01 | A | web/test/terminalStatus.test.mjs | 3.8.2 web 纯逻辑测试：三 variant 文案契约 + isRunning + 连接态（6 例）
+2026-09-01 | M | server/src/localAccess.js | 3.8.2 REST 不再接受 ?token=（仅 header）；WS 查询串令牌保留（allowQuery 语义）
+2026-09-01 | M | server/test/localAccess.test.js | 3.8.2 补 REST 拒 query token / WS 保留 / header 正常用例
+2026-09-01 | A | eslint.config.js | 3.8.2 ESLint flat config：正确性规则 0 error；.vue 用 essential；HTA 遗留转义与 ANSI 控制字符正则豁免
+2026-09-01 | M | package.json | 3.8.2 加 lint / test:web script；devDeps eslint + eslint-plugin-vue；type:module
+2026-09-01 | M | .github/workflows/ci.yml | 3.8.2 CI 在 Test 前加 Lint、后加 Test web
+2026-09-01 | M | server/test/terminalService.test.js | 修复偶发：日志批量落盘与断言竞态，改轮询等待（断言不变）
+2026-09-01 | M | server/src/uploads.js | lint 顺手：删未使用 rel（纯表达式，行为不变）
+2026-09-01 | M | server/src/slashCommands.js | lint 顺手：persist 解构绑定改 _persist（键名不变，行为不变）
+2026-09-01 | M | server/src/processRegistry.js | lint 顺手：删未使用 rid 死代码；\\\" 转义按原样保留（模板字面量行为不变）
+2026-09-01 | M | server/src/routes.js server/src/runners.js server/src/seed.js server/src/services.js shared/index.js | lint 顺手：删死导入/死参数（_group）、修无义转义（行为不变）
+2026-09-01 | M | docs/directory-structure.md docs/frontend-components.md docs/refactor-3.8-plan.md | 3.8 文档同步：engine/ 与 workbench/ 新结构、组件拆分说明、计划勾选与偏差记录
+2026-09-01 | M | README.md | 路线图 3.8.0/3.8.1/3.8.2 勾选；文档表与版本表同步
+2026-09-01 | M | CODE_CHANGE.md | 追加 3.8 实施条目
+
 2026-08-31 | M | web/src/components/terminal/TerminalView.vue | 按产品取舍：TUI 继续吞备用屏以保住上翻历史；Grok 画面内可点按钮不做了
 2026-08-31 | M | web/src/components/terminal/FurnaceWorkspace.vue | 撤回「记录」侧栏方案，TUI 仍是上方对话记录 + 下方终端
 2026-08-31 | M | docs/crucible-gui-plain.md | 写明 TUI 可点按钮可能不准，以键盘为准

@@ -35,6 +35,14 @@ app.use(ElementPlusX)
 
 ## 2. 工作台映射（已实现）
 
+> **3.8.1 拆分说明**：`Workbench.vue` 保留三栏布局壳（≤800 行）；三栏各自成组件
+> `views/workbench/components/{SessionRail, FlowRail, ComposerPanel}.vue`，
+> 会话/终端/桌宠状态收敛进 `views/workbench/composables/{useSessionDetail,
+> useTerminalSessions, useFurnaceSync}.js`（模块级 ref 单例，沿用 furnaceUi 模式，不引 Pinia）。
+> 终端状态文案、满屏/全屏/Esc 折叠、本地上传已单一来源化：
+> `composables/{terminalStatus, pagefill, localUploads}.js`。
+> 下表组件名仍是用户可见面；拆分只动内部组织，不改视觉与交互。
+
 | 区域 | 组件 | 说明 |
 |------|------|------|
 | 壳层顶栏 | `App.vue` + `AppLogo` | 品牌 Logo + 分段导航 |

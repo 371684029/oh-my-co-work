@@ -218,6 +218,7 @@ packages/  可直接运行的三平台压缩包
 | [3.5 熔炉 GUI / TUI](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、GUI 与 TUI 同一进程 |
 | [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：chatgpt-pets 桌宠图集、头像、GUI 附件、PTY 宿主 |
 | [熔炉 GUI 可读正文](./docs/crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
+| [3.8 重构与加固计划](./docs/refactor-3.8-plan.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（规划中） |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
@@ -242,6 +243,9 @@ packages/  可直接运行的三平台压缩包
 - [x] 3.7.2：修复熔炉启动报错 `unexpected argument '--prompt'`——官方 grok CLI 没有 --prompt 参数，短启动词改经 AGENTS.md/rules 文件传，不再走命令行
 - [x] 3.7.3：临时协助节点折叠状态直接标出实际 @ 的成员，不用展开就知道用了哪个工具
 - [x] 3.7.4：支持与交流补邮箱联系方式（371684029@qq.com）
+- [x] 3.8.0：引擎拆分——engine.js 模块化（store/offsite/archive/adapterEvents/advance/sessionLifecycle/gates/mentions/userInput，单向依赖无环），gate 与 advance 补 14 个直接单测
+- [x] 3.8.1：工作台拆分——Workbench.vue 799 行布局壳、三栏组件化（SessionRail/FlowRail/ComposerPanel）、终端状态收敛进 composables、复制逻辑单一来源（terminalStatus/pagefill/localUploads）
+- [x] 3.8.2：工程加固——ESLint 进 CI（0 error）、REST 收紧 `?token=`（WS 例外）、web 纯逻辑测试 13 例；浏览器人工冒烟与三平台打包交由后续流水线补验
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

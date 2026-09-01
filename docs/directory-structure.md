@@ -31,9 +31,12 @@ oh-my-co-work/
 │   │   └── furnace/             # 熔炉三套 prompt + 记忆种子
 │   └── src/
 │       ├── index.js             # Express + WS 入口，自动 seed
-│       ├── localAccess.js       # 本机 Origin / 访问令牌（2.0.1）
+│       ├── localAccess.js       # 本机 Origin / 访问令牌（2.0.1；3.8.2 起 REST 不收 ?token=）
 │       ├── db.js                # SQLite + DATA_ROOT
-│       ├── engine.js            # Session 推进 / 闸门 / 归档
+│       ├── engine.js            # 门面：re-export engine/ 模块（3.8.0 拆分）
+│       ├── engine/              # 引擎模块（3.8.0）：store / offsite / archive /
+│       │                        #   adapterEvents / advance / sessionLifecycle /
+│       │                        #   gates / mentions / userInput（单向依赖，无环）
 │       ├── runners.js           # echo / script 执行
 │       ├── processRegistry.js   # PID / 进程树
 │       ├── terminal/            # PTY 终端会话
@@ -53,9 +56,15 @@ oh-my-co-work/
 │       ├── App.vue              # 顶栏：工作台 | 设置
 │       ├── router.js
 │       ├── api.js               # fetch 封装
+│       ├── composables/         # terminalStatus / pagefill / localUploads /
+│       │                        #   useFurnaceWorkspace / furnaceUi / furnacePetAtlas
 │       ├── styles.css
+│       ├── test/                # web 纯逻辑测试（node --test，3.8.2）
 │       └── views/
-│           ├── Workbench.vue    # 三栏 + Plus-X 对话组件
+│           ├── Workbench.vue    # 三栏布局壳（3.8.1 拆分后 ≤800 行）
+│           ├── workbench/       # 3.8.1 拆分：components/{SessionRail,FlowRail,
+│           │                    #   ComposerPanel}.vue + composables/{useSessionDetail,
+│           │                    #   useTerminalSessions,useFurnaceSync}.js
 │           └── settings/
 │               ├── SettingsLayout.vue
 │               ├── Members.vue
