@@ -14,5 +14,5 @@ commit.linux-x64=4f539be7285413e67501e0d363afaf12e7d78a47
 built.linux-x64=2026-09-01T10:27:21.296Z
 file.win32-x64=oh-my-co-work-v3-win32-x64.zip
 size.win32-x64=23879275
-commit.win32-x64=b996fb840ecb2f75904a62af3f7daa7b6f28e1a9
-built.win32-x64=2026-08-31T11:31:23.158Z
+commit.win32-x64=4f539be7285413e67501e0d363afaf12e7d78a47
+built.win32-x64=2026-09-01T10:27:21.889Z
