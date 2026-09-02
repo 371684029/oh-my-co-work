@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-02 | M | docs/docs-4x-plan.md | 新增 §7 Phase 3：4.2.0 发布更新与本地历史保留规范——三层更新模型（4.2.0 只做检查+获取，self-replace 后置）、数据保留七条硬规则（zip 不含 data/** 入 verify-pack、更新前强制引导备份、restore 含恢复前备份、schema 迁移链、降级不承诺）、任务/测试/验收清单；风险表与完成定义补 4.2.0；版本切分表加 4.2.0 行
+2026-09-02 | M | README.md docs/README.md | 路线图加 4.2.0；4.x 计划简介更新
+
 2026-09-02 | M | package.json server/package.json web/package.json shared/package.json server/config/about.json | 版本号提升到 4.0.0（含 3.8.0 重构封板与 4.0.0 协同文档中心两条 changelog）；README 徽章、docs 索引、AGENT.md 版本现状同步
 
 2026-09-02 | M | docs/selftest.md | code review 精修：selftest 数量口径（4 selftest + test-enter-send）、root 下 1 例按设计 skip 注脚、§8 令牌提取器改为可运行命令、§3.1 去掉未用的 getDb
