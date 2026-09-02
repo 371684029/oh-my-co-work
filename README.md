@@ -247,7 +247,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 3.8.0：引擎拆分——engine.js 模块化（store/offsite/archive/adapterEvents/advance/sessionLifecycle/gates/mentions/userInput，单向依赖无环），gate 与 advance 补 14 个直接单测
 - [x] 3.8.1：工作台拆分——Workbench.vue 799 行布局壳、三栏组件化（SessionRail/FlowRail/ComposerPanel）、终端状态收敛进 composables、复制逻辑单一来源（terminalStatus/pagefill/localUploads）
 - [x] 3.8.2：工程加固——ESLint 进 CI（0 error）、REST 收紧 `?token=`（WS 例外）、web 纯逻辑测试 13 例；浏览器人工冒烟与三平台打包交由后续流水线补验
-- [ ] 4.0.0：协同文档中心——本地聚合群报告/节点台账，左菜单右内容，默认群模板排序可切时间排序，群公告 MD 可编辑
+- [x] 4.0.0：协同文档中心——本地聚合群报告/节点台账，新标签打开独立页面（左菜单右内容），默认群模板排序可切时间排序，群公告 MD 可编辑，超链/文档互链/本地文件夹链接可点
 - [ ] 4.1.0：文档中心增强——全文搜索、节点文档徽标、打包本群全部 MD 导出
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知

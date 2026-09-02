@@ -280,11 +280,19 @@
             size="small"
             plain
             :disabled="!activeId"
+            @click="openDocsHub"
+          >
+            打开 MD
+          </el-button>
+          <el-button
+            size="small"
+            text
+            :disabled="!activeId"
             :loading="announceOpenLoading"
             :title="announceMdHint"
             @click="openAnnouncementMd"
           >
-            打开 MD
+            系统打开
           </el-button>
           <el-button
             size="small"
@@ -492,6 +500,7 @@ import {
   statusType,
   formatTime,
   openAnnouncementMd,
+  openDocsHub,
   rebuildAnnouncement,
   saveSessionNotes,
 } from '../composables/useSessionDetail'

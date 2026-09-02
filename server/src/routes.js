@@ -54,6 +54,7 @@ import { getAppSettings,
 } from './appSettings.js'
 import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
+import * as docsHub from './docsHub.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -749,6 +750,47 @@ router.get('/about', (_req, res) => {
     extraNotes: Array.isArray(data.extraNotes) ? data.extraNotes : [],
     changelog: Array.isArray(data.changelog) ? data.changelog : [],
   })
+})
+
+// —— 文档中心（4.0）：聚合 journals 会话文档 ——
+
+router.get('/docs/list', (req, res) => {
+  try {
+    res.json(docsHub.listDocs({ sort: req.query.sort === 'time' ? 'time' : 'group' }))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/docs/file', (req, res) => {
+  try {
+    res.json(
+      docsHub.readDoc(String(req.query.sessionId || ''), String(req.query.name || '')),
+    )
+  } catch (e) {
+    const code = e.code === 'NOT_WHITELISTED' || e.code === 'BAD_SESSION' ? 400 : 404
+    res.status(code).json({ error: e.message })
+  }
+})
+
+router.post('/docs/announcement', (req, res) => {
+  try {
+    const { sessionId, markdown } = req.body || {}
+    res.json(docsHub.saveAnnouncement(sessionId, markdown))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.post('/docs/open-path', (req, res) => {
+  try {
+    docsHub
+      .openDocsPath(req.body?.path)
+      .then((r) => res.json(r))
+      .catch((e) => res.status(400).json({ error: e.message }))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 
 export default router

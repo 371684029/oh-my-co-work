@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Workbench from './views/Workbench.vue'
+import DocsHub from './views/docs/DocsHub.vue'
 import SettingsLayout from './views/settings/SettingsLayout.vue'
 import Members from './views/settings/Members.vue'
 import Groups from './views/settings/Groups.vue'
@@ -13,6 +14,7 @@ const routes = [
   { path: '/', redirect: '/workbench' },
   { path: '/workbench', component: Workbench },
   { path: '/workbench/:sessionId', component: Workbench, props: true },
+  { path: '/docs', component: DocsHub },
   {
     path: '/settings',
     component: SettingsLayout,

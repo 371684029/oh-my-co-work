@@ -27,6 +27,14 @@
           <button
             type="button"
             class="nav-item"
+            title="新标签打开文档中心"
+            @click="openDocs"
+          >
+            文档
+          </button>
+          <button
+            type="button"
+            class="nav-item"
             :class="{ active: nav === 'settings' }"
             @click="go('settings')"
           >
@@ -143,6 +151,11 @@ watch(
 function go(v) {
   nav.value = v
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
+}
+
+/** 文档中心：新开标签打开（§3.5），不导航当前工作台 */
+function openDocs() {
+  window.open('/docs', '_blank', 'noopener')
 }
 
 async function refreshGrokGate() {

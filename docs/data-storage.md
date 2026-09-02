@@ -146,6 +146,11 @@ WAL 下可能存在：
 
 实现：`server/src/journal.js`。
 
+> **文档中心（4.0）**：`server/src/docsHub.js` 是这套 MD 的**只读聚合视图**（群报告可经它编辑）。
+> 它不复制文件、不建第二份索引——`GET /api/docs/list`（按群模板分组 / 按时间两种排序，60s 缓存）、
+> `GET /api/docs/file`（文件名白名单 + 1MB 截断）、`POST /api/docs/announcement`（透传保存，manual 语义不变）、
+> `POST /api/docs/open-path`（只起文件夹，文件一律开所在目录）。前端页面：`/docs`（新标签打开）。
+
 ### 3.1 单节点文件
 
 ```

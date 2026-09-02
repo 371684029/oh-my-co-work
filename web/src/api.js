@@ -40,6 +40,18 @@ async function req(path, options = {}) {
 
 export const api = {
   health: () => req('/health'),
+  docs: {
+    list: (sort = 'group') => req(`/docs/list?sort=${encodeURIComponent(sort)}`),
+    file: (sessionId, name) =>
+      req(`/docs/file?sessionId=${encodeURIComponent(sessionId)}&name=${encodeURIComponent(name)}`),
+    saveAnnouncement: (sessionId, markdown) =>
+      req('/docs/announcement', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, markdown }),
+      }),
+    openPath: (path) =>
+      req('/docs/open-path', { method: 'POST', body: JSON.stringify({ path }) }),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),

@@ -22,6 +22,23 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-02 | A | web/src/views/docs/DocsHub.vue | 4.0.0 文档中心页面（928 行）：左菜单双排序（群模板树/时间扁平）+ 右渲染/编辑切换 + 链接事件委托（openPath/页内跳转）+ URL 可分享 + 未保存守卫 + 空态
+2026-09-02 | A | web/src/views/workbench/composables/useDocsHub.js | 4.0.0 文档中心状态单例（381 行）：列表/当前文档/保存/链接解析（白名单校验）
+2026-09-02 | M | web/src/router.js | 加 /docs 独立页面路由
+2026-09-02 | M | web/src/App.vue | 顶栏「文档」入口，window.open 新标签打开
+2026-09-02 | M | web/src/views/workbench/components/FlowRail.vue web/src/views/workbench/composables/useSessionDetail.js | 「打开 MD」改为新开文档中心；新增「系统打开」次按钮保留原行为
+2026-09-02 | M | docs/docs-4x-plan.md | 4.0.0 任务/验收勾选与实施偏差记录
+2026-09-02 | M | README.md | 路线图 4.0.0 勾选
+2026-09-02 | M | CODE_CHANGE.md | 追加 4.0.0 实施条目
+
+2026-09-01 | A | server/src/docsHub.js | 4.0.0 文档中心服务端：journals 扫描聚合（60s 缓存+失效）、文件名白名单/会话 ID 校验/穿越拦截、1MB 截断读取、公告保存（manual 语义）、open-path 防误执行（文件只开所在目录）
+2026-09-01 | M | server/src/routes.js | 挂接 /api/docs/list|file|announcement|open-path
+2026-09-01 | M | web/src/api.js | 新增 api.docs 客户端（list/file/saveAnnouncement/openPath）
+2026-09-01 | A | server/test/docsHub.test.js | 文档中心服务端测试：扫描结构/双排序/白名单与穿越/1MB 截断/manual 语义/open-path 防误执行（6 例）
+2026-09-01 | A | web/src/views/docs/markdownRenderer.js | 4.0.0 渲染工厂：html:false + 链接三分类（外链新标签/文档互链 data-docs-link/本地路径 data-docs-path）；路径识别基于原始文本（连续 text/text_special token 串接），规避反斜杠转义吞字与贪婪吞尾
+2026-09-01 | A | web/test/docsRender.test.mjs | 渲染测试：XSS 转义/三类链接/Windows 空格反斜杠/UNC 转义后形态/POSIX 仅整行/普通句不误判/尾随标点不入路径（10 例）
+2026-09-01 | M | web/package.json package-lock.json | 新增运行时依赖 markdown-it（约 100KB，进 vite 产物）
+2026-09-01 | M | docs/data-storage.md docs/directory-structure.md | 文档中心只读聚合视图说明与目录同步
 2026-09-01 | M | docs/docs-4x-plan.md | 新增 §3.4 链接可点：网页超链新标签 / 文档互链页内跳转 / 本地文件夹起文件管理器（文件只开所在目录防误执行）；路径识别基于原始文本（防反斜杠被 markdown 转义吞掉）；§4/§5.1/§5.2/§5.3/§8/§9 同步任务、用例与完成定义
 2026-09-01 | M | docs/README.md README.md | 4.x 计划简介补「链接可点」
 2026-09-01 | M | docs/docs-4x-plan.md | 文档中心打开方式按产品决定改为新开浏览器标签（独立 /docs 页面）：§1 目标、§2.1 原则、§3.4 打开方式与联动、§5.2 前端任务、§9 完成定义同步

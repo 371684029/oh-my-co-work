@@ -34,6 +34,7 @@ oh-my-co-work/
 │       ├── localAccess.js       # 本机 Origin / 访问令牌（2.0.1；3.8.2 起 REST 不收 ?token=）
 │       ├── db.js                # SQLite + DATA_ROOT
 │       ├── engine.js            # 门面：re-export engine/ 模块（3.8.0 拆分）
+│       ├── docsHub.js           # 文档中心（4.0）：journals 聚合/白名单/公告保存/路径打开
 │       ├── engine/              # 引擎模块（3.8.0）：store / offsite / archive /
 │       │                        #   adapterEvents / advance / sessionLifecycle /
 │       │                        #   gates / mentions / userInput（单向依赖，无环）
@@ -62,9 +63,10 @@ oh-my-co-work/
 │       ├── test/                # web 纯逻辑测试（node --test，3.8.2）
 │       └── views/
 │           ├── Workbench.vue    # 三栏布局壳（3.8.1 拆分后 ≤800 行）
+│           ├── docs/            # 4.0 文档中心：DocsHub.vue + markdownRenderer.js
 │           ├── workbench/       # 3.8.1 拆分：components/{SessionRail,FlowRail,
 │           │                    #   ComposerPanel}.vue + composables/{useSessionDetail,
-│           │                    #   useTerminalSessions,useFurnaceSync}.js
+│           │                    #   useTerminalSessions,useFurnaceSync,useDocsHub}.js
 │           └── settings/
 │               ├── SettingsLayout.vue
 │               ├── Members.vue

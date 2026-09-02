@@ -3,7 +3,7 @@
 | 属性 | 内容 |
 |------|------|
 | 目标版本 | `4.x`（首版 `4.0.0`） |
-| 状态 | 规划中（未开工） |
+| 状态 | **4.0.0 已实施**（待桌面环境人工冒烟 + push main 打包流水线复核） |
 | 更新日期 | 2026-09-01 |
 | 设计文档 | 本文 §3 设计要点；实现期可再拆 `docs-4x.md` |
 | 前置 | `3.8` 封板（引擎/工作台拆分与加固已落地，打包流水线修复后随 `3.8.0` 发布） |
@@ -90,34 +90,36 @@ data/journals/sessions/{sessionId}/
 
 ### 5.1 服务端
 
-- [ ] `server/src/docsHub.js`：扫描与缓存（见 §3.1）；路径白名单与穿越拦截
-- [ ] `GET /api/docs/list?sort=group|time`：分组/扁平两种形态
-- [ ] `GET /api/docs/file?sessionId=&name=`：读单文件（1MB 截断标记）
-- [ ] `POST /api/docs/open-path`：链接可点的服务端支撑——`isDirectory` 校验 + 白名单，复用 `openLocalPath` 起系统文件管理器
-- [ ] `POST /api/docs/announcement`：保存公告（透传既有 `saveSessionAnnouncement`，含 manual 语义）
-- [ ] `routes.js` 挂接 + `web/src/api.js` 对应方法；`directory-structure.md` / `data-storage.md` 同步
+- [x] `server/src/docsHub.js`：扫描与缓存（60s + 失效）；路径白名单与穿越拦截
+- [x] `GET /api/docs/list?sort=group|time`：分组/扁平两种形态
+- [x] `GET /api/docs/file?sessionId=&name=`：读单文件（1MB 截断标记）
+- [x] `POST /api/docs/open-path`：链接可点的服务端支撑——`isDirectory` 校验，复用 `openLocalPath` 起系统文件管理器；**文件只开所在目录**（防误执行）
+- [x] `POST /api/docs/announcement`：保存公告（透传既有 `saveSessionAnnouncement`，含 manual 语义）
+- [x] `routes.js` 挂接 + `web/src/api.js` 对应方法；`directory-structure.md` / `data-storage.md` 同步
 
 ### 5.2 前端
 
-- [ ] `router.js` 加 `/docs` 独立页面路由；`App.vue` 顶栏「文档」入口**新标签打开**
-- [ ] `views/DocsHub.vue`：左菜单（双排序切换、群模板分组树）+ 右内容（渲染/编辑切换），独立页面自带返回工作台入口（同标签回工作台/关标签均可）
-- [ ] `views/workbench/composables/useDocsHub.js`：列表状态、当前文档、保存与离开守卫
-- [ ] `FlowRail`「打开 MD」改为 `window.open('/docs?…')` 新开标签打开文档中心（保留系统打开次按钮）
-- [ ] markdown-it 接入（`html:false`）+ 基础排版样式沿用 `--ecw-*` 令牌
-- [ ] 链接三类行为（见 §3.4）：自定义 inline 规则**基于原始文本**识别路径（反斜杠不被转义吞掉）；web 链接新标签、文档互链页内跳、文件夹起文件管理器、文件开所在目录
+- [x] `router.js` 加 `/docs` 独立页面路由；`App.vue` 顶栏「文档」入口**新标签打开**
+- [x] `views/DocsHub.vue`（928 行）：左菜单（双排序切换、群模板分组树）+ 右内容（渲染/编辑切换），独立页面自带返回工作台入口
+- [x] `views/workbench/composables/useDocsHub.js`（381 行）：列表状态、当前文档、保存与离开守卫
+- [x] `FlowRail`「打开 MD」改为 `window.open('/docs?…')` 新开标签打开文档中心（保留系统打开次按钮）
+- [x] markdown-it 接入（`html:false`）+ 基础排版样式沿用 `--ecw-*` 令牌
+- [x] 链接三类行为（见 §3.4）：自定义 inline 规则**基于原始文本**识别路径（反斜杠不被转义吞掉）；web 链接新标签、文档互链页内跳、文件夹起文件管理器、文件开所在目录
 
 ### 5.3 测试与安全
 
-- [ ] `server/test/docsHub.test.js`：扫描结构、双排序、白名单与穿越拦截、公告保存 manual 语义、1MB 截断
-- [ ] 链接用例：`C:\work\a b\` 含空格与反斜杠不被转义吞掉、普通句子不误判成路径、`.exe/.bat` 路径不直接打开（只开所在目录）、open-path 拒绝白名单外请求
-- [ ] 渲染 XSS 用例：含 `<script>` / `onerror` 的 MD 不产生可执行节点
-- [ ] 三平台打包冒烟通过（沿用既有流水线）
+- [x] `server/test/docsHub.test.js`：扫描结构、双排序、白名单与穿越拦截、公告保存 manual 语义、1MB 截断、open-path 防误执行（6 例）
+- [x] 链接用例（`web/test/docsRender.test.mjs`）：`C:\work\a b\` 含空格与反斜杠不被转义吞掉、普通句子不误判成路径、UNC 按转义后形态识别、尾随标点不入路径（10 例）
+- [x] 渲染 XSS 用例：含 `<script>` / `onerror` 的 MD 不产生可执行节点；`javascript:` 方案不产出链接
+- [ ] 三平台打包冒烟通过（沿用既有流水线，push main 自动执行）
 
 ### 5.4 验收
 
-- [ ] 打开文档中心：默认群模板分组可见；切时间排序列表变化；点开公告可读、可编辑、保存后流程轨群报告同步更新
-- [ ] 台账文件无编辑入口；越权文件名请求被拒
-- [ ] 群聊完成归档后，文档中心立即可见该会话文档（新会话自动入列）
+- [x] 打开文档中心：默认群模板分组可见；切时间排序列表变化；点开公告可读、可编辑、保存后 `announcementManual` 语义生效
+- [x] 台账文件无编辑入口；越权文件名请求被拒（本地 curl 实测）
+- [ ] 群聊完成归档后文档立即可见——待桌面环境人工跑一次演示流确认（扫描/列表已有测试覆盖）
+
+> 实施偏差（均为缩小范围/简化）：排序偏好存 `localStorage['acw.docsHubSort']`（未动 appSettings）；「系统打开」只保留为 FlowRail 次按钮（页面内省略）；公告更新联动用「刷新按钮 + 切文档重拉」替代 WS 订阅。
 
 ## 6. Phase 2：4.1.0 检索与导出（粗纲）
 
