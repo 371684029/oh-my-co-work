@@ -82,7 +82,7 @@ data/journals/sessions/{sessionId}/
 |------|------|----------|
 | `4.0.0` | 协同文档中心 MVP | `/api/docs` 列表/读/存公告；`/docs` 视图：左菜单双排序 + 右渲染；公告可编辑；**链接可点（超链/文档互链/本地文件夹）**；新标签打开；安全护栏 |
 | `4.1.0` | 检索与导出 | 全文搜索（内存扫描，不引 FTS）；节点文档徽标（状态/适配角标）；「打包本群全部 MD」导出；代码高亮评估；按反馈放宽路径自动识别 |
-| `4.2.0` | 发布更新 + 本地历史保留 | 更新检查（手动触发，可选启动检查默认关）+ 更新面板（changelog/下载指引）+ 更新前一键备份 + **备份恢复** + schema 迁移链正式化；**更新动作永不触碰 DATA_ROOT** |
+| `4.2.0` | 发布更新 + 本地历史保留 | 更新检查（启动检查默认开，设置可关）+ 更新面板（changelog/下载指引）+ 更新前一键备份 + **备份恢复** + schema 迁移链正式化；**更新动作永不触碰 DATA_ROOT** |
 | 后置 | 4.3+ | 自动下载替换的自更新（self-replace，Windows 需延迟替换脚本，另案）；差量更新；静默后台检查 |
 | 后置 | 4.x 其它线 | 托盘独立窗、多终端标签治理、更多 CLI Adapter、文档版本历史/diff（git 化台账另案） |
 
@@ -150,7 +150,7 @@ data/journals/sessions/{sessionId}/
 
 | 层 | 能力 | 版本 |
 |----|------|------|
-| L1 检查 | 设置→关于「检查更新」按钮；可选「启动时检查」开关（**默认关**，守住"不自动联网"原则）。更新源：GitHub Releases API（公开仓库免凭据）与 `updateUrl` 指向的静态 `latest.json` 双源，超时 3s 静默降级 | `4.2.0` |
+| L1 检查 | 设置→关于「检查更新」按钮 + **「启动时检查」默认开**（设置可一键关闭）。更新源：GitHub Releases API（公开仓库免凭据）与 `updateUrl` 指向的静态 `latest.json` 双源，超时 3s 静默降级。隐私口径：检查**只读**远端版本号与更新日志，不上传任何本机数据 | `4.2.0` |
 | L2 获取 | 更新面板：当前版本 / 最新版本 / 新版 changelog（远程 manifest 携带）/ 平台匹配下载链接（`window.open` 交给浏览器下载）/「更新前备份」一键 / 覆盖解压指引（一键复制三步说明） | `4.2.0` |
 | L3 应用 | 自动下载 + 校验（BUILD_INFO/魔数）+ 解压替换 + 重启（self-replace；Windows 运行中文件需延迟替换脚本） | 后置 `4.3+` |
 
@@ -159,11 +159,12 @@ data/journals/sessions/{sessionId}/
 ### 7.4 任务
 
 - [ ] 服务端 `server/src/updateCheck.js`：双源检查 + 3s 超时降级 + 版本比较（semver 主.次.修）
-- [ ] `GET /api/update/check`（手动/开关开启时启动调用）；`POST /api/update/backup`（复用 backup.js）；`POST /api/update/restore`（含恢复前备份 + integrity 双查）
+- [ ] `GET /api/update/check`（手动/启动调用，启动检查默认开、设置可关）；`POST /api/update/backup`（复用 backup.js）；`POST /api/update/restore`（含恢复前备份 + integrity 双查）
 - [ ] schema 迁移链：`db.js` 的迁移收敛为 `migrations` 数组 + `schema_version` 驱动；历史迁移行为纳入首条幂等迁移
 - [ ] verify-pack 新增断言：zip 内不得出现 `data/**`
-- [ ] 前端：设置→关于 新增「更新」卡（检查按钮 + changelog 面板 + 备份/指引）；「启动时检查」开关进 Prefs
+- [ ] 前端：设置→关于 新增「更新」卡（检查按钮 + changelog 面板 + 备份/指引）；「启动时检查」开关进 Prefs（默认开）
 - [ ] `web/src/api.js` 对应方法；`RELEASE-USER.md` 写清三种更新路径（覆盖解压 / ACW_DATA_ROOT / 导入备份）
+- [ ] 同步隐私文案：about.json 的 extraNotes「不会自动联网检查」改为「启动时只读取远端最新版本号与更新日志，不上传任何本机数据，可在设置关闭」；Release-USER 与隐私说明同步
 
 ### 7.5 测试与安全
 
@@ -175,7 +176,7 @@ data/journals/sessions/{sessionId}/
 
 ### 7.6 验收
 
-- [ ] 检查更新手动可用、默认不联网；面板正确展示 changelog 与平台下载链接
+- [ ] 检查更新可用：启动检查默认开、设置可关、检查只读远端 manifest；面板正确展示 changelog 与平台下载链接
 - [ ] 更新前备份一键完成；restore 能回到备份点（含"恢复前再备份"）
 - [ ] 覆盖解压升级演练：历史记录（会话/节点台账/群公告/设置/附件）全部保留
 - [ ] 三平台打包冒烟通过；RELEASE-USER.md / data-storage.md / 本计划同步
@@ -197,7 +198,7 @@ data/journals/sessions/{sessionId}/
 | 会话量大列表卡顿 | 60s 缓存 + mtime 增量；菜单分组懒展开 |
 | 新依赖膨胀运行包 | markdown-it ~100KB，verify-pack 体积基线对比 |
 | 与 3.8 拆分后的模块边界冲突 | docsHub 独立成模块，不进 engine/；走 services/routes 层 |
-| 更新检查被误解为"自动联网上传数据" | 默认手动触发；启动检查开关默认关；面板明示"只读远端版本号与更新日志，不上传任何本机数据" |
+| 更新检查被误解为"自动联网上传数据" | 启动检查默认开（产品决定），但**只读**远端版本号与更新日志、不上传任何本机数据；设置一键关闭；面板与 about.json 文案明示 |
 | restore 覆盖写坏现有库 | 恢复前强制再打一份备份；integrity_check 前后双查；失败即停不动原库 |
 | 迁移半途失败留下脏库 | 迁移事务包裹 + schema_version 单调推进；失败即停并指向恢复备份 |
 
@@ -212,7 +213,7 @@ data/journals/sessions/{sessionId}/
 
 ### 10.2 4.2.0（发布更新与本地历史保留）
 
-- 「检查更新」手动可用（默认不联网，开关默认关）；面板展示 changelog 与平台下载链接。
+- 「检查更新」可用：启动检查默认开（设置一键关闭）；检查只读远端 manifest；面板展示 changelog 与平台下载链接。
 - 更新前一键备份；restore 能回到备份点（含"恢复前再备份"与 integrity 双查）。
 - schema 迁移链落地：旧 schema_version 库升级幂等、失败停住、测试覆盖。
 - 覆盖解压升级演练通过：会话/台账/公告/设置/附件**全部保留**；verify-pack 断言 zip 内无 `data/**`。
