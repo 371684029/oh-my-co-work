@@ -26,7 +26,11 @@ function journalRoot() {
 }
 
 function classify(name) {
-  const normalized = String(name || '').replace(/\\/g, '/')
+  let normalized = String(name || '').replace(/\\/g, '/')
+  // 计划/互链示例写 ./step-01-x.md，真实文件在 nodes/step-NN-*.md
+  if (/^step-\d{2}-[A-Za-z0-9_-]+\.md$/.test(normalized)) {
+    normalized = `nodes/${normalized}`
+  }
   for (const rule of FILE_KINDS) {
     const m = normalized.match(rule.re)
     if (m) return { kind: rule.kind, title: rule.title, normalized, step: m[1] ? Number(m[1]) : null }
@@ -232,16 +236,21 @@ export function readDoc(sessionId, name) {
   if (!fs.existsSync(abs)) throw Object.assign(new Error('文件不存在'), { code: 'NO_FILE' })
   const st = statFile(abs)
   const truncated = st.size > MAX_READ_BYTES
-  const content = truncated
-    ? fs.readFileSync(abs, { encoding: 'utf8', flag: 'r' }).slice(0, MAX_READ_BYTES)
-    : fs.readFileSync(abs, 'utf8')
+  const n = truncated ? MAX_READ_BYTES : st.size
+  const buf = Buffer.alloc(n)
+  const fd = fs.openSync(abs, 'r')
+  try {
+    fs.readSync(fd, buf, 0, n, 0)
+  } finally {
+    fs.closeSync(fd)
+  }
   return {
     sessionId,
     name: hit.normalized,
     kind: hit.kind,
     size: st.size,
     mtimeMs: st.mtimeMs,
-    content,
+    content: buf.toString('utf8'),
     truncated,
   }
 }
@@ -352,5 +361,13 @@ export function exportGroupZip(groupId) {
   }
   const zipPath = path.join(os.tmpdir(), `acw-docs-${groupId}-${Date.now()}.zip`)
   writeZipArchive(entries, zipPath)
-  return { path: zipPath, files: entries.length, sessions: sessions.length, groupTitle: group.title }
+  const slug = slugify(group.title)
+  return {
+    path: zipPath,
+    files: entries.length,
+    sessions: sessions.length,
+    groupTitle: group.title,
+    slug,
+    filename: `${slug}.zip`,
+  }
 }

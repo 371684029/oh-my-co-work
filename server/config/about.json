@@ -2,17 +2,38 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "4.0.0",
+  "version": "4.2.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
   "extraNotes": [
     "节点是死的，人是活的：流程给人绕行与临时协助的空间，而不是把人钉死在节点上。",
-    "引擎与界面均在本机进程内完成；可选的「更新地址」仅作人工跳转，不会自动联网检查。",
+    "引擎与界面均在本机进程内完成；启动时会向 GitHub Releases 查询是否有更新（只读版本号，不上传数据、不自动安装），可在设置关闭。",
     "支持与交流页的联系方式仅用于展示，不涉及远程调用。",
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "4.2.0",
+      "date": "2026-09-02",
+      "title": "4.2.0：发布更新与本地历史保留",
+      "items": [
+        "启动时检查更新默认开启（设置可关）：只读 GitHub Releases 版本号，不上传本机数据、不自动下载安装。",
+        "关于页可手动检查、一键备份、从备份恢复；恢复前自动再打一份备份。",
+        "tar 不可用时保留目录备份，列表与恢复都能认；拷入失败会把活库从 aside 回滚。",
+        "文档超 1MB 只读前 1MB；互链 step-*.md 映射到 nodes/；群文档导出 zip 使用群名 slug。"
+      ]
+    },
+    {
+      "version": "4.1.0",
+      "date": "2026-09-02",
+      "title": "4.1.0：文档检索与导出",
+      "items": [
+        "文档中心全文搜索（内存扫描，不引 FTS）。",
+        "节点台账徽标：状态 / 适配 / 克隆。",
+        "按群模板打包导出全部 Markdown 为 zip。"
+      ]
+    },
     {
       "version": "4.0.0",
       "date": "2026-09-02",

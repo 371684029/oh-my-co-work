@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.0.0-409eff?style=flat-square" alt="version 4.0.0" />
+  <img src="https://img.shields.io/badge/version-4.2.0-409eff?style=flat-square" alt="version 4.2.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -220,7 +220,7 @@ packages/  可直接运行的三平台压缩包
 | [熔炉 GUI 可读正文](./docs/crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
 | [3.8 重构与加固计划](./docs/refactor-3.8-plan.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（已实施） |
 | [自测体系](./docs/selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
-| [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0 已实施） |
+| [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0）；检索导出（4.1.0）；更新检查与备份恢复（4.2.0） |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |

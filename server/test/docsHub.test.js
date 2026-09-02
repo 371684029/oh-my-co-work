@@ -135,3 +135,34 @@ test('openDocsPath opens directories but only the containing dir for files', asy
   await assert.rejects(() => docsHub.openDocsPath(path.join(dir, 'no-such-dir'), deps), /不存在/)
   await assert.rejects(() => docsHub.openDocsPath('', deps), /路径为空/)
 })
+
+test('readDoc maps step-*.md alias into nodes/', () => {
+  const session = seedSession('别名组')
+  writeDoc(session.id, 'nodes/step-02-xyz.md', '台账正文')
+  const out = docsHub.readDoc(session.id, 'step-02-xyz.md')
+  assert.equal(out.name, 'nodes/step-02-xyz.md')
+  assert.equal(out.kind, 'step')
+  assert.equal(out.content, '台账正文')
+})
+
+test('searchDocs finds unique needle in announcement', () => {
+  const session = seedSession('检索组')
+  const token = `ZXQSEARCHTOKEN${Date.now()}`
+  writeDoc(session.id, 'ANNOUNCEMENT.md', `前缀 ${token} 后缀`)
+  docsHub.invalidateDocsCache()
+  const r = docsHub.searchDocs(token)
+  assert.ok(r.hits.some((h) => h.sessionId === session.id && h.snippet.includes(token)))
+})
+
+test('exportGroupZip returns slug and a zip file', () => {
+  const session = seedSession('导出组甲')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '导出内容')
+  const groupId = getDb().prepare('SELECT group_id FROM sessions WHERE id = ?').get(session.id).group_id
+  const out = docsHub.exportGroupZip(groupId)
+  assert.ok(out.slug)
+  assert.equal(out.filename, `${out.slug}.zip`)
+  assert.ok(out.files >= 1)
+  assert.ok(fs.existsSync(out.path))
+  assert.ok(fs.statSync(out.path).size > 0)
+  fs.rmSync(out.path, { force: true })
+})

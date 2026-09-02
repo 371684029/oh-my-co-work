@@ -129,78 +129,59 @@ export function createBackup(opts = {}) {
   }
 }
 
-/**
- * 4.2.0：从 data/backups/ 恢复一份 tar.gz 备份。
- * 流程：恢复前自动再打一份「恢复前备份」→ 解包到 staging → integrity 校验 →
- * 关闭连接 → 现有数据挪到 aside 目录 → 拷入备份数据 → 重新 initDb（会顺带跑迁移链）。
- * backups/ 目录本身不在备份与恢复范围内（历史备份永远保留）。
- * @param {string} filename data/backups/ 下的备份文件名（acw-backup-*.tar.gz）
- * @param {{ initDb?: Function, checkSqliteFile?: Function }} [deps]
- * @returns {{ ok: true, restoredFrom: string, preRestore: { path: string }, aside: string }}
- */
-export function restoreBackup(filename, deps = {}) {
-  const name = path.basename(String(filename || ''))
-  if (!/^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/.test(name)) {
-    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
-  }
-  const archive = path.join(DATA_ROOT, 'backups', name)
-  if (!fs.existsSync(archive)) {
-    throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
-  }
+const BACKUP_NAME_RE = /^acw-backup-[A-Za-z0-9._-]+(?:\.tar\.gz)?$/
+const LIVE_RELS = [
+  'oh-my-co-work.sqlite',
+  'oh-my-co-work.sqlite-wal',
+  'oh-my-co-work.sqlite-shm',
+  'element-co-work.sqlite',
+  'element-co-work.sqlite-wal',
+  'element-co-work.sqlite-shm',
+  'journals',
+  'uploads',
+]
 
-  const initDbFn = deps.initDb || initDb
-  const checkSqlite = deps.checkSqliteFile || checkSqliteFile
-
-  // 恢复前先打一份（integrity 失败会直接抛出，不动现有库）
-  const pre = createBackup()
-
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+function dirBytes(p) {
+  let n = 0
   try {
-    execFileSync('tar', ['-xzf', archive, '-C', work], { stdio: 'pipe' })
-  } catch (e) {
-    fs.rmSync(work, { recursive: true, force: true })
-    throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
+    for (const e of fs.readdirSync(p, { withFileTypes: true })) {
+      const fp = path.join(p, e.name)
+      if (e.isFile()) n += fs.statSync(fp).size
+      else if (e.isDirectory()) n += dirBytes(fp)
+    }
+  } catch {
+    /* ignore */
   }
+  return n
+}
 
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  if (!fs.existsSync(stagedDb)) {
-    fs.rmSync(work, { recursive: true, force: true })
-    throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
-  }
-  const check = checkSqlite(stagedDb)
-  if (!check.ok) {
-    fs.rmSync(work, { recursive: true, force: true })
-    throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
-      code: 'INTEGRITY_FAIL',
-    })
-  }
-
-  // 关闭现有连接后换库
-  closeDb()
-
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  const aside = path.join(
-    DATA_ROOT,
-    'backups',
-    `pre-restore-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`,
-  )
-  fs.mkdirSync(aside, { recursive: true })
-  const moveAside = (rel) => {
-    const src = path.join(DATA_ROOT, rel)
-    if (fs.existsSync(src)) {
-      fs.cpSync(src, path.join(aside, rel), { recursive: true })
-      fs.rmSync(src, { recursive: true, force: true })
+function resolveBackupEntry(name) {
+  const dir = path.join(DATA_ROOT, 'backups')
+  if (name.endsWith('.tar.gz')) {
+    const archive = path.join(dir, name)
+    if (fs.existsSync(archive) && fs.statSync(archive).isFile()) {
+      return { kind: 'tar', path: archive, id: name }
+    }
+  } else {
+    const folder = path.join(dir, name)
+    if (fs.existsSync(folder) && fs.statSync(folder).isDirectory()) {
+      return { kind: 'dir', path: folder, id: name }
+    }
+    const archive = path.join(dir, `${name}.tar.gz`)
+    if (fs.existsSync(archive) && fs.statSync(archive).isFile()) {
+      return { kind: 'tar', path: archive, id: `${name}.tar.gz` }
     }
   }
-  moveAside('oh-my-co-work.sqlite')
-  for (const suf of ['-wal', '-shm']) moveAside('oh-my-co-work.sqlite' + suf)
-  moveAside('journals')
-  moveAside('uploads')
+  return null
+}
 
+function applyStagedToLive(work) {
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
   fs.copyFileSync(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
   for (const suf of ['-wal', '-shm']) {
-    if (fs.existsSync(stagedDb + suf)) fs.copyFileSync(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+    if (fs.existsSync(stagedDb + suf)) {
+      fs.copyFileSync(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+    }
   }
   const stagedJournals = path.join(work, 'journals')
   if (fs.existsSync(stagedJournals)) {
@@ -210,24 +191,138 @@ export function restoreBackup(filename, deps = {}) {
   if (fs.existsSync(stagedUploads)) {
     fs.cpSync(stagedUploads, path.join(DATA_ROOT, 'uploads'), { recursive: true })
   }
-  fs.rmSync(work, { recursive: true, force: true })
+}
 
-  initDbFn()
-  return { ok: true, restoredFrom: name, preRestore: { path: pre.path }, aside }
+function restoreFromAside(aside) {
+  for (const rel of LIVE_RELS) {
+    const live = path.join(DATA_ROOT, rel)
+    if (fs.existsSync(live)) fs.rmSync(live, { recursive: true, force: true })
+  }
+  if (!aside || !fs.existsSync(aside)) return
+  for (const name of fs.readdirSync(aside)) {
+    fs.cpSync(path.join(aside, name), path.join(DATA_ROOT, name), { recursive: true })
+  }
 }
 
 /**
- * 4.2.0：列出 data/backups/ 下的 tar.gz 备份（新→旧），供恢复 UI 选择
+ * 4.2.0：从 data/backups/ 恢复一份 tar.gz 或目录备份。
+ * 流程：恢复前自动再打一份「恢复前备份」→ 解包/定位 staging → integrity 校验 →
+ * 关闭连接 → 现有数据挪到 aside 目录 → 拷入备份数据 → 重新 initDb（会顺带跑迁移链）。
+ * 拷入失败时从 aside 回滚再 initDb，避免活库被搬走后落空。
+ * backups/ 目录本身不在备份与恢复范围内（历史备份永远保留）。
+ * @param {string} filename data/backups/ 下的备份名（acw-backup-*.tar.gz 或同名目录）
+ * @param {{ initDb?: Function, checkSqliteFile?: Function, applyLive?: Function }} [deps]
+ * @returns {{ ok: true, restoredFrom: string, preRestore: { path: string }, aside: string }}
+ */
+export function restoreBackup(filename, deps = {}) {
+  const name = path.basename(String(filename || ''))
+  if (!BACKUP_NAME_RE.test(name)) {
+    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+  }
+  const entry = resolveBackupEntry(name)
+  if (!entry) {
+    throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
+  }
+
+  const initDbFn = deps.initDb || initDb
+  const checkSqlite = deps.checkSqliteFile || checkSqliteFile
+  const applyLive = deps.applyLive || applyStagedToLive
+
+  // 恢复前先打一份（integrity 失败会直接抛出，不动现有库）
+  const pre = createBackup()
+
+  let work = null
+  let ownWork = false
+  if (entry.kind === 'tar') {
+    work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+    ownWork = true
+    try {
+      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+    } catch (e) {
+      fs.rmSync(work, { recursive: true, force: true })
+      throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
+    }
+  } else {
+    work = entry.path
+  }
+
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(stagedDb)) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
+  }
+  const check = checkSqlite(stagedDb)
+  if (!check.ok) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
+      code: 'INTEGRITY_FAIL',
+    })
+  }
+
+  closeDb()
+
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const aside = path.join(
+    DATA_ROOT,
+    'backups',
+    `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`,
+  )
+  fs.mkdirSync(aside, { recursive: true })
+  const moveAside = (rel) => {
+    const src = path.join(DATA_ROOT, rel)
+    if (fs.existsSync(src)) {
+      fs.cpSync(src, path.join(aside, rel), { recursive: true })
+      fs.rmSync(src, { recursive: true, force: true })
+    }
+  }
+
+  try {
+    for (const rel of LIVE_RELS) moveAside(rel)
+    applyLive(work)
+    initDbFn()
+    return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path }, aside }
+  } catch (err) {
+    try {
+      restoreFromAside(aside)
+    } catch (rb) {
+      console.warn('[acw] restore rollback', rb?.message || rb)
+    }
+    try {
+      initDbFn()
+    } catch (reopen) {
+      console.warn('[acw] restore reinit', reopen?.message || reopen)
+    }
+    throw err
+  } finally {
+    if (ownWork && work) {
+      try {
+        fs.rmSync(work, { recursive: true, force: true })
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+/**
+ * 4.2.0：列出 data/backups/ 下的 tar.gz 与目录备份（新→旧），供恢复 UI 选择。
+ * tar 失败时 createBackup 会留下 acw-backup-* 目录，必须能列出并恢复。
  */
 export function listBackups() {
   const dir = path.join(DATA_ROOT, 'backups')
   if (!fs.existsSync(dir)) return []
-  return fs
-    .readdirSync(dir, { withFileTypes: true })
-    .filter((e) => e.isFile() && /^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/.test(e.name))
-    .map((e) => {
-      const st = fs.statSync(path.join(dir, e.name))
-      return { filename: e.name, bytes: st.size, mtimeMs: st.mtimeMs }
-    })
-    .sort((a, b) => b.mtimeMs - a.mtimeMs)
+  const items = []
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name.startsWith('.')) continue
+    const abs = path.join(dir, e.name)
+    if (e.isFile() && /^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/.test(e.name)) {
+      const st = fs.statSync(abs)
+      items.push({ filename: e.name, bytes: st.size, mtimeMs: st.mtimeMs, format: 'tar.gz' })
+    } else if (e.isDirectory() && /^acw-backup-[A-Za-z0-9._-]+$/.test(e.name)) {
+      const st = fs.statSync(abs)
+      items.push({ filename: e.name, bytes: dirBytes(abs), mtimeMs: st.mtimeMs, format: 'dir' })
+    }
+  }
+  return items.sort((a, b) => b.mtimeMs - a.mtimeMs)
 }

@@ -102,3 +102,49 @@ test('corrupted sqlite inside a valid archive is rejected by integrity check', a
   assert.equal(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c, before)
   void SESSION_STATUS
 })
+
+test('directory backup can be listed and restored', async () => {
+  const { execFileSync } = await import('node:child_process')
+  const session = seedSession('目录备份组')
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '目录备份公告')
+  const created = backup.createBackup()
+  assert.equal(created.format, 'tar.gz')
+  const dirName = `acw-backup-dirround-${Date.now()}`
+  const dest = path.join(dataRoot, 'backups', dirName)
+  fs.mkdirSync(dest, { recursive: true })
+  execFileSync('tar', ['-xzf', created.path, '-C', dest])
+
+  const listed = backup.listBackups()
+  const hit = listed.find((b) => b.filename === dirName)
+  assert.ok(hit, 'listBackups 应包含目录备份')
+  assert.equal(hit.format, 'dir')
+
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '改过了')
+  const r = backup.restoreBackup(dirName)
+  assert.equal(r.ok, true)
+  assert.equal(
+    fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
+    '目录备份公告',
+  )
+})
+
+test('restore rolls live data back if apply fails after move-aside', () => {
+  const session = seedSession('回滚组')
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '回滚应还在')
+  const created = backup.createBackup()
+  const later = seedSession('回滚后应还在')
+  assert.throws(
+    () =>
+      backup.restoreBackup(path.basename(created.path), {
+        applyLive: () => {
+          throw new Error('injected apply fail')
+        },
+      }),
+    /injected apply fail/,
+  )
+  assert.ok(getSessionDetail(later.id))
+  assert.equal(
+    fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
+    '回滚应还在',
+  )
+}))

@@ -22,6 +22,17 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-02 | M | package.json server/package.json web/package.json shared/package.json package-lock.json server/config/about.json | 源码版本升到 4.2.0；changelog 补 4.1.0/4.2.0；extraNotes 改为启动检查默认可关、只读版本号
+2026-09-02 | M | README.md docs/README.md AGENT.md docs/docs-4x-plan.md packages/README.md | 版本现状与路线图对齐 4.2.0；注明运行包 zip 仍为 4.0.0 待重打
+2026-09-02 | M | server/src/docsHub.js | 超 1MB 限额读前 1MB；step-*.md 映射到 nodes/；exportGroupZip 返回 slug/filename
+2026-09-02 | M | server/src/routes.js | 文档导出 Content-Disposition 使用 slug 文件名
+2026-09-02 | M | server/src/backup.js | list/restore 支持目录备份；拷入失败从 aside 回滚
+2026-09-02 | M | web/src/views/workbench/composables/useDocsHub.js | 互链 ./step-*.md 改写为 nodes/step-*.md
+2026-09-02 | M | web/src/views/settings/About.vue | 去掉「不会自动联网」不实文案；目录备份在恢复列表标明
+2026-09-02 | M | server/test/docsHub.test.js | 补检索、导出、step 别名测试
+2026-09-02 | M | server/test/backupRestore.test.js | 补目录备份往返与 apply 失败回滚
+2026-09-02 | M | CODE_CHANGE.md | 追加 4.2.0 审查修复条目
+
 2026-09-02 | M | docs/docs-4x-plan.md | 产品决定：4.2.0 启动检查更新默认开（设置可关）；隐私口径改为「检查只读远端版本号与更新日志，不上传任何本机数据」；任务补 about.json「不会自动联网检查」文案同步
 
 2026-09-02 | M | docs/docs-4x-plan.md | 新增 §7 Phase 3：4.2.0 发布更新与本地历史保留规范——三层更新模型（4.2.0 只做检查+获取，self-replace 后置）、数据保留七条硬规则（zip 不含 data/** 入 verify-pack、更新前强制引导备份、restore 含恢复前备份、schema 迁移链、降级不承诺）、任务/测试/验收清单；风险表与完成定义补 4.2.0；版本切分表加 4.2.0 行

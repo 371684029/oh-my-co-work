@@ -59,7 +59,7 @@
               </el-button>
             </template>
           </template>
-          <span v-else class="muted tiny">手动检查，不会自动联网</span>
+          <span v-else class="muted tiny">启动时也会检查（设置可关）；只读版本号，不自动安装</span>
         </div>
 
         <!-- 备份与恢复 -->
@@ -84,7 +84,7 @@
             <el-option
               v-for="b in availableBackups"
               :key="b.filename"
-              :label="`${b.filename}（${formatSize(b.bytes)}）`"
+              :label="`${b.filename}${b.format === 'dir' ? ' · 目录' : ''}（${formatSize(b.bytes)}）`"
               :value="b.filename"
             />
           </el-select>
@@ -129,7 +129,7 @@
           {{ data.updateHint || '暂未配置更新地址。' }}
         </p>
         <p class="muted tiny">
-          不会自动联网检查更新；仅当你主动打开链接时才会访问网络。
+          启动检查默认可关。检查只向 GitHub Releases 读取版本号，不上传数据、不自动下载安装。「更新地址」仅在你主动打开时访问。
         </p>
       </section>
 

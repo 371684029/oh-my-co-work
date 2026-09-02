@@ -311,7 +311,8 @@ function resolveDocLink(href) {
     rest = raw.replace(/^\.\//, '')
   }
   if (!sessionId) return null
-  const name = rest.replace(/\\/g, '/')
+  let name = rest.replace(/\\/g, '/')
+  if (/^step-\d{2}-[A-Za-z0-9_-]+\.md$/.test(name)) name = `nodes/${name}`
   if (!DOC_NAME_RE.test(name)) return null
   return { sessionId, name }
 }

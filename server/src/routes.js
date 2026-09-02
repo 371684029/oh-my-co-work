@@ -808,9 +808,10 @@ router.get('/docs/export', (req, res) => {
   try {
     const out = docsHub.exportGroupZip(String(req.query.groupId || ''))
     tmp = out.path
+    const downloadName = String(out.filename || `${out.slug || 'docs'}.zip`).replace(/["\r\n\\]/g, '')
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', `attachment; filename="docs-${out.slugify || encodeURIComponent(out.groupTitle)}-${out.files}.zip"`)
-    res.download(out.path, `docs-${out.files}.zip`, () => {
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    res.download(out.path, downloadName, () => {
       if (tmp) fs.rmSync(tmp, { force: true })
     })
   } catch (e) {
