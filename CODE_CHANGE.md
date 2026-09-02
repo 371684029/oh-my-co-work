@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-02 | M | docs/docs-4x-plan.md | 打包冒烟勾选（ceeb6b1 流水线实测 CI + Pack release 全绿）；状态更新为已实施
 2026-09-02 | A | web/src/views/docs/DocsHub.vue | 4.0.0 文档中心页面（928 行）：左菜单双排序（群模板树/时间扁平）+ 右渲染/编辑切换 + 链接事件委托（openPath/页内跳转）+ URL 可分享 + 未保存守卫 + 空态
 2026-09-02 | A | web/src/views/workbench/composables/useDocsHub.js | 4.0.0 文档中心状态单例（381 行）：列表/当前文档/保存/链接解析（白名单校验）
 2026-09-02 | M | web/src/router.js | 加 /docs 独立页面路由
