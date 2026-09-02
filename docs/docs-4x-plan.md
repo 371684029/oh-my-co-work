@@ -55,7 +55,21 @@ data/journals/sessions/{sessionId}/
 - 编辑：右栏「编辑」按钮仅对公告出现；`el-input textarea` 编辑（不做富文本），保存走既有 `saveSessionAnnouncement`（写入 `announcementManual: true`）。未保存离开弹确认。
 - 大文件护栏：单文件读取上限 1MB，超出截断并提示「用系统打开看全文」。
 
-### 3.4 打开方式与联动
+### 3.4 链接可点（超链 / 文档互链 / 本地文件夹）
+
+渲染出的内容里链接分三类，行为各不相同：
+
+| 链接类型 | 识别方式 | 点击行为 |
+|----------|----------|----------|
+| 网页超链 | markdown 显式链接 + `linkify: true` 自动识别 http/https | 新浏览器标签打开（`target="_blank"` + `rel="noopener noreferrer"`） |
+| 文档互链 | 指向 journals 内的 MD（`./step-01-x.md`、其它会话的公告/索引） | 文档中心**页内跳转**（浏览器历史可回退），不开新标签，防标签爆炸 |
+| 本地文件夹/文件路径 | markdown 显式链接 + 保守自动识别：整行或独立 token 的绝对路径（Windows `C:\…`、UNC `\\srv\share`、POSIX `/…`）与 `#文件夹` 值 | **文件夹**：服务端 `isDirectory` 校验后起系统文件管理器（复用既有 `openLocalPath`，`start`/`open`/`xdg-open`）；**文件不直接打开**（防误执行），默认「打开所在文件夹」；文档中心自己的 MD 除外（页内打开） |
+
+- Windows 反斜杠路径会被 markdown 转义吞掉（`D:\work\a` 渲染成 `D:worka`）：路径识别必须基于**原始文本**做 markdown-it 自定义 inline 规则，不能渲染后补链接。
+- 自动识别从严起步：只认整行路径、独立路径 token、`#文件夹` chip，不动普通句子里的词，避免误判；4.1 按使用反馈放宽。
+- 安全：`openLocalPath` 沿用既有令牌保护；服务端只放行「真实存在的目录」与 journals 白名单内的文件。MD 内容是本机 agent 产出，这层防的是**误点**（`.exe`、`.bat` 被当文件打开），不假设有远程攻击者。
+
+### 3.5 打开方式与联动
 
 - **新开标签是默认打开方式**：顶栏「文档」、右栏「打开 MD」、会话内文档引用，都以 `window.open('/docs?session=…&file=…')` 新开一个完整文档中心页面并定位到对应文件。工作台标签页保持原样，不被导航走。
 - 3.x 的「打开 MD」是 `window.open` 指向**裸文件 URL**（无菜单）；4.0 换成指向文档中心页面，同一个新标签习惯，但内容从裸 MD 变成带菜单的页面。
@@ -66,8 +80,8 @@ data/journals/sessions/{sessionId}/
 
 | 版本 | 主题 | 交付边界 |
 |------|------|----------|
-| `4.0.0` | 协同文档中心 MVP | `/api/docs` 列表/读/存公告；`/docs` 视图：左菜单双排序 + 右渲染；公告可编辑；工作台跳转；安全护栏 |
-| `4.1.0` | 检索与导出 | 全文搜索（内存扫描，不引 FTS）；节点文档徽标（状态/适配角标）；「打包本群全部 MD」导出；代码高亮评估 |
+| `4.0.0` | 协同文档中心 MVP | `/api/docs` 列表/读/存公告；`/docs` 视图：左菜单双排序 + 右渲染；公告可编辑；**链接可点（超链/文档互链/本地文件夹）**；新标签打开；安全护栏 |
+| `4.1.0` | 检索与导出 | 全文搜索（内存扫描，不引 FTS）；节点文档徽标（状态/适配角标）；「打包本群全部 MD」导出；代码高亮评估；按反馈放宽路径自动识别 |
 | 后置 | 4.x 其它线 | 托盘独立窗、多终端标签治理、更多 CLI Adapter、文档版本历史/diff（git 化台账另案） |
 
 `4.0` 不做：富文本编辑、协作多人光标、云端同步、`docs/` 仓库文档聚合。
@@ -79,6 +93,7 @@ data/journals/sessions/{sessionId}/
 - [ ] `server/src/docsHub.js`：扫描与缓存（见 §3.1）；路径白名单与穿越拦截
 - [ ] `GET /api/docs/list?sort=group|time`：分组/扁平两种形态
 - [ ] `GET /api/docs/file?sessionId=&name=`：读单文件（1MB 截断标记）
+- [ ] `POST /api/docs/open-path`：链接可点的服务端支撑——`isDirectory` 校验 + 白名单，复用 `openLocalPath` 起系统文件管理器
 - [ ] `POST /api/docs/announcement`：保存公告（透传既有 `saveSessionAnnouncement`，含 manual 语义）
 - [ ] `routes.js` 挂接 + `web/src/api.js` 对应方法；`directory-structure.md` / `data-storage.md` 同步
 
@@ -89,10 +104,12 @@ data/journals/sessions/{sessionId}/
 - [ ] `views/workbench/composables/useDocsHub.js`：列表状态、当前文档、保存与离开守卫
 - [ ] `FlowRail`「打开 MD」改为 `window.open('/docs?…')` 新开标签打开文档中心（保留系统打开次按钮）
 - [ ] markdown-it 接入（`html:false`）+ 基础排版样式沿用 `--ecw-*` 令牌
+- [ ] 链接三类行为（见 §3.4）：自定义 inline 规则**基于原始文本**识别路径（反斜杠不被转义吞掉）；web 链接新标签、文档互链页内跳、文件夹起文件管理器、文件开所在目录
 
 ### 5.3 测试与安全
 
 - [ ] `server/test/docsHub.test.js`：扫描结构、双排序、白名单与穿越拦截、公告保存 manual 语义、1MB 截断
+- [ ] 链接用例：`C:\work\a b\` 含空格与反斜杠不被转义吞掉、普通句子不误判成路径、`.exe/.bat` 路径不直接打开（只开所在目录）、open-path 拒绝白名单外请求
 - [ ] 渲染 XSS 用例：含 `<script>` / `onerror` 的 MD 不产生可执行节点
 - [ ] 三平台打包冒烟通过（沿用既有流水线）
 
@@ -121,6 +138,7 @@ data/journals/sessions/{sessionId}/
 | 风险 | 对策 |
 |------|------|
 | agent 产出混入恶意 HTML/脚本 | 渲染器 `html:false` + XSS 测试用例锁死 |
+| 误开本地文件导致执行（.exe/.bat） | 文件一律不直接打开——只开所在文件夹；目录才起文件管理器；服务端白名单 + isDirectory 校验 |
 | 用户误改台账破坏溯源 | 台账只读；编辑入口只给公告 |
 | 会话量大列表卡顿 | 60s 缓存 + mtime 增量；菜单分组懒展开 |
 | 新依赖膨胀运行包 | markdown-it ~100KB，verify-pack 体积基线对比 |
@@ -131,6 +149,7 @@ data/journals/sessions/{sessionId}/
 同时满足才可称 4.0 落地：
 
 - `/docs` 页面（新标签打开）可用：默认群模板排序 + 可切时间排序；公告可读可编辑可保存；顶栏与「打开 MD」均新开标签进入。
+- 链接可点：网页超链新标签、文档互链页内跳转、`#文件夹`/本地路径起文件管理器（文件只开所在目录）。
 - 台账只读 + 路径白名单 + 渲染不执行 HTML，安全用例全绿。
 - 工作台「打开 MD」默认内嵌跳转；`announcement.updated` 联动刷新。
 - 三平台打包冒烟通过；README / data-storage / frontend-components / directory-structure 已同步。

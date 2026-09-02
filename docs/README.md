@@ -19,7 +19,7 @@
 | [crucible-grok-client.md](./crucible-grok-client.md) | **Grok 客户端原理**：官方 CLI + node-pty，不是自研 Chat API |
 | [crucible-gui-plain.md](./crucible-gui-plain.md) | **GUI 可读正文**：去 TUI 框线/底栏，不把整屏抄进聊天区 |
 | [refactor-3.8-plan.md](./refactor-3.8-plan.md) | **3.8 重构与加固计划**：引擎拆分 / 工作台拆分 / lint 与令牌收紧（已实施） |
-| [docs-4x-plan.md](./docs-4x-plan.md) | **4.x 协同文档中心计划**：聚合会话群报告/台账，左菜单右渲染，群模板排序默认 + 时间排序，公告可编辑 |
+| [docs-4x-plan.md](./docs-4x-plan.md) | **4.x 协同文档中心计划**：聚合会话群报告/台账，左菜单右渲染，群模板排序默认 + 时间排序，公告可编辑，超链/文档互链/本地文件夹链接可点 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [data-and-ops.md](./data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |
 | [script-guide.md](./script-guide.md) | **写脚本指南**：占位符 / `ACW_*` / cwd / 缺参拦截（CI03） |
