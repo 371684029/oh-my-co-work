@@ -14,6 +14,7 @@
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
+| darwin-arm64 | [`oh-my-co-work-v4-darwin-arm64.zip`](./oh-my-co-work-v4-darwin-arm64.zip) | 23947525 | `f6b87d6befa0` | 2026-09-02T05:47:10.331Z |
 | linux-x64 | [`oh-my-co-work-v4-linux-x64.zip`](./oh-my-co-work-v4-linux-x64.zip) | 24105672 | `c5bead5f9e04` | 2026-09-02T05:40:09.448Z |
 
 版本：`4.0.0`（大版本 v4）
