@@ -143,6 +143,7 @@ start.bat
 - 运行：`npm run test`（workspace 委托到 server）
 - 自愈 / 冒烟测试放在 `scripts/selftest-*.mjs`，不走 test runner
 - 测试用 Node 内置 `assert` + `node:test`，不引入第三方测试库
+- 套路与约定详见 `docs/selftest.md`（隔离数据根 / 表征测试 / 依赖注入 / 轮询等待）
 
 ---
 

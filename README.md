@@ -219,7 +219,8 @@ packages/  可直接运行的三平台压缩包
 | [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：chatgpt-pets 桌宠图集、头像、GUI 附件、PTY 宿主 |
 | [熔炉 GUI 可读正文](./docs/crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
 | [3.8 重构与加固计划](./docs/refactor-3.8-plan.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（已实施） |
-| [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（规划中） |
+| [自测体系](./docs/selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
+| [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0 已实施） |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
