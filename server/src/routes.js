@@ -31,7 +31,7 @@ import {
   restartFromNode,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
-import { createBackup, runIntegrityCheck } from './backup.js'
+import { runIntegrityCheck } from './backup.js'
 import {
   touchHeartbeat,
   notifyClientGone,
@@ -55,6 +55,8 @@ import { getAppSettings,
 import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
 import * as docsHub from './docsHub.js'
+import * as updateCheck from './updateCheck.js'
+import { createBackup, restoreBackup, listBackups } from './backup.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -788,6 +790,64 @@ router.post('/docs/open-path', (req, res) => {
       .openDocsPath(req.body?.path)
       .then((r) => res.json(r))
       .catch((e) => res.status(400).json({ error: e.message }))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/docs/search', (req, res) => {
+  try {
+    res.json(docsHub.searchDocs(String(req.query.q || '')))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/docs/export', (req, res) => {
+  let tmp = null
+  try {
+    const out = docsHub.exportGroupZip(String(req.query.groupId || ''))
+    tmp = out.path
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="docs-${out.slugify || encodeURIComponent(out.groupTitle)}-${out.files}.zip"`)
+    res.download(out.path, `docs-${out.files}.zip`, () => {
+      if (tmp) fs.rmSync(tmp, { force: true })
+    })
+  } catch (e) {
+    if (tmp) fs.rmSync(tmp, { force: true })
+    res.status(400).json({ error: e.message })
+  }
+})
+
+// —— 发布更新（4.2.0）：检查 / 备份 / 恢复 ——
+
+router.get('/update/check', async (req, res) => {
+  try {
+    res.json(await updateCheck.checkForUpdates())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.get('/update/backups', (req, res) => {
+  try {
+    res.json({ backups: listBackups() })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/update/backup', (req, res) => {
+  try {
+    res.json(createBackup())
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/update/restore', (req, res) => {
+  try {
+    res.json(restoreBackup(String(req.body?.filename || '')))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

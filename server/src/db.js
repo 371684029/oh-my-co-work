@@ -311,34 +311,94 @@ export function initDb() {
     db.prepare('INSERT INTO schema_version (version) VALUES (1)').run()
   }
 
-  // 轻量迁移：节点输入 / markdown 台账路径
-  const cols = db.prepare(`PRAGMA table_info(node_instances)`).all().map((c) => c.name)
-  if (!cols.includes('input_json')) {
-    try {
-      db.exec(`ALTER TABLE node_instances ADD COLUMN input_json TEXT`)
-    } catch {
-      /* ignore */
-    }
-  }
-  if (!cols.includes('journal_path')) {
-    try {
-      db.exec(`ALTER TABLE node_instances ADD COLUMN journal_path TEXT`)
-    } catch {
-      /* ignore */
-    }
-  }
-
-  // 群模板扩展配置（管理员等）
-  const gcols = db.prepare(`PRAGMA table_info(groups)`).all().map((c) => c.name)
-  if (!gcols.includes('config_json')) {
-    try {
-      db.exec(`ALTER TABLE groups ADD COLUMN config_json TEXT NOT NULL DEFAULT '{}'`)
-    } catch {
-      /* ignore */
-    }
-  }
+  runMigrations(db)
 
   return db
+}
+
+/**
+ * 4.2.0 schema 迁移链：按 schema_version 单调推进，事务包裹、幂等、失败即停。
+ * 历史上的 ad-hoc ALTER 收敛为 v2/v3 两步（列存在性检查保证幂等）。
+ */
+const MIGRATIONS = [
+  {
+    version: 2,
+    name: 'node_instances input_json/journal_path',
+    up: (db) => {
+      const cols = db.prepare(`PRAGMA table_info(node_instances)`).all().map((c) => c.name)
+      if (!cols.includes('input_json')) {
+        db.exec(`ALTER TABLE node_instances ADD COLUMN input_json TEXT`)
+      }
+      if (!cols.includes('journal_path')) {
+        db.exec(`ALTER TABLE node_instances ADD COLUMN journal_path TEXT`)
+      }
+    },
+  },
+  {
+    version: 3,
+    name: 'groups config_json',
+    up: (db) => {
+      const gcols = db.prepare(`PRAGMA table_info(groups)`).all().map((c) => c.name)
+      if (!gcols.includes('config_json')) {
+        db.exec(`ALTER TABLE groups ADD COLUMN config_json TEXT NOT NULL DEFAULT '{}'`)
+      }
+    },
+  },
+]
+
+function runMigrations(db) {
+  let current = db.prepare('SELECT version FROM schema_version LIMIT 1').get()?.version ?? 1
+  for (const m of MIGRATIONS) {
+    if (m.version <= current) continue
+    const run = db.transaction(() => {
+      m.up(db)
+      db.prepare('UPDATE schema_version SET version = ?').run(m.version)
+    })
+    try {
+      run()
+    } catch (e) {
+      throw Object.assign(
+        new Error(`数据库迁移失败 v${m.version}（${m.name}）：${e.message}；请用 data/backups/ 内备份恢复`),
+        { code: 'MIGRATION_FAIL' },
+      )
+    }
+    current = m.version
+  }
+}
+
+/** 关闭当前连接（restore 换库前必须）；未初始化时静默 */
+export function closeDb() {
+  try {
+    db?.close?.()
+  } catch {
+    /* ignore */
+  }
+  db = undefined
+}
+
+/**
+ * 校验一个独立 sqlite 文件的完整性（restore 前的 staging 检查），不占用全局连接
+ */
+export function checkSqliteFile(dbPath) {
+  let probe
+  try {
+    probe = openDatabase(dbPath)
+    const rows = probe.pragma('integrity_check')
+    const detail = Array.isArray(rows)
+      ? rows.map((r) => (r && r.integrity_check != null ? r.integrity_check : String(r))).join('; ')
+      : String(rows)
+    const ok = detail === 'ok' || /^ok$/i.test(String(detail).trim())
+    return { ok, detail }
+  } catch (e) {
+    // 非法文件（file is not a database）也按完整性失败处理，而非抛出
+    return { ok: false, detail: e.message }
+  } finally {
+    try {
+      probe?.close?.()
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 export function parseJson(text, fallback = null) {

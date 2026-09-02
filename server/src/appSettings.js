@@ -187,6 +187,7 @@ function ensureSettingsFile() {
           terminal: defaultTerminalSettings(),
           quota: defaultQuotaSettings(),
           redact: defaultRedactSettings(),
+          updateCheck: defaultUpdateCheckSettings(),
         },
         null,
         2,
@@ -197,6 +198,16 @@ function ensureSettingsFile() {
 }
 
 /** 未人工确认归档时，超时自动归档（小时）；默认 3 */
+function defaultUpdateCheckSettings() {
+  // 4.2.0：启动检查更新默认开（产品决定），设置可关；检查只读远端版本号与更新日志
+  return { startup: true }
+}
+
+function normalizeUpdateCheck(raw) {
+  const r = raw && typeof raw === 'object' ? raw : {}
+  return { startup: r.startup !== false }
+}
+
 export function normalizeAutoArchiveHours(v) {
   const n = Number(v)
   if (!Number.isFinite(n) || n <= 0) return 3
@@ -222,6 +233,7 @@ export function getAppSettings() {
       terminal: normalizeTerminal(raw.terminal),
       quota: normalizeQuota(raw.quota),
       redact: normalizeRedact(raw.redact),
+      updateCheck: normalizeUpdateCheck(raw.updateCheck),
     }
   } catch {
     return {
@@ -234,6 +246,7 @@ export function getAppSettings() {
       terminal: defaultTerminalSettings(),
       quota: defaultQuotaSettings(),
       redact: defaultRedactSettings(),
+      updateCheck: defaultUpdateCheckSettings(),
     }
   }
 }
@@ -295,6 +308,10 @@ export function updateAppSettings(patch = {}) {
       patch.redact !== undefined
         ? normalizeRedact({ ...cur.redact, ...patch.redact })
         : cur.redact,
+    updateCheck:
+      patch.updateCheck !== undefined
+        ? normalizeUpdateCheck({ ...cur.updateCheck, ...patch.updateCheck })
+        : cur.updateCheck,
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

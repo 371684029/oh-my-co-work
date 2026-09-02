@@ -41,6 +41,31 @@ const current = ref(null) // { sessionId, name }
 const file = ref(null) // api.docs.file 返回
 const fileLoading = ref(false)
 
+// ===== 全文搜索（4.1.0）=====
+const searchQuery = ref('')
+const searchResults = ref([])
+const searchLoading = ref(false)
+let searchDebounceTimer = null
+
+const isSearching = computed(() => searchQuery.value.trim().length > 0)
+
+async function doSearch(q) {
+  const trimmed = (q || '').trim()
+  if (!trimmed) {
+    searchResults.value = []
+    return
+  }
+  searchLoading.value = true
+  try {
+    const data = await api.docs.search(trimmed)
+    searchResults.value = data.hits || []
+  } catch {
+    searchResults.value = []
+  } finally {
+    searchLoading.value = false
+  }
+}
+
 // ===== 公告编辑 =====
 const editing = ref(false)
 const draft = ref('')
@@ -321,6 +346,15 @@ function initDocsHub({ route, router }) {
       }
       loadList()
     }),
+    watch(searchQuery, (v) => {
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+      const q = (v || '').trim()
+      if (!q) {
+        searchResults.value = []
+        return
+      }
+      searchDebounceTimer = setTimeout(() => doSearch(q), 300)
+    }),
   )
 }
 
@@ -337,6 +371,10 @@ function disposeDocsHub() {
   editing.value = false
   draft.value = ''
   saving.value = false
+  searchQuery.value = ''
+  searchResults.value = []
+  searchLoading.value = false
+  if (searchDebounceTimer) { clearTimeout(searchDebounceTimer); searchDebounceTimer = null }
   workFolderBySession.value = {}
   workFoldersReady = false
 }
@@ -360,6 +398,12 @@ export {
   canEdit,
   dirty,
   renderedHtml,
+  // 4.1.0 搜索
+  searchQuery,
+  searchResults,
+  searchLoading,
+  isSearching,
+  doSearch,
   relativeTime,
   formatSize,
   formatTime,

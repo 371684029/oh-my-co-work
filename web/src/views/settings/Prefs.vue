@@ -29,6 +29,25 @@
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
+          <div class="prefs-title">启动时检查更新</div>
+          <p class="prefs-hint">
+            开启后每次启动应用会自动检查是否有新版本，发现新版本时通知提示。不会自动下载或安装。
+          </p>
+        </div>
+        <el-switch
+          v-model="startupUpdateCheck"
+          :loading="savingStartupUpdate"
+          inline-prompt
+          active-text="开"
+          inactive-text="关"
+          @change="onToggleStartupUpdate"
+        />
+      </div>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-row">
+        <div class="prefs-text">
           <div class="prefs-title">是否展示脚本弹窗</div>
           <p class="prefs-hint">
             全局默认。开启后脚本执行可弹出<strong>脚本自身控制台</strong>（bat 黑窗）。
@@ -296,6 +315,8 @@ const backingUp = ref(false)
 const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
+const startupUpdateCheck = ref(true)
+const savingStartupUpdate = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -336,6 +357,7 @@ async function load() {
       }
     }
     adaptBackup.value = s.adapt?.backup !== false
+    startupUpdateCheck.value = s.updateCheck?.startup !== false
     if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
@@ -538,6 +560,19 @@ async function saveGrok() {
     ElMessage.error(e.message)
   } finally {
     savingGrok.value = false
+  }
+}
+
+async function onToggleStartupUpdate(val) {
+  savingStartupUpdate.value = true
+  try {
+    await api.appSettings.update({ updateCheck: { startup: !!val } })
+    ElMessage.success(val ? '已开启启动时检查更新' : '已关闭启动时检查更新')
+  } catch (e) {
+    startupUpdateCheck.value = !val
+    ElMessage.error(e.message)
+  } finally {
+    savingStartupUpdate.value = false
   }
 }
 

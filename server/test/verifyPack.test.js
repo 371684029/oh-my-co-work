@@ -91,6 +91,23 @@ test('verifyPackedZip passes a well-formed win32-x64 package', () => {
   })
 })
 
+test('verifyPackedZip rejects a package that leaks the runtime data directory (4.2.0)', () => {
+  withTmpDir((dir) => {
+    const spritesheetBytes = fs.existsSync(SOURCE_SPRITESHEET)
+      ? fs.readFileSync(SOURCE_SPRITESHEET)
+      : Buffer.from('fake-sprite')
+    const zipPath = buildFixtureZip({ dir, platformTag: 'win32-x64', spritesheetBytes })
+    const leaked = path.join(dir, 'win32-x64', 'data', 'oh-my-co-work.sqlite')
+    fs.mkdirSync(path.dirname(leaked), { recursive: true })
+    fs.writeFileSync(leaked, 'SQLite format 3 placeholder')
+    execFileSync('zip', [zipPath, 'win32-x64/data/oh-my-co-work.sqlite'], { cwd: dir })
+    assert.throws(
+      () => verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' }),
+      /data\/\*\*/,
+    )
+  })
+})
+
 test('verifyPackedZip rejects a cross-packed zip whose build/Release binary is the wrong architecture', () => {
   withTmpDir((dir) => {
     const spritesheetBytes = fs.existsSync(SOURCE_SPRITESHEET)

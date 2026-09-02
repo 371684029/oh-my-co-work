@@ -85,7 +85,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElNotification } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
@@ -210,6 +210,27 @@ async function onFurnaceClick() {
   openFurnaceSession()
 }
 
+// 4.2.0 启动时检查更新（静默，仅发现新版本时通知）
+async function startupCheckUpdate() {
+  try {
+    const s = await api.appSettings.get()
+    if (s.updateCheck?.startup === false) return
+    const r = await api.update.check()
+    if (!r.checked || !r.hasUpdate) return
+    const notesPreview = (r.notes || '').slice(0, 120)
+    ElNotification({
+      title: `发现新版本 v${r.latest}`,
+      message: notesPreview
+        ? `${notesPreview}${(r.notes || '').length > 120 ? '…' : ''}\n前往设置 → 关于查看详情`
+        : '前往设置 → 关于查看详情',
+      type: 'info',
+      duration: 8000,
+    })
+  } catch {
+    // 静默失败，不打扰用户
+  }
+}
+
 async function openFurnaceAnyway() {
   grokGuideOpen.value = false
   const { s, probe } = await refreshGrokGate()
@@ -231,6 +252,7 @@ onMounted(() => {
   document.addEventListener('fullscreenchange', syncFullscreenState)
   syncFullscreenState()
   refreshGrokGate()
+  startupCheckUpdate()
 })
 
 onUnmounted(() => {

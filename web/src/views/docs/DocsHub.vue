@@ -14,27 +14,65 @@
     <div class="dh-body">
       <!-- 左：文档菜单 -->
       <aside class="dh-left">
+        <!-- 4.1.0 全文搜索 -->
+        <div class="dh-search">
+          <el-input
+            v-model="searchQuery"
+            placeholder="全文搜索…"
+            clearable
+            size="small"
+          />
+        </div>
+
         <div class="dh-sort">
           <el-segmented v-model="sort" :options="sortOptions" size="small" block />
         </div>
 
         <div class="dh-menu">
-          <div v-if="listLoading && !hasDocs" class="dh-menu-empty">加载中…</div>
-          <div v-else-if="listError && !hasDocs" class="dh-menu-empty">{{ listError }}</div>
-
-          <!-- 按群模板：群 → 会话 → 文件 -->
-          <template v-else-if="sort === 'group'">
-            <div v-for="g in groups" :key="groupKey(g)" class="dh-group">
+          <!-- 4.1.0 搜索结果 -->
+          <template v-if="isSearching">
+            <div v-if="searchLoading" class="dh-menu-empty">搜索中…</div>
+            <div v-else-if="!searchResults.length" class="dh-menu-empty">无匹配结果</div>
+            <template v-else>
               <button
+                v-for="hit in searchResults"
+                :key="`${hit.sessionId}:${hit.name}:${hit.line}`"
                 type="button"
-                class="dh-group-head"
-                :aria-expanded="isGroupOpen(groupKey(g))"
-                @click="toggleGroup(groupKey(g))"
+                class="dh-search-hit"
+                @click="onSearchHit(hit)"
               >
-                <span class="dh-caret" :class="{ open: isGroupOpen(groupKey(g)) }" aria-hidden="true">›</span>
-                <span class="dh-group-title">{{ g.groupTitle }}</span>
-                <span class="dh-group-count">{{ sessionCount(g) }}</span>
+                <div class="dh-hit-title">{{ hit.title || hit.name }}</div>
+                <div class="dh-hit-meta">{{ hit.groupTitle }} · {{ hit.sessionTitle }}</div>
+                <div class="dh-hit-snippet" v-html="highlightSnippet(hit.snippet, searchQuery)" />
+                <div class="dh-hit-line">第 {{ hit.line }} 行</div>
               </button>
+            </template>
+          </template>
+
+          <!-- 正常列表（非搜索） -->
+          <template v-else>
+            <div v-if="listLoading && !hasDocs" class="dh-menu-empty">加载中…</div>
+            <div v-else-if="listError && !hasDocs" class="dh-menu-empty">{{ listError }}</div>
+
+            <!-- 按群模板：群 → 会话 → 文件 -->
+            <template v-else-if="sort === 'group'">
+              <div v-for="g in groups" :key="groupKey(g)" class="dh-group">
+                <button
+                  type="button"
+                  class="dh-group-head"
+                  :aria-expanded="isGroupOpen(groupKey(g))"
+                  @click="toggleGroup(groupKey(g))"
+                >
+                  <span class="dh-caret" :class="{ open: isGroupOpen(groupKey(g)) }" aria-hidden="true">›</span>
+                  <span class="dh-group-title">{{ g.groupTitle }}</span>
+                  <span class="dh-group-count">{{ sessionCount(g) }}</span>
+                  <button
+                    type="button"
+                    class="dh-export-btn"
+                    title="导出群文档 MD"
+                    @click.stop="onExportGroup(groupKey(g))"
+                  >导出</button>
+                </button>
 
               <div v-show="isGroupOpen(groupKey(g))" class="dh-sessions">
                 <div v-for="s in g.sessions" :key="s.sessionId" class="dh-session">
@@ -68,6 +106,9 @@
                       <el-tag size="small" round effect="plain" :type="kindTag(f.kind)">
                         {{ f.title }}
                       </el-tag>
+                      <span v-if="f.meta?.adapt" class="dh-badge dh-badge--adapt">适配</span>
+                      <span v-if="f.meta?.cloned" class="dh-badge dh-badge--cloned">克隆</span>
+                      <span v-if="f.meta?.status" class="dh-badge" :class="`dh-badge--${f.meta.status}`">{{ statusLabel(f.meta.status) }}</span>
                     </button>
                   </div>
                 </div>
@@ -90,6 +131,7 @@
               </span>
               <span class="dh-time-meta">{{ relativeTime(it.mtimeMs) }}</span>
             </button>
+          </template>
           </template>
 
           <div v-if="!listLoading && !listError && !hasDocs" class="dh-menu-empty">
@@ -172,6 +214,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { api } from '../../api'
 import {
   sort,
   sortOptions,
@@ -189,6 +232,11 @@ import {
   currentSession,
   canEdit,
   renderedHtml,
+  // 4.1.0 搜索
+  searchQuery,
+  searchResults,
+  searchLoading,
+  isSearching,
   relativeTime,
   formatSize,
   formatTime,
@@ -256,6 +304,33 @@ function isActiveFile(sessionId, name) {
 
 function goWorkbench() {
   router.push('/workbench')
+}
+
+// 4.1.0 搜索结果点击
+function onSearchHit(hit) {
+  expandFor(hit.sessionId)
+  selectFile(hit.sessionId, hit.name)
+}
+
+// 4.1.0 搜索高亮：对 snippet 中的 query 词加 <mark>
+function highlightSnippet(snippet, query) {
+  if (!snippet || !query) return snippet || ''
+  const escaped = snippet.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const q = query.trim()
+  if (!q) return escaped
+  const words = q.split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`(${words.join('|')})`, 'gi')
+  return escaped.replace(re, '<mark>$1</mark>')
+}
+
+// 4.1.0 导出群文档
+async function onExportGroup(groupId) {
+  try {
+    await api.docs.downloadDocsExport(groupId)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error(e?.message || '导出失败')
+  }
 }
 
 async function refresh() {
@@ -924,5 +999,146 @@ onUnmounted(() => {
   .dh-welcome-hero {
     animation: none !important;
   }
+}
+
+/* —— 4.1.0 搜索 —— */
+.dh-search {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.dh-search-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dh-search-results::-webkit-scrollbar {
+  display: none;
+}
+
+.dh-search-hit {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.dh-search-hit:hover {
+  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.dh-hit-title {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ecw-text-1, #1d1d1f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-hit-meta {
+  font-size: 11px;
+  color: var(--ecw-text-3, #86868b);
+  margin-top: 2px;
+}
+
+.dh-hit-snippet {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ecw-text-2, #6e6e73);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dh-hit-snippet :deep(mark) {
+  background: rgba(255, 200, 0, 0.35);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.dh-hit-line {
+  font-size: 10.5px;
+  color: var(--ecw-text-3, #86868b);
+  margin-top: 2px;
+}
+
+/* —— 4.1.0 导出按钮 —— */
+.dh-export-btn {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--ecw-accent, #007aff);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dh-export-btn:hover {
+  background: rgba(0, 122, 255, 0.16);
+}
+
+/* —— 4.1.0 节点徽标 —— */
+.dh-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.dh-badge--adapt {
+  background: rgba(230, 162, 60, 0.15);
+  color: #b87d1e;
+}
+
+.dh-badge--cloned {
+  background: rgba(103, 194, 58, 0.15);
+  color: #4a9c2d;
+}
+
+.dh-badge--active {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--ecw-accent, #007aff);
+}
+
+.dh-badge--running {
+  background: rgba(0, 122, 255, 0.12);
+  color: var(--ecw-accent, #007aff);
+}
+
+.dh-badge--waiting_human {
+  background: rgba(245, 108, 108, 0.12);
+  color: var(--el-color-danger);
+}
+
+.dh-badge--failed {
+  background: rgba(245, 108, 108, 0.12);
+  color: var(--el-color-danger);
+}
+
+.dh-badge--archived {
+  background: rgba(176, 180, 188, 0.15);
+  color: #6e6e73;
+}
+
+.dh-badge--interrupted,
+.dh-badge--paused {
+  background: rgba(230, 162, 60, 0.12);
+  color: #b87d1e;
 }
 </style>

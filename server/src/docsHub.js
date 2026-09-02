@@ -3,10 +3,12 @@
 // Security: session-id charset guard + strict filename whitelist (no traversal),
 // 1MB read cap, open-path never opens a file directly (dir or containing dir only).
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
-import { DATA_ROOT, getDb } from './db.js'
+import { DATA_ROOT, getDb, parseJson } from './db.js'
 import { openLocalPath } from './fsBrowser.js'
 import { saveSessionAnnouncement } from './engine.js'
+import { writeZipArchive } from './adaptBackup.js'
 
 const MAX_READ_BYTES = 1024 * 1024
 const CACHE_TTL_MS = 60_000
@@ -114,7 +116,7 @@ export function invalidateDocsCache() {
  * Aggregate docs for all sessions that have a journal dir.
  * @param {{ sort?: 'group'|'time' }} opts
  */
-export function listDocs({ sort = 'group' } = {}) {
+function scanAll() {
   const now = Date.now()
   if (!cache.data || now - cache.at > CACHE_TTL_MS) {
     const meta = sessionMeta()
@@ -139,10 +141,10 @@ export function listDocs({ sort = 'group' } = {}) {
         status: s?.status || null,
         updatedAt: s?.updated_at || null,
         workFolder: s?.workFolder || null,
-        files,
+        files: decorateWithNodeMeta(sessionId, files),
       }
       sessions.push(item)
-      for (const f of files) {
+      for (const f of item.files) {
         flat.push({
           sessionId,
           sessionTitle: item.sessionTitle,
@@ -150,6 +152,7 @@ export function listDocs({ sort = 'group' } = {}) {
           name: f.name,
           kind: f.kind,
           title: f.title,
+          meta: f.meta,
           mtimeMs: f.mtimeMs,
           size: f.size,
         })
@@ -157,7 +160,36 @@ export function listDocs({ sort = 'group' } = {}) {
     }
     cache = { at: now, data: { sessions, flat } }
   }
-  const { sessions, flat } = cache.data
+  return cache.data
+}
+
+/** 节点台账文件补流程轨同源徽标元数据（状态 / 适配 / 克隆） */
+function decorateWithNodeMeta(sessionId, files) {
+  const steps = files.filter((f) => f.kind === 'step')
+  if (!steps.length) return files
+  const nodes = getDb()
+    .prepare('SELECT id, status, input_json, output_json FROM node_instances WHERE session_id = ?')
+    .all(sessionId)
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  return files.map((f) => {
+    if (f.kind !== 'step') return f
+    const n = byId.get(String(f.step != null ? f.name.match(/step-\d+-([A-Za-z0-9_-]+)\.md$/)?.[1] : ''))
+    if (!n) return f
+    const input = parseJson(n.input_json, {})
+    const output = parseJson(n.output_json, {})
+    return {
+      ...f,
+      meta: {
+        status: n.status || null,
+        adapt: !!(input.adapt || output.adapt),
+        cloned: !!(output.cloned || input.cloned),
+      },
+    }
+  })
+}
+
+export function listDocs({ sort = 'group' } = {}) {
+  const { sessions, flat } = scanAll()
   if (sort === 'time') {
     return { sort, items: [...flat].sort((a, b) => b.mtimeMs - a.mtimeMs) }
   }
@@ -239,4 +271,86 @@ export async function openDocsPath(targetPath, deps = {}) {
   const opened = st.isDirectory() ? abs : path.dirname(abs)
   await openTarget(opened)
   return { ok: true, opened, isDir: st.isDirectory() }
+}
+
+const MAX_SEARCH_HITS = 200
+const PER_FILE_HITS = 3
+const SNIPPET_LEN = 160
+
+/**
+ * 全文搜索（内存扫描，不引 FTS）：遍历白名单文档，逐行匹配关键词。
+ * @returns {{ q, hits: Array<{ sessionId, sessionTitle, groupTitle, name, kind, title, line, snippet, mtimeMs }> }}
+ */
+export function searchDocs(q) {
+  const needle = String(q || '').trim().toLowerCase()
+  if (!needle) return { q: String(q || ''), hits: [] }
+  const { sessions } = scanAll()
+  const hits = []
+  for (const s of sessions) {
+    for (const f of s.files) {
+      if (hits.length >= MAX_SEARCH_HITS) break
+      let content
+      try {
+        content = readDoc(s.sessionId, f.name).content
+      } catch {
+        continue
+      }
+      const lines = content.split(/\r?\n/)
+      let inFile = 0
+      for (let i = 0; i < lines.length && inFile < PER_FILE_HITS; i++) {
+        if (!lines[i].toLowerCase().includes(needle)) continue
+        const raw = lines[i].trim()
+        const at = raw.toLowerCase().indexOf(needle)
+        const from = Math.max(0, Math.floor(at - SNIPPET_LEN / 2))
+        const snippet = raw.slice(from, from + SNIPPET_LEN)
+        hits.push({
+          sessionId: s.sessionId,
+          sessionTitle: s.sessionTitle,
+          groupTitle: s.groupTitle,
+          name: f.name,
+          kind: f.kind,
+          title: f.title,
+          line: i + 1,
+          snippet,
+          mtimeMs: f.mtimeMs,
+        })
+        inFile += 1
+      }
+      if (hits.length >= MAX_SEARCH_HITS) break
+    }
+  }
+  return { q: String(q || ''), hits }
+}
+
+function slugify(s) {
+  return String(s || 'group').replace(/[\\/:*?"<>|\r\n\s]+/g, '_').slice(0, 60) || 'group'
+}
+
+/**
+ * 打包一个群模板下全部会话的文档为 zip（文件名前缀为会话标题）。
+ * @returns {{ path: string, files: number, sessions: number }} 临时 zip 路径（调用方发送后删除）
+ */
+export function exportGroupZip(groupId) {
+  if (!groupId || !/^[A-Za-z0-9_-]+$/.test(String(groupId))) {
+    throw Object.assign(new Error('非法群 ID'), { code: 'BAD_GROUP' })
+  }
+  const group = getDb().prepare('SELECT id, title FROM groups WHERE id = ?').get(groupId)
+  if (!group) throw Object.assign(new Error('群模板不存在'), { code: 'NO_GROUP' })
+  const sessions = getDb()
+    .prepare('SELECT id, title FROM sessions WHERE group_id = ? ORDER BY updated_at DESC')
+    .all(groupId)
+  const entries = []
+  for (const s of sessions) {
+    const files = scanSessionDir(s.id)
+    const prefix = `${slugify(s.title)}-${s.id}`
+    for (const f of files) {
+      entries.push({ name: `${prefix}/${f.name}`, path: path.join(journalRoot(), s.id, ...f.name.split('/')) })
+    }
+  }
+  if (!entries.length) {
+    throw Object.assign(new Error('该群没有可导出的文档'), { code: 'EMPTY' })
+  }
+  const zipPath = path.join(os.tmpdir(), `acw-docs-${groupId}-${Date.now()}.zip`)
+  writeZipArchive(entries, zipPath)
+  return { path: zipPath, files: entries.length, sessions: sessions.length, groupTitle: group.title }
 }

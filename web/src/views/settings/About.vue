@@ -35,6 +35,72 @@
         </div>
       </section>
 
+      <!-- 更新 (4.2.0) -->
+      <section class="about-card">
+        <div class="section-title">更新</div>
+
+        <!-- 检查更新 -->
+        <div class="update-row">
+          <el-button size="small" :loading="updateChecking" @click="checkUpdate">
+            检查更新
+          </el-button>
+          <template v-if="updateResult">
+            <el-tag v-if="!updateResult.hasUpdate" type="success" effect="plain" round size="small">
+              已是最新
+            </el-tag>
+            <template v-else>
+              <el-tag type="warning" effect="plain" round size="small">
+                发现新版本 v{{ updateResult.latest }}
+              </el-tag>
+              <div v-if="updateResult.notes" class="update-notes">{{ updateResult.notes }}</div>
+              <div v-if="updateResult.date" class="update-date">{{ updateResult.date }}</div>
+              <el-button v-if="updateResult.url" size="small" type="primary" plain @click="openUrl(updateResult.url)">
+                打开下载页
+              </el-button>
+            </template>
+          </template>
+          <span v-else class="muted tiny">手动检查，不会自动联网</span>
+        </div>
+
+        <!-- 备份与恢复 -->
+        <div class="update-divider" />
+        <div class="update-row">
+          <el-button size="small" :loading="backupCreating" @click="createBackupNow">
+            立即备份
+          </el-button>
+          <span v-if="lastBackupName" class="update-last-backup">最近备份：{{ lastBackupName }}</span>
+        </div>
+        <div class="update-row" style="margin-top: 8px">
+          <el-button size="small" :loading="backupsLoading" @click="loadBackupsForRestore">
+            从备份恢复
+          </el-button>
+          <el-select
+            v-if="showRestoreSelect"
+            v-model="selectedRestoreFile"
+            placeholder="选择备份文件"
+            size="small"
+            style="width: 280px; margin-left: 8px"
+          >
+            <el-option
+              v-for="b in availableBackups"
+              :key="b.filename"
+              :label="`${b.filename}（${formatSize(b.bytes)}）`"
+              :value="b.filename"
+            />
+          </el-select>
+          <el-button
+            v-if="selectedRestoreFile"
+            size="small"
+            type="danger"
+            plain
+            :loading="restoreRunning"
+            @click="doRestore"
+          >
+            恢复
+          </el-button>
+        </div>
+      </section>
+
       <!-- 特殊说明：完全本地 -->
       <section class="about-card about-card--local">
         <div class="local-kicker">特殊说明</div>
@@ -96,7 +162,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import AppLogo from '../../components/AppLogo.vue'
 
@@ -112,6 +178,16 @@ const data = ref({
   changelog: [],
 })
 const loading = ref(true)
+// 4.2.0 更新
+const updateChecking = ref(false)
+const updateResult = ref(null)
+const backupCreating = ref(false)
+const lastBackupName = ref('')
+const backupsLoading = ref(false)
+const availableBackups = ref([])
+const showRestoreSelect = ref(false)
+const selectedRestoreFile = ref('')
+const restoreRunning = ref(false)
 
 function copy(t) {
   navigator.clipboard.writeText(t || '')
@@ -120,6 +196,73 @@ function copy(t) {
 
 function openUrl(url) {
   if (url) window.open(url, '_blank', 'noopener')
+}
+
+// 4.2.0 更新
+async function checkUpdate() {
+  updateChecking.value = true
+  try {
+    updateResult.value = await api.update.check()
+  } catch (e) {
+    ElMessage.error(e?.message || '检查更新失败')
+  } finally {
+    updateChecking.value = false
+  }
+}
+
+async function createBackupNow() {
+  backupCreating.value = true
+  try {
+    const r = await api.update.backup()
+    lastBackupName.value = r.path || r.filename || '备份完成'
+    ElMessage.success('备份成功')
+  } catch (e) {
+    ElMessage.error(e?.message || '备份失败')
+  } finally {
+    backupCreating.value = false
+  }
+}
+
+async function loadBackupsForRestore() {
+  backupsLoading.value = true
+  try {
+    const r = await api.update.backups()
+    availableBackups.value = r.backups || []
+    showRestoreSelect.value = true
+    selectedRestoreFile.value = ''
+  } catch (e) {
+    ElMessage.error(e?.message || '加载备份列表失败')
+  } finally {
+    backupsLoading.value = false
+  }
+}
+
+async function doRestore() {
+  if (!selectedRestoreFile.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确定从备份 ${selectedRestoreFile.value} 恢复？当前数据会被覆盖（恢复前会自动再备份一次）。`,
+      '从备份恢复',
+      { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消' },
+    )
+  } catch { return }
+  restoreRunning.value = true
+  try {
+    await api.update.restore(selectedRestoreFile.value)
+    ElMessage.success('恢复完成，正在重启应用…')
+    setTimeout(() => window.location.reload(), 1500)
+  } catch (e) {
+    ElMessage.error(e?.message || '恢复失败')
+  } finally {
+    restoreRunning.value = false
+  }
+}
+
+function formatSize(n) {
+  const b = Number(n) || 0
+  if (b < 1024) return `${b} B`
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+  return `${(b / 1024 / 1024).toFixed(1)} MB`
 }
 
 onMounted(async () => {
@@ -302,5 +445,42 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--el-text-color-regular);
   line-height: 1.6;
+}
+
+/* 4.2.0 更新卡 */
+.update-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.update-notes {
+  width: 100%;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--el-text-color-regular);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.update-date {
+  width: 100%;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 2px;
+}
+
+.update-last-backup {
+  font-size: 12.5px;
+  color: var(--el-text-color-secondary);
+}
+
+.update-divider {
+  height: 1px;
+  background: var(--el-border-color-lighter);
+  margin: 14px 0;
 }
 </style>

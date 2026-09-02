@@ -98,6 +98,12 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   const platform = platformOf(platformTag)
   const entries = unzipList(zipPath).map(normalizeEntry)
 
+  // 4.2.0：运行包不得包含运行时数据目录（包根下的 data/），否则覆盖解压会威胁用户历史数据
+  const dataEntries = entries.filter((e) => e === 'data' || e.startsWith('data/') || /^[^/]+\/data(\/|$)/.test(e))
+  if (dataEntries.length) {
+    throw new Error(`zip 内发现运行时数据目录 data/**（${dataEntries[0]} …），打包脚本泄漏了用户数据`)
+  }
+
   const buildInfoEntries = entries.filter(
     (e) => e === 'BUILD_INFO.json' || e.endsWith('/BUILD_INFO.json'),
   )

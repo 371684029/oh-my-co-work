@@ -51,6 +51,31 @@ export const api = {
       }),
     openPath: (path) =>
       req('/docs/open-path', { method: 'POST', body: JSON.stringify({ path }) }),
+    search: (q) => req(`/docs/search?q=${encodeURIComponent(q)}`),
+    exportGroupUrl: (groupId) => `/docs/export?groupId=${encodeURIComponent(groupId)}`,
+    /** 群文档导出为 zip 下载（fetch 带 token → blob → 触发浏览器保存） */
+    downloadDocsExport: async (groupId) => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/docs/export?groupId=${encodeURIComponent(groupId)}`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `docs-${groupId}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      return { ok: true }
+    },
+  },
+  update: {
+    check: () => req('/update/check'),
+    backups: () => req('/update/backups'),
+    backup: () => req('/update/backup', { method: 'POST', body: '{}' }),
+    restore: (filename) =>
+      req('/update/restore', { method: 'POST', body: JSON.stringify({ filename }) }),
   },
   members: {
     list: () => req('/members'),
