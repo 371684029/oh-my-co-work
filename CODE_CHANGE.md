@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-02 | M | docs/selftest.md | code review 精修：selftest 数量口径（4 selftest + test-enter-send）、root 下 1 例按设计 skip 注脚、§8 令牌提取器改为可运行命令、§3.1 去掉未用的 getDb
 2026-09-02 | A | docs/selftest.md | 新增自测体系文档：分层总览（node:test 139+23 例）、四套路（隔离数据根/表征测试/依赖注入/轮询等待）、前端纯逻辑测试、静态核查、发布闸门、实弹 curl、经验沉淀
 2026-09-02 | M | AGENT.md README.md docs/README.md | 测试约定指向 selftest.md；文档索引补自测体系；4.x 状态改为已实施
 

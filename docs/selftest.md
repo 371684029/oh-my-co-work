@@ -11,7 +11,7 @@
 |----|------|------|------|------|
 | 服务端单元/集成 | `server/test/*.test.js`（25 文件） | Node 内置 `node:test` + `node:assert/strict` | **139 例** | `npm test` |
 | 前端纯逻辑 | `web/test/*.test.mjs`（3 文件） | 同上（浏览器不用开） | **23 例** | `npm run test:web` |
-| 自愈/冒烟脚本 | `scripts/selftest-*.mjs` 等 | 独立脚本，**不走 test runner** | 4+1 个 | `node scripts/selftest-xxx.mjs` |
+| 自愈/冒烟脚本 | `scripts/selftest-*.mjs` + `test-enter-send.mjs` | 独立脚本，**不走 test runner** | 4 + 1 个 | `node scripts/selftest-xxx.mjs` |
 | 静态核查 | ESLint + 模板绑定核查 | eslint 9 / 临时脚本 | 0 error 基线 | `npm run lint` |
 | 发布自测 | CI + 打包流水线 | GitHub Actions | 每次推 main | 自动 |
 
@@ -29,6 +29,8 @@ npm run lint             # ESLint 0-error 基线
 npm run build -w web     # vite 构建（模板/导入错误的兜底网）
 ```
 
+> 注：服务端 139 例中，`adaptBackup.test.js` 的 444 权限用例在 **root 用户下按设计 skip**（root 对 444 文件仍可写，断言无意义）——本地 root 跑是 138 pass + 1 skipped；CI（非 root）139 全绿。
+
 CI（`.github/workflows/ci.yml`）每次 push/PR 按序执行：**Install → Lint → Test → Test web → Build web → Pack dry-run + 真机冒烟**（解压 linux 包 → `node start.mjs` → curl `/api/health`）。推 main 还会触发 `pack-release.yml`：三平台打包 → verify-pack → validate（三包必须同 sourceCommit）→ 发布 `latest`。
 
 ---
@@ -43,7 +45,7 @@ CI（`.github/workflows/ci.yml`）每次 push/PR 按序执行：**Install → Li
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-docs-hub-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
-const { initDb, getDb } = await import('../src/db.js')
+const { initDb } = await import('../src/db.js')
 initDb()
 const { createMember, createGroup, createSessionFromGroup } = await import('../src/services.js')
 ```
@@ -110,7 +112,7 @@ assert.equal(/<a [^>]*javascript:/i.test(render('[点我](javascript:alert(1))')
 
 ## 5. 自愈/冒烟脚本（selftest-\*.mjs）
 
-`scripts/selftest-forward-jump.mjs`、`selftest-session-ops.mjs`、`selftest-v1-priority.mjs`、`selftest-v1-stability.mjs`——**不走 test runner**，是独立长流程脚本（起真实服务/跑完整流），用于手工自愈验证与发版前巡检。与单测的分工：单测管"单元语义不变"，selftest 管"整条流程能走通"。
+`scripts/selftest-forward-jump.mjs`、`selftest-session-ops.mjs`、`selftest-v1-priority.mjs`、`selftest-v1-stability.mjs`——**不走 test runner**，是独立长流程脚本（起真实服务/跑完整流），用于手工自愈验证与发版前巡检。另有 `test-enter-send.mjs`（输入框回车发送的单点验证）。与单测的分工：单测管"单元语义不变"，selftest 管"整条流程能走通"。**注意**：这类脚本默认针对真实运行中的服务与真实数据（如 `selftest-session-ops` 断言库里已有群模板），不要在含重要数据的实例上随手跑。
 
 ---
 
@@ -145,7 +147,8 @@ assert.equal(/<a [^>]*javascript:/i.test(render('[点我](javascript:alert(1))')
 
 ```bash
 ACW_PORT=3979 node server/src/index.js &
-TOKEN=$(curl -s -H "Origin: http://127.0.0.1:5173" http://127.0.0.1:3979/api/bootstrap | node -p "...token")
+TOKEN=$(curl -s -H "Origin: http://127.0.0.1:5173" http://127.0.0.1:3979/api/bootstrap \
+  | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).token")
 curl -o /dev/null -w "%{http_code}" "http://127.0.0.1:3979/api/members?token=$TOKEN"              # 期望 401（3.8.2 收紧）
 curl -o /dev/null -w "%{http_code}" -H "X-ACW-Token: $TOKEN" http://127.0.0.1:3979/api/members    # 期望 200
 curl -o /dev/null -w "%{http_code}" http://127.0.0.1:3979/docs                                    # 期望 200（SPA 回退）
