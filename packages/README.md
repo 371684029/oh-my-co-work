@@ -15,7 +15,7 @@
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
 | darwin-arm64 | [`oh-my-co-work-v3-darwin-arm64.zip`](./oh-my-co-work-v3-darwin-arm64.zip) | 23888137 | `fddd2038140b` | 2026-09-02T02:43:08.755Z |
-| linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 24046282 | `fddd2038140b` | 2026-09-02T02:43:11.982Z |
+| linux-x64 | [`oh-my-co-work-v3-linux-x64.zip`](./oh-my-co-work-v3-linux-x64.zip) | 24046284 | `9c865a000e95` | 2026-09-02T02:50:04.718Z |
 | win32-x64 | [`oh-my-co-work-v3-win32-x64.zip`](./oh-my-co-work-v3-win32-x64.zip) | 23882407 | `9c865a000e95` | 2026-09-02T02:50:03.459Z |
 
 版本：`3.7.4`（大版本 v3）
