@@ -121,8 +121,9 @@ jobs:
             exit 1
           fi
           node scripts/pack-release.mjs --manifest-only
-          # 只提交本平台 zip + 本平台 sidecar + 共享清单，避免碰其它平台的文件
-          git add "packages/${FILE}" "packages/oh-my-co-work-v${MAJOR}-${PLAT}.build.json" packages/README.md packages/CURRENT.txt
+          # 整目录暂存：大版本切换时 pack 会删除旧 major 的 zip/sidecar，
+          # 必须把删除一并提交，否则三平台并行时 main 里新旧版本混存、validate 必挂
+          git add -A packages/
           if ! git diff --staged --quiet; then
             git commit -m "chore(packages): 更新 ${FILE} (${VER})"
           fi
@@ -130,7 +131,7 @@ jobs:
           for i in 1 2 3 4 5 6; do
             if ! git pull --rebase origin main; then
               node scripts/pack-release.mjs --manifest-only
-              git add packages/README.md packages/CURRENT.txt packages/*.zip packages/*.build.json || true
+              git add -A packages/ || true
               GIT_EDITOR=true git rebase --continue || true
             fi
             # 清掉残留冲突标记后再提交
