@@ -147,4 +147,4 @@ test('restore rolls live data back if apply fails after move-aside', () => {
     fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
     '回滚应还在',
   )
-}))
+})
