@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-01 | M | docs/docs-4x-plan.md | 文档中心打开方式按产品决定改为新开浏览器标签（独立 /docs 页面）：§1 目标、§2.1 原则、§3.4 打开方式与联动、§5.2 前端任务、§9 完成定义同步
 2026-09-01 | A | docs/docs-4x-plan.md | 新增 4.x 协同文档中心实施计划：并入现有服务（不起新端口）、渲染不执行 HTML、编辑只开公告、群模板排序默认可切时间、4.0/4.1 切分与安全护栏
 2026-09-01 | M | .github/workflows/pack-release.yml | fix(ci)：打包提交改为先自检 sourceCommit + 先提交本平台 zip 再 rebase；删除冲突分支里 checkout HEAD 覆盖新 zip 的两行销毁逻辑（win32 包连续多日未真正入库的根因）
 2026-09-01 | M | .gitattributes | 补 *.zip binary 规则
