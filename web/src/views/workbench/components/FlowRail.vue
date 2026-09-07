@@ -601,6 +601,8 @@ const selectedDocName = ref('')
 const selectedDocContent = ref('')
 const selectedDocLoading = ref(false)
 const exportingRailDocs = ref(false)
+let currentFileReqId = 0
+let currentListReqId = 0
 
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
@@ -608,7 +610,9 @@ const renderedDocHtml = computed(() => {
 })
 
 async function loadRailDocs() {
-  if (!activeId.value) {
+  const reqSessionId = activeId.value
+  const reqId = ++currentListReqId
+  if (!reqSessionId) {
     railDocFiles.value = []
     selectedDocName.value = ''
     selectedDocContent.value = ''
@@ -617,39 +621,51 @@ async function loadRailDocs() {
   railDocsLoading.value = true
   try {
     const res = await api.docs.list('group')
+    if (reqId !== currentListReqId || reqSessionId !== activeId.value) return
     let found = null
     for (const g of res?.groups || []) {
-      const s = (g.sessions || []).find((s) => s.sessionId === activeId.value)
+      const s = (g.sessions || []).find((s) => s.sessionId === reqSessionId)
       if (s) {
         found = s
         break
       }
     }
     railDocFiles.value = found?.files || []
-    if (railDocFiles.value.length && !selectedDocName.value) {
+    if (railDocFiles.value.length && (!selectedDocName.value || !railDocFiles.value.some((f) => f.name === selectedDocName.value))) {
       await onSelectRailDoc(railDocFiles.value[0].name)
     } else if (!railDocFiles.value.length) {
       selectedDocName.value = ''
       selectedDocContent.value = ''
     }
   } catch (e) {
-    ElMessage.warning(e?.message || '加载文档列表失败')
+    if (reqId === currentListReqId && reqSessionId === activeId.value) {
+      ElMessage.warning(e?.message || '加载文档列表失败')
+    }
   } finally {
-    railDocsLoading.value = false
+    if (reqId === currentListReqId) {
+      railDocsLoading.value = false
+    }
   }
 }
 
 async function onSelectRailDoc(name) {
-  if (!activeId.value || !name) return
+  const reqSessionId = activeId.value
+  const reqId = ++currentFileReqId
+  if (!reqSessionId || !name) return
   selectedDocName.value = name
   selectedDocLoading.value = true
   try {
-    const res = await api.docs.file(activeId.value, name)
+    const res = await api.docs.file(reqSessionId, name)
+    if (reqId !== currentFileReqId || reqSessionId !== activeId.value) return
     selectedDocContent.value = res?.content || ''
   } catch (e) {
-    ElMessage.error(e?.message || '读取文档内容失败')
+    if (reqId === currentFileReqId && reqSessionId === activeId.value) {
+      ElMessage.error(e?.message || '读取文档内容失败')
+    }
   } finally {
-    selectedDocLoading.value = false
+    if (reqId === currentFileReqId) {
+      selectedDocLoading.value = false
+    }
   }
 }
 

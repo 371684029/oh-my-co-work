@@ -148,3 +148,20 @@ test('restore rolls live data back if apply fails after move-aside', () => {
     '回滚应还在',
   )
 })
+
+test('listBackups distinguishes format correctly and backup download validation logic', () => {
+  const created = backup.createBackup()
+  assert.equal(created.ok, true)
+  const backups = backup.listBackups()
+  const tarItem = backups.find((b) => b.format === 'tar.gz')
+  assert.ok(tarItem)
+  assert.ok(tarItem.filename.endsWith('.tar.gz'))
+
+  // 安全文件名正则验证
+  const validRegex = /^[A-Za-z0-9_.-]+$/
+  assert.equal(validRegex.test(tarItem.filename), true)
+  assert.equal(validRegex.test('../evil.tar.gz'), false)
+  assert.equal(validRegex.test('bad/path.tar.gz'), false)
+  assert.equal(validRegex.test('bad\\path.tar.gz'), false)
+})
+

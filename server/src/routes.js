@@ -154,9 +154,9 @@ router.get('/backup/download', (req, res) => {
     if (requested) {
       filename = path.basename(requested)
     } else {
-      const backups = listBackups()
+      const backups = listBackups().filter((b) => b.format !== 'dir' && b.filename.endsWith('.tar.gz'))
       if (!backups.length) {
-        return res.status(404).json({ error: '暂无可用备份文件' })
+        return res.status(404).json({ error: '暂无可下载的压缩包备份文件' })
       }
       filename = backups[0].filename
     }
@@ -165,10 +165,17 @@ router.get('/backup/download', (req, res) => {
     }
     const backupDir = path.join(DATA_ROOT, 'backups')
     const target = path.join(backupDir, filename)
-    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
-      return res.status(404).json({ error: '备份文件不存在或为目录' })
+    if (!fs.existsSync(target)) {
+      return res.status(404).json({ error: '备份文件不存在' })
     }
-    res.setHeader('Content-Type', 'application/gzip')
+    const stat = fs.statSync(target)
+    if (!stat.isFile()) {
+      return res.status(400).json({ error: '该备份为目录格式，请使用 tar.gz 压缩包格式进行下载' })
+    }
+    const contentType = filename.endsWith('.tar.gz') || filename.endsWith('.gz')
+      ? 'application/gzip'
+      : (filename.endsWith('.zip') ? 'application/zip' : 'application/octet-stream')
+    res.setHeader('Content-Type', contentType)
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
     res.download(target, filename)
   } catch (e) {
@@ -835,34 +842,60 @@ router.get('/docs/search', (req, res) => {
 
 router.get('/docs/export', (req, res) => {
   let tmp = null
+  let cleaned = false
+  const cleanup = () => {
+    if (tmp && !cleaned) {
+      cleaned = true
+      try {
+        fs.rmSync(tmp, { force: true })
+      } catch {
+        /* ignore */
+      }
+    }
+  }
   try {
     const out = docsHub.exportGroupZip(String(req.query.groupId || ''))
     tmp = out.path
     const downloadName = String(out.filename || `${out.slug || 'docs'}.zip`).replace(/["\r\n\\]/g, '')
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    res.on('finish', cleanup)
+    res.on('close', cleanup)
     res.download(out.path, downloadName, () => {
-      if (tmp) fs.rmSync(tmp, { force: true })
+      cleanup()
     })
   } catch (e) {
-    if (tmp) fs.rmSync(tmp, { force: true })
+    cleanup()
     res.status(400).json({ error: e.message })
   }
 })
 
 router.get('/docs/export-all', (_req, res) => {
   let tmp = null
+  let cleaned = false
+  const cleanup = () => {
+    if (tmp && !cleaned) {
+      cleaned = true
+      try {
+        fs.rmSync(tmp, { force: true })
+      } catch {
+        /* ignore */
+      }
+    }
+  }
   try {
     const out = docsHub.exportAllDocsZip()
     tmp = out.path
     const downloadName = String(out.filename || 'oh-my-co-work-all-docs.zip').replace(/["\r\n\\]/g, '')
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    res.on('finish', cleanup)
+    res.on('close', cleanup)
     res.download(out.path, downloadName, () => {
-      if (tmp) fs.rmSync(tmp, { force: true })
+      cleanup()
     })
   } catch (e) {
-    if (tmp) fs.rmSync(tmp, { force: true })
+    cleanup()
     res.status(400).json({ error: e.message })
   }
 })

@@ -4,7 +4,7 @@
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
         <div class="top-left docs-top-left">
-          <AppLogo size="md" class="brand-logo" />
+          <AppLogo size="md" class="brand-logo brand-logo--clickable" title="返回工作台" @click="goWorkbench" />
           <h1 class="docs-brand-title">文档中心</h1>
         </div>
         <div class="top-right docs-top-right">
@@ -285,6 +285,16 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   min-width: 0;
+}
+
+.brand-logo--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.brand-logo--clickable:hover {
+  transform: scale(1.05);
+  opacity: 0.9;
 }
 
 .docs-top-left {

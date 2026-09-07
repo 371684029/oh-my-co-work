@@ -273,6 +273,14 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  try {
+    const r = await api.update.backups()
+    if (r?.backups?.length) {
+      lastBackupName.value = r.backups[0].filename
+    }
+  } catch {
+    /* ignore */
+  }
 })
 </script>
 

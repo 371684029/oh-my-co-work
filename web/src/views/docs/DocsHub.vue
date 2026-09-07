@@ -2,10 +2,10 @@
   <div class="docs-hub">
     <!-- 主体：三栏工作流（群模板分类轨 -> 会话与文件轨 -> 文档正文区） -->
     <div class="dh-body">
-      <!-- 栏 1：群模板分类 -->
-      <aside v-if="sort === 'group'" class="dh-col dh-col-groups">
+      <!-- 栏 1：群模板/时间跨度分类导航 -->
+      <aside class="dh-col dh-col-groups">
         <div class="dh-col-head">
-          <span class="dh-col-title">群模板</span>
+          <span class="dh-col-title">{{ sort === 'group' ? '群模板' : '时间跨度' }}</span>
           <el-button
             size="small"
             type="primary"
@@ -17,7 +17,8 @@
           </el-button>
         </div>
 
-        <div class="dh-group-list">
+        <!-- 按群模式 -->
+        <div v-if="sort === 'group'" class="dh-group-list">
           <!-- 全部选项 -->
           <button
             type="button"
@@ -59,6 +60,22 @@
           <div v-if="!listLoading && !groups.length" class="dh-empty-tip">
             暂无群模板
           </div>
+        </div>
+
+        <!-- 按时间模式：时间范围筛选 -->
+        <div v-else class="dh-group-list">
+          <button
+            v-for="range in timeRanges"
+            :key="range.key"
+            type="button"
+            class="dh-group-item"
+            :class="{ active: selectedTimeRange === range.key }"
+            @click="selectedTimeRange = range.key"
+          >
+            <span class="dh-group-item-icon">{{ range.icon }}</span>
+            <span class="dh-group-item-name">{{ range.label }}</span>
+            <span class="dh-group-item-count">{{ range.count }}</span>
+          </button>
         </div>
       </aside>
 
@@ -168,10 +185,10 @@
               </div>
             </template>
 
-            <!-- 按时间扁平展示 -->
+            <!-- 按时间扁平展示（支持按时间跨度筛选） -->
             <template v-else>
               <button
-                v-for="it in items"
+                v-for="it in displayedTimeItems"
                 :key="`${it.sessionId}:${it.name}`"
                 type="button"
                 class="dh-time-row"
@@ -184,6 +201,9 @@
                 </div>
                 <span class="dh-time-row-meta">{{ relativeTime(it.mtimeMs) }}</span>
               </button>
+              <div v-if="!displayedTimeItems.length" class="dh-empty-tip">
+                该时间段暂无文档
+              </div>
             </template>
           </template>
 
@@ -313,8 +333,55 @@ const route = useRoute()
 const router = useRouter()
 
 const selectedGroupId = ref('all')
+const selectedTimeRange = ref('all')
 const expandedSessions = ref({})
 const exportingAll = ref(false)
+
+const timeRanges = computed(() => {
+  const allCount = items.value.length
+  const now = Date.now()
+  const oneDay = 24 * 60 * 60 * 1000
+  const sevenDays = 7 * oneDay
+  const thirtyDays = 30 * oneDay
+
+  let todayCount = 0
+  let weekCount = 0
+  let monthCount = 0
+  let olderCount = 0
+
+  for (const it of items.value) {
+    const diff = now - Number(it.mtimeMs || 0)
+    if (diff <= oneDay) todayCount++
+    if (diff <= sevenDays) weekCount++
+    if (diff <= thirtyDays) monthCount++
+    if (diff > thirtyDays) olderCount++
+  }
+
+  return [
+    { key: 'all', label: '全部时间', icon: '🕒', count: allCount },
+    { key: 'today', label: '今天', icon: '⚡', count: todayCount },
+    { key: 'week', label: '最近 7 天', icon: '📅', count: weekCount },
+    { key: 'month', label: '最近 30 天', icon: '🗓️', count: monthCount },
+    { key: 'older', label: '更早以前', icon: '📦', count: olderCount },
+  ]
+})
+
+const displayedTimeItems = computed(() => {
+  if (selectedTimeRange.value === 'all') return items.value
+  const now = Date.now()
+  const oneDay = 24 * 60 * 60 * 1000
+  const sevenDays = 7 * oneDay
+  const thirtyDays = 30 * oneDay
+
+  return items.value.filter((it) => {
+    const diff = now - Number(it.mtimeMs || 0)
+    if (selectedTimeRange.value === 'today') return diff <= oneDay
+    if (selectedTimeRange.value === 'week') return diff <= sevenDays
+    if (selectedTimeRange.value === 'month') return diff <= thirtyDays
+    if (selectedTimeRange.value === 'older') return diff > thirtyDays
+    return true
+  })
+})
 
 function groupKey(g) {
   return g.groupId || 'none'

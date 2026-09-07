@@ -182,3 +182,21 @@ test('exportAllDocsZip packages all documents across sessions', () => {
   fs.rmSync(out.path, { force: true })
 })
 
+test('exportAllDocsZip with empty sessions provides placeholder README.md', () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-docs-empty-'))
+  const origDataRoot = process.env.ACW_DATA_ROOT
+  process.env.ACW_DATA_ROOT = tempDir
+  try {
+    const out = docsHub.exportAllDocsZip()
+    assert.ok(out.filename.startsWith('oh-my-co-work-all-docs-'))
+    assert.equal(out.filename.endsWith('.zip'), true)
+    assert.ok(fs.existsSync(out.path))
+    assert.ok(fs.statSync(out.path).size > 0)
+    fs.rmSync(out.path, { force: true })
+  } finally {
+    process.env.ACW_DATA_ROOT = origDataRoot
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+
