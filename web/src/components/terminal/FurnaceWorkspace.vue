@@ -266,18 +266,6 @@
       </div>
 
       <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
-        <div v-if="chatTurns.length" ref="tuiHistEl" class="furnace-tui-history">
-          <div class="furnace-tui-history-head">可上翻的对话记录（同一条进程）</div>
-          <div
-            v-for="turn in chatTurns"
-            :key="`tui-${turn.id}`"
-            class="furnace-tui-line"
-            :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
-          >
-            <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
-            <pre>{{ turn.text }}</pre>
-          </div>
-        </div>
         <TerminalView
           :key="terminal.id"
           :terminal="terminal"
@@ -330,7 +318,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'input', 'resize', 'select', 'download-log', 'gap'])
 const workspaceRoot = ref(null)
 const logEl = ref(null)
-const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
@@ -393,7 +380,6 @@ const {
   focused,
   isPagefill,
   logEl,
-  tuiHistEl,
   fileInput,
   composerEl,
 })
@@ -582,74 +568,28 @@ const {
   background: #17191f;
 }
 
-.furnace-tui-history {
-  flex: 0 1 42%;
-  min-height: 120px;
-  max-height: 46%;
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.06);
-  padding: 8px 12px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.furnace-tui-history-head {
-  font-size: 11px;
-  color: #8b909a;
-  margin-bottom: 8px;
-}
-
-.furnace-tui-line {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.furnace-tui-line span {
-  color: #8b909a;
-  font-size: 11px;
-  padding-top: 2px;
-}
-
-.furnace-tui-line.is-user span {
-  color: #64a9ff;
-}
-
-.furnace-tui-line pre {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  color: #e7e9ee;
-  font-family: inherit;
-}
-
-.furnace-tui-line.is-user pre {
-  color: #c9ddff;
-}
-
 .furnace-tui :deep(.terminal-view) {
   flex: 1;
   min-height: 0;
-  height: 100%;
+  height: auto;
 }
 
 .furnace-log {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: scroll;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: auto;
   scrollbar-color: rgba(60, 60, 67, 0.55) rgba(0, 0, 0, 0.06);
   padding: 16px 3% 12px;
   display: grid;
   grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-rows: max-content;
   gap: 16px 14px;
-  align-items: stretch;
+  align-items: start;
+  align-content: start;
 }
 
 .furnace-log::-webkit-scrollbar {
@@ -668,6 +608,7 @@ const {
 .furnace-buddy {
   position: sticky;
   top: 8px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -692,11 +633,11 @@ const {
 
 .furnace-thread {
   min-width: 0;
+  min-height: 0;
   width: 100%;
-  min-height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 12px;
   padding-bottom: 4px;
 }

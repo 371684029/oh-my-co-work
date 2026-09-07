@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 去掉上方重复对话栏，终端铺满；GUI 消息区改 grid 起点对齐，避免内容把容器撑高导致滚不动
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 去掉 TUI 历史栏滚动；底栏改成滚轮上翻历史
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 熔炉 preserveHistory：捕获滚轮写入 xterm scrollback，避免 Grok 鼠标协议吞掉上翻
+2026-09-07 | M | docs/crucible-gui-plain.md | TUI 口径改为铺满终端 + 滚轮上翻，干净正文可切 GUI
+2026-09-07 | M | docs/frontend-components.md | 干活面说明同步：GUI 可滚动、TUI 铺满可上翻
+
 2026-09-07 | M | packages/CURRENT.txt packages/README.md packages/oh-my-co-work-v4-*.build.json packages/oh-my-co-work-v4-*.zip | 三平台（linux-x64、win32-x64、darwin-arm64）4.2.0 运行包全量重新打包并通过 validate 校验
 2026-09-07 | M | eslint.config.js | 忽略打包临时目录 release/**，保证代码静态检查 0 error
 2026-09-07 | M | README.md | 文档同步：已实现功能与路线图补充 4.2.1（文档中心解耦与三栏内嵌、设置页一键备份/导出、熔炉元数据卡片化美化与下载安全加固）

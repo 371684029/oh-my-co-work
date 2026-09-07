@@ -22,7 +22,7 @@ const props = defineProps({
   prefs: { type: Object, default: () => ({}) },
   /** 隐藏时禁止 fit，避免把 PTY 缩成几列 */
   active: { type: Boolean, default: true },
-  /** 熔炉：吞掉备用屏，清屏前把当前画面推进滚动历史，才能上翻看到更早的话 */
+  /** 熔炉：吞掉备用屏，让主缓冲能滚；清屏仍走 xterm 自己的 scrollback，不要在 CSI 回调里 write */
   preserveHistory: { type: Boolean, default: false },
 })
 
@@ -35,6 +35,8 @@ let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
 const historyDisposables = []
+let wheelEl = null
+let onWheelScroll = null
 
 function paramAt(params, index) {
   if (!params) return 0
@@ -116,7 +118,19 @@ onMounted(async () => {
   fitAddon = new FitAddon()
   xterm.loadAddon(fitAddon)
   xterm.open(host.value)
-  if (props.preserveHistory) attachHistoryPreservation(xterm)
+  if (props.preserveHistory) {
+    attachHistoryPreservation(xterm)
+    wheelEl = host.value
+    onWheelScroll = (ev) => {
+      if (!xterm) return
+      const raw = ev.deltaMode === 1 ? ev.deltaY : ev.deltaY / 18
+      const n = Math.max(1, Math.min(16, Math.round(Math.abs(raw)) || 1))
+      xterm.scrollLines(ev.deltaY > 0 ? n : -n)
+      ev.preventDefault()
+      ev.stopPropagation()
+    }
+    wheelEl.addEventListener('wheel', onWheelScroll, { passive: false, capture: true })
+  }
   xterm.onData((data) => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
@@ -166,6 +180,11 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (wheelEl && onWheelScroll) {
+    wheelEl.removeEventListener('wheel', onWheelScroll, { capture: true })
+  }
+  wheelEl = null
+  onWheelScroll = null
   historyDisposables.splice(0).forEach((d) => d?.dispose?.())
   resizeObserver?.disconnect()
   resizeObserver = null
