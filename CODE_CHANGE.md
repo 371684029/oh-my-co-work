@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | shared/ptyPlain.js | 熔炉去壳增强：过滤 Grok CLI 启动菜单、目录与令牌指标、重试进度指示与提示符回显
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 去除提示符与时间戳回显行；底部文案提示同步
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉通栏全屏宽度布局：移除 44rem 窄列限制，左右气泡端对端对齐，按钮改为清晰的「满屏/退出满屏」
+2026-09-07 | M | server/test/ptyPlain.test.js | 补 Grok 启动菜单、路径指标、重试与提示符过滤测试
 2026-09-07 | A | docs/ai-case-blog.md | 对外案例博客单一事实源：元数据字段 + 正文 + 素材直链，口径对齐 4.2.0
 2026-09-07 | M | README.md | 为什么做它补痛点表/面向谁/AI 层级，文档表与正文链到案例博客
 2026-09-07 | M | docs/README.md | 索引与维护原则增加 ai-case-blog.md

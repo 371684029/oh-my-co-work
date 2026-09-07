@@ -110,3 +110,30 @@ test('chat turns split when user text appears in transcript', () => {
   assert.equal(turns[2].role, 'assistant')
   assert.match(turns[2].text, /写文档/)
 })
+
+test('GUI transcript drops Grok CLI startup menu, paths, spinners and token indicators', () => {
+  const raw = [
+    'New worktree ctrl+w',
+    'Resume session',
+    'Changelog',
+    'Quit',
+    'ctrl+q',
+    'D:\\ai\\oh-my-co-work-v4-win32-x64\\data\\furnace',
+    'D:\\ai\\oh-my-co-work-v4-win32-x64\\data\\furnace 1.5K / 131K',
+    '> 3:26 PM',
+    '\\ Retrying (attempt 1)... 5.5s 5.9s ↓1.51k [stop]',
+    '你好，这是已经过滤干净的可读回答正文。',
+  ].join('\n')
+  const text = furnaceGuiTranscript(raw, { cols: 80, rows: 20 })
+  assert.match(text, /你好，这是已经过滤干净的可读回答正文/)
+  assert.equal(text.includes('New worktree'), false)
+  assert.equal(text.includes('Resume session'), false)
+  assert.equal(text.includes('Changelog'), false)
+  assert.equal(text.includes('Quit'), false)
+  assert.equal(text.includes('ctrl+q'), false)
+  assert.equal(text.includes('data\\furnace'), false)
+  assert.equal(text.includes('1.5K / 131K'), false)
+  assert.equal(text.includes('Retrying'), false)
+  assert.equal(text.includes('[stop]'), false)
+})
+

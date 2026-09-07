@@ -45,12 +45,12 @@
             class="furnace-btn"
             :title="
               isPagefill
-                ? '缩小到工作台三栏，熔炉仍在中间'
-                : '铺满整个页面'
+                ? '退出满屏，回到工作台三栏'
+                : '满屏：铺满整个页面'
             "
             @click="togglePagefill"
           >
-            {{ isPagefill ? '缩小到三栏' : '铺满页面' }}
+            {{ isPagefill ? '退出满屏' : '满屏' }}
           </button>
           <button
             type="button"
@@ -228,7 +228,7 @@
       </div>
 
       <footer class="furnace-foot">
-        <span>{{ isPagefill ? '铺满页面' : '三栏中栏' }} · {{ surface === 'chat' ? 'GUI' : 'TUI' }}</span>
+        <span>{{ isPagefill ? '满屏' : '三栏中栏' }} · {{ surface === 'chat' ? 'GUI' : 'TUI' }}</span>
         <span v-if="terminal.cwd" class="furnace-cwd" :title="terminal.cwd">{{ terminal.cwd }}</span>
         <span>{{ footerHint }}</span>
       </footer>
@@ -617,12 +617,12 @@ const {
 
 .furnace-thread {
   min-width: 0;
-  max-width: 44rem;
+  width: 100%;
   min-height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   padding-bottom: 4px;
 }
 
@@ -635,7 +635,7 @@ const {
 }
 
 .furnace-welcome {
-  max-width: 40rem;
+  max-width: min(52rem, 100%);
   margin: 0;
   padding: 18px 20px 16px;
   border-radius: 18px;
@@ -711,7 +711,7 @@ const {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 100%;
+  width: 100%;
 }
 
 .furnace-turn.is-user {
@@ -730,9 +730,9 @@ const {
 }
 
 .furnace-bubble {
-  max-width: min(40rem, 100%);
+  max-width: min(56rem, 88%);
   margin: 0;
-  padding: 12px 16px;
+  padding: 12px 18px;
   border-radius: 18px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -764,7 +764,7 @@ const {
 
 .furnace-jump-latest {
   position: absolute;
-  right: 22px;
+  right: calc(3% + 12px);
   bottom: 118px;
   z-index: 3;
   border: 0;
@@ -781,7 +781,7 @@ const {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  padding: 12px 8% 16px;
+  padding: 12px 3% 16px;
   background: rgba(255, 255, 255, 0.92);
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }

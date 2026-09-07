@@ -40,7 +40,7 @@ const CHROME_LINE = [
   /alt\s*\+\s*enter/i,
   /shift\s*\+\s*enter/i,
   /shift\s*\+\s*tab/i,
-  /ctrl\s*\+\s*x\s*:/i,
+  /ctrl\s*\+\s*[a-z0-9]/i,
   /logged in with/i,
   /always-approve/i,
   /grok build beta/i,
@@ -49,6 +49,12 @@ const CHROME_LINE = [
   /api key\s*\|/i,
   /^\s*beta\s*$/i,
   /^\s*(deepseek|claude|gpt-?4|grok)(\s|$)/i,
+  /^\s*(new worktree|resume session|changelog|quit)\b/i,
+  /data[\\/]furnace/i,
+  /\b\d+(\.\d+)?[kKmM]\s*\/\s*\d+(\.\d+)?[kKmM]\b/i,
+  /^[-/\\|]\s*retrying\b/i,
+  /\bretrying\s*\(attempt\s*\d+\)/i,
+  /\b\[stop\]/i,
 ]
 
 const HISTORY_MAX_LINES = 3000
@@ -62,8 +68,9 @@ function isChromeLine(line) {
   if (!stripped) return true
   const trimmed = line.replace(BOX_CHARS, '').trim()
   if (!trimmed) return true
-  if (hasCjk(trimmed) && trimmed.length > 12) return false
+  if (/^>\s*(\d{1,2}:\d{2}(\s*(AM|PM))?)?\s*$/i.test(trimmed)) return true
   if (CHROME_LINE.some((re) => re.test(line) || re.test(trimmed))) return true
+  if (hasCjk(trimmed) && trimmed.length > 12) return false
   if (!hasCjk(trimmed) && !/[a-zA-Z]{2,}/.test(trimmed) && trimmed.length < 12) return true
   return false
 }
@@ -479,7 +486,8 @@ export function buildFurnaceChatTurns(transcript, userMessages = []) {
     if (rest) {
       const idx = rest.indexOf(user)
       if (idx >= 0) {
-        const before = rest.slice(0, idx).trim()
+        let before = rest.slice(0, idx).trim()
+        before = before.replace(/(?:^|\n)\s*>\s*$/, '').trim()
         if (before) turns.push({ role: 'assistant', text: before })
         rest = rest.slice(idx + user.length).replace(/^\s+/, '')
         split = true

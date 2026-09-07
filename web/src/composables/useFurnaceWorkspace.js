@@ -132,7 +132,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
     if (surface.value === 'chat') {
       return isPagefill.value
         ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
-        : '已在三栏中栏 · 可再铺满页面'
+        : '已在三栏中栏 · 可再满屏或全屏'
     }
     if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 上方可上翻记录 · 菜单用键盘'
     if (isPagefill.value) return '再按 Esc 缩小回工作台'
@@ -167,11 +167,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
     for (const item of sent.value) {
       const u = String(item.text || '').trim()
       if (!u) continue
+      const escaped = u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      next = next.replace(new RegExp(`^\\s*>\\s*${escaped}.*$`, 'gim'), '')
       next = next.split(u).join('')
     }
     next = next
       .split('\n')
       .filter((line) => !/^\s*你[：:]\s*/.test(line))
+      .filter((line) => !/^\s*>\s*(\d{1,2}:\d{2}(\s*(AM|PM))?)?\s*$/i.test(line))
       .join('\n')
     return collapseDupBlocks(next.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim())
   }
