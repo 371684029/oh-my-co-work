@@ -1410,8 +1410,8 @@ watch(
 
 .docs-rail-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 10px;
   gap: 8px;
   flex-shrink: 0;
@@ -1421,6 +1421,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: max-content;
+  margin-right: auto;
 }
 
 .docs-rail-logo {
@@ -1432,12 +1434,14 @@ watch(
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ecw-text-1, #1d1d1f);
+  white-space: nowrap;
 }
 
 .docs-rail-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .docs-rail-body {
