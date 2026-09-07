@@ -23,7 +23,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 ## 变更记录
 
 2026-09-07 | M | web/src/components/terminal/furnaceLayout.css | TUI 改成左右行：终端铺满 + 右侧 22px 箭头 + 抽屉独立滚动
-2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 历史改右侧抽屉，数据和 GUI 同一份 chatTurns；默认收起
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 历史改右侧抽屉，数据和 GUI 同一份 chatTurns；默认收起；箭头垂直居中
 2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 去掉熔炉 preserveHistory：不再吞备用屏、不再捕获滚轮
 2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | TUI 底栏改成右侧箭头展开记录
 2026-09-07 | M | web/test/furnaceScroll.test.mjs | 锁 TUI 抽屉契约：有箭头/抽屉，无 preserve-history
