@@ -13,6 +13,7 @@ const layoutCss = fs.readFileSync(
   path.join(root, 'web/src/components/terminal/furnaceLayout.css'),
   'utf8',
 )
+const artifactDir = process.env.CURSOR_WALKTHROUGH_DIR || path.join(root, 'tmp')
 
 const html = `<!doctype html>
 <html>
@@ -24,12 +25,21 @@ ${layoutCss}
 .furnace-head, .furnace-foot, .furnace-composer { background: #ddd; padding: 8px; }
 .furnace-log { padding: 12px; background: #f4f6f9; }
 .furnace-tui { background: #17191f; }
+.furnace-tui-toggle {
+  border: 0;
+  padding: 0;
+  color: #c5c9d3;
+  background: #1f232c;
+  cursor: pointer;
+}
+.furnace-tui-drawer { padding: 10px 12px; background: #12141a; color: #d6d8de; }
 .tui-fake {
   flex: 1 1 0%;
   min-height: 0;
-  overflow-y: scroll;
+  height: 100%;
   color: #eee;
   padding: 8px;
+  overflow: hidden;
 }
 </style>
 </head>
@@ -48,12 +58,27 @@ ${layoutCss}
 <section id="tui" class="furnace-workspace is-pagefill" style="display:none">
   <header class="furnace-head">返回群聊 · TUI</header>
   <div class="furnace-tui">
-    <div class="tui-fake" id="tui-log"></div>
+    <div class="furnace-tui-stage">
+      <div class="tui-fake" id="tui-stage">native grok surface</div>
+    </div>
+    <aside class="furnace-tui-rail" id="tui-rail">
+      <button type="button" class="furnace-tui-toggle" id="tui-toggle">‹</button>
+      <div id="tui-drawer" class="furnace-tui-drawer" style="display:none"></div>
+    </aside>
   </div>
   <footer class="furnace-foot">满屏 · TUI</footer>
 </section>
 </body>
 </html>`
+
+async function screenshot(page, name) {
+  try {
+    fs.mkdirSync(artifactDir, { recursive: true })
+    await page.screenshot({ path: path.join(artifactDir, name), fullPage: false })
+  } catch {
+    /* 没有产物目录时跳过截图，不影响断言 */
+  }
+}
 
 async function main() {
   const browser = await chromium.launch({ headless: true })
@@ -62,8 +87,9 @@ async function main() {
   await page.evaluate(`(() => {
     const thread = document.getElementById('gui-thread')
     thread.innerHTML = Array.from({ length: 40 }, (_, i) => '<p>历史 ' + (i + 1) + '：' + '段落 '.repeat(24) + '</p>').join('')
-    const tui = document.getElementById('tui-log')
-    tui.innerHTML = Array.from({ length: 80 }, (_, i) => '<div>TUI line ' + (i + 1) + '</div>').join('')
+    const drawer = document.getElementById('tui-drawer')
+    drawer.innerHTML = '<div class="furnace-tui-drawer-head">对话记录</div>' +
+      Array.from({ length: 80 }, (_, i) => '<div class="furnace-tui-line"><span>Grok</span><pre>历史 ' + (i + 1) + ' ' + '段落 '.repeat(8) + '</pre></div>').join('')
   })()`)
 
   const gui = await page.evaluate(`(() => {
@@ -92,35 +118,68 @@ async function main() {
   assert.ok(gui.logBottom <= gui.composerTop + 1, 'GUI 输入区应固定在对话区之下')
   assert.ok(gui.footTop < gui.vh, 'GUI 底栏应在视口内')
   console.log('GUI_SCROLL_OK', gui)
+  await screenshot(page, 'furnace-gui-scroll.png')
 
   await page.evaluate(`(() => {
     document.getElementById('gui').style.display = 'none'
     document.getElementById('tui').style.display = 'flex'
   })()`)
 
-  const tui = await page.evaluate(`(() => {
-    const log = document.getElementById('tui-log')
+  const collapsed = await page.evaluate(`(() => {
+    const stage = document.getElementById('tui-stage').getBoundingClientRect()
+    const drawer = document.getElementById('tui-drawer')
     const head = document.querySelector('#tui .furnace-head').getBoundingClientRect()
     const foot = document.querySelector('#tui .furnace-foot').getBoundingClientRect()
-    const box = log.getBoundingClientRect()
+    return {
+      stageTop: Math.round(stage.top),
+      stageBottom: Math.round(stage.bottom),
+      stageWidth: Math.round(stage.width),
+      drawerDisplay: getComputedStyle(drawer).display,
+      headBottom: Math.round(head.bottom),
+      footTop: Math.round(foot.top),
+      vh: window.innerHeight,
+      vw: window.innerWidth,
+    }
+  })()`)
+
+  assert.equal(collapsed.drawerDisplay, 'none', `默认应收起抽屉 ${JSON.stringify(collapsed)}`)
+  assert.ok(collapsed.stageTop >= collapsed.headBottom - 1, 'TUI 顶栏应固定')
+  assert.ok(collapsed.stageBottom <= collapsed.footTop + 1, 'TUI 底栏应固定')
+  assert.ok(collapsed.stageWidth > collapsed.vw * 0.9, `收起时终端应几乎铺满 ${JSON.stringify(collapsed)}`)
+  console.log('TUI_COLLAPSED_OK', collapsed)
+  await screenshot(page, 'furnace-tui-collapsed.png')
+
+  const opened = await page.evaluate(`(() => {
+    const drawer = document.getElementById('tui-drawer')
+    const toggle = document.getElementById('tui-toggle')
+    drawer.style.display = 'block'
+    toggle.textContent = '›'
+    const stage = document.getElementById('tui-stage').getBoundingClientRect()
+    const box = drawer.getBoundingClientRect()
+    const head = document.querySelector('#tui .furnace-head').getBoundingClientRect()
+    const foot = document.querySelector('#tui .furnace-foot').getBoundingClientRect()
     const before = {
-      canScroll: log.scrollHeight > log.clientHeight + 1,
-      scrollTop: log.scrollTop,
-      logTop: Math.round(box.top),
-      logBottom: Math.round(box.bottom),
+      canScroll: drawer.scrollHeight > drawer.clientHeight + 1,
+      stageWidth: Math.round(stage.width),
+      drawerWidth: Math.round(box.width),
+      drawerTop: Math.round(box.top),
+      drawerBottom: Math.round(box.bottom),
       headBottom: Math.round(head.bottom),
       footTop: Math.round(foot.top),
       vh: window.innerHeight,
     }
-    log.scrollTop = 320
-    return Object.assign(before, { scrolled: log.scrollTop })
+    drawer.scrollTop = 320
+    return Object.assign(before, { scrolled: drawer.scrollTop })
   })()`)
 
-  assert.equal(tui.canScroll, true, `TUI 应能滚 ${JSON.stringify(tui)}`)
-  assert.ok(tui.scrolled >= 200, `TUI scrollTop 应变 ${JSON.stringify(tui)}`)
-  assert.ok(tui.logTop >= tui.headBottom - 1, 'TUI 顶栏应固定')
-  assert.ok(tui.logBottom <= tui.footTop + 1, 'TUI 底栏应固定')
-  console.log('TUI_SCROLL_OK', tui)
+  assert.equal(opened.canScroll, true, `抽屉应能滚 ${JSON.stringify(opened)}`)
+  assert.ok(opened.scrolled >= 200, `抽屉 scrollTop 应变 ${JSON.stringify(opened)}`)
+  assert.ok(opened.drawerTop >= opened.headBottom - 1, '展开后顶栏应固定')
+  assert.ok(opened.drawerBottom <= opened.footTop + 1, '展开后底栏应固定')
+  assert.ok(opened.drawerWidth >= 200, `抽屉应有可读宽度 ${JSON.stringify(opened)}`)
+  assert.ok(opened.stageWidth > 400, `展开后终端仍应有宽度 ${JSON.stringify(opened)}`)
+  console.log('TUI_DRAWER_OK', opened)
+  await screenshot(page, 'furnace-tui-drawer.png')
 
   await browser.close()
 }

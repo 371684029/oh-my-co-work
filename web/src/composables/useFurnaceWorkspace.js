@@ -134,7 +134,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
         ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
         : '已在三栏中栏 · 可再满屏或全屏'
     }
-    if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 滚轮上翻历史 · 菜单用键盘'
+    if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 右侧箭头展开记录 · 菜单用键盘'
     if (isPagefill.value) return '再按 Esc 缩小回工作台'
     return '点 TUI 继续输入'
   })

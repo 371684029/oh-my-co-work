@@ -35,7 +35,7 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'tui' }"
-            title="TUI：原 Grok 终端"
+            title="TUI：原 Grok 终端；右侧箭头展开对话记录"
             @click="surface = 'tui'"
           >
             TUI
@@ -265,18 +265,54 @@
         </form>
       </div>
 
-      <div v-if="tuiEverShown" v-show="surface === 'tui'" class="furnace-tui">
-        <TerminalView
-          :key="terminal.id"
-          :terminal="terminal"
-          :prefs="prefs"
-          :active="surface === 'tui'"
-          preserve-history
-          @input="$emit('input', $event)"
-          @resize="$emit('resize', $event)"
-          @gap="$emit('gap', $event)"
-          @focus-change="onFocusChange"
-        />
+      <div
+        v-if="tuiEverShown"
+        v-show="surface === 'tui'"
+        class="furnace-tui"
+      >
+        <div class="furnace-tui-stage">
+          <TerminalView
+            :key="terminal.id"
+            :terminal="terminal"
+            :prefs="prefs"
+            :active="surface === 'tui'"
+            @input="$emit('input', $event)"
+            @resize="$emit('resize', $event)"
+            @gap="$emit('gap', $event)"
+            @focus-change="onFocusChange"
+          />
+        </div>
+        <aside class="furnace-tui-rail" :class="{ 'is-open': tuiHistoryOpen }">
+          <button
+            type="button"
+            class="furnace-tui-toggle"
+            :aria-expanded="tuiHistoryOpen"
+            aria-controls="furnace-tui-drawer"
+            :title="tuiHistoryOpen ? '收起对话记录' : '展开对话记录（和 GUI 同一份）'"
+            @click="toggleTuiHistory"
+          >
+            {{ tuiHistoryOpen ? '›' : '‹' }}
+          </button>
+          <div
+            v-show="tuiHistoryOpen"
+            id="furnace-tui-drawer"
+            ref="tuiHistEl"
+            class="furnace-tui-drawer"
+            @scroll.passive="onTuiHistScroll"
+          >
+            <div class="furnace-tui-drawer-head">对话记录</div>
+            <p v-if="!chatTurns.length" class="furnace-tui-drawer-empty">还没有对话。发过之后会出现在这里，和 GUI 是同一份。</p>
+            <div
+              v-for="turn in chatTurns"
+              :key="`tui-${turn.id}`"
+              class="furnace-tui-line"
+              :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
+            >
+              <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+              <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
+            </div>
+          </div>
+        </aside>
       </div>
 
       <footer class="furnace-foot">
@@ -289,7 +325,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
@@ -319,9 +355,12 @@ const props = defineProps({
 const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'input', 'resize', 'select', 'download-log', 'gap'])
 const workspaceRoot = ref(null)
 const logEl = ref(null)
+const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
+const tuiHistoryOpen = ref(false)
+const tuiHistStick = ref(true)
 
 const {
   isFullscreen,
@@ -336,6 +375,10 @@ const {
   onBeforeEscape: (_ev) => {
     if (surface.value === 'chat' && document.activeElement?.tagName === 'TEXTAREA') {
       document.activeElement.blur()
+      return true
+    }
+    if (surface.value === 'tui' && tuiHistoryOpen.value) {
+      tuiHistoryOpen.value = false
       return true
     }
     return false
@@ -384,6 +427,39 @@ const {
   fileInput,
   composerEl,
 })
+
+function toggleTuiHistory() {
+  tuiHistoryOpen.value = !tuiHistoryOpen.value
+}
+
+function onTuiHistScroll() {
+  const el = tuiHistEl.value
+  if (!el) return
+  tuiHistStick.value = el.scrollHeight - el.scrollTop - el.clientHeight < 64
+}
+
+function scrollTuiHist() {
+  const el = tuiHistEl.value
+  if (!el || !tuiHistStick.value) return
+  el.scrollTop = el.scrollHeight
+}
+
+watch(tuiHistoryOpen, (open) => {
+  if (open) tuiHistStick.value = true
+  nextTick(() => {
+    window.dispatchEvent(new Event('resize'))
+    if (open) scrollTuiHist()
+  })
+})
+
+watch(
+  chatTurns,
+  () => {
+    if (!tuiHistoryOpen.value) return
+    nextTick(scrollTuiHist)
+  },
+  { deep: true, flush: 'post' },
+)
 </script>
 
 <style scoped>
@@ -546,8 +622,88 @@ const {
   background: rgba(0, 0, 0, 0.12);
 }
 
-.furnace-tui :deep(.xterm-viewport) {
-  overflow-y: scroll !important;
+.furnace-tui-toggle {
+  border: 0;
+  padding: 0;
+  color: #c5c9d3;
+  background: #1f232c;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.furnace-tui-toggle:hover {
+  color: #fff;
+  background: #2a303c;
+}
+
+.furnace-tui-drawer {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.38) rgba(255, 255, 255, 0.06);
+  padding: 10px 12px 12px;
+  background: #12141a;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: #d6d8de;
+}
+
+.furnace-tui-drawer::-webkit-scrollbar {
+  width: 10px;
+}
+
+.furnace-tui-drawer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+}
+
+.furnace-tui-drawer-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: -10px -12px 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e8eaef;
+  background: #12141a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.furnace-tui-drawer-empty {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #8b90a0;
+}
+
+.furnace-tui-line {
+  margin: 0 0 10px;
+}
+
+.furnace-tui-line span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #8b90a0;
+}
+
+.furnace-tui-line pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.furnace-tui-line.is-user pre {
+  color: #9ec5ff;
+}
+
+.furnace-tui-line.is-assistant pre {
+  color: #d6d8de;
 }
 
 .furnace-log {

@@ -22,6 +22,16 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | web/src/components/terminal/furnaceLayout.css | TUI 改成左右行：终端铺满 + 右侧 22px 箭头 + 抽屉独立滚动
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 历史改右侧抽屉，数据和 GUI 同一份 chatTurns；默认收起
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 去掉熔炉 preserveHistory：不再吞备用屏、不再捕获滚轮
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | TUI 底栏改成右侧箭头展开记录
+2026-09-07 | M | web/test/furnaceScroll.test.mjs | 锁 TUI 抽屉契约：有箭头/抽屉，无 preserve-history
+2026-09-07 | M | scripts/selftest-furnace-scroll.mjs | Playwright 测抽屉独立滚动，默认收起时终端几乎铺满
+2026-09-07 | M | docs/crucible-3.5.md | TUI 补充右侧箭头展开同一份对话记录
+2026-09-07 | M | docs/frontend-components.md | 干活面说明同步右侧箭头展开记录
+2026-09-07 | M | docs/selftest.md | 熔炉滚动自测改为 GUI + TUI 抽屉
+
 2026-09-07 | M | server/test/terminalService.test.js | attach 冲刷用例轮询改 25ms×80，避免 CI 上 1ms×300 等不到 UNIQUE_ATTACH_TOKEN
 
 2026-09-07 | A | web/src/components/terminal/furnaceLayout.css | 抽出熔炉滚动骨架：中栏 flex 1 1 0%，GUI/TUI 内部滚，顶栏输入固定
