@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | shared/ptyPlain.js shared/index.js | 熔炉结构化元数据解析：新增 parseFurnaceTurnText 提取时间戳、思考时长与执行耗时，去除 ANSI 乱码前缀与碎片残片
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉气泡元信息卡片化：时间胶囊、深度思考 pill、完成耗时 badge 样式美化，正文干净呈现
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 保留带时间戳的提示行供元数据提取，仅过滤空白提示符
+2026-09-07 | M | server/test/ptyPlain.test.js | 覆盖 parseFurnaceTurnText 提取与正文提纯单测
 2026-09-07 | M | shared/ptyPlain.js | 熔炉去壳增强：过滤 Grok CLI 启动菜单、目录与令牌指标、重试进度指示与提示符回显
 2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 去除提示符与时间戳回显行；底部文案提示同步
 2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉通栏全屏宽度布局：移除 44rem 窄列限制，左右气泡端对端对齐，按钮改为清晰的「满屏/退出满屏」

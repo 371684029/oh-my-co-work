@@ -68,7 +68,11 @@ function isChromeLine(line) {
   if (!stripped) return true
   const trimmed = line.replace(BOX_CHARS, '').trim()
   if (!trimmed) return true
-  if (/^>\s*(\d{1,2}:\d{2}(\s*(AM|PM))?)?\s*$/i.test(trimmed)) return true
+  if (/^>\s*$/i.test(trimmed)) return true
+  // 元数据行保留给结构化卡片渲染（时间戳、思考时长、执行耗时）
+  if (/^[♦•*✦-]?\s*(?:Thought|Thinking)\s+(?:for\b|\()/i.test(trimmed)) return false
+  if (/\bWorked\s+for\b/i.test(trimmed)) return false
+  if (/^>\s*\d{1,2}:\d{2}/i.test(trimmed)) return false
   if (CHROME_LINE.some((re) => re.test(line) || re.test(trimmed))) return true
   if (hasCjk(trimmed) && trimmed.length > 12) return false
   if (!hasCjk(trimmed) && !/[a-zA-Z]{2,}/.test(trimmed) && trimmed.length < 12) return true
@@ -81,10 +85,17 @@ export function sanitizeFurnaceGuiText(text) {
   if (!src.trim()) return ''
   const kept = []
   for (const line of src.split('\n')) {
-    const noBox = line.replace(BOX_CHARS, ' ').replace(/[ \t]+/g, ' ').trim()
+    let noBox = line.replace(BOX_CHARS, ' ').replace(/[ \t]+/g, ' ').trim()
     if (!noBox) continue
+    // 如果带有终端乱码前缀的 Worked for（如 Lh mWorked for 2.6s），剥除乱码前缀
+    if (/\bWorked\s+for\b/i.test(noBox)) {
+      noBox = noBox.replace(/^.*?\b(Worked\s+for\b.*)$/i, '$1')
+    }
     if (isChromeLine(line) || isChromeLine(noBox)) continue
-    if (!hasCjk(noBox) && noBox.length <= 3 && !/^[A-Za-z]{2,}$/.test(noBox)) continue
+    // 过滤无中文且缺乏实质单词的 ANSI 碎片残片（如 "Th c", ":2 P", "6", "Lh m"）
+    const hasCjkChar = hasCjk(noBox)
+    const words = noBox.match(/[A-Za-z0-9]+/g) || []
+    if (!hasCjkChar && noBox.length < 10 && !words.some((w) => w.length >= 3)) continue
     kept.push(noBox)
   }
   const out = []
@@ -499,4 +510,104 @@ export function buildFurnaceChatTurns(transcript, userMessages = []) {
   if (after) turns.push({ role: 'assistant', text: after })
   else if (!split && body) turns.push({ role: 'assistant', text: body })
   return turns
+}
+
+/**
+ * 解析熔炉对话正文中的结构化元数据（时间戳、思考时长、执行耗时）与清洗后的正文。
+ * 供 GUI 气泡渲染精致结构化卡片（时间胶囊、深度思考 pill、完成耗时 badge）。
+ *
+ * @param {string} rawText 原始气泡文本
+ * @returns {{ time: string | null, thought: string | null, worked: string | null, body: string }}
+ */
+export function parseFurnaceTurnText(rawText) {
+  const src = String(rawText || '').trim()
+  if (!src) return { time: null, thought: null, worked: null, body: '' }
+
+  let time = null
+  let thought = null
+  let worked = null
+  const bodyLines = []
+
+  const lines = src.split('\n')
+  for (const line of lines) {
+    let trimmed = line.trim()
+    if (!trimmed) {
+      if (bodyLines.length && bodyLines[bodyLines.length - 1] !== '') {
+        bodyLines.push('')
+      }
+      continue
+    }
+
+    // 过滤路径与 token 统计杂质
+    if (
+      /data[\\/]furnace/i.test(trimmed) ||
+      /\b\d+(\.\d+)?[kKmM]\s*\/\s*\d+(\.\d+)?[kKmM]\b/i.test(trimmed)
+    ) {
+      continue
+    }
+
+    // 1. 独立时间戳（如 `> 3:37 PM` 或 `3:37 PM` 或 `15:37`）
+    const standaloneTimeMatch = trimmed.match(/^>*\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM))?)$/i)
+    if (standaloneTimeMatch) {
+      if (!time) time = standaloneTimeMatch[1].toUpperCase()
+      continue
+    }
+
+    // 2. 思考时长（如 `♦ Thought for 0.8s`、`Thought for 1.8s`、`Thinking for 2s`）
+    const thoughtMatch = trimmed.match(
+      /^[♦•*✦-]?\s*((?:Thought|Thinking)\s+(?:for\s+)?\d+(?:\.\d+)?s)/i,
+    )
+    if (thoughtMatch) {
+      if (!thought) {
+        const raw = thoughtMatch[1]
+        thought = raw.charAt(0).toUpperCase() + raw.slice(1)
+      }
+      continue
+    }
+
+    // 3. 执行耗时（如 `Lh mWorked for 2.6s`、`Worked for 3.6s`）
+    const workedMatch = trimmed.match(/Worked\s+(?:for\s+)?\d+(?:\.\d+)?s\b/i)
+    if (workedMatch) {
+      if (!worked) {
+        const raw = workedMatch[0]
+        worked = raw.charAt(0).toUpperCase() + raw.slice(1)
+      }
+      continue
+    }
+
+    // 4. 去除碎片杂质行（如 `Th c`, `Lh m`, `:2 P`, `6` 等 ANSI/光标残片）
+    const hasCjkChar = /[\u3400-\u9fff]/.test(trimmed)
+    const words = trimmed.match(/[A-Za-z0-9]+/g) || []
+    if (!hasCjkChar && trimmed.length < 10 && !words.some((w) => w.length >= 3)) {
+      continue
+    }
+
+    // 5. 行尾终端右对齐时钟粘连（如 `...请把内容 3:37 PM`）
+    const trailingClockMatch = trimmed.match(
+      /^(.*?)(?:\s+|>)\s*(\d{1,2}:\d{2}(?:\s*(?:AM|PM))?)$/i,
+    )
+    if (trailingClockMatch && trailingClockMatch[1].trim().length > 0) {
+      if (!time) time = trailingClockMatch[2].toUpperCase()
+      trimmed = trailingClockMatch[1].trim()
+    }
+
+    // 6. 行首残留的单字符句号/圆点（重绘遗留，如 `。我是「熔炉」系统审核`）
+    if (/^[。.]\s*(?=[\u4e00-\u9fa5])/.test(trimmed)) {
+      trimmed = trimmed.replace(/^[。.]\s*/, '')
+    }
+
+    if (trimmed) {
+      bodyLines.push(trimmed)
+    }
+  }
+
+  while (bodyLines.length && !bodyLines[0]) bodyLines.shift()
+  while (bodyLines.length && !bodyLines[bodyLines.length - 1]) bodyLines.pop()
+
+  return {
+    time,
+    thought,
+    worked,
+    body: bodyLines.join('\n'),
+  }
 }

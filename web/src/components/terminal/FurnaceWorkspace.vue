@@ -134,7 +134,71 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
-              <div class="furnace-bubble">{{ turn.text }}</div>
+              <div class="furnace-bubble">
+                <template v-if="turn.role === 'assistant'">
+                  <div
+                    v-if="getTurnMeta(turn.text).time || getTurnMeta(turn.text).thought"
+                    class="furnace-meta-row is-top"
+                  >
+                    <span
+                      v-if="getTurnMeta(turn.text).time"
+                      class="furnace-chip-time"
+                      title="消息时间"
+                    >
+                      <svg
+                        class="furnace-chip-icon"
+                        viewBox="0 0 16 16"
+                        width="11"
+                        height="11"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm0 14.5a6.5 6.5 0 1 1 6.5-6.5 6.5 6.5 0 0 1-6.5 6.5zM7.25 4v4.25l3.25 1.95.75-1.23-2.5-1.47V4z"
+                        />
+                      </svg>
+                      {{ getTurnMeta(turn.text).time }}
+                    </span>
+                    <span
+                      v-if="getTurnMeta(turn.text).thought"
+                      class="furnace-chip-thought"
+                      title="模型思考时长"
+                    >
+                      <span class="furnace-chip-sparkle">✦</span>
+                      {{ getTurnMeta(turn.text).thought }}
+                    </span>
+                  </div>
+
+                  <div v-if="getTurnMeta(turn.text).body" class="furnace-bubble-text">
+                    {{ getTurnMeta(turn.text).body }}
+                  </div>
+
+                  <div
+                    v-if="getTurnMeta(turn.text).worked"
+                    class="furnace-meta-row is-bottom"
+                  >
+                    <span
+                      class="furnace-chip-worked"
+                      title="执行耗时"
+                    >
+                      <svg
+                        class="furnace-chip-icon"
+                        viewBox="0 0 16 16"
+                        width="11"
+                        height="11"
+                        fill="currentColor"
+                      >
+                        <path
+                          d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+                        />
+                      </svg>
+                      {{ getTurnMeta(turn.text).worked }}
+                    </span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="furnace-bubble-text">{{ turn.text }}</div>
+                </template>
+              </div>
             </div>
             <div v-if="awaitingReply" class="furnace-turn is-assistant is-pending">
               <span class="furnace-turn-label">Grok</span>
@@ -243,6 +307,17 @@ import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
+import { parseFurnaceTurnText } from '@acw/shared'
+
+const turnMetaCache = new Map()
+function getTurnMeta(text) {
+  const key = String(text || '')
+  if (turnMetaCache.has(key)) return turnMetaCache.get(key)
+  const meta = parseFurnaceTurnText(key)
+  if (turnMetaCache.size > 200) turnMetaCache.clear()
+  turnMetaCache.set(key, meta)
+  return meta
+}
 const props = defineProps({
   terminal: { type: Object, required: true },
   terminals: { type: Array, default: () => [] },
@@ -746,6 +821,75 @@ const {
   background: #fff;
   color: #1d1d1f;
   border-bottom-left-radius: 6px;
+}
+
+.furnace-bubble-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.furnace-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.furnace-meta-row.is-top {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+}
+
+.furnace-meta-row.is-bottom {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.06);
+}
+
+.furnace-chip-time,
+.furnace-chip-thought,
+.furnace-chip-worked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  user-select: none;
+}
+
+.furnace-chip-time {
+  background: rgba(0, 0, 0, 0.04);
+  color: #6e6e73;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 500;
+}
+
+.furnace-chip-thought {
+  background: rgba(94, 92, 230, 0.08);
+  color: #5856d6;
+  font-weight: 550;
+  border: 1px solid rgba(94, 92, 230, 0.16);
+}
+
+.furnace-chip-sparkle {
+  color: #5e5ce6;
+  font-size: 10px;
+}
+
+.furnace-chip-worked {
+  background: rgba(52, 199, 89, 0.08);
+  color: #248a3d;
+  font-weight: 550;
+  border: 1px solid rgba(52, 199, 89, 0.18);
+}
+
+.furnace-chip-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
 }
 
 .furnace-turn.is-user .furnace-bubble {

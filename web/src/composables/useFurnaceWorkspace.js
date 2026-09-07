@@ -174,7 +174,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
     next = next
       .split('\n')
       .filter((line) => !/^\s*你[：:]\s*/.test(line))
-      .filter((line) => !/^\s*>\s*(\d{1,2}:\d{2}(\s*(AM|PM))?)?\s*$/i.test(line))
+      .filter((line) => !/^\s*>\s*$/.test(line))
       .join('\n')
     return collapseDupBlocks(next.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim())
   }

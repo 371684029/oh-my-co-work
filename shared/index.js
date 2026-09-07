@@ -137,6 +137,7 @@ export {
   furnaceGuiReadable,
   takeFurnaceAssistantDelta,
   buildFurnaceChatTurns,
+  parseFurnaceTurnText,
 } from './ptyPlain.js'
 
 /** 去 CSI / OSC，给卡片预览用；GUI 请用 furnaceGuiTranscript */

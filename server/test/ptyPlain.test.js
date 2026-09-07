@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { renderPtyPlainText, furnaceGuiTranscript, furnaceGuiReadable, takeFurnaceAssistantDelta, buildFurnaceChatTurns } from '@acw/shared'
+import {
+  renderPtyPlainText,
+  furnaceGuiTranscript,
+  furnaceGuiReadable,
+  takeFurnaceAssistantDelta,
+  buildFurnaceChatTurns,
+  parseFurnaceTurnText,
+} from '@acw/shared'
 
 test('carriage return overwrites the same line', () => {
   assert.equal(renderPtyPlainText('hello\rworld', { cols: 40, rows: 10 }), 'world')
@@ -111,29 +118,28 @@ test('chat turns split when user text appears in transcript', () => {
   assert.match(turns[2].text, /写文档/)
 })
 
-test('GUI transcript drops Grok CLI startup menu, paths, spinners and token indicators', () => {
+test('parseFurnaceTurnText extracts time, thought, worked, and cleans body', () => {
   const raw = [
-    'New worktree ctrl+w',
-    'Resume session',
-    'Changelog',
-    'Quit',
-    'ctrl+q',
-    'D:\\ai\\oh-my-co-work-v4-win32-x64\\data\\furnace',
-    'D:\\ai\\oh-my-co-work-v4-win32-x64\\data\\furnace 1.5K / 131K',
-    '> 3:26 PM',
-    '\\ Retrying (attempt 1)... 5.5s 5.9s ↓1.51k [stop]',
-    '你好，这是已经过滤干净的可读回答正文。',
+    'D:\\ai\\oh-my-co-work-v4-win32-x64\\oh-my-co-work-v4-win32-x64\\data\\furnace 13K / 131K',
+    '> 3:37 PM',
+    '♦ Thought for 1.8s',
+    '。我是「熔炉」系统审核，只负责节点一览里标着「现在」的那一格——当前是 #1 熔炉闸(状态: 待确认)。3:37 PM',
+    '本轮没有需要审核的产出，我按规则停在这里。有关这个节点的通过或拒绝，请把内容给我。',
+    'Th c',
+    'Lh mWorked for 3.6s',
   ].join('\n')
-  const text = furnaceGuiTranscript(raw, { cols: 80, rows: 20 })
-  assert.match(text, /你好，这是已经过滤干净的可读回答正文/)
-  assert.equal(text.includes('New worktree'), false)
-  assert.equal(text.includes('Resume session'), false)
-  assert.equal(text.includes('Changelog'), false)
-  assert.equal(text.includes('Quit'), false)
-  assert.equal(text.includes('ctrl+q'), false)
-  assert.equal(text.includes('data\\furnace'), false)
-  assert.equal(text.includes('1.5K / 131K'), false)
-  assert.equal(text.includes('Retrying'), false)
-  assert.equal(text.includes('[stop]'), false)
+
+  const meta = parseFurnaceTurnText(raw)
+  assert.equal(meta.time, '3:37 PM')
+  assert.equal(meta.thought, 'Thought for 1.8s')
+  assert.equal(meta.worked, 'Worked for 3.6s')
+  assert.match(meta.body, /我是「熔炉」系统审核/)
+  assert.match(meta.body, /本轮没有需要审核的产出/)
+  assert.equal(meta.body.includes('Th c'), false)
+  assert.equal(meta.body.includes('Lh m'), false)
+  assert.equal(meta.body.includes('Thought for'), false)
+  assert.equal(meta.body.includes('Worked for'), false)
+  assert.equal(meta.body.includes('13K / 131K'), false)
 })
+
 
