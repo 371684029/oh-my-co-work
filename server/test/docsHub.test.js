@@ -166,3 +166,19 @@ test('exportGroupZip returns slug and a zip file', () => {
   assert.ok(fs.statSync(out.path).size > 0)
   fs.rmSync(out.path, { force: true })
 })
+
+test('exportAllDocsZip packages all documents across sessions', () => {
+  const s1 = seedSession('全量导出组1')
+  writeDoc(s1.id, 'ANNOUNCEMENT.md', '全量内容1')
+  const s2 = seedSession('全量导出组2')
+  writeDoc(s2.id, 'nodes/step-00-init.md', '台账内容2')
+
+  const out = docsHub.exportAllDocsZip()
+  assert.ok(out.filename.startsWith('oh-my-co-work-all-docs-'))
+  assert.equal(out.filename.endsWith('.zip'), true)
+  assert.ok(out.files >= 2)
+  assert.ok(fs.existsSync(out.path))
+  assert.ok(fs.statSync(out.path).size > 0)
+  fs.rmSync(out.path, { force: true })
+})
+

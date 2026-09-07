@@ -146,6 +146,36 @@ router.post('/backup', (_req, res) => {
   }
 })
 
+/** 下载已生成的备份压缩包（安全限制在 DATA_ROOT/backups） */
+router.get('/backup/download', (req, res) => {
+  try {
+    const requested = req.query.filename ? String(req.query.filename).trim() : ''
+    let filename = ''
+    if (requested) {
+      filename = path.basename(requested)
+    } else {
+      const backups = listBackups()
+      if (!backups.length) {
+        return res.status(404).json({ error: '暂无可用备份文件' })
+      }
+      filename = backups[0].filename
+    }
+    if (!filename || !/^[A-Za-z0-9_.-]+$/.test(filename)) {
+      return res.status(400).json({ error: '非法备份文件名' })
+    }
+    const backupDir = path.join(DATA_ROOT, 'backups')
+    const target = path.join(backupDir, filename)
+    if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+      return res.status(404).json({ error: '备份文件不存在或为目录' })
+    }
+    res.setHeader('Content-Type', 'application/gzip')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.download(target, filename)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // 本机路径浏览（工作文件夹 / 脚本文件选择）
 router.get('/fs/roots', (_req, res) => {
   try {
@@ -819,6 +849,24 @@ router.get('/docs/export', (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
+
+router.get('/docs/export-all', (_req, res) => {
+  let tmp = null
+  try {
+    const out = docsHub.exportAllDocsZip()
+    tmp = out.path
+    const downloadName = String(out.filename || 'oh-my-co-work-all-docs.zip').replace(/["\r\n\\]/g, '')
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    res.download(out.path, downloadName, () => {
+      if (tmp) fs.rmSync(tmp, { force: true })
+    })
+  } catch (e) {
+    if (tmp) fs.rmSync(tmp, { force: true })
+    res.status(400).json({ error: e.message })
+  }
+})
+
 
 // —— 发布更新（4.2.0）：检查 / 备份 / 恢复 ——
 

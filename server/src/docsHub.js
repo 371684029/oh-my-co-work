@@ -371,3 +371,48 @@ export function exportGroupZip(groupId) {
     filename: `${slug}.zip`,
   }
 }
+
+/**
+ * 打包全系统所有会话的文档为 zip，按群模板与会话分目录。
+ * @returns {{ path: string, files: number, sessions: number, filename: string }}
+ */
+export function exportAllDocsZip() {
+  const groups = getDb().prepare('SELECT id, title FROM groups').all()
+  const groupMap = new Map(groups.map((g) => [g.id, g.title]))
+  const sessions = getDb()
+    .prepare('SELECT id, title, group_id FROM sessions ORDER BY updated_at DESC')
+    .all()
+
+  const entries = []
+  for (const s of sessions) {
+    const files = scanSessionDir(s.id)
+    const gTitle = s.group_id ? (groupMap.get(s.group_id) || '未命名群') : '独立会话'
+    const groupPrefix = slugify(gTitle)
+    const sessionPrefix = `${slugify(s.title)}-${s.id}`
+    for (const f of files) {
+      entries.push({
+        name: `${groupPrefix}/${sessionPrefix}/${f.name}`,
+        path: path.join(journalRoot(), s.id, ...f.name.split('/')),
+      })
+    }
+  }
+
+  if (!entries.length) {
+    const readmeBuf = Buffer.from('# oh-my-co-work 协同文档中心\n\n暂无会话文档。\n', 'utf8')
+    entries.push({
+      name: 'README.md',
+      data: readmeBuf,
+    })
+  }
+
+  const zipPath = path.join(os.tmpdir(), `acw-docs-all-${Date.now()}.zip`)
+  writeZipArchive(entries, zipPath)
+  const filename = `oh-my-co-work-all-docs-${Date.now()}.zip`
+  return {
+    path: zipPath,
+    files: entries.length,
+    sessions: sessions.length,
+    filename,
+  }
+}
+

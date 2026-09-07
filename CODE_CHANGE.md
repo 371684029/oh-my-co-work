@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | web/src/App.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/components/FlowRail.vue | 文档中心脱离原顶栏结构：顶部只留 logo+文档中心标题；工作台第三栏集成文档中心 Tab 与内嵌台账预览；DocsHub 升级三栏分类布局
+2026-09-07 | M | server/src/docsHub.js server/src/routes.js server/test/docsHub.test.js web/src/api.js web/src/views/settings/Prefs.vue | 设置页新增一键备份与一键导出：支持全量文档 zip 打包下载、快照备份生成与文件下载接口
 2026-09-07 | M | shared/ptyPlain.js shared/index.js | 熔炉结构化元数据解析：新增 parseFurnaceTurnText 提取时间戳、思考时长与执行耗时，去除 ANSI 乱码前缀与碎片残片
 2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 熔炉气泡元信息卡片化：时间胶囊、深度思考 pill、完成耗时 badge 样式美化，正文干净呈现
 2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 保留带时间戳的提示行供元数据提取，仅过滤空白提示符

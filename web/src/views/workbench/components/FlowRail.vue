@@ -17,6 +17,14 @@
       >
         群报告
       </button>
+      <button
+        type="button"
+        class="wb-right-tab"
+        :class="{ active: rightTab === 'docs' }"
+        @click="rightTab = 'docs'"
+      >
+        文档中心
+      </button>
     </div>
 
     <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
@@ -452,6 +460,82 @@
       </div>
     </div>
 
+    <!-- Tab：文档中心（第三栏集成） -->
+    <div v-show="rightTab === 'docs'" class="wb-right-pane docs-pane">
+      <div class="docs-rail-toolbar">
+        <div class="docs-rail-title-wrap">
+          <AppLogo size="sm" class="docs-rail-logo" />
+          <span class="docs-rail-title">文档中心</span>
+        </div>
+        <div class="docs-rail-actions">
+          <el-button
+            size="small"
+            plain
+            :disabled="!activeId"
+            @click="openDocsHub"
+          >
+            新标签打开
+          </el-button>
+          <el-button
+            v-if="detail?.session?.group_id"
+            size="small"
+            plain
+            :disabled="!activeId"
+            :loading="exportingRailDocs"
+            @click="onExportRailGroupDocs"
+          >
+            导出群
+          </el-button>
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            :disabled="!activeId"
+            :loading="railDocsLoading"
+            @click="loadRailDocs"
+          >
+            刷新
+          </el-button>
+        </div>
+      </div>
+
+      <div v-if="detail && activeId" class="docs-rail-body">
+        <!-- 文件选项列表 -->
+        <div v-if="railDocFiles.length" class="docs-rail-files">
+          <button
+            v-for="f in railDocFiles"
+            :key="f.name"
+            type="button"
+            class="docs-rail-file-pill"
+            :class="{ active: selectedDocName === f.name }"
+            @click="onSelectRailDoc(f.name)"
+          >
+            <span class="pill-name">{{ f.title || f.name }}</span>
+            <span class="pill-badge">{{ f.kind === 'announcement' ? '报告' : '台账' }}</span>
+          </button>
+        </div>
+        <div v-else-if="!railDocsLoading" class="docs-rail-empty">
+          当前会话暂无生成台账或报告
+        </div>
+
+        <!-- 正文阅读区 -->
+        <div v-if="selectedDocContent" class="docs-rail-content-wrap">
+          <div class="docs-rail-file-header">
+            <span class="file-header-name">{{ selectedDocName }}</span>
+            <span v-if="selectedDocName.includes('step')" class="file-header-badge">审计留痕只读</span>
+          </div>
+          <div class="docs-rail-content" v-html="renderedDocHtml" />
+        </div>
+        <div v-else-if="selectedDocLoading" class="docs-rail-empty">
+          读取中…
+        </div>
+      </div>
+
+      <div v-else class="announce-empty">
+        <p>选择会话后查看文档中心</p>
+      </div>
+    </div>
+
   </aside>
 </template>
 
@@ -504,6 +588,96 @@ import {
   rebuildAnnouncement,
   saveSessionNotes,
 } from '../composables/useSessionDetail'
+import { ref, watch, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import AppLogo from '../../../components/AppLogo.vue'
+import { api } from '../../../api'
+import { createDocsMarkdown } from '../../docs/markdownRenderer'
+
+const md = createDocsMarkdown()
+const railDocFiles = ref([])
+const railDocsLoading = ref(false)
+const selectedDocName = ref('')
+const selectedDocContent = ref('')
+const selectedDocLoading = ref(false)
+const exportingRailDocs = ref(false)
+
+const renderedDocHtml = computed(() => {
+  if (!selectedDocContent.value) return ''
+  return md.render(selectedDocContent.value)
+})
+
+async function loadRailDocs() {
+  if (!activeId.value) {
+    railDocFiles.value = []
+    selectedDocName.value = ''
+    selectedDocContent.value = ''
+    return
+  }
+  railDocsLoading.value = true
+  try {
+    const res = await api.docs.list('group')
+    let found = null
+    for (const g of res?.groups || []) {
+      const s = (g.sessions || []).find((s) => s.sessionId === activeId.value)
+      if (s) {
+        found = s
+        break
+      }
+    }
+    railDocFiles.value = found?.files || []
+    if (railDocFiles.value.length && !selectedDocName.value) {
+      await onSelectRailDoc(railDocFiles.value[0].name)
+    } else if (!railDocFiles.value.length) {
+      selectedDocName.value = ''
+      selectedDocContent.value = ''
+    }
+  } catch (e) {
+    ElMessage.warning(e?.message || '加载文档列表失败')
+  } finally {
+    railDocsLoading.value = false
+  }
+}
+
+async function onSelectRailDoc(name) {
+  if (!activeId.value || !name) return
+  selectedDocName.value = name
+  selectedDocLoading.value = true
+  try {
+    const res = await api.docs.file(activeId.value, name)
+    selectedDocContent.value = res?.content || ''
+  } catch (e) {
+    ElMessage.error(e?.message || '读取文档内容失败')
+  } finally {
+    selectedDocLoading.value = false
+  }
+}
+
+async function onExportRailGroupDocs() {
+  if (!detail.value?.session?.group_id) {
+    ElMessage.warning('当前会话未绑定群模板')
+    return
+  }
+  exportingRailDocs.value = true
+  try {
+    await api.docs.downloadDocsExport(detail.value.session.group_id)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    ElMessage.error(e?.message || '导出失败')
+  } finally {
+    exportingRailDocs.value = false
+  }
+}
+
+watch(
+  [activeId, () => rightTab.value],
+  ([newId, newTab]) => {
+    if (newTab === 'docs' && newId) {
+      loadRailDocs()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -1207,5 +1381,161 @@ import {
 }
 .meta-review.is-reject {
   color: #b42318;
+}
+
+/* —— 第三栏：文档中心样式 —— */
+.docs-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.docs-rail-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.docs-rail-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.docs-rail-logo {
+  flex-shrink: 0;
+}
+
+.docs-rail-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.docs-rail-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.docs-rail-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.docs-rail-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 96px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  flex-shrink: 0;
+}
+
+.docs-rail-file-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.docs-rail-file-pill:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.docs-rail-file-pill.active {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: rgba(0, 122, 255, 0.35);
+  color: var(--ecw-accent, #007aff);
+  font-weight: 600;
+}
+
+.pill-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-badge {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.docs-rail-content-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 0.5px solid rgba(0, 0, 0, 0.06);
+}
+
+.docs-rail-file-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.file-header-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.file-header-badge {
+  font-size: 10.5px;
+  color: var(--ecw-text-3, #86868b);
+}
+
+.docs-rail-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ecw-text-1, #1d1d1f);
+  word-break: break-word;
+}
+
+.docs-rail-content :deep(pre) {
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  overflow: auto;
+  font-size: 11px;
+}
+
+.docs-rail-empty {
+  padding: 30px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ecw-text-3, #86868b);
 }
 </style>

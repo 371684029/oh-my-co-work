@@ -69,7 +69,25 @@ export const api = {
       URL.revokeObjectURL(url)
       return { ok: true }
     },
+    /** 全量文档导出为 zip 下载（包含全系统群报告与节点台账） */
+    downloadAllDocsExport: async () => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/docs/export-all`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const dateStr = new Date().toISOString().slice(0, 10)
+      a.download = `oh-my-co-work-all-docs-${dateStr}.zip`
+      a.click()
+      URL.revokeObjectURL(url)
+      return { ok: true }
+    },
   },
+
   update: {
     check: () => req('/update/check'),
     backups: () => req('/update/backups'),
@@ -216,7 +234,30 @@ export const api = {
         body: JSON.stringify({ sessionIds }),
       }),
   },
-  backup: () => req('/backup', { method: 'POST', body: '{}' }),
+  backup: Object.assign(
+    () => req('/backup', { method: 'POST', body: '{}' }),
+    {
+      create: () => req('/backup', { method: 'POST', body: '{}' }),
+      download: async (filename) => {
+        const token = await accessToken()
+        const query = filename ? `?filename=${encodeURIComponent(filename)}` : ''
+        const res = await fetch(`${BASE}/backup/download${query}`, {
+          headers: { 'X-ACW-Token': token },
+        })
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename || `acw-backup-${new Date().toISOString().slice(0, 10)}.tar.gz`
+        a.click()
+        URL.revokeObjectURL(url)
+        return { ok: true }
+      },
+    },
+  ),
+
+
   slashCommands: {
     list: () => req('/slash-commands'),
     save: (commands) =>

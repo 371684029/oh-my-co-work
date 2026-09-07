@@ -1,66 +1,84 @@
 <template>
   <div ref="appRoot" class="ecw-layout">
-    <header class="ecw-topbar">
-      <div class="top-left">
-        <!-- macOS 交通灯装饰（仅视觉，不绑窗口操作） -->
-        <div class="traffic-lights" aria-hidden="true">
-          <span class="tl tl-close" />
-          <span class="tl tl-min" />
-          <span class="tl tl-max" />
+    <header class="ecw-topbar" :class="{ 'is-docs-topbar': isDocsRoute }">
+      <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
+      <template v-if="isDocsRoute">
+        <div class="top-left docs-top-left">
+          <AppLogo size="md" class="brand-logo" />
+          <h1 class="docs-brand-title">文档中心</h1>
         </div>
-        <AppLogo size="md" class="brand-logo" />
-        <div class="brand-block">
-          <span class="brand">oh-my-co-work</span>
-          <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow · 终端守护者"
-            >人机协同 · 万物归元 · 皆可 Workflow · <em class="brand-guard">终端守护者</em></span
+        <div class="top-right docs-top-right">
+          <button type="button" class="dh-back-btn" @click="goWorkbench">
+            返回工作台
+          </button>
+          <button
+            type="button"
+            class="fullscreen-button"
+            data-fullscreen-control
+            :title="isFullscreen ? '退出全屏' : '全屏'"
+            @click="toggleWorkbenchFullscreen"
           >
+            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
+          </button>
         </div>
-        <nav class="top-nav" aria-label="主导航" data-fullscreen-control>
+      </template>
+
+      <!-- 工作台与设置：常规项目顶栏 -->
+      <template v-else>
+        <div class="top-left">
+          <!-- macOS 交通灯装饰（仅视觉，不绑窗口操作） -->
+          <div class="traffic-lights" aria-hidden="true">
+            <span class="tl tl-close" />
+            <span class="tl tl-min" />
+            <span class="tl tl-max" />
+          </div>
+          <AppLogo size="md" class="brand-logo" />
+          <div class="brand-block">
+            <span class="brand">oh-my-co-work</span>
+            <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow · 终端守护者"
+              >人机协同 · 万物归元 · 皆可 Workflow · <em class="brand-guard">终端守护者</em></span
+            >
+          </div>
+          <nav class="top-nav" aria-label="主导航" data-fullscreen-control>
+            <button
+              type="button"
+              class="nav-item"
+              :class="{ active: nav === 'workbench' }"
+              @click="go('workbench')"
+            >
+              工作台
+            </button>
+            <button
+              type="button"
+              class="nav-item"
+              :class="{ active: nav === 'settings' }"
+              @click="go('settings')"
+            >
+              设置
+            </button>
+          </nav>
+        </div>
+        <div class="top-right">
           <button
             type="button"
-            class="nav-item"
-            :class="{ active: nav === 'workbench' }"
-            @click="go('workbench')"
+            class="fullscreen-button"
+            data-fullscreen-control
+            :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
+            @click="toggleWorkbenchFullscreen"
           >
-            工作台
+            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
-          <button
-            type="button"
-            class="nav-item"
-            title="新标签打开文档中心"
-            @click="openDocs"
-          >
-            文档
-          </button>
-          <button
-            type="button"
-            class="nav-item"
-            :class="{ active: nav === 'settings' }"
-            @click="go('settings')"
-          >
-            设置
-          </button>
-        </nav>
-      </div>
-      <div class="top-right">
-        <button
-          type="button"
-          class="fullscreen-button"
-          data-fullscreen-control
-          :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
-          @click="toggleWorkbenchFullscreen"
-        >
-          <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
-          <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
-        </button>
-        <span class="mvp-pill">MVP</span>
-      </div>
+          <span class="mvp-pill">MVP</span>
+        </div>
+      </template>
     </header>
     <main class="ecw-main">
       <router-view />
     </main>
     <FurnaceSprite
-      v-show="!furnaceWorkspaceOpen"
+      v-show="!furnaceWorkspaceOpen && !isDocsRoute"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
       @click="onFurnaceClick"
@@ -130,6 +148,8 @@ const furnaceTitle = computed(() => {
   return `${FURNACE_DISPLAY_NAME} · 闲置`
 })
 
+const isDocsRoute = computed(() => route.path.startsWith('/docs'))
+
 function syncFullscreenState() {
   isFullscreen.value = !!fullscreenElement()
 }
@@ -153,9 +173,8 @@ function go(v) {
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
 }
 
-/** 文档中心：新开标签打开（§3.5），不导航当前工作台 */
-function openDocs() {
-  window.open('/docs', '_blank', 'noopener')
+function goWorkbench() {
+  router.push('/workbench')
 }
 
 async function refreshGrokGate() {
@@ -266,6 +285,47 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   min-width: 0;
+}
+
+.docs-top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.docs-brand-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.docs-top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dh-back-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--ecw-accent, #007aff);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.dh-back-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.dh-back-btn:active {
+  transform: scale(0.97);
 }
 
 /* macOS 红黄绿 */
