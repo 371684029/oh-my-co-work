@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | A | web/src/components/terminal/furnaceLayout.css | 抽出熔炉滚动骨架：中栏 flex 1 1 0%，GUI/TUI 内部滚，顶栏输入固定
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 接入滚动骨架，去掉会把容器撑高的 grid
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | TUI 滚轮仅在激活时拦截，避免横向滚动被吞
+2026-09-07 | A | web/test/furnaceScroll.test.mjs | 锁 GUI/TUI 滚动契约（独立滚动容器、不再垫历史栏）
+2026-09-07 | A | scripts/selftest-furnace-scroll.mjs | Playwright 自测 GUI/TUI 长内容可滚且顶栏底栏不跟着跑
+2026-09-07 | M | docs/selftest.md | 补熔炉滚动自测脚本与 web 用例数
+
 2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 去掉上方重复对话栏，终端铺满；GUI 消息区改 grid 起点对齐，避免内容把容器撑高导致滚不动
 2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 去掉 TUI 历史栏滚动；底栏改成滚轮上翻历史
 2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 熔炉 preserveHistory：捕获滚轮写入 xterm scrollback，避免 Grok 鼠标协议吞掉上翻

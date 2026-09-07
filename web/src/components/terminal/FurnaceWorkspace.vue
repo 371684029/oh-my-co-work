@@ -290,6 +290,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
@@ -387,12 +388,7 @@ const {
 
 <style scoped>
 .furnace-workspace {
-  min-height: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   margin: 0 8px 8px;
-  overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 18px;
   background: #f4f6f9;
@@ -409,11 +405,7 @@ const {
 }
 
 .furnace-workspace.is-pagefill {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  width: 100%;
-  height: 100%;
+  margin: 0;
 }
 
 .furnace-workspace:not(.is-chat) {
@@ -424,7 +416,6 @@ const {
 .furnace-foot {
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
   gap: 12px;
   padding: 8px 12px;
 }
@@ -555,41 +546,15 @@ const {
   background: rgba(0, 0, 0, 0.12);
 }
 
-.furnace-chat,
-.furnace-tui {
-  min-height: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-}
-
-.furnace-tui {
-  background: #17191f;
-}
-
-.furnace-tui :deep(.terminal-view) {
-  flex: 1;
-  min-height: 0;
-  height: auto;
+.furnace-tui :deep(.xterm-viewport) {
+  overflow-y: scroll !important;
 }
 
 .furnace-log {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   scrollbar-width: auto;
   scrollbar-color: rgba(60, 60, 67, 0.55) rgba(0, 0, 0, 0.06);
   padding: 16px 3% 12px;
-  display: grid;
-  grid-template-columns: 104px minmax(0, 1fr);
-  grid-template-rows: max-content;
-  gap: 16px 14px;
-  align-items: start;
-  align-content: start;
 }
 
 .furnace-log::-webkit-scrollbar {
@@ -606,9 +571,6 @@ const {
 }
 
 .furnace-buddy {
-  position: sticky;
-  top: 8px;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -632,12 +594,8 @@ const {
 }
 
 .furnace-thread {
-  min-width: 0;
-  min-height: 0;
-  width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   gap: 12px;
   padding-bottom: 4px;
 }

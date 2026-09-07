@@ -10,8 +10,8 @@
 | 层 | 位置 | 工具 | 规模 | 跑法 |
 |----|------|------|------|------|
 | 服务端单元/集成 | `server/test/*.test.js`（25 文件） | Node 内置 `node:test` + `node:assert/strict` | **139 例** | `npm test` |
-| 前端纯逻辑 | `web/test/*.test.mjs`（3 文件） | 同上（浏览器不用开） | **23 例** | `npm run test:web` |
-| 自愈/冒烟脚本 | `scripts/selftest-*.mjs` + `test-enter-send.mjs` | 独立脚本，**不走 test runner** | 4 + 1 个 | `node scripts/selftest-xxx.mjs` |
+| 前端纯逻辑 | `web/test/*.test.mjs`（4 文件） | 同上（浏览器不用开） | **25 例** | `npm run test:web` |
+| 自愈/冒烟脚本 | `scripts/selftest-*.mjs` + `test-enter-send.mjs` | 独立脚本，**不走 test runner** | 5 + 1 个 | `node scripts/selftest-xxx.mjs` |
 | 静态核查 | ESLint + 模板绑定核查 | eslint 9 / 临时脚本 | 0 error 基线 | `npm run lint` |
 | 发布自测 | CI + 打包流水线 | GitHub Actions | 每次推 main | 自动 |
 
@@ -112,7 +112,7 @@ assert.equal(/<a [^>]*javascript:/i.test(render('[点我](javascript:alert(1))')
 
 ## 5. 自愈/冒烟脚本（selftest-\*.mjs）
 
-`scripts/selftest-forward-jump.mjs`、`selftest-session-ops.mjs`、`selftest-v1-priority.mjs`、`selftest-v1-stability.mjs`——**不走 test runner**，是独立长流程脚本（起真实服务/跑完整流），用于手工自愈验证与发版前巡检。另有 `test-enter-send.mjs`（输入框回车发送的单点验证）。与单测的分工：单测管"单元语义不变"，selftest 管"整条流程能走通"。**注意**：这类脚本默认针对真实运行中的服务与真实数据（如 `selftest-session-ops` 断言库里已有群模板），不要在含重要数据的实例上随手跑。
+`scripts/selftest-forward-jump.mjs`、`selftest-session-ops.mjs`、`selftest-v1-priority.mjs`、`selftest-v1-stability.mjs`、`selftest-furnace-scroll.mjs`——**不走 test runner**。前四个是独立长流程脚本（起真实服务/跑完整流）；`selftest-furnace-scroll.mjs` 用 Playwright 测熔炉 GUI/TUI 滚动骨架（不需要 grok 进程）。另有 `test-enter-send.mjs`（输入框回车发送的单点验证）。与单测的分工：单测管"单元语义不变"，selftest 管"整条流程能走通"。**注意**：长流程脚本默认针对真实运行中的服务与真实数据（如 `selftest-session-ops` 断言库里已有群模板），不要在含重要数据的实例上随手跑。
 
 ---
 

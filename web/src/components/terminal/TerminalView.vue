@@ -122,7 +122,8 @@ onMounted(async () => {
     attachHistoryPreservation(xterm)
     wheelEl = host.value
     onWheelScroll = (ev) => {
-      if (!xterm) return
+      if (!xterm || props.active === false) return
+      if (Math.abs(ev.deltaY) < Math.abs(ev.deltaX)) return
       const raw = ev.deltaMode === 1 ? ev.deltaY : ev.deltaY / 18
       const n = Math.max(1, Math.min(16, Math.round(Math.abs(raw)) || 1))
       xterm.scrollLines(ev.deltaY > 0 ? n : -n)
