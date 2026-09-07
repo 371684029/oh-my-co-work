@@ -61,7 +61,7 @@ test('attach flushes pending output before sending its snapshot', async () => {
   )
 
   let attached = false
-  for (let i = 0; i < 300; i++) {
+  for (let i = 0; i < 80; i++) {
     const terminal = terminalService.listSessionTerminals(sessionId, { includeReplay: true })[0]
     if (terminal?.replay.includes('UNIQUE_ATTACH_TOKEN')) {
       terminalService.handleTerminalClientMessage(
@@ -72,7 +72,7 @@ test('attach flushes pending output before sending its snapshot', async () => {
       attached = true
       break
     }
-    await new Promise((resolve) => setTimeout(resolve, 1))
+    await new Promise((resolve) => setTimeout(resolve, 25))
   }
   await promise
   bus.unsubscribe(ws)

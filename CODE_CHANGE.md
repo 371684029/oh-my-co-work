@@ -22,10 +22,37 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | docs/selftest.md | 合并熔炉抽屉与文档中心换行后：web 5 文件 26 例，自测脚本 6+1
+
 2026-09-07 | M | web/src/views/workbench/components/FlowRail.vue | 第三栏文档中心工具栏改为可换行，标题 nowrap；换行后按钮左对齐
 2026-09-07 | A | web/test/docsRailLayout.test.mjs | 锁文档中心工具栏换行契约
 2026-09-07 | A | scripts/selftest-docs-rail-toolbar.mjs | Playwright 测窄栏标题横排、按钮换行
 2026-09-07 | M | docs/selftest.md | 补文档中心工具栏布局用例与自测脚本
+
+2026-09-07 | M | web/src/components/terminal/furnaceLayout.css | TUI 改成左右行：终端铺满 + 右侧 22px 箭头 + 抽屉独立滚动
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 历史改右侧抽屉，数据和 GUI 同一份 chatTurns；默认收起；箭头垂直居中
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 去掉熔炉 preserveHistory：不再吞备用屏、不再捕获滚轮
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | TUI 底栏改成右侧箭头展开记录
+2026-09-07 | M | web/test/furnaceScroll.test.mjs | 锁 TUI 抽屉契约：有箭头/抽屉，无 preserve-history
+2026-09-07 | M | scripts/selftest-furnace-scroll.mjs | Playwright 测抽屉独立滚动，默认收起时终端几乎铺满
+2026-09-07 | M | docs/crucible-3.5.md | TUI 补充右侧箭头展开同一份对话记录
+2026-09-07 | M | docs/frontend-components.md | 干活面说明同步右侧箭头展开记录
+2026-09-07 | M | docs/selftest.md | 熔炉滚动自测改为 GUI + TUI 抽屉
+
+2026-09-07 | M | server/test/terminalService.test.js | attach 冲刷用例轮询改 25ms×80，避免 CI 上 1ms×300 等不到 UNIQUE_ATTACH_TOKEN
+
+2026-09-07 | A | web/src/components/terminal/furnaceLayout.css | 抽出熔炉滚动骨架：中栏 flex 1 1 0%，GUI/TUI 内部滚，顶栏输入固定
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 接入滚动骨架，去掉会把容器撑高的 grid
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | TUI 滚轮仅在激活时拦截，避免横向滚动被吞
+2026-09-07 | A | web/test/furnaceScroll.test.mjs | 锁 GUI/TUI 滚动契约（独立滚动容器、不再垫历史栏）
+2026-09-07 | A | scripts/selftest-furnace-scroll.mjs | Playwright 自测 GUI/TUI 长内容可滚且顶栏底栏不跟着跑
+2026-09-07 | M | docs/selftest.md | 补熔炉滚动自测脚本与 web 用例数
+
+2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | TUI 去掉上方重复对话栏，终端铺满；GUI 消息区改 grid 起点对齐，避免内容把容器撑高导致滚不动
+2026-09-07 | M | web/src/composables/useFurnaceWorkspace.js | 去掉 TUI 历史栏滚动；底栏改成滚轮上翻历史
+2026-09-07 | M | web/src/components/terminal/TerminalView.vue | 熔炉 preserveHistory：捕获滚轮写入 xterm scrollback，避免 Grok 鼠标协议吞掉上翻
+2026-09-07 | M | docs/crucible-gui-plain.md | TUI 口径改为铺满终端 + 滚轮上翻，干净正文可切 GUI
+2026-09-07 | M | docs/frontend-components.md | 干活面说明同步：GUI 可滚动、TUI 铺满可上翻
 
 2026-09-07 | M | packages/CURRENT.txt packages/README.md packages/oh-my-co-work-v4-*.build.json packages/oh-my-co-work-v4-*.zip | 三平台（linux-x64、win32-x64、darwin-arm64）4.2.0 运行包全量重新打包并通过 validate 校验
 2026-09-07 | M | eslint.config.js | 忽略打包临时目录 release/**，保证代码静态检查 0 error

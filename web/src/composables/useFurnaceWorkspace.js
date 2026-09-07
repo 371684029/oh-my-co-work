@@ -16,7 +16,7 @@ import { useLocalUploads } from './localUploads'
  * @param {object} refs 组件侧模板 ref 与 pagefill 状态
  */
 export function useFurnaceWorkspace(props, emit, refs) {
-  const { surface, focused, isPagefill, logEl, tuiHistEl, fileInput, composerEl } = refs
+  const { surface, focused, isPagefill, logEl, fileInput, composerEl } = refs
 
   /** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
   const tuiEverShown = ref(surface.value === 'tui')
@@ -134,7 +134,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
         ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
         : '已在三栏中栏 · 可再满屏或全屏'
     }
-    if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 上方可上翻记录 · 菜单用键盘'
+    if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 右侧箭头展开记录 · 菜单用键盘'
     if (isPagefill.value) return '再按 Esc 缩小回工作台'
     return '点 TUI 继续输入'
   })
@@ -192,12 +192,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
   function scrollLog() {
     const el = logEl.value
     if (!el || !stickBottom.value) return
-    el.scrollTop = el.scrollHeight
-  }
-
-  function scrollTuiHistory() {
-    const el = tuiHistEl.value
-    if (!el) return
     el.scrollTop = el.scrollHeight
   }
 
@@ -262,7 +256,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
   watch(liveText, () => {
     syncAssistantFromTranscript()
     nextTick(scrollLog)
-    nextTick(scrollTuiHistory)
   })
 
   watch(
