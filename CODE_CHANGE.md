@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | web/src/views/workbench/components/FlowRail.vue | 第三栏文档中心工具栏改为可换行，标题 nowrap 避免被挤成竖排
+2026-09-07 | A | web/test/docsRailLayout.test.mjs | 锁文档中心工具栏换行契约
+2026-09-07 | A | scripts/selftest-docs-rail-toolbar.mjs | Playwright 测窄栏标题横排、按钮换行
+2026-09-07 | M | docs/selftest.md | 补文档中心工具栏布局用例与自测脚本
+
 2026-09-07 | M | packages/CURRENT.txt packages/README.md packages/oh-my-co-work-v4-*.build.json packages/oh-my-co-work-v4-*.zip | 三平台（linux-x64、win32-x64、darwin-arm64）4.2.0 运行包全量重新打包并通过 validate 校验
 2026-09-07 | M | eslint.config.js | 忽略打包临时目录 release/**，保证代码静态检查 0 error
 2026-09-07 | M | README.md | 文档同步：已实现功能与路线图补充 4.2.1（文档中心解耦与三栏内嵌、设置页一键备份/导出、熔炉元数据卡片化美化与下载安全加固）
