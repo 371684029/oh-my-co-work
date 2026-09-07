@@ -12,6 +12,7 @@ export default [
       '**/dist/**',
       '**/build/**',
       'packages/**',
+      'release/**',
       'data/**',
       'coverage/**',
       'server/test/fixtures/**',

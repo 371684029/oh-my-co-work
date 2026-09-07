@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | packages/CURRENT.txt packages/README.md packages/oh-my-co-work-v4-*.build.json packages/oh-my-co-work-v4-*.zip | 三平台（linux-x64、win32-x64、darwin-arm64）4.2.0 运行包全量重新打包并通过 validate 校验
+2026-09-07 | M | eslint.config.js | 忽略打包临时目录 release/**，保证代码静态检查 0 error
 2026-09-07 | M | README.md | 文档同步：已实现功能与路线图补充 4.2.1（文档中心解耦与三栏内嵌、设置页一键备份/导出、熔炉元数据卡片化美化与下载安全加固）
 2026-09-07 | M | server/src/routes.js server/test/docsHub.test.js server/test/backupRestore.test.js web/src/App.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/components/FlowRail.vue web/src/views/settings/About.vue | 4.x.x 功能审查优化：备份下载安全校验（排除目录与后缀动态 MIME）、全量文档导出异常清理保护、DocsHub 时间模式三栏布局稳定与时间范围筛选、FlowRail 第三栏会话切换防竞态、顶栏 Logo 点击返回、Prefs/About 备份状态同步
 2026-09-07 | M | web/src/App.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/components/FlowRail.vue | 文档中心脱离原顶栏结构：顶部只留 logo+文档中心标题；工作台第三栏集成文档中心 Tab 与内嵌台账预览；DocsHub 升级三栏分类布局
