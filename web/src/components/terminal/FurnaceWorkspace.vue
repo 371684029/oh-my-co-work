@@ -623,6 +623,9 @@ watch(
 }
 
 .furnace-tui-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   padding: 0;
   color: #c5c9d3;
