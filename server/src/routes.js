@@ -136,10 +136,13 @@ router.get('/runtime', (_req, res) => {
   })
 })
 
-/** M01：一键备份（也可 npm run backup） */
-router.post('/backup', (_req, res) => {
+/** M01：备份（支持 targetPath 与 sourcePath 指定文件/文件夹） */
+router.post('/backup', (req, res) => {
   try {
-    const result = createBackup({ includeUploads: true })
+    const opts = { includeUploads: true }
+    if (req.body?.targetPath) opts.targetPath = String(req.body.targetPath).trim()
+    if (req.body?.sourcePath) opts.sourcePath = String(req.body.sourcePath).trim()
+    const result = createBackup(opts)
     res.status(201).json(result)
   } catch (e) {
     res.status(400).json({ error: e.message, code: e.code, detail: e.detail })
@@ -921,7 +924,10 @@ router.get('/update/backups', (req, res) => {
 
 router.post('/update/backup', (req, res) => {
   try {
-    res.json(createBackup())
+    const opts = {}
+    if (req.body?.targetPath) opts.targetPath = String(req.body.targetPath).trim()
+    if (req.body?.sourcePath) opts.sourcePath = String(req.body.sourcePath).trim()
+    res.json(createBackup(opts))
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
@@ -929,7 +935,8 @@ router.post('/update/backup', (req, res) => {
 
 router.post('/update/restore', (req, res) => {
   try {
-    res.json(restoreBackup(String(req.body?.filename || '')))
+    const target = req.body?.path || req.body?.filename || req.body?.targetPath || ''
+    res.json(restoreBackup(String(target)))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

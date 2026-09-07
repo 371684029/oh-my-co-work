@@ -91,9 +91,12 @@ export const api = {
   update: {
     check: () => req('/update/check'),
     backups: () => req('/update/backups'),
-    backup: () => req('/update/backup', { method: 'POST', body: '{}' }),
-    restore: (filename) =>
-      req('/update/restore', { method: 'POST', body: JSON.stringify({ filename }) }),
+    backup: (opts) =>
+      req('/update/backup', { method: 'POST', body: JSON.stringify(opts || {}) }),
+    restore: (target) => {
+      const body = typeof target === 'string' ? { path: target } : (target || {})
+      return req('/update/restore', { method: 'POST', body: JSON.stringify(body) })
+    },
   },
   members: {
     list: () => req('/members'),

@@ -62,42 +62,114 @@
           <span v-else class="muted tiny">启动时也会检查（设置可关）；只读版本号，不自动安装</span>
         </div>
 
-        <!-- 备份与恢复 -->
+        <!-- 备份与恢复（支持选择文件或文件夹） -->
         <div class="update-divider" />
-        <div class="update-row">
-          <el-button size="small" :loading="backupCreating" @click="createBackupNow">
-            立即备份
-          </el-button>
-          <span v-if="lastBackupName" class="update-last-backup">最近备份：{{ lastBackupName }}</span>
+
+        <div class="backup-section">
+          <div class="backup-section-head">
+            <span class="backup-section-title">数据备份</span>
+            <span v-if="lastBackupName" class="update-last-backup" :title="lastBackupName">
+              最近备份：{{ lastBackupName }}
+            </span>
+          </div>
+
+          <div class="update-row">
+            <el-button size="small" type="primary" :loading="backupCreating" @click="createBackupNow">
+              立即备份
+            </el-button>
+            <el-button size="small" text @click="showCustomBackup = !showCustomBackup">
+              {{ showCustomBackup ? '收起路径设置' : '选择备份目标 / 源文件或文件夹…' }}
+            </el-button>
+          </div>
+
+          <div v-if="showCustomBackup" class="backup-custom-box">
+            <div class="backup-field">
+              <label class="backup-field-label">保存位置（文件或文件夹）：</label>
+              <PathPicker
+                v-model="backupTargetPath"
+                mode="any"
+                placeholder="留空默认保存至 data/backups/ 目录"
+                hint="可选择目标文件夹（输出备份包）或具体文件路径（.tar.gz）"
+              />
+            </div>
+            <div class="backup-field" style="margin-top: 10px">
+              <label class="backup-field-label">备份源（可选文件或文件夹）：</label>
+              <PathPicker
+                v-model="backupSourcePath"
+                mode="any"
+                placeholder="留空默认全量备份（数据库 + 台账 + 上传附件）"
+                hint="可选择指定的 .sqlite 数据库文件或指定数据文件夹进行归档"
+              />
+            </div>
+          </div>
         </div>
-        <div class="update-row" style="margin-top: 8px">
-          <el-button size="small" :loading="backupsLoading" @click="loadBackupsForRestore">
-            从备份恢复
-          </el-button>
-          <el-select
-            v-if="showRestoreSelect"
-            v-model="selectedRestoreFile"
-            placeholder="选择备份文件"
-            size="small"
-            style="width: 280px; margin-left: 8px"
-          >
-            <el-option
-              v-for="b in availableBackups"
-              :key="b.filename"
-              :label="`${b.filename}${b.format === 'dir' ? ' · 目录' : ''}（${formatSize(b.bytes)}）`"
-              :value="b.filename"
+
+        <div class="update-divider" style="margin: 14px 0" />
+
+        <div class="backup-section">
+          <div class="backup-section-head">
+            <span class="backup-section-title">从备份恢复</span>
+            <el-radio-group v-model="restoreMode" size="small">
+              <el-radio-button value="history" label="history">历史备份</el-radio-button>
+              <el-radio-button value="custom" label="custom">选择文件/文件夹</el-radio-button>
+            </el-radio-group>
+          </div>
+
+          <div v-if="restoreMode === 'history'" class="update-row" style="margin-top: 8px">
+            <el-select
+              v-model="selectedRestoreFile"
+              placeholder="选择历史备份文件"
+              size="small"
+              style="width: 280px"
+              :loading="backupsLoading"
+            >
+              <el-option
+                v-for="b in availableBackups"
+                :key="b.filename"
+                :label="`${b.filename}${b.format === 'dir' ? ' · 目录' : ''}（${formatSize(b.bytes)}）`"
+                :value="b.filename"
+              />
+            </el-select>
+            <el-button
+              size="small"
+              text
+              :loading="backupsLoading"
+              @click="loadBackupsList"
+            >
+              刷新
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              plain
+              :disabled="!selectedRestoreFile"
+              :loading="restoreRunning"
+              @click="doRestore"
+            >
+              恢复
+            </el-button>
+          </div>
+
+          <div v-else class="restore-custom-box" style="margin-top: 8px">
+            <PathPicker
+              v-model="restoreCustomPath"
+              mode="any"
+              placeholder="点击右侧浏览选择备份文件 (.tar.gz / .sqlite) 或备份文件夹"
+              hint="支持外部 .tar.gz 压缩包、.sqlite 数据库单文件，或包含备份数据的文件夹"
             />
-          </el-select>
-          <el-button
-            v-if="selectedRestoreFile"
-            size="small"
-            type="danger"
-            plain
-            :loading="restoreRunning"
-            @click="doRestore"
-          >
-            恢复
-          </el-button>
+            <div style="margin-top: 10px; display: flex; justify-content: flex-end">
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :disabled="!restoreCustomPath"
+                :loading="restoreRunning"
+                @click="doRestore"
+              >
+                从选定路径恢复
+              </el-button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -161,10 +233,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import AppLogo from '../../components/AppLogo.vue'
+import PathPicker from '../../components/PathPicker.vue'
 
 const data = ref({
   productName: 'oh-my-co-work',
@@ -181,11 +254,19 @@ const loading = ref(true)
 // 4.2.0 更新
 const updateChecking = ref(false)
 const updateResult = ref(null)
+
+// 备份配置与状态（支持指定保存路径与源文件/文件夹）
+const showCustomBackup = ref(false)
+const backupTargetPath = ref('')
+const backupSourcePath = ref('')
 const backupCreating = ref(false)
 const lastBackupName = ref('')
+
+// 恢复配置与状态（支持从历史备份或自定义文件/文件夹恢复）
+const restoreMode = ref('history')
+const restoreCustomPath = ref('')
 const backupsLoading = ref(false)
 const availableBackups = ref([])
-const showRestoreSelect = ref(false)
 const selectedRestoreFile = ref('')
 const restoreRunning = ref(false)
 
@@ -210,12 +291,36 @@ async function checkUpdate() {
   }
 }
 
+async function loadBackupsList() {
+  backupsLoading.value = true
+  try {
+    const r = await api.update.backups()
+    availableBackups.value = r?.backups || []
+    if (availableBackups.value.length) {
+      if (!lastBackupName.value) {
+        lastBackupName.value = availableBackups.value[0].filename
+      }
+      if (!selectedRestoreFile.value) {
+        selectedRestoreFile.value = availableBackups.value[0].filename
+      }
+    }
+  } catch {
+    /* ignore */
+  } finally {
+    backupsLoading.value = false
+  }
+}
+
 async function createBackupNow() {
   backupCreating.value = true
   try {
-    const r = await api.update.backup()
+    const opts = {}
+    if (backupTargetPath.value.trim()) opts.targetPath = backupTargetPath.value.trim()
+    if (backupSourcePath.value.trim()) opts.sourcePath = backupSourcePath.value.trim()
+    const r = await api.update.backup(opts)
     lastBackupName.value = r.path || r.filename || '备份完成'
-    ElMessage.success('备份成功')
+    ElMessage.success('备份成功，已写入：' + (r.path || '默认位置'))
+    await loadBackupsList()
   } catch (e) {
     ElMessage.error(e?.message || '备份失败')
   } finally {
@@ -223,32 +328,29 @@ async function createBackupNow() {
   }
 }
 
-async function loadBackupsForRestore() {
-  backupsLoading.value = true
-  try {
-    const r = await api.update.backups()
-    availableBackups.value = r.backups || []
-    showRestoreSelect.value = true
-    selectedRestoreFile.value = ''
-  } catch (e) {
-    ElMessage.error(e?.message || '加载备份列表失败')
-  } finally {
-    backupsLoading.value = false
+const effectiveRestoreTarget = computed(() => {
+  if (restoreMode.value === 'history') {
+    return selectedRestoreFile.value
   }
-}
+  return restoreCustomPath.value.trim()
+})
 
 async function doRestore() {
-  if (!selectedRestoreFile.value) return
+  const target = effectiveRestoreTarget.value
+  if (!target) {
+    ElMessage.warning('请先选择备份文件或文件夹')
+    return
+  }
   try {
     await ElMessageBox.confirm(
-      `确定从备份 ${selectedRestoreFile.value} 恢复？当前数据会被覆盖（恢复前会自动再备份一次）。`,
+      `确定从备份恢复？当前数据会被覆盖（恢复前会自动再备份一次）。\n\n恢复来源：${target}`,
       '从备份恢复',
       { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消' },
     )
   } catch { return }
   restoreRunning.value = true
   try {
-    await api.update.restore(selectedRestoreFile.value)
+    await api.update.restore(target)
     ElMessage.success('恢复完成，正在重启应用…')
     setTimeout(() => window.location.reload(), 1500)
   } catch (e) {
@@ -273,14 +375,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-  try {
-    const r = await api.update.backups()
-    if (r?.backups?.length) {
-      lastBackupName.value = r.backups[0].filename
-    }
-  } catch {
-    /* ignore */
-  }
+  await loadBackupsList()
 })
 </script>
 
@@ -490,5 +585,39 @@ onMounted(async () => {
   height: 1px;
   background: var(--el-border-color-lighter);
   margin: 14px 0;
+}
+
+.backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.backup-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.backup-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.backup-custom-box,
+.restore-custom-box {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px dashed var(--el-border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.backup-field-label {
+  display: block;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  margin-bottom: 4px;
 }
 </style>

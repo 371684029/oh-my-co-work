@@ -37,57 +37,136 @@ function resolveLiveDbPath() {
 
 /**
  * 导出 tar.gz：sqlite（checkpoint 后拷贝）+ journals + uploads
- * @param {{ outDir?: string, includeUploads?: boolean }} [opts]
+ * 支持指定目标路径 targetPath（文件夹或具体文件）与源路径 sourcePath（文件或文件夹）
+ * @param {{ outDir?: string, targetPath?: string, sourcePath?: string, includeUploads?: boolean }} [opts]
  */
 export function createBackup(opts = {}) {
-  const integrity = runIntegrityCheck()
-  if (!integrity.ok) {
-    throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
-      code: 'INTEGRITY_FAIL',
-      detail: integrity.detail,
-    })
+  let integrityDetail = 'ok'
+  const sourcePath = opts.sourcePath ? path.resolve(String(opts.sourcePath).trim()) : null
+
+  if (sourcePath) {
+    if (!fs.existsSync(sourcePath)) {
+      throw Object.assign(new Error(`备份源路径不存在：${sourcePath}`), { code: 'NO_SOURCE' })
+    }
+  } else {
+    const integrity = runIntegrityCheck()
+    if (!integrity.ok) {
+      throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
+        code: 'INTEGRITY_FAIL',
+        detail: integrity.detail,
+      })
+    }
+    integrityDetail = integrity.detail
+    try {
+      getDb().pragma('wal_checkpoint(TRUNCATE)')
+    } catch (e) {
+      console.warn('[acw] wal_checkpoint', e?.message || e)
+    }
   }
 
-  try {
-    getDb().pragma('wal_checkpoint(TRUNCATE)')
-  } catch (e) {
-    console.warn('[acw] wal_checkpoint', e?.message || e)
+  // 计算输出目录与最终归档文件路径
+  let outDir = path.join(DATA_ROOT, 'backups')
+  let specificFile = null
+  if (opts.targetPath) {
+    const tp = path.resolve(String(opts.targetPath).trim())
+    if (fs.existsSync(tp)) {
+      const st = fs.statSync(tp)
+      if (st.isDirectory()) {
+        outDir = tp
+      } else {
+        outDir = path.dirname(tp)
+        specificFile = tp
+      }
+    } else {
+      if (tp.endsWith(path.sep) || tp.endsWith('/') || tp.endsWith('\\') || !path.extname(tp)) {
+        outDir = tp
+      } else {
+        outDir = path.dirname(tp)
+        specificFile = tp
+      }
+    }
+  } else if (opts.outDir) {
+    outDir = path.resolve(opts.outDir)
   }
 
-  const outDir = opts.outDir || path.join(DATA_ROOT, 'backups')
   fs.mkdirSync(outDir, { recursive: true })
   const name = `acw-backup-${stamp()}`
   const work = path.join(outDir, `.${name}-work`)
   if (fs.existsSync(work)) fs.rmSync(work, { recursive: true, force: true })
   fs.mkdirSync(work, { recursive: true })
 
-  const liveDb = resolveLiveDbPath()
-  const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
-  if (!fs.existsSync(liveDb)) {
-    throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
-  }
-  fs.copyFileSync(liveDb, dbCopy)
-  // checkpoint 后通常无 wal/shm；若仍有则一并拷
-  for (const suf of ['-wal', '-shm']) {
-    const side = liveDb + suf
-    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
-      fs.copyFileSync(side, dbCopy + suf)
+  let sourceDb = null
+  if (sourcePath) {
+    const st = fs.statSync(sourcePath)
+    if (st.isFile()) {
+      const isSqlite = /\.(?:sqlite|db|sqlite3)$/i.test(sourcePath)
+      if (isSqlite) {
+        const check = checkSqliteFile(sourcePath)
+        if (!check.ok) {
+          fs.rmSync(work, { recursive: true, force: true })
+          throw Object.assign(new Error(`源数据库 integrity_check 失败：${check.detail}`), {
+            code: 'INTEGRITY_FAIL',
+            detail: check.detail,
+          })
+        }
+        integrityDetail = check.detail
+        sourceDb = sourcePath
+        const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
+        fs.copyFileSync(sourcePath, dbCopy)
+        for (const suf of ['-wal', '-shm']) {
+          const side = sourcePath + suf
+          if (fs.existsSync(side) && fs.statSync(side).size > 0) {
+            fs.copyFileSync(side, dbCopy + suf)
+          }
+        }
+      }
+      // 原样也保留一份文件
+      fs.copyFileSync(sourcePath, path.join(work, path.basename(sourcePath)))
+    } else if (st.isDirectory()) {
+      fs.cpSync(sourcePath, work, { recursive: true })
+      // 检查目录内是否有 sqlite 文件进行校验
+      try {
+        const found = fs.readdirSync(work).find((f) => /\.(?:sqlite|db|sqlite3)$/i.test(f))
+        if (found) {
+          const full = path.join(work, found)
+          const check = checkSqliteFile(full)
+          if (check.ok) integrityDetail = check.detail
+          sourceDb = full
+        }
+      } catch {
+        /* ignore */
+      }
     }
-  }
-
-  const journalsSrc = path.join(DATA_ROOT, 'journals')
-  const journalsDst = path.join(work, 'journals')
-  if (fs.existsSync(journalsSrc)) {
-    fs.cpSync(journalsSrc, journalsDst, { recursive: true })
   } else {
-    fs.mkdirSync(journalsDst, { recursive: true })
-  }
+    const liveDb = resolveLiveDbPath()
+    sourceDb = liveDb
+    const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
+    if (!fs.existsSync(liveDb)) {
+      throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
+    }
+    fs.copyFileSync(liveDb, dbCopy)
+    // checkpoint 后通常无 wal/shm；若仍有则一并拷
+    for (const suf of ['-wal', '-shm']) {
+      const side = liveDb + suf
+      if (fs.existsSync(side) && fs.statSync(side).size > 0) {
+        fs.copyFileSync(side, dbCopy + suf)
+      }
+    }
 
-  if (opts.includeUploads !== false) {
-    const upSrc = path.join(DATA_ROOT, 'uploads')
-    const upDst = path.join(work, 'uploads')
-    if (fs.existsSync(upSrc)) {
-      fs.cpSync(upSrc, upDst, { recursive: true })
+    const journalsSrc = path.join(DATA_ROOT, 'journals')
+    const journalsDst = path.join(work, 'journals')
+    if (fs.existsSync(journalsSrc)) {
+      fs.cpSync(journalsSrc, journalsDst, { recursive: true })
+    } else {
+      fs.mkdirSync(journalsDst, { recursive: true })
+    }
+
+    if (opts.includeUploads !== false) {
+      const upSrc = path.join(DATA_ROOT, 'uploads')
+      const upDst = path.join(work, 'uploads')
+      if (fs.existsSync(upSrc)) {
+        fs.cpSync(upSrc, upDst, { recursive: true })
+      }
     }
   }
 
@@ -96,24 +175,27 @@ export function createBackup(opts = {}) {
     product: 'oh-my-co-work',
     dataRoot: DATA_ROOT,
     repoRoot: ROOT,
-    integrity: integrity.detail,
-    sourceDb: liveDb,
+    integrity: integrityDetail,
+    sourceDb,
+    sourcePath: sourcePath || null,
   }
   fs.writeFileSync(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
 
-  const archivePath = path.join(outDir, `${name}.tar.gz`)
+  const archivePath = specificFile || path.join(outDir, `${name}.tar.gz`)
   try {
     const entries = fs.readdirSync(work)
     execFileSync('tar', ['-czf', archivePath, '-C', work, ...entries], { stdio: 'pipe' })
   } catch (e) {
-    const dirBackup = path.join(outDir, name)
+    const dirBackup = specificFile
+      ? specificFile.replace(/\.tar\.gz$/i, '')
+      : path.join(outDir, name)
     if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
     fs.renameSync(work, dirBackup)
     return {
       ok: true,
       path: dirBackup,
       format: 'dir',
-      integrity: integrity.detail,
+      integrity: integrityDetail,
       warning: `tar 不可用（${e.message}），已输出目录备份`,
     }
   }
@@ -125,7 +207,7 @@ export function createBackup(opts = {}) {
     path: archivePath,
     format: 'tar.gz',
     bytes: size,
-    integrity: integrity.detail,
+    integrity: integrityDetail,
   }
 }
 
@@ -175,12 +257,81 @@ function resolveBackupEntry(name) {
   return null
 }
 
+function resolveRestoreTarget(target) {
+  const raw = String(target || '').trim()
+  if (!raw) {
+    throw Object.assign(new Error('未指定备份文件或文件夹'), { code: 'BAD_NAME' })
+  }
+
+  // 若不含路径分隔符，优先走内置 backups 目录校验
+  if (!/[/\\]/.test(raw)) {
+    if (BACKUP_NAME_RE.test(raw)) {
+      const entry = resolveBackupEntry(raw)
+      if (!entry) throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
+      return entry
+    }
+    const entry = resolveBackupEntry(raw)
+    if (entry) return entry
+    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+  }
+
+  // 包含路径分隔符：绝对或相对路径
+  // 校验文件名与后缀安全性
+  const ext = path.extname(raw).toLowerCase()
+  if (ext && !['.gz', '.tar', '.tgz', '.sqlite', '.sqlite3', '.db'].includes(ext)) {
+    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+  }
+
+  const resolved = path.resolve(raw)
+  if (!fs.existsSync(resolved)) {
+    // 尝试在 DATA_ROOT/backups 下匹配 basename
+    const base = path.basename(raw)
+    const entry = resolveBackupEntry(base)
+    if (entry) return entry
+    throw Object.assign(new Error('非法备份文件名：备份不存在'), { code: 'NO_BACKUP' })
+  }
+
+  const st = fs.statSync(resolved)
+  if (st.isDirectory()) {
+    return { kind: 'dir', path: resolved, id: path.basename(resolved) }
+  }
+  if (st.isFile()) {
+    if (/\.(?:tar\.gz|tgz|tar)$/i.test(resolved)) {
+      return { kind: 'tar', path: resolved, id: path.basename(resolved) }
+    }
+    if (/\.(?:sqlite|db|sqlite3)$/i.test(resolved)) {
+      return { kind: 'sqlite_file', path: resolved, id: path.basename(resolved) }
+    }
+    throw Object.assign(
+      new Error('非法备份文件名：请选择 .tar.gz 压缩包、.sqlite 数据库文件或备份目录'),
+      { code: 'BAD_NAME' },
+    )
+  }
+
+  throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+}
+
 function applyStagedToLive(work) {
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  fs.copyFileSync(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
-  for (const suf of ['-wal', '-shm']) {
-    if (fs.existsSync(stagedDb + suf)) {
-      fs.copyFileSync(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+  let stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(stagedDb)) {
+    const legacy = path.join(work, 'element-co-work.sqlite')
+    if (fs.existsSync(legacy)) {
+      stagedDb = legacy
+    } else {
+      try {
+        const found = fs.readdirSync(work).find((f) => /\.(?:sqlite|db|sqlite3)$/i.test(f))
+        if (found) stagedDb = path.join(work, found)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  if (stagedDb && fs.existsSync(stagedDb)) {
+    fs.copyFileSync(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
+    for (const suf of ['-wal', '-shm']) {
+      if (fs.existsSync(stagedDb + suf)) {
+        fs.copyFileSync(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+      }
     }
   }
   const stagedJournals = path.join(work, 'journals')
@@ -205,24 +356,17 @@ function restoreFromAside(aside) {
 }
 
 /**
- * 4.2.0：从 data/backups/ 恢复一份 tar.gz 或目录备份。
+ * 4.2.0+：从指定备份文件或文件夹恢复。
+ * 支持：data/backups/ 下的历史备份名、本机任意 .tar.gz 压缩包、.sqlite 数据库文件或备份目录。
  * 流程：恢复前自动再打一份「恢复前备份」→ 解包/定位 staging → integrity 校验 →
  * 关闭连接 → 现有数据挪到 aside 目录 → 拷入备份数据 → 重新 initDb（会顺带跑迁移链）。
  * 拷入失败时从 aside 回滚再 initDb，避免活库被搬走后落空。
- * backups/ 目录本身不在备份与恢复范围内（历史备份永远保留）。
- * @param {string} filename data/backups/ 下的备份名（acw-backup-*.tar.gz 或同名目录）
+ * @param {string} filenameOrPath 备份文件名或本地文件/文件夹路径
  * @param {{ initDb?: Function, checkSqliteFile?: Function, applyLive?: Function }} [deps]
  * @returns {{ ok: true, restoredFrom: string, preRestore: { path: string }, aside: string }}
  */
-export function restoreBackup(filename, deps = {}) {
-  const name = path.basename(String(filename || ''))
-  if (!BACKUP_NAME_RE.test(name)) {
-    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
-  }
-  const entry = resolveBackupEntry(name)
-  if (!entry) {
-    throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
-  }
+export function restoreBackup(filenameOrPath, deps = {}) {
+  const entry = resolveRestoreTarget(filenameOrPath)
 
   const initDbFn = deps.initDb || initDb
   const checkSqlite = deps.checkSqliteFile || checkSqliteFile
@@ -242,11 +386,36 @@ export function restoreBackup(filename, deps = {}) {
       fs.rmSync(work, { recursive: true, force: true })
       throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
     }
+  } else if (entry.kind === 'sqlite_file') {
+    work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+    ownWork = true
+    const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+    fs.copyFileSync(entry.path, stagedDb)
+    for (const suf of ['-wal', '-shm']) {
+      const side = entry.path + suf
+      if (fs.existsSync(side) && fs.statSync(side).size > 0) {
+        fs.copyFileSync(side, stagedDb + suf)
+      }
+    }
   } else {
     work = entry.path
   }
 
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  let stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(stagedDb)) {
+    const legacy = path.join(work, 'element-co-work.sqlite')
+    if (fs.existsSync(legacy)) {
+      stagedDb = legacy
+    } else {
+      try {
+        const found = fs.readdirSync(work).find((f) => /\.(?:sqlite|db|sqlite3)$/i.test(f))
+        if (found) stagedDb = path.join(work, found)
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   if (!fs.existsSync(stagedDb)) {
     if (ownWork) fs.rmSync(work, { recursive: true, force: true })
     throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })

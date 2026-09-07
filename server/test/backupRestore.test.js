@@ -165,3 +165,56 @@ test('listBackups distinguishes format correctly and backup download validation 
   assert.equal(validRegex.test('bad\\path.tar.gz'), false)
 })
 
+test('createBackup and restoreBackup with custom target file and folder paths', async () => {
+  const customDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-custom-backup-'))
+  const session = seedSession('自定义路径测试组')
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '初始公告内容')
+
+  // 1. 备份到指定具体文件路径（.tar.gz）
+  const targetArchive = path.join(customDir, 'my-exact-backup.tar.gz')
+  const createdFile = backup.createBackup({ targetPath: targetArchive })
+  assert.equal(createdFile.ok, true)
+  assert.equal(createdFile.path, targetArchive)
+  assert.ok(fs.existsSync(targetArchive))
+
+  // 2. 备份到指定文件夹目录（自动生成 acw-backup-*.tar.gz）
+  const targetSubDir = path.join(customDir, 'subfolder')
+  const createdDir = backup.createBackup({ targetPath: targetSubDir })
+  assert.equal(createdDir.ok, true)
+  assert.equal(path.dirname(createdDir.path), targetSubDir)
+  assert.ok(fs.existsSync(createdDir.path))
+
+  // 3. 从外部自定义文件绝对路径恢复
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '被外部文件覆盖前')
+  const rFile = backup.restoreBackup(targetArchive)
+  assert.equal(rFile.ok, true)
+  assert.equal(
+    fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
+    '初始公告内容',
+  )
+
+  // 4. 从外部备份文件夹目录恢复
+  const extractedFolder = path.join(customDir, 'extracted-backup')
+  fs.mkdirSync(extractedFolder, { recursive: true })
+  const { execFileSync } = await import('node:child_process')
+  execFileSync('tar', ['-xzf', targetArchive, '-C', extractedFolder])
+
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '被外部文件夹覆盖前')
+  const rFolder = backup.restoreBackup(extractedFolder)
+  assert.equal(rFolder.ok, true)
+  assert.equal(
+    fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
+    '初始公告内容',
+  )
+
+  // 5. 从单个 sqlite 文件直接恢复
+  const singleSqlite = path.join(customDir, 'single.sqlite')
+  fs.copyFileSync(path.join(extractedFolder, 'oh-my-co-work.sqlite'), singleSqlite)
+  writeJournal(session.id, 'ANNOUNCEMENT.md', '被单文件恢复前')
+  const rSqlite = backup.restoreBackup(singleSqlite)
+  assert.equal(rSqlite.ok, true)
+
+  fs.rmSync(customDir, { recursive: true, force: true })
+})
+
+

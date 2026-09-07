@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | server/src/backup.js server/src/routes.js server/test/backupRestore.test.js web/src/api.js web/src/components/PathPicker.vue web/src/views/settings/Prefs.vue web/src/views/settings/About.vue README.md | 移除设置页一键备份与导出；改造备份与从备份恢复功能，支持通过本地路径浏览与选择任意文件或文件夹进行备份与还原，覆盖自定义路径备份恢复单测
 2026-09-07 | M | packages/CURRENT.txt packages/README.md packages/oh-my-co-work-v4-*.build.json packages/oh-my-co-work-v4-*.zip | 三平台（linux-x64、win32-x64、darwin-arm64）4.2.0 运行包全量重新打包并通过 validate 校验
 2026-09-07 | M | eslint.config.js | 忽略打包临时目录 release/**，保证代码静态检查 0 error
 2026-09-07 | M | README.md | 文档同步：已实现功能与路线图补充 4.2.1（文档中心解耦与三栏内嵌、设置页一键备份/导出、熔炉元数据卡片化美化与下载安全加固）

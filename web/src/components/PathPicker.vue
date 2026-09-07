@@ -13,7 +13,7 @@
 
     <el-dialog
       v-model="visible"
-      :title="mode === 'folder' ? '选择文件夹' : '选择文件'"
+      :title="mode === 'folder' ? '选择文件夹' : (mode === 'file' ? '选择文件' : '选择文件或文件夹')"
       width="560px"
       append-to-body
       destroy-on-close
@@ -72,7 +72,7 @@
       <template #footer>
         <div class="pp-footer">
           <span class="pp-selected" :title="selected || currentPath">
-            {{ selected || (mode === 'folder' ? currentPath : '未选择文件') }}
+            {{ selected || ((mode === 'folder' || mode === 'any') ? (currentPath || '当前文件夹') : '未选择文件') }}
           </span>
           <div class="pp-footer-actions">
             <el-button @click="visible = false">取消</el-button>
@@ -93,7 +93,7 @@ import { api } from '../api'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  /** folder | file */
+  /** folder | file | any */
   mode: { type: String, default: 'folder' },
   placeholder: { type: String, default: '' },
   hint: { type: String, default: '' },
@@ -113,7 +113,9 @@ const entries = ref([])
 const selected = ref('')
 
 const canConfirm = computed(() => {
-  if (props.mode === 'folder') return !!(selected.value || currentPath.value)
+  if (props.mode === 'folder' || props.mode === 'any') {
+    return !!(selected.value || currentPath.value)
+  }
   return !!(selected.value && selected.value !== currentPath.value)
 })
 
@@ -219,12 +221,12 @@ function refresh() {
 
 function onClickEntry(e) {
   if (e.type === 'dir') {
-    if (props.mode === 'folder' && !e.isParent) {
+    if ((props.mode === 'folder' || props.mode === 'any') && !e.isParent) {
       selected.value = e.path
     }
-    // 单击目录：文件夹模式仅选中；双击进入。单击「..」进入
+    // 单击目录：文件夹/通用模式仅选中；双击进入。单击「..」进入
     if (e.isParent) enter(e.path)
-  } else if (e.type === 'file' && props.mode === 'file') {
+  } else if (e.type === 'file' && (props.mode === 'file' || props.mode === 'any')) {
     selected.value = e.path
   }
 }
@@ -232,14 +234,14 @@ function onClickEntry(e) {
 function onDblEntry(e) {
   if (e.type === 'dir') {
     enter(e.path)
-  } else if (e.type === 'file' && props.mode === 'file') {
+  } else if (e.type === 'file' && (props.mode === 'file' || props.mode === 'any')) {
     selected.value = e.path
     confirm()
   }
 }
 
 function confirm() {
-  if (props.mode === 'folder') {
+  if (props.mode === 'folder' || props.mode === 'any') {
     const p = selected.value || currentPath.value
     if (!p) return
     emit('update:modelValue', p)
@@ -253,6 +255,11 @@ function confirm() {
   emit('update:modelValue', selected.value)
   visible.value = false
 }
+
+defineExpose({
+  open,
+  refresh,
+})
 </script>
 
 <style scoped>

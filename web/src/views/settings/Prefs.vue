@@ -256,74 +256,6 @@
       </el-button>
     </section>
 
-    <!-- 一键备份与一键导出 -->
-    <section class="prefs-card">
-      <div class="prefs-title">一键备份与一键导出</div>
-      <p class="prefs-hint">
-        数据完全保存在本机。提供一键打包本地 SQLite 数据库、节点台账与附件，支持随时下载归档或按需导出全部会话协同文档。
-      </p>
-
-      <div class="backup-export-grid">
-        <!-- 一键备份区块 -->
-        <div class="be-card">
-          <div class="be-card-head">
-            <span class="be-card-badge">快照</span>
-            <div class="be-card-title">一键备份</div>
-          </div>
-          <p class="be-card-desc">
-            执行 SQLite 完整性检查与 checkpoint，将数据库、全部台账与上传文件打包至本地 <code>data/backups</code>，并可一键下载到电脑。
-          </p>
-          <div class="be-card-actions">
-            <el-button
-              type="primary"
-              size="default"
-              :loading="backingUp"
-              @click="onOneClickBackup"
-            >
-              一键备份
-            </el-button>
-            <el-button
-              v-if="lastBackupFile"
-              size="default"
-              plain
-              :loading="downloadingBackup"
-              @click="onDownloadBackup(lastBackupFile)"
-            >
-              下载备份包
-            </el-button>
-          </div>
-          <div v-if="lastBackupSummary" class="be-last-info">
-            最近备份：{{ lastBackupSummary }}
-          </div>
-        </div>
-
-        <!-- 一键导出区块 -->
-        <div class="be-card">
-          <div class="be-card-head">
-            <span class="be-card-badge be-card-badge--export">文档</span>
-            <div class="be-card-title">一键导出</div>
-          </div>
-          <p class="be-card-desc">
-            聚合所有群模板与会话下的群报告（ANNOUNCEMENT.md）、会话索引与节点台账，一键打包为 ZIP 文件直接下载到本地。
-          </p>
-          <div class="be-card-actions">
-            <el-button
-              type="success"
-              size="default"
-              plain
-              :loading="exportingDocs"
-              @click="onOneClickExportDocs"
-            >
-              一键导出全部文档 (ZIP)
-            </el-button>
-          </div>
-          <div v-if="lastExportTime" class="be-last-info">
-            最近导出：{{ lastExportTime }}
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="prefs-card prefs-card--danger">
       <div class="prefs-title">删除演示数据</div>
       <p class="prefs-hint">
@@ -371,12 +303,6 @@ const quota = ref({
 const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
-const backingUp = ref(false)
-const downloadingBackup = ref(false)
-const exportingDocs = ref(false)
-const lastBackupFile = ref('')
-const lastBackupSummary = ref('')
-const lastExportTime = ref('')
 const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
@@ -435,17 +361,6 @@ async function load() {
         enabled: s.redact.enabled !== false,
         patternsText: s.redact.patternsText || '',
       }
-    }
-    try {
-      const bRes = await api.update.backups()
-      if (bRes?.backups?.length) {
-        const top = bRes.backups[0]
-        lastBackupFile.value = top.filename
-        const sizeStr = top.bytes ? ` (${(top.bytes / 1024 / 1024).toFixed(2)} MB)` : ''
-        lastBackupSummary.value = `${top.filename}${sizeStr}`
-      }
-    } catch {
-      /* ignore */
     }
     await loadResources()
   } catch (e) {
@@ -571,48 +486,6 @@ async function saveQuota() {
     savingQuota.value = false
   }
 }
-
-async function onOneClickBackup() {
-  backingUp.value = true
-  try {
-    const r = await api.backup()
-    const filename = r.path ? r.path.split(/[/\\]/).pop() : (r.filename || 'acw-backup.tar.gz')
-    lastBackupFile.value = filename
-    const sizeStr = r.bytes ? ` (${(r.bytes / 1024 / 1024).toFixed(2)} MB)` : ''
-    lastBackupSummary.value = `${filename}${sizeStr} · ${new Date().toLocaleTimeString()}`
-    ElMessage.success('一键备份成功，文件已写入本地 backups 目录')
-  } catch (e) {
-    ElMessage.error(e?.message || '一键备份失败')
-  } finally {
-    backingUp.value = false
-  }
-}
-
-async function onDownloadBackup(filename) {
-  downloadingBackup.value = true
-  try {
-    await api.backup.download(filename)
-    ElMessage.success('备份包开始下载')
-  } catch (e) {
-    ElMessage.error(e?.message || '下载备份失败')
-  } finally {
-    downloadingBackup.value = false
-  }
-}
-
-async function onOneClickExportDocs() {
-  exportingDocs.value = true
-  try {
-    await api.docs.downloadAllDocsExport()
-    lastExportTime.value = new Date().toLocaleTimeString()
-    ElMessage.success('一键导出成功，ZIP 压缩包已开始下载')
-  } catch (e) {
-    ElMessage.error(e?.message || '一键导出失败')
-  } finally {
-    exportingDocs.value = false
-  }
-}
-
 
 function onAdminChange() {
   /* 点保存再提交 */
@@ -787,81 +660,5 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.backup-export-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.be-card {
-  display: flex;
-  flex-direction: column;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 0.5px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-}
-
-.be-card-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.be-card-badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: rgba(0, 122, 255, 0.1);
-  color: var(--ecw-accent, #007aff);
-}
-
-.be-card-badge--export {
-  background: rgba(103, 194, 58, 0.12);
-  color: #529b2e;
-}
-
-.be-card-title {
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.be-card-desc {
-  flex: 1;
-  margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--el-text-color-secondary);
-}
-
-.be-card-desc code {
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 11px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.be-card-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.be-last-info {
-  margin-top: 10px;
-  font-size: 11.5px;
-  color: var(--el-text-color-placeholder);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 </style>
