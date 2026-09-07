@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | README.md | 文档同步：已实现功能与路线图补充 4.2.1（文档中心解耦与三栏内嵌、设置页一键备份/导出、熔炉元数据卡片化美化与下载安全加固）
 2026-09-07 | M | server/src/routes.js server/test/docsHub.test.js server/test/backupRestore.test.js web/src/App.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/components/FlowRail.vue web/src/views/settings/About.vue | 4.x.x 功能审查优化：备份下载安全校验（排除目录与后缀动态 MIME）、全量文档导出异常清理保护、DocsHub 时间模式三栏布局稳定与时间范围筛选、FlowRail 第三栏会话切换防竞态、顶栏 Logo 点击返回、Prefs/About 备份状态同步
 2026-09-07 | M | web/src/App.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/components/FlowRail.vue | 文档中心脱离原顶栏结构：顶部只留 logo+文档中心标题；工作台第三栏集成文档中心 Tab 与内嵌台账预览；DocsHub 升级三栏分类布局
 2026-09-07 | M | server/src/docsHub.js server/src/routes.js server/test/docsHub.test.js web/src/api.js web/src/views/settings/Prefs.vue | 设置页新增一键备份与一键导出：支持全量文档 zip 打包下载、快照备份生成与文件下载接口
