@@ -22,7 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
-2026-09-07 | M | web/src/views/workbench/components/FlowRail.vue | 第三栏文档中心工具栏改为可换行，标题 nowrap 避免被挤成竖排
+2026-09-07 | M | web/src/views/workbench/components/FlowRail.vue | 第三栏文档中心工具栏改为可换行，标题 nowrap；换行后按钮左对齐
 2026-09-07 | A | web/test/docsRailLayout.test.mjs | 锁文档中心工具栏换行契约
 2026-09-07 | A | scripts/selftest-docs-rail-toolbar.mjs | Playwright 测窄栏标题横排、按钮换行
 2026-09-07 | M | docs/selftest.md | 补文档中心工具栏布局用例与自测脚本
