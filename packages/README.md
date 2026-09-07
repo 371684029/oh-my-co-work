@@ -14,7 +14,7 @@
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
-| darwin-arm64 | [`oh-my-co-work-v4-darwin-arm64.zip`](./oh-my-co-work-v4-darwin-arm64.zip) | 23960148 | `ec2de8abf088` | 2026-09-07T05:26:48.247Z |
+| darwin-arm64 | [`oh-my-co-work-v4-darwin-arm64.zip`](./oh-my-co-work-v4-darwin-arm64.zip) | 23960409 | `9b8fea2c329d` | 2026-09-07T08:05:28.442Z |
 | linux-x64 | [`oh-my-co-work-v4-linux-x64.zip`](./oh-my-co-work-v4-linux-x64.zip) | 24118295 | `ec2de8abf088` | 2026-09-07T05:26:49.513Z |
 | win32-x64 | [`oh-my-co-work-v4-win32-x64.zip`](./oh-my-co-work-v4-win32-x64.zip) | 23954416 | `ec2de8abf088` | 2026-09-07T05:26:47.891Z |
 
