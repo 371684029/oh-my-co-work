@@ -197,6 +197,7 @@ start.bat
 
 ## 10. 参考文档
 
+- `docs/ai-case-blog.md` — 对外案例单一事实源（痛点、场景、AI 层级、提效）；改产品叙事先改这里再同步 README
 - `docs/technical-design.md` — Workflow、会话、节点、闸门设计
 - `docs/data-storage.md` — SQLite 与 Markdown 台账结构
 - `docs/tui-2x.md` — PTY 架构、协议与安全
