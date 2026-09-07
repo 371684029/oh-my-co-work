@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-07 | M | server/test/terminalService.test.js | attach 冲刷用例轮询改 25ms×80，避免 CI 上 1ms×300 等不到 UNIQUE_ATTACH_TOKEN
+
 2026-09-07 | A | web/src/components/terminal/furnaceLayout.css | 抽出熔炉滚动骨架：中栏 flex 1 1 0%，GUI/TUI 内部滚，顶栏输入固定
 2026-09-07 | M | web/src/components/terminal/FurnaceWorkspace.vue | 接入滚动骨架，去掉会把容器撑高的 grid
 2026-09-07 | M | web/src/components/terminal/TerminalView.vue | TUI 滚轮仅在激活时拦截，避免横向滚动被吞
