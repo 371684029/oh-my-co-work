@@ -1421,8 +1421,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1 0 auto;
   min-width: max-content;
+  margin-right: auto;
 }
 
 .docs-rail-logo {
@@ -1441,8 +1441,6 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  flex: 1 1 14rem;
-  justify-content: flex-end;
   min-width: 0;
 }
 

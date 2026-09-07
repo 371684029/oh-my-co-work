@@ -27,8 +27,8 @@ const html = `<!doctype html>
 <style>
 body { margin: 0; font-family: system-ui, sans-serif; background: #ece8f4; }
 .frame {
-  width: 268px;
-  padding: 10px;
+  width: 260px;
+  padding: 10px 0;
   background: rgba(255,255,255,0.55);
   border-radius: 14px;
 }
@@ -68,7 +68,7 @@ ${docsCss}
 
 async function main() {
   const browser = await chromium.launch({ headless: true })
-  const page = await browser.newPage({ viewport: { width: 400, height: 240 } })
+  const page = await browser.newPage({ viewport: { width: 300, height: 160 } })
   await page.setContent(html, { waitUntil: 'load' })
 
   const metrics = await page.evaluate(`(() => {
@@ -84,6 +84,8 @@ async function main() {
       titleWidth: Math.round(t.width),
       titleText: getComputedStyle(title).whiteSpace,
       wrapWidth: Math.round(wrap.getBoundingClientRect().width),
+      actionsLeft: Math.round(a.left),
+      toolbarLeft: Math.round(tb.left),
       actionsTop: Math.round(a.top),
       titleTop: Math.round(t.top),
       toolbarHeight: Math.round(tb.height),
@@ -95,6 +97,10 @@ async function main() {
   assert.ok(metrics.titleHeight <= 24, `标题不应竖排叠字 ${JSON.stringify(metrics)}`)
   assert.ok(metrics.titleWidth >= 48, `标题应横向排开 ${JSON.stringify(metrics)}`)
   assert.equal(metrics.wrapped, true, `窄栏按钮应换到下一行 ${JSON.stringify(metrics)}`)
+  assert.ok(
+    Math.abs(metrics.actionsLeft - metrics.toolbarLeft) <= 4,
+    `换行后按钮应左对齐 ${JSON.stringify(metrics)}`,
+  )
   console.log('DOCS_RAIL_WRAP_OK', metrics)
 
   try {
