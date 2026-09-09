@@ -431,6 +431,7 @@ function serializeSteps(steps) {
       row.captureParams = !!s.captureParams
     }
     if (s.adapt) row.adapt = true
+    if (s.refine) row.refine = true
     return row
   })
 }

@@ -19,6 +19,7 @@ const {
   getSessionDetail,
   handleGateAction,
 } = await import('../src/services.js')
+const { persistRefineSpec } = await import('../src/refine.js')
 const { MEMBER_KIND } = await import('@acw/shared')
 
 function wait(ms) {
@@ -154,4 +155,20 @@ test('advance 集成：已炼化成员(开启但无规格)首轮产出规格并�
   const after = getMember(m.id)
   assert.equal(after.config.refine.status, 'done')
   assert.equal(after.config.refine.format.title, '台账员 产出台账')
+})
+
+test('persistRefineSpec 只补 refine 键，不覆盖其它 config', () => {
+  const m = createMember({
+    name: `p-${Date.now()}-${Math.random()}`,
+    displayName: '脚本员',
+    kind: MEMBER_KIND.ECHO,
+    config: { adapt: true, defaultText: 'ok', extraKeep: 'yes', refine: { enabled: true } },
+  })
+  persistRefineSpec(m, { title: '脚本台账' })
+  const after = getMember(m.id)
+  assert.equal(after.config.adapt, true)
+  assert.equal(after.config.extraKeep, 'yes')
+  assert.equal(after.config.defaultText, 'ok')
+  assert.equal(after.config.refine.format.title, '脚本台账')
+  assert.equal(after.config.refine.status, 'done')
 })

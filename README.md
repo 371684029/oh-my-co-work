@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.2.0-409eff?style=flat-square" alt="version 4.2.0" />
+  <img src="https://img.shields.io/badge/version-4.6.0-409eff?style=flat-square" alt="version 4.6.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -122,6 +122,21 @@
 - **缩小到三栏**：熔炉仍在中栏；**返回群聊**只关这层皮，进程还在。
 - 设置「开熔炉默认」：铺满 GUI / 铺满 TUI。顶栏切换只改这一轮，不写回设置。
 
+## 4.x：协同文档中心
+
+群报告、会话索引和节点台账都在 `data/journals/` 里。文档中心把它们聚成一个可搜、可编、可导出的页面，不用翻文件夹。
+
+<img src="./docs/assets/screenshots/docs-hub.webp" alt="协同文档中心：左群模板、中会话与文件、右 Markdown 正文（群报告可编辑）" width="100%" />
+<p align="center"><sub>独立页面 <code>/docs</code>：按群模板或时间浏览 · 全文搜索 · 公告可编辑 · 按群 / 全部导出 zip</sub></p>
+
+<img src="./docs/assets/screenshots/docs-hub-rail.webp" alt="工作台第三栏文档中心：群报告、文档索引与节点台账预览" width="100%" />
+<p align="center"><sub>工作台右侧「文档中心」Tab：当前会话台账预览，可新标签打开完整文档中心</sub></p>
+
+- 左栏按群模板（或时间）分类，中栏会话文件树，右栏渲染 Markdown。
+- 只有 `ANNOUNCEMENT.md` 可编辑；节点台账只读，避免改坏溯源。
+- 网页链接新标签打开；文档互链页内跳转；本地路径只开所在文件夹（不直接执行文件）。
+- 工作台第三栏同步预览同一套文档，导出走群模板 zip。
+
 ## 已实现
 
 | 能力 | 说明 |
@@ -152,7 +167,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。当前源码版本 **4.2.0**；仓库 `packages/` 内 zip 构建元数据仍为 4.0.0，待下次发布流水线重打。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。当前源码版本 **4.6.0**；仓库 `packages/` 内 zip 构建元数据仍为 4.2.0，待下次发布流水线重打。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -269,6 +284,8 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.1.0：文档中心增强——全文搜索、节点文档徽标、打包本群全部 MD 导出
 - [x] 4.2.0：发布更新与本地历史保留——启动检查更新（默认开、设置可关；只读版本号、不自动安装）、更新面板、更新前一键备份、备份恢复、schema 迁移链；更新动作永不触碰数据目录
 - [x] 4.2.1：文档中心解耦与工作台三栏集成（内嵌台账预览与群导出）、设置页新增一键备份（本地快照+下载）与一键导出（全量文档 ZIP）、熔炉通栏满屏与元信息胶囊卡片美化（深度思考与耗时结构化呈现）、下载安全与竞态加固
+- [x] 4.5.0：熔炉炼化——成员/步骤炼化字段、执行后格式化进台账（stdout 优先）、规格回写不覆盖其它 config
+- [x] 4.6.0：四维模糊搜索 + 审查修复——拼音阈值与打分排序、文档中心竞态、备份恢复拒绝符号链接、活库损坏可恢复、协议相对链接外链处理
 - [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
 - [ ] 桌面壳、托盘与系统通知
 

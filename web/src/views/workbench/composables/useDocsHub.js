@@ -46,11 +46,14 @@ const searchQuery = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
 let searchDebounceTimer = null
+let searchReqId = 0
+let fileReqId = 0
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
 async function doSearch(q) {
   const trimmed = (q || '').trim()
+  const reqId = ++searchReqId
   if (!trimmed) {
     searchResults.value = []
     return
@@ -58,11 +61,13 @@ async function doSearch(q) {
   searchLoading.value = true
   try {
     const data = await api.docs.search(trimmed)
+    if (reqId !== searchReqId) return
     searchResults.value = data.hits || []
   } catch {
+    if (reqId !== searchReqId) return
     searchResults.value = []
   } finally {
-    searchLoading.value = false
+    if (reqId === searchReqId) searchLoading.value = false
   }
 }
 
@@ -130,6 +135,7 @@ function relativeTime(v) {
   if (diffMs < 0) return ''
   const mins = Math.floor(diffMs / 60000)
   if (mins < 1) return '刚刚'
+  if (mins < 60) return `${mins} 分钟前`
   const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours} 小时前`
   const days = Math.floor(hours / 24)
@@ -225,16 +231,22 @@ async function loadList() {
 
 async function loadFile(sessionId, name) {
   if (!sessionId || !name) return
+  const reqId = ++fileReqId
   fileLoading.value = true
   try {
-    file.value = await api.docs.file(sessionId, name)
+    const data = await api.docs.file(sessionId, name)
+    if (reqId !== fileReqId) return
+    if (current.value?.sessionId !== sessionId || current.value?.name !== name) return
+    file.value = data
     editing.value = false
-    draft.value = file.value.content || ''
+    draft.value = data.content || ''
   } catch (e) {
+    if (reqId !== fileReqId) return
+    if (current.value?.sessionId !== sessionId || current.value?.name !== name) return
     file.value = null
     ElMessage.error(e?.message || '读取文档失败')
   } finally {
-    fileLoading.value = false
+    if (reqId === fileReqId) fileLoading.value = false
   }
 }
 
@@ -247,20 +259,24 @@ function syncQuery() {
   _router.replace({ path: '/docs', query: q }).catch(() => {})
 }
 
+async function confirmDiscardIfDirty() {
+  if (!dirty.value) return true
+  try {
+    await ElMessageBox.confirm('当前公告有未保存的修改，继续将丢失', '未保存', {
+      type: 'warning',
+      confirmButtonText: '放弃修改',
+      cancelButtonText: '留在当前',
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** 切换文件（含未保存守卫）；force 用于 URL 直达预选 */
 async function selectFile(sessionId, name, { force = false } = {}) {
   if (!sessionId || !name) return
-  if (!force && dirty.value) {
-    try {
-      await ElMessageBox.confirm('当前公告有未保存的修改，切换将丢失', '未保存', {
-        type: 'warning',
-        confirmButtonText: '放弃修改',
-        cancelButtonText: '留在当前',
-      })
-    } catch {
-      return
-    }
-  }
+  if (!force && !(await confirmDiscardIfDirty())) return
   editing.value = false
   current.value = { sessionId, name }
   syncQuery()
@@ -281,12 +297,15 @@ function cancelEdit() {
 
 async function save() {
   if (!current.value || !canEdit.value) return
+  const sessionId = current.value.sessionId
+  const name = current.value.name
   saving.value = true
   try {
-    await api.docs.saveAnnouncement(current.value.sessionId, draft.value)
+    await api.docs.saveAnnouncement(sessionId, draft.value)
+    if (current.value?.sessionId !== sessionId || current.value?.name !== name) return
     editing.value = false
     await loadList()
-    await loadFile(current.value.sessionId, current.value.name)
+    await loadFile(sessionId, name)
     ElMessage.success('群报告已保存')
   } catch (e) {
     ElMessage.error(e?.message || '保存失败')
@@ -378,6 +397,8 @@ function disposeDocsHub() {
   if (searchDebounceTimer) { clearTimeout(searchDebounceTimer); searchDebounceTimer = null }
   workFolderBySession.value = {}
   workFoldersReady = false
+  searchReqId += 1
+  fileReqId += 1
 }
 
 export {
@@ -419,6 +440,7 @@ export {
   startEdit,
   cancelEdit,
   save,
+  confirmDiscardIfDirty,
   resolveDocLink,
   openPath,
   initDocsHub,

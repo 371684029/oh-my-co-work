@@ -29,6 +29,13 @@ test('web links open in a new tab with noopener', () => {
   assert.ok(out.includes('href="https://auto.link/x"'))
 })
 
+test('protocol-relative links are treated as external with noopener', () => {
+  const out = render('[go](//evil.example/phish)')
+  assert.ok(out.includes('href="//evil.example/phish"'))
+  assert.ok(out.includes('target="_blank"'))
+  assert.ok(out.includes('rel="noopener noreferrer"'))
+})
+
 test('markdown links to other journal docs become in-app doc links', () => {
   const out = render('[报告](./ANNOUNCEMENT.md) 与 [台账](/journals/sessions/ses_x/nodes/step-01-a.md)')
   assert.ok(out.includes('data-docs-link'))

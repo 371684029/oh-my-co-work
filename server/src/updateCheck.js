@@ -42,6 +42,30 @@ export function compareVersions(a, b) {
   return 0
 }
 
+export function safeHttpUrl(raw, fallback = '') {
+  try {
+    const u = new URL(String(raw || ''))
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return fallback
+    return u.toString()
+  } catch {
+    return fallback
+  }
+}
+
+/** GitHub 目录树页不是 manifest；.json 直链或其它 base 才拼 latest.json */
+export function resolveManifestUrl(updateUrl) {
+  const base = String(updateUrl || '').trim().replace(/\/$/, '')
+  if (!base) return ''
+  if (/\.json$/i.test(base)) return base
+  if (/github\.com\/[^/]+\/[^/]+\/(?:tree|blob)\//i.test(base)) return ''
+  return `${base}/latest.json`
+}
+
+function clipNotes(s) {
+  const t = String(s || '')
+  return t.length > 8000 ? `${t.slice(0, 8000)}\n…` : t
+}
+
 async function tryFetchJson(url, fetchImpl) {
   const res = await fetchImpl(url, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -74,9 +98,9 @@ export async function checkForUpdates(deps = {}) {
         latest,
         hasUpdate: compareVersions(latest, current) > 0,
         source: 'github',
-        notes: String(r.body || ''),
+        notes: clipNotes(r.body || ''),
         date: String(r.published_at || ''),
-        url: String(r.html_url || REPO_API),
+        url: safeHttpUrl(r.html_url, 'https://github.com/371684029/oh-my-co-work/releases'),
       }
     }
     errors.push('github: 响应缺少 tag_name')
@@ -86,9 +110,11 @@ export async function checkForUpdates(deps = {}) {
 
   // 源 2：updateUrl 指向的静态 latest.json（{ version, notes, date, url }）
   try {
-    const base = readUpdateUrl().replace(/\/$/, '')
-    if (base) {
-      const r = await tryFetchJson(`${base}/latest.json`, fetchImpl)
+    const manifest = resolveManifestUrl(
+      deps.updateUrl != null ? deps.updateUrl : readUpdateUrl(),
+    )
+    if (manifest) {
+      const r = await tryFetchJson(manifest, fetchImpl)
       const latest = String(r.version || '')
       if (latest) {
         return {
@@ -97,14 +123,14 @@ export async function checkForUpdates(deps = {}) {
           latest,
           hasUpdate: compareVersions(latest, current) > 0,
           source: 'manifest',
-          notes: String(r.notes || ''),
+          notes: clipNotes(r.notes || ''),
           date: String(r.date || ''),
-          url: String(r.url || base),
+          url: safeHttpUrl(r.url, safeHttpUrl(manifest.replace(/\/latest\.json$/i, ''), manifest)),
         }
       }
       errors.push('manifest: 响应缺少 version')
     } else {
-      errors.push('manifest: 未配置 updateUrl')
+      errors.push('manifest: 未配置可用的 latest.json（已忽略 GitHub 目录页）')
     }
   } catch (e) {
     errors.push(`manifest: ${e.message}`)

@@ -3,7 +3,7 @@ import test from 'node:test'
 
 // 4.6 全局模糊搜索：统一匹配器（shared/fuzzy）行为锁定。
 // 中文全拼/首字母、英文大小写、子序列容错、阈值过滤。
-import { fuzzyScore, isFuzzyMatch, fuzzySearch } from '@acw/shared'
+import { fuzzyScore, isFuzzyMatch, fuzzySearch, searchMatchThreshold } from '@acw/shared'
 
 test('中文：子串/全拼/首字母/大小写 命中', () => {
   assert.equal(isFuzzyMatch('成员', '成员'), true)
@@ -66,4 +66,12 @@ test('fuzzyScore：分值方向（exact > prefix > pinyin-first > 子序列）',
   const sub = fuzzyScore('cyu', '成员') // 子序列 hmm -> 需 >=0
   assert.ok(exact > prefix)
   assert.ok(prefix >= first || prefix >= sub, '前缀不应低于首字母/子序列中最差者')
+})
+
+test('searchMatchThreshold：拒绝过短 ASCII，中文单字仍可搜', () => {
+  assert.equal(searchMatchThreshold(''), null)
+  assert.equal(searchMatchThreshold('a'), null)
+  assert.equal(searchMatchThreshold('en'), 70)
+  assert.equal(searchMatchThreshold('chengyuan'), 50)
+  assert.equal(searchMatchThreshold('成'), 50)
 })

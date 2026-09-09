@@ -48,10 +48,11 @@
               <span class="dh-group-item-count">{{ sessionCount(g) }}</span>
             </button>
             <button
+              v-if="g.groupId"
               type="button"
               class="dh-group-export-btn"
               title="导出该群文档"
-              @click.stop="onExportGroup(groupKey(g))"
+              @click.stop="onExportGroup(g.groupId)"
             >
               导出
             </button>
@@ -285,7 +286,7 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import {
@@ -323,6 +324,7 @@ import {
   startEdit,
   cancelEdit,
   save,
+  confirmDiscardIfDirty,
   resolveDocLink,
   openPath,
   initDocsHub,
@@ -459,6 +461,7 @@ async function onExportAll() {
 }
 
 async function refresh() {
+  if (!(await confirmDiscardIfDirty())) return
   await loadList()
   if (current.value) await loadFile(current.value.sessionId, current.value.name)
 }
@@ -482,6 +485,10 @@ function onContentClick(e) {
     }
   }
 }
+
+onBeforeRouteLeave(async () => {
+  return confirmDiscardIfDirty()
+})
 
 onMounted(async () => {
   initDocsHub({ route, router })

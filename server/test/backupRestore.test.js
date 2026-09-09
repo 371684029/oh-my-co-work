@@ -157,11 +157,25 @@ test('listBackups distinguishes format correctly and backup download validation 
   assert.ok(tarItem)
   assert.ok(tarItem.filename.endsWith('.tar.gz'))
 
-  // 安全文件名正则验证
-  const validRegex = /^[A-Za-z0-9_.-]+$/
-  assert.equal(validRegex.test(tarItem.filename), true)
-  assert.equal(validRegex.test('../evil.tar.gz'), false)
-  assert.equal(validRegex.test('bad/path.tar.gz'), false)
-  assert.equal(validRegex.test('bad\\path.tar.gz'), false)
+  const { BACKUP_DOWNLOAD_RE } = backup
+  assert.equal(BACKUP_DOWNLOAD_RE.test(tarItem.filename), true)
+  assert.equal(BACKUP_DOWNLOAD_RE.test('../evil.tar.gz'), false)
+  assert.equal(BACKUP_DOWNLOAD_RE.test('notes.json'), false)
+})
+
+test('restore rejects archives that plant journal symlinks', async () => {
+  const created = backup.createBackup()
+  const extract = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-symlink-bak-'))
+  const { execFileSync } = await import('node:child_process')
+  execFileSync('tar', ['-xzf', created.path, '-C', extract])
+  const journals = path.join(extract, 'journals')
+  if (fs.existsSync(journals)) fs.rmSync(journals, { recursive: true, force: true })
+  fs.symlinkSync(os.tmpdir(), journals)
+  const evilName = 'acw-backup-symlinkplant.tar.gz'
+  const evil = path.join(dataRoot, 'backups', evilName)
+  const entries = fs.readdirSync(extract)
+  execFileSync('tar', ['-czf', evil, '-C', extract, ...entries])
+  assert.throws(() => backup.restoreBackup(evilName), /符号链接/)
+  assert.ok(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c >= 1)
 })
 

@@ -57,7 +57,7 @@ import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
 import * as docsHub from './docsHub.js'
 import * as updateCheck from './updateCheck.js'
-import { createBackup, restoreBackup, listBackups } from './backup.js'
+import { createBackup, restoreBackup, listBackups, BACKUP_DOWNLOAD_RE } from './backup.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -161,16 +161,22 @@ router.get('/backup/download', (req, res) => {
       }
       filename = backups[0].filename
     }
-    if (!filename || !/^[A-Za-z0-9_.-]+$/.test(filename)) {
+    if (!filename || !BACKUP_DOWNLOAD_RE.test(filename)) {
       return res.status(400).json({ error: '非法备份文件名' })
     }
-    const backupDir = path.join(DATA_ROOT, 'backups')
-    const target = path.join(backupDir, filename)
+    const backupDir = path.resolve(DATA_ROOT, 'backups')
+    const target = path.resolve(backupDir, filename)
+    if (!target.startsWith(backupDir + path.sep)) {
+      return res.status(400).json({ error: '非法备份路径' })
+    }
     if (!fs.existsSync(target)) {
       return res.status(404).json({ error: '备份文件不存在' })
     }
-    const stat = fs.statSync(target)
-    if (!stat.isFile()) {
+    const lstat = fs.lstatSync(target)
+    if (lstat.isSymbolicLink()) {
+      return res.status(400).json({ error: '拒绝下载符号链接' })
+    }
+    if (!lstat.isFile()) {
       return res.status(400).json({ error: '该备份为目录格式，请使用 tar.gz 压缩包格式进行下载' })
     }
     const contentType = filename.endsWith('.tar.gz') || filename.endsWith('.gz')
@@ -944,7 +950,13 @@ router.post('/update/restore', (req, res) => {
   try {
     res.json(restoreBackup(String(req.body?.filename || '')))
   } catch (e) {
-    res.status(400).json({ error: e.message })
+    const status = e.code === 'RESTORE_BUSY' ? 409 : 400
+    res.status(status).json({
+      error: e.message,
+      code: e.code,
+      rollbackError: e.rollbackError?.message || undefined,
+      dbReopenFailed: e.dbReopenFailed || undefined,
+    })
   }
 })
 

@@ -22,6 +22,32 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-09 | A | docs/assets/screenshots/docs-hub.webp | 文档中心独立页三栏截图（群模板 / 会话文件 / 群报告正文）
+2026-09-09 | A | docs/assets/screenshots/docs-hub-rail.webp | 工作台第三栏文档中心预览截图
+2026-09-09 | M | README.md | 新增 4.x 协同文档中心小节并嵌入上述截图
+2026-09-09 | M | docs/ai-case-blog.md | 素材表补文档中心两张截图直链
+2026-09-09 | A | scripts/seed-docs-hub-demo.mjs | 为截图准备演示会话台账
+2026-09-09 | A | scripts/capture-docs-screenshots.mjs | Playwright 拍摄文档中心截图
+
+---
+
+2026-09-09 | M | web/src/views/settings/Groups.vue | serializeSteps 写出 step.refine，群模板炼化勾选可保存
+2026-09-09 | M | server/src/refine.js | extractMessageText 优先 stdout；persistRefineSpec 合并 config；规格必须有 title
+2026-09-09 | M | web/src/views/settings/Members.vue | 取消炼化只关 enabled，保留 format
+2026-09-09 | M | web/src/views/workbench/composables/useDocsHub.js | 读文件/搜索竞态序号；未保存确认；不足一小时显示分钟
+2026-09-09 | M | web/src/views/docs/DocsHub.vue | 路由离开守卫；无 groupId 不显示导出
+2026-09-09 | M | web/src/views/docs/markdownRenderer.js | // 协议相对链接当外链并加 noopener
+2026-09-09 | M | web/src/views/workbench/components/FlowRail.vue | 报告徽标 kind=announce；预览点击委托
+2026-09-09 | M | server/src/backup.js | 恢复拒绝符号链接；活库 integrity 失败仍可恢复；restore 互斥锁
+2026-09-09 | M | server/src/docsHub.js | 读文件 realpath 约束；open-path 前缀白名单；搜索打分与扫描上限
+2026-09-09 | M | shared/fuzzy.js | searchMatchThreshold 抑制过短 ASCII 拼音噪音
+2026-09-09 | M | server/src/services.js | 聊天搜索按分数排序并套用短查询阈值
+2026-09-09 | M | server/src/updateCheck.js | 忽略 GitHub 目录页当 manifest；下载 URL 仅 http(s)
+2026-09-09 | M | server/src/routes.js | 备份下载仅 tar.gz + 拒 symlink；restore 错误带 code
+2026-09-09 | M | package.json server/web/shared about.json | 源码版本升到 4.6.0
+
+---
+
 2026-09-07 | M | docs/selftest.md | 合并熔炉抽屉与文档中心换行后：web 5 文件 26 例，自测脚本 6+1
 
 2026-09-07 | M | web/src/views/workbench/components/FlowRail.vue | 第三栏文档中心工具栏改为可换行，标题 nowrap；换行后按钮左对齐

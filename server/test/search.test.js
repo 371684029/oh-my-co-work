@@ -90,3 +90,13 @@ test('searchMessages: 空查询返回空', () => {
   const r = searchMessages('')
   assert.equal(r.hits.length, 0)
 })
+
+test('searchMessages: 单字母 ASCII 不搜；命中按分数排序', () => {
+  const session = seedSession('短查')
+  insertMessage(session.id, { role: 'user', content: { text: 'alpha 噪声行' } })
+  insertMessage(session.id, { role: 'user', content: { text: '精确 tokenXYZ 目标' } })
+  assert.equal(searchMessages('a', { sessionId: session.id }).hits.length, 0)
+  const r = searchMessages('tokenXYZ', { sessionId: session.id })
+  assert.ok(r.hits[0].snippet.includes('tokenXYZ'))
+  assert.ok(r.hits[0].score >= 70)
+})

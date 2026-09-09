@@ -257,16 +257,25 @@ function inheritCloneMeta(prev = {}, next = {}) {
 }
 
 function inheritNodeInputMeta(prev = {}, next = {}) {
-  const out = inheritCloneMeta(prev, next)
-  if (!prev?.adapt && !next?.adapt) return out
-  return {
-    ...out,
-    adapt: true,
-    adaptBackup: next.adaptBackup || prev.adaptBackup || null,
-    adaptPatched: next.adaptPatched || prev.adaptPatched || [],
-    adaptFallback: next.adaptFallback ?? prev.adaptFallback,
-    adaptReason: next.adaptReason || prev.adaptReason || null,
+  let out = inheritCloneMeta(prev, next)
+  if (prev?.adapt || next?.adapt) {
+    out = {
+      ...out,
+      adapt: true,
+      adaptBackup: next.adaptBackup || prev.adaptBackup || null,
+      adaptPatched: next.adaptPatched || prev.adaptPatched || [],
+      adaptFallback: next.adaptFallback ?? prev.adaptFallback,
+      adaptReason: next.adaptReason || prev.adaptReason || null,
+    }
   }
+  if (prev?.refine || next?.refine || prev?.refineFormatted || next?.refineFormatted) {
+    out = {
+      ...out,
+      refine: next.refine || prev.refine,
+      refineFormatted: next.refineFormatted || prev.refineFormatted,
+    }
+  }
+  return out
 }
 
 export function persistNodeIo(sessionId, nodeId, { input, output, status, finished }) {

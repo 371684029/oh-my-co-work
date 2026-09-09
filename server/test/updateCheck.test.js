@@ -3,7 +3,7 @@ import test from 'node:test'
 
 // 4.2.0 更新检查：版本比较、双源降级、超时静默。
 
-const { compareVersions, checkForUpdates } = await import('../src/updateCheck.js')
+const { compareVersions, checkForUpdates, resolveManifestUrl, safeHttpUrl } = await import('../src/updateCheck.js')
 
 test('compareVersions numeric segment compare', () => {
   assert.equal(compareVersions('4.0.0', '4.0.0'), 0)
@@ -55,6 +55,7 @@ test('github fails → manifest fallback', async () => {
       throw new Error('unexpected url ' + url)
     },
     currentVersion: '4.0.0',
+    updateUrl: 'https://example.com/updates',
   })
   assert.equal(r.checked, true)
   assert.equal(r.source, 'manifest')
@@ -68,4 +69,24 @@ test('both sources fail → checked:false with combined error, never throws', as
   assert.equal(r.current, '4.0.0')
   assert.ok(r.error.includes('github'))
   assert.ok(r.error.includes('manifest'))
+})
+
+test('resolveManifestUrl ignores GitHub tree pages; keeps json endpoints', () => {
+  assert.equal(
+    resolveManifestUrl('https://github.com/371684029/oh-my-co-work/tree/main/packages'),
+    '',
+  )
+  assert.equal(
+    resolveManifestUrl('https://example.com/updates'),
+    'https://example.com/updates/latest.json',
+  )
+  assert.equal(
+    resolveManifestUrl('https://example.com/latest.json'),
+    'https://example.com/latest.json',
+  )
+})
+
+test('safeHttpUrl rejects javascript: and relative junk', () => {
+  assert.equal(safeHttpUrl('javascript:alert(1)', 'https://ok.example/'), 'https://ok.example/')
+  assert.equal(safeHttpUrl('https://github.com/x/y/releases/tag/v1').startsWith('https://'), true)
 })

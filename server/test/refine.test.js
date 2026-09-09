@@ -11,13 +11,20 @@ import {
 
 const member = (refine) => ({ id: 'm1', name: 'm1', display_name: '日志员', config: { refine } })
 
-test('extractMessageText：支持 summary / text / data / 字符串', () => {
+test('extractMessageText：stdout 优先于 summary', () => {
   assert.equal(extractMessageText({ summary: '产出A' }), '产出A')
   assert.equal(extractMessageText({ text: '产出B' }), '产出B')
   assert.equal(extractMessageText({ data: '产出C' }), '产出C')
   assert.equal(extractMessageText('产出D'), '产出D')
   assert.equal(extractMessageText({ choices: [{ text: 'AI文本' }] }), 'AI文本')
   assert.equal(extractMessageText(null), '')
+  assert.equal(
+    extractMessageText({
+      summary: '已完成（截断）',
+      data: { stdout: '完整脚本输出\n第二行' },
+    }),
+    '完整脚本输出\n第二行',
+  )
 })
 
 test('applyRefineFormat：有 title 包裹 + 去 ANSI；无 title 保原样去 ANSI', () => {

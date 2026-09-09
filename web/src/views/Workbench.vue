@@ -146,6 +146,7 @@
                 <template #header="{ item }">
                   <div
                     class="bubble-sender"
+                    :data-msg-id="item.id"
                     :class="[
                       `kind-${item._kind || 'agent'}`,
                       item.placement === 'end' ? 'is-end' : 'is-start',
@@ -240,7 +241,7 @@
 </template>
 
 <script setup>
-import { onUnmounted, defineAsyncComponent, ref } from 'vue'
+import { onUnmounted, defineAsyncComponent, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'
@@ -344,12 +345,16 @@ async function fireChatSearch() {
   }
 }
 
-function jumpToChatHit(hit) {
+async function jumpToChatHit(hit) {
   chatSearchOpen.value = false
   chatSearchQ.value = ''
   chatSearchHits.value = []
-  // 仅当命中来自其它会话时才切换；同会话命中停留在当前会话（弹层即定位入口）
   if (hit.sessionId && hit.sessionId !== activeId.value) selectSession(hit.sessionId)
+  await nextTick()
+  const id = hit.messageId
+  if (!id) return
+  const el = document.querySelector(`[data-msg-id="${CSS.escape(String(id))}"]`)
+  el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 }
 
 onUnmounted(() => {
