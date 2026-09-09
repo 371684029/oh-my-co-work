@@ -236,7 +236,6 @@ async function startupCheckUpdate() {
     if (s.updateCheck?.startup !== true) return
     const r = await api.update.check()
     if (!r.checked || !r.hasUpdate) return
-    const notesPreview = (r.notes || '').slice(0, 60)
     ElMessage.info({
       message: `发现新版本 v${r.latest}，前往设置 → 关于查看详情`,
       duration: 8000,
