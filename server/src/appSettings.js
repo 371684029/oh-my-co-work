@@ -199,13 +199,13 @@ function ensureSettingsFile() {
 
 /** 未人工确认归档时，超时自动归档（小时）；默认 3 */
 function defaultUpdateCheckSettings() {
-  // 4.2.0：启动检查更新默认开（产品决定），设置可关；检查只读远端版本号与更新日志
-  return { startup: true }
+  // 4.7.0：降低打扰，启动检查更新默认关，交由关于面板手点
+  return { startup: false }
 }
 
 function normalizeUpdateCheck(raw) {
   const r = raw && typeof raw === 'object' ? raw : {}
-  return { startup: r.startup !== false }
+  return { startup: r.startup === true }
 }
 
 export function normalizeAutoArchiveHours(v) {

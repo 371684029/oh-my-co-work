@@ -380,7 +380,7 @@ const lastExportTime = ref('')
 const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
-const startupUpdateCheck = ref(true)
+const startupUpdateCheck = ref(false)
 const savingStartupUpdate = ref(false)
 
 const resolvedHint = computed(() => {
@@ -422,7 +422,7 @@ async function load() {
       }
     }
     adaptBackup.value = s.adapt?.backup !== false
-    startupUpdateCheck.value = s.updateCheck?.startup !== false
+    startupUpdateCheck.value = s.updateCheck?.startup === true
     if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,

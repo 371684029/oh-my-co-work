@@ -103,7 +103,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElNotification } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
@@ -229,20 +229,16 @@ async function onFurnaceClick() {
   openFurnaceSession()
 }
 
-// 4.2.0 启动时检查更新（静默，仅发现新版本时通知）
+// 4.7.0 启动时检查更新（静默，仅发现新版本时轻提示）
 async function startupCheckUpdate() {
   try {
     const s = await api.appSettings.get()
-    if (s.updateCheck?.startup === false) return
+    if (s.updateCheck?.startup !== true) return
     const r = await api.update.check()
     if (!r.checked || !r.hasUpdate) return
-    const notesPreview = (r.notes || '').slice(0, 120)
-    ElNotification({
-      title: `发现新版本 v${r.latest}`,
-      message: notesPreview
-        ? `${notesPreview}${(r.notes || '').length > 120 ? '…' : ''}\n前往设置 → 关于查看详情`
-        : '前往设置 → 关于查看详情',
-      type: 'info',
+    const notesPreview = (r.notes || '').slice(0, 60)
+    ElMessage.info({
+      message: `发现新版本 v${r.latest}，前往设置 → 关于查看详情`,
       duration: 8000,
     })
   } catch {
