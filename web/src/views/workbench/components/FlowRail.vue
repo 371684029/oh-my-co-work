@@ -520,7 +520,7 @@
             @click="onSelectRailDoc(f.name)"
           >
             <span class="pill-name">{{ f.title || f.name }}</span>
-            <span class="pill-badge">{{ f.kind === 'announcement' ? '报告' : '台账' }}</span>
+            <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
           </button>
         </div>
         <div v-else-if="!railDocsLoading" class="docs-rail-empty">
@@ -533,7 +533,11 @@
             <span class="file-header-name">{{ selectedDocName }}</span>
             <span v-if="selectedDocName.includes('step')" class="file-header-badge">审计留痕只读</span>
           </div>
-          <div class="docs-rail-content" v-html="renderedDocHtml" />
+          <div
+            class="docs-rail-content"
+            v-html="renderedDocHtml"
+            @click="onRailContentClick"
+          />
         </div>
         <div v-else-if="selectedDocLoading" class="docs-rail-empty">
           读取中…
@@ -603,8 +607,34 @@ import { ElMessage } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { openPath } from '../composables/useDocsHub'
 
-const md = createDocsMarkdown()
+const DOC_NAME_RE = /^(ANNOUNCEMENT\.md|README\.md|nodes\/step-\d{2}-[A-Za-z0-9_-]+\.md)$/
+
+function resolveRailDocLink(href, sessionId) {
+  const raw = String(href || '').trim()
+  if (!raw || !sessionId) return null
+  let sid = sessionId
+  let rest = raw
+  const abs = raw.match(/^\/journals\/sessions\/([^/]+)\/(.+)$/)
+  if (abs) {
+    sid = abs[1]
+    rest = abs[2]
+  } else {
+    rest = raw.replace(/^\.\//, '')
+  }
+  if (sid !== sessionId) return null
+  let name = rest.replace(/\\/g, '/')
+  if (/^step-\d{2}-[A-Za-z0-9_-]+\.md$/.test(name)) name = `nodes/${name}`
+  if (!DOC_NAME_RE.test(name)) return null
+  return { sessionId: sid, name }
+}
+
+const md = computed(() =>
+  createDocsMarkdown({
+    workFolders: [sessionGroupFolder.value].filter(Boolean),
+  }),
+)
 const railDocFiles = ref([])
 const railDocsLoading = ref(false)
 const selectedDocName = ref('')
@@ -616,8 +646,24 @@ let currentListReqId = 0
 
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
-  return md.render(selectedDocContent.value)
+  return md.value.render(selectedDocContent.value)
 })
+
+function onRailContentClick(e) {
+  const pathEl = e.target.closest?.('.docs-path-link')
+  if (pathEl) {
+    e.preventDefault()
+    openPath(pathEl.getAttribute('data-docs-path'))
+    return
+  }
+  const docEl = e.target.closest?.('.docs-doc-link')
+  if (docEl) {
+    e.preventDefault()
+    const r = resolveRailDocLink(docEl.getAttribute('data-docs-link'), activeId.value)
+    if (r) onSelectRailDoc(r.name)
+    else ElMessage.warning('无法定位文档')
+  }
+}
 
 async function loadRailDocs() {
   const reqSessionId = activeId.value

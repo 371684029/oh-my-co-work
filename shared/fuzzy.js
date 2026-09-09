@@ -100,7 +100,15 @@ export function fuzzyScore(query, target) {
   return best
 }
 
-/** 命中与否（threshold 可调，默认 30 即子序列即可命中） */
+/** 空查询不搜；纯 ASCII 单字符不搜；2 字母提高阈值，避免拼音 includes 噪音。 */
+export function searchMatchThreshold(query) {
+  const q = String(query || '').trim()
+  if (!q) return null
+  const ascii = /^[\x00-\x7f]+$/.test(q)
+  if (ascii && q.length < 2) return null
+  if (ascii && q.length < 3) return 70
+  return 50
+}
 export function isFuzzyMatch(query, target, threshold = 30) {
   return fuzzyScore(query, target) >= threshold
 }

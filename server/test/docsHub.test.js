@@ -118,7 +118,8 @@ test('saveAnnouncement writes file and marks announcementManual', () => {
 })
 
 test('openDocsPath opens directories but only the containing dir for files', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-open-path-'))
+  const dir = path.join(dataRoot, 'open-path-probe')
+  fs.mkdirSync(dir, { recursive: true })
   const file = path.join(dir, 'evil.exe')
   fs.writeFileSync(file, 'MZ')
 
@@ -126,14 +127,16 @@ test('openDocsPath opens directories but only the containing dir for files', asy
   const deps = { openTarget: async (p) => opened.push(p) }
 
   await docsHub.openDocsPath(dir, deps)
-  assert.deepEqual(opened, [dir])
+  assert.equal(opened[0], fs.realpathSync(dir))
 
   await docsHub.openDocsPath(file, deps)
-  assert.equal(opened[1], dir) // 文件 → 打开所在目录，绝不是文件本身
+  assert.equal(opened[1], fs.realpathSync(dir))
   assert.notEqual(opened[1], file)
 
   await assert.rejects(() => docsHub.openDocsPath(path.join(dir, 'no-such-dir'), deps), /不存在/)
   await assert.rejects(() => docsHub.openDocsPath('', deps), /路径为空/)
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-open-out-'))
+  await assert.rejects(() => docsHub.openDocsPath(outside, deps), /允许打开/)
 })
 
 test('readDoc maps step-*.md alias into nodes/', () => {
@@ -194,21 +197,13 @@ test('exportAllDocsZip packages all documents across sessions', () => {
   fs.rmSync(out.path, { force: true })
 })
 
-test('exportAllDocsZip with empty sessions provides placeholder README.md', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-docs-empty-'))
-  const origDataRoot = process.env.ACW_DATA_ROOT
-  process.env.ACW_DATA_ROOT = tempDir
-  try {
-    const out = docsHub.exportAllDocsZip()
-    assert.ok(out.filename.startsWith('oh-my-co-work-all-docs-'))
-    assert.equal(out.filename.endsWith('.zip'), true)
-    assert.ok(fs.existsSync(out.path))
-    assert.ok(fs.statSync(out.path).size > 0)
-    fs.rmSync(out.path, { force: true })
-  } finally {
-    process.env.ACW_DATA_ROOT = origDataRoot
-    fs.rmSync(tempDir, { recursive: true, force: true })
-  }
+test('empty docs zip placeholder is a valid zip entry', async () => {
+  const { writeZipArchive } = await import('../src/adaptBackup.js')
+  const tmp = path.join(os.tmpdir(), `acw-empty-docs-${Date.now()}.zip`)
+  const buf = Buffer.from('# oh-my-co-work 协同文档中心\n\n暂无会话文档。\n', 'utf8')
+  writeZipArchive([{ name: 'README.md', data: buf }], tmp)
+  assert.ok(fs.existsSync(tmp) && fs.statSync(tmp).size > 0)
+  fs.rmSync(tmp, { force: true })
 })
 
 

@@ -10,7 +10,7 @@ import { DATA_ROOT, getDb, parseJson } from './db.js'
 import { openLocalPath } from './fsBrowser.js'
 import { saveSessionAnnouncement } from './engine.js'
 import { writeZipArchive } from './adaptBackup.js'
-import { fuzzyMatch } from '@acw/shared'
+import { fuzzyScore, searchMatchThreshold } from '@acw/shared'
 
 const MAX_READ_BYTES = 1024 * 1024
 const CACHE_TTL_MS = 60_000
@@ -25,6 +25,34 @@ const FILE_KINDS = [
 
 function journalRoot() {
   return path.join(DATA_ROOT, 'journals', 'sessions')
+}
+
+function confinedUnder(root, candidate) {
+  const r = path.resolve(root)
+  const c = path.resolve(candidate)
+  return c === r || c.startsWith(r + path.sep)
+}
+
+function resolveWhitelistedAbs(sessionId, relName) {
+  const root = path.resolve(journalRoot(), sessionId)
+  const abs = path.resolve(root, ...String(relName).split('/'))
+  if (!confinedUnder(root, abs)) {
+    throw Object.assign(new Error('路径越界'), { code: 'ESCAPE' })
+  }
+  if (!fs.existsSync(abs)) throw Object.assign(new Error('文件不存在'), { code: 'NO_FILE' })
+  const st = fs.lstatSync(abs)
+  if (st.isSymbolicLink()) {
+    throw Object.assign(new Error('不读取符号链接'), { code: 'SYMLINK' })
+  }
+  const realRoot = fs.realpathSync(root)
+  const realFile = fs.realpathSync(abs)
+  if (!confinedUnder(realRoot, realFile)) {
+    throw Object.assign(new Error('路径越界'), { code: 'ESCAPE' })
+  }
+  if (!fs.statSync(realFile).isFile()) {
+    throw Object.assign(new Error('不是普通文件'), { code: 'BAD_FILE' })
+  }
+  return realFile
 }
 
 function classify(name) {
@@ -54,6 +82,11 @@ function scanSessionDir(sessionId) {
     if (!hit) return
     const abs = path.join(dir, ...relName.split('/'))
     if (!fs.existsSync(abs)) return
+    try {
+      if (fs.lstatSync(abs).isSymbolicLink()) return
+    } catch {
+      return
+    }
     // 根目录误命名的 step-*.md 会被 classify 归一为 nodes/step-*.md，与 nodes 下真实文件指向同一绝对路径，去重避免重复条目。
     if (seen.has(abs)) return
     seen.add(abs)
@@ -141,6 +174,7 @@ function scanAll() {
       const files = scanSessionDir(sessionId)
       if (!files.length) continue
       const s = meta.byId.get(sessionId)
+      if (!s) continue
       const group = s ? meta.groupById.get(s.group_id) : null
       const item = {
         sessionId,
@@ -238,8 +272,7 @@ export function readDoc(sessionId, name) {
   assertSession(sessionId)
   const hit = classify(name)
   if (!hit) throw Object.assign(new Error('文件不在白名单内'), { code: 'NOT_WHITELISTED' })
-  const abs = path.join(journalRoot(), sessionId, ...hit.normalized.split('/'))
-  if (!fs.existsSync(abs)) throw Object.assign(new Error('文件不存在'), { code: 'NO_FILE' })
+  const abs = resolveWhitelistedAbs(sessionId, hit.normalized)
   const st = statFile(abs)
   const truncated = st.size > MAX_READ_BYTES
   const n = truncated ? MAX_READ_BYTES : st.size
@@ -285,6 +318,31 @@ export function saveAnnouncement(sessionId, markdown) {
  * Directories open as-is; files NEVER open directly — their containing dir opens instead.
  * @param {{ openTarget?: (p: string) => Promise<unknown> }} [deps]
  */
+function allowedOpenPrefixes() {
+  const prefixes = [path.resolve(DATA_ROOT)]
+  try {
+    prefixes.push(path.resolve(os.homedir()))
+  } catch {
+    /* ignore */
+  }
+  try {
+    prefixes.push(path.resolve(process.cwd()))
+  } catch {
+    /* ignore */
+  }
+  try {
+    const rows = getDb().prepare('SELECT context_json FROM sessions').all()
+    for (const r of rows) {
+      const ctx = parseJson(r.context_json, {})
+      const wf = ctx.groupFolder || ctx.primaryWorkFolder
+      if (wf) prefixes.push(path.resolve(String(wf)))
+    }
+  } catch {
+    /* ignore */
+  }
+  return prefixes
+}
+
 export async function openDocsPath(targetPath, deps = {}) {
   const openTarget = deps.openTarget || openLocalPath
   const raw = String(targetPath || '').trim()
@@ -293,31 +351,48 @@ export async function openDocsPath(targetPath, deps = {}) {
   if (!fs.existsSync(abs)) throw Object.assign(new Error('路径不存在'), { code: 'NO_PATH' })
   const st = fs.statSync(abs)
   const opened = st.isDirectory() ? abs : path.dirname(abs)
-  await openTarget(opened)
-  return { ok: true, opened, isDir: st.isDirectory() }
+  const openedReal = fs.realpathSync(opened)
+  const ok = allowedOpenPrefixes().some((p) => {
+    try {
+      const rp = fs.existsSync(p) ? fs.realpathSync(p) : path.resolve(p)
+      return confinedUnder(rp, openedReal)
+    } catch {
+      return confinedUnder(p, openedReal)
+    }
+  })
+  if (!ok) {
+    throw Object.assign(new Error('路径不在允许打开的范围内'), { code: 'NOT_ALLOWED' })
+  }
+  await openTarget(openedReal)
+  return { ok: true, opened: openedReal, isDir: st.isDirectory() }
 }
 
 const MAX_SEARCH_HITS = 200
 const PER_FILE_HITS = 3
 const SNIPPET_LEN = 160
+const MAX_SEARCH_FILES = 400
 
-/**
- * 全文搜索（内存扫描，不引 FTS）：遍历白名单文档，逐行做模糊/拼音匹配。
- * 匹配阈值 50（到「子串/全拼/首字母」级，不含裸子序列，避免长行噪音）。
- * 另按会话/群标题命中，作为文档级入口。
- * @returns {{ q, hits: Array<{ sessionId, sessionTitle, groupTitle, name, kind, title, line, snippet, mtimeMs }> }}
- */
+function snippetAround(raw, needle) {
+  const lower = raw.toLowerCase()
+  let at = lower.indexOf(needle)
+  if (at < 0) at = 0
+  const from = Math.max(0, Math.floor(at - SNIPPET_LEN / 2))
+  return raw.slice(from, from + SNIPPET_LEN)
+}
+
 export function searchDocs(q) {
+  const threshold = searchMatchThreshold(q)
   const needle = String(q || '').trim().toLowerCase()
-  if (!needle) return { q: String(q || ''), hits: [] }
+  if (threshold == null) return { q: String(q || ''), hits: [] }
   const { sessions } = scanAll()
   const hits = []
+  let filesScanned = 0
   for (const s of sessions) {
-    // 会话/群标题命中：作为文档级入口
-    if (
-      hits.length < MAX_SEARCH_HITS &&
-      (fuzzyMatch(needle, s.sessionTitle, 50) || fuzzyMatch(needle, s.groupTitle, 50))
-    ) {
+    const titleScore = Math.max(
+      fuzzyScore(needle, s.sessionTitle),
+      fuzzyScore(needle, s.groupTitle),
+    )
+    if (titleScore >= threshold) {
       hits.push({
         sessionId: s.sessionId,
         sessionTitle: s.sessionTitle,
@@ -328,10 +403,12 @@ export function searchDocs(q) {
         line: 0,
         snippet: `群：${s.groupTitle || ''} 会话：${s.sessionTitle}`,
         mtimeMs: s.files.reduce((m, f) => Math.max(m, f.mtimeMs), 0) || 0,
+        score: titleScore,
       })
     }
     for (const f of s.files) {
-      if (hits.length >= MAX_SEARCH_HITS) break
+      if (filesScanned >= MAX_SEARCH_FILES) break
+      filesScanned += 1
       let content
       try {
         content = readDoc(s.sessionId, f.name).content
@@ -341,11 +418,8 @@ export function searchDocs(q) {
       const lines = content.split(/\r?\n/)
       let inFile = 0
       for (let i = 0; i < lines.length && inFile < PER_FILE_HITS; i++) {
-        if (!fuzzyMatch(needle, lines[i], 50)) continue
-        const raw = lines[i].trim()
-        const at = raw.toLowerCase().indexOf(needle)
-        const from = Math.max(0, Math.floor((at < 0 ? 0 : at) - SNIPPET_LEN / 2))
-        const snippet = raw.slice(from, from + SNIPPET_LEN)
+        const score = fuzzyScore(needle, lines[i])
+        if (score < threshold) continue
         hits.push({
           sessionId: s.sessionId,
           sessionTitle: s.sessionTitle,
@@ -354,15 +428,16 @@ export function searchDocs(q) {
           kind: f.kind,
           title: f.title,
           line: i + 1,
-          snippet,
+          snippet: snippetAround(lines[i].trim(), needle),
           mtimeMs: f.mtimeMs,
+          score,
         })
         inFile += 1
       }
-      if (hits.length >= MAX_SEARCH_HITS) break
     }
   }
-  return { q: String(q || ''), hits }
+  hits.sort((a, b) => (b.score || 0) - (a.score || 0) || (b.mtimeMs || 0) - (a.mtimeMs || 0))
+  return { q: String(q || ''), hits: hits.slice(0, MAX_SEARCH_HITS) }
 }
 
 function slugify(s) {

@@ -69,7 +69,8 @@ export function findPathsInText(text, workFolders = []) {
 }
 
 function isExternalHref(href) {
-  return /^(https?:|mailto:)/i.test(String(href || ''))
+  const h = String(href || '')
+  return /^(https?:|mailto:)/i.test(h) || /^\/\//.test(h)
 }
 
 function isDocRelativeHref(href) {
@@ -164,6 +165,8 @@ export function createDocsMarkdown({ workFolders = [] } = {}) {
     } else if (isExternalHref(href)) {
       token.attrSet('target', '_blank')
       token.attrSet('rel', 'noopener noreferrer')
+    } else if (href && href !== '#' && !token.attrGet('data-docs-path')) {
+      token.attrSet('href', '#')
     }
     return defaultLinkOpen(tokens, idx, options, env, self)
   }

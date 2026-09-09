@@ -5,12 +5,22 @@
  * 本模块是纯逻辑 + 可注入 formatter，熔炉(REFINE 角色)只负责产 format 规格，测试用确定性 formatter 替身。
  */
 import { stripAnsi } from '@acw/shared'
-import { getDb } from './db.js'
+import { getDb, parseJson } from './db.js'
 
-/** 从执行结果里抽取可文档化的文本 */
+function stdoutOf(output) {
+  if (!output || typeof output !== 'object') return ''
+  const data = output.data && typeof output.data === 'object' ? output.data : null
+  if (data && data.stdout != null && String(data.stdout).trim()) return String(data.stdout)
+  if (typeof output.stdout === 'string' && output.stdout.trim()) return output.stdout
+  return ''
+}
+
+/** 从执行结果里抽取可文档化的文本（脚本 stdout 优先于短摘要） */
 export function extractMessageText(output) {
   if (output == null) return ''
   if (typeof output === 'string') return output
+  const stdout = stdoutOf(output)
+  if (stdout) return stdout
   if (typeof output.text === 'string') return output.text
   if (Array.isArray(output.choices)) {
     return output.choices
@@ -55,8 +65,10 @@ export function defaultRefineFormat(output, member = {}) {
  */
 export function refineOutputForNode(output, member = {}, opts = {}) {
   const refine = member.config?.refine || {}
-  const format = refine.format && typeof refine.format === 'object' ? refine.format : null
-  const hasSpec = !!format
+  const format = refine.format && typeof refine.format === 'object' && !Array.isArray(refine.format)
+    ? refine.format
+    : null
+  const hasSpec = !!(format && typeof format.title === 'string' && format.title.trim())
   if (hasSpec) {
     return {
       source: 'spec',
@@ -98,7 +110,12 @@ export function defaultRefineSpecAuthor(member = {}) {
  */
 export function produceRefineSpec(member = {}, opts = {}) {
   const author = opts.author || defaultRefineSpecAuthor
-  const spec = author(member) || {}
+  const spec = author(member)
+  const fallback = defaultRefineSpecAuthor(member)
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return fallback
+  if (typeof spec.title !== 'string' || !spec.title.trim()) {
+    return { ...spec, title: fallback.title }
+  }
   return spec
 }
 
@@ -107,28 +124,28 @@ export function produceRefineSpec(member = {}, opts = {}) {
  * saveMember 可注入（默认直接写库）；返回更新后的 member 对象（含 config.refine）。
  */
 export function persistRefineSpec(member, spec, { saveMember } = {}) {
-  const refine = {
-    ...(member.config?.refine || {}),
+  const refinePatch = {
     enabled: true,
     status: 'done',
     format: spec,
     refinedAt: new Date().toISOString(),
   }
-  const updated = { ...member, config: { ...member.config, refine } }
   if (saveMember) {
-    saveMember(member.id, refine)
-  } else {
-    try {
-      getDb()
-        .prepare(`UPDATE members SET config_json = ?, updated_at = ? WHERE id = ?`)
-        .run(
-          JSON.stringify(updated.config),
-          new Date().toISOString(),
-          member.id,
-        )
-    } catch {
-      /* 回写失败不阻断流程 */
-    }
+    const live = { ...(member.config || {}) }
+    const refine = { ...(live.refine || {}), ...refinePatch }
+    const updated = { ...member, config: { ...live, refine } }
+    saveMember(member.id, { config: updated.config })
+    return updated
   }
-  return updated
+  const db = getDb()
+  const row = db.prepare('SELECT config_json FROM members WHERE id = ?').get(member.id)
+  const live = parseJson(row?.config_json, member.config || {})
+  const refine = { ...(live.refine || {}), ...refinePatch }
+  const nextConfig = { ...live, refine }
+  db.prepare(`UPDATE members SET config_json = ?, updated_at = ? WHERE id = ?`).run(
+    JSON.stringify(nextConfig),
+    new Date().toISOString(),
+    member.id,
+  )
+  return { ...member, config: nextConfig }
 }

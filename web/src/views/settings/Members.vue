@@ -539,11 +539,16 @@ async function save() {
 
     if (prev?.role) baseConfig.role = prev.role
     if (form.value.adapt) baseConfig.adapt = true
-    // 4.5 熔炉炼化：开启时写入 config.refine（保留已有规格/状态）；取消则不再带 refine
+    // 4.5 熔炉炼化：开启时写入 config.refine；取消只关 enabled，保留已学到的 format
     if (form.value.refine) {
       baseConfig.refine = {
         ...(prev?.refine || {}),
         enabled: true,
+      }
+    } else if (prev?.refine) {
+      baseConfig.refine = {
+        ...prev.refine,
+        enabled: false,
       }
     }
 

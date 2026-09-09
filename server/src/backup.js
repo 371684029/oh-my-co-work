@@ -40,12 +40,15 @@ function resolveLiveDbPath() {
  * @param {{ outDir?: string, includeUploads?: boolean }} [opts]
  */
 export function createBackup(opts = {}) {
-  const integrity = runIntegrityCheck()
-  if (!integrity.ok) {
-    throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
-      code: 'INTEGRITY_FAIL',
-      detail: integrity.detail,
-    })
+  let integrity = { ok: true, detail: 'skipped' }
+  if (!opts.skipIntegrity) {
+    integrity = runIntegrityCheck()
+    if (!integrity.ok) {
+      throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
+        code: 'INTEGRITY_FAIL',
+        detail: integrity.detail,
+      })
+    }
   }
 
   try {
@@ -130,6 +133,8 @@ export function createBackup(opts = {}) {
 }
 
 const BACKUP_NAME_RE = /^acw-backup-[A-Za-z0-9._-]+(?:\.tar\.gz)?$/
+export const BACKUP_DOWNLOAD_RE = /^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/
+let restoreInFlight = false
 const LIVE_RELS = [
   'oh-my-co-work.sqlite',
   'oh-my-co-work.sqlite-wal',
@@ -175,12 +180,69 @@ function resolveBackupEntry(name) {
   return null
 }
 
+function confinedUnder(root, candidate) {
+  const r = path.resolve(root)
+  const c = path.resolve(candidate)
+  return c === r || c.startsWith(r + path.sep)
+}
+
+function assertRegularFile(abs, label = '文件') {
+  const st = fs.lstatSync(abs)
+  if (st.isSymbolicLink()) {
+    throw Object.assign(new Error(`${label}不能是符号链接`), { code: 'SYMLINK' })
+  }
+  if (!st.isFile()) {
+    throw Object.assign(new Error(`${label}不是普通文件`), { code: 'BAD_FILE' })
+  }
+}
+
+/**
+ * 拒绝符号链接及逃出 root 的路径，防止备份/恢复把 journals 种到 DATA_ROOT 外。
+ */
+export function assertTreeNoSymlinks(root) {
+  if (!fs.existsSync(root)) return
+  const rootReal = fs.realpathSync(root)
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, e.name)
+      if (e.isSymbolicLink()) {
+        throw Object.assign(new Error(`备份含符号链接：${path.relative(root, abs) || e.name}`), {
+          code: 'SYMLINK',
+        })
+      }
+      if (e.isDirectory()) {
+        const real = fs.realpathSync(abs)
+        if (!confinedUnder(rootReal, real)) {
+          throw Object.assign(new Error(`备份路径越界：${path.relative(root, abs) || e.name}`), {
+            code: 'ESCAPE',
+          })
+        }
+        walk(abs)
+      } else if (e.isFile()) {
+        const real = fs.realpathSync(abs)
+        if (!confinedUnder(rootReal, real)) {
+          throw Object.assign(new Error(`备份路径越界：${path.relative(root, abs) || e.name}`), {
+            code: 'ESCAPE',
+          })
+        }
+      }
+    }
+  }
+  walk(root)
+}
+
+function copyRegularFile(src, dest) {
+  assertRegularFile(src, src)
+  fs.copyFileSync(src, dest)
+}
+
 function applyStagedToLive(work) {
+  assertTreeNoSymlinks(work)
   const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  fs.copyFileSync(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
+  copyRegularFile(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
   for (const suf of ['-wal', '-shm']) {
     if (fs.existsSync(stagedDb + suf)) {
-      fs.copyFileSync(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+      copyRegularFile(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
     }
   }
   const stagedJournals = path.join(work, 'journals')
@@ -215,6 +277,18 @@ function restoreFromAside(aside) {
  * @returns {{ ok: true, restoredFrom: string, preRestore: { path: string }, aside: string }}
  */
 export function restoreBackup(filename, deps = {}) {
+  if (restoreInFlight) {
+    throw Object.assign(new Error('已有恢复进行中'), { code: 'RESTORE_BUSY' })
+  }
+  restoreInFlight = true
+  try {
+    return restoreBackupUnlocked(filename, deps)
+  } finally {
+    restoreInFlight = false
+  }
+}
+
+function restoreBackupUnlocked(filename, deps = {}) {
   const name = path.basename(String(filename || ''))
   if (!BACKUP_NAME_RE.test(name)) {
     throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
@@ -228,8 +302,16 @@ export function restoreBackup(filename, deps = {}) {
   const checkSqlite = deps.checkSqliteFile || checkSqliteFile
   const applyLive = deps.applyLive || applyStagedToLive
 
-  // 恢复前先打一份（integrity 失败会直接抛出，不动现有库）
-  const pre = createBackup()
+  let pre = null
+  try {
+    pre = createBackup()
+  } catch (e) {
+    if (e.code === 'INTEGRITY_FAIL' || e.code === 'NO_DB') {
+      pre = { path: null, skipped: true, reason: e.message }
+    } else {
+      throw e
+    }
+  }
 
   let work = null
   let ownWork = false
@@ -246,10 +328,23 @@ export function restoreBackup(filename, deps = {}) {
     work = entry.path
   }
 
+  try {
+    assertTreeNoSymlinks(work)
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
+  }
+
   const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
   if (!fs.existsSync(stagedDb)) {
     if (ownWork) fs.rmSync(work, { recursive: true, force: true })
     throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
+  }
+  try {
+    assertRegularFile(stagedDb, '备份库')
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
   }
   const check = checkSqlite(stagedDb)
   if (!check.ok) {
@@ -266,7 +361,7 @@ export function restoreBackup(filename, deps = {}) {
   const aside = path.join(
     DATA_ROOT,
     'backups',
-    `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`,
+    `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${String(d.getMilliseconds()).padStart(3, '0')}`,
   )
   fs.mkdirSync(aside, { recursive: true })
   const moveAside = (rel) => {
@@ -281,20 +376,17 @@ export function restoreBackup(filename, deps = {}) {
     for (const rel of LIVE_RELS) moveAside(rel)
     applyLive(work)
     initDbFn()
-    return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path }, aside }
+    return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
   } catch (err) {
     try {
       restoreFromAside(aside)
     } catch (rb) {
       console.warn('[acw] restore rollback', rb?.message || rb)
-      // 回滚失败也必须在返回错误上暴露，避免调用方误以为已恢复原状。
       err.rollbackError = rb
     }
     try {
       initDbFn()
     } catch (reopen) {
-      // 二次重开失败不能只打 warn：数据库此时已关闭、连接为 null，
-      // 必须通过返回错误让调用方感知进程处于 DB 下线状态。
       console.error('[acw] restore reinit', reopen?.message || reopen)
       err.dbReopenFailed = true
       err.dbReopenError = reopen

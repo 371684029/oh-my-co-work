@@ -8,7 +8,7 @@ import {
   normalizeStepFlow,
   flowNeedsWait,
 } from '@acw/shared'
-import { fuzzyMatch } from '@acw/shared'
+import { fuzzyScore, searchMatchThreshold } from '@acw/shared'
 import {
   createSessionFromGroup,
   createSessionFromMember,
@@ -480,8 +480,9 @@ function messageText(m) {
  * @returns {{ q, hits: Array<{ sessionId, sessionTitle, nodeInstanceId, messageId, role, memberId, memberName, snippet, at }> }}
  */
 export function searchMessages(query, opts = {}) {
+  const threshold = searchMatchThreshold(query)
   const q = String(query || '').trim().toLowerCase()
-  if (!q) return { q: String(q || ''), hits: [] }
+  if (threshold == null) return { q: String(query || '').trim(), hits: [] }
   const { sessionId } = opts || {}
   const hits = []
 
@@ -491,29 +492,29 @@ export function searchMessages(query, opts = {}) {
     return (mid) => (mid ? map.get(mid) || '' : '')
   })()
 
-  const collect = (s, rows) => {
+  const collect = (s, rows, perSessionCap) => {
+    const local = []
     for (const m of rows) {
-      if (hits.length >= SEARCH_HITS_MAX) return
       const text = messageText({ ...m, content: parseJson(m.content_json, {}) })
       if (!text) continue
+      let bestScore = -1
       let bestAt = -1
       let bestSnippet = ''
       const lines = text.split(/\r?\n/)
-      let matchedAny = false
       for (let i = 0; i < lines.length; i++) {
-        if (!fuzzyMatch(q, lines[i], 50)) continue
-        matchedAny = true
-        const raw = lines[i].trim()
-        const at = raw.toLowerCase().indexOf(q)
-        const from = Math.max(0, Math.floor((at < 0 ? 0 : at) - 160 / 2))
-        const snippet = raw.slice(from, from + 160)
-        // 分数取该文本块最优（此处以行序近似；命中即认为满足阈值）
-        if (bestSnippet === '') bestSnippet = snippet
-        bestAt = i
-        break
+        const score = fuzzyScore(q, lines[i])
+        if (score < threshold) continue
+        if (score > bestScore) {
+          bestScore = score
+          const raw = lines[i].trim()
+          const at = raw.toLowerCase().indexOf(q)
+          const from = Math.max(0, Math.floor((at < 0 ? 0 : at) - 160 / 2))
+          bestSnippet = raw.slice(from, from + 160)
+          bestAt = i
+        }
       }
-      if (!matchedAny) continue
-      hits.push({
+      if (bestScore < threshold) continue
+      local.push({
         sessionId: s.id,
         sessionTitle: s.title,
         nodeInstanceId: m.node_instance_id || null,
@@ -523,8 +524,11 @@ export function searchMessages(query, opts = {}) {
         memberName: memberName(m.member_id),
         snippet: bestSnippet,
         at: bestAt,
+        score: bestScore,
       })
     }
+    local.sort((a, b) => b.score - a.score)
+    hits.push(...local.slice(0, perSessionCap))
   }
 
   if (sessionId) {
@@ -533,7 +537,8 @@ export function searchMessages(query, opts = {}) {
     const rows = getDb()
       .prepare('SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC')
       .all(sessionId)
-    collect(s, rows)
+    collect(s, rows, SEARCH_HITS_PER_SESSION)
+    hits.sort((a, b) => b.score - a.score)
     return { q, hits: hits.slice(0, SEARCH_HITS_PER_SESSION) }
   }
 
@@ -543,14 +548,10 @@ export function searchMessages(query, opts = {}) {
     const rows = getDb()
       .prepare('SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC')
       .all(s.id)
-    let before = hits.length
-    collect(s, rows)
-    // 每会话最多 SEARCH_HITS_PER_SESSION 条
-    if (hits.length - before > SEARCH_HITS_PER_SESSION) {
-      hits.length = before + SEARCH_HITS_PER_SESSION
-    }
+    collect(s, rows, SEARCH_HITS_PER_SESSION)
   }
-  return { q, hits }
+  hits.sort((a, b) => b.score - a.score)
+  return { q, hits: hits.slice(0, SEARCH_HITS_MAX) }
 }
 
 export function renameSession(id, title) {
