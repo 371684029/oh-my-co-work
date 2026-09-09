@@ -208,6 +208,8 @@
 | 内嵌 TUI | [`assets/screenshots/embedded-tui-fullscreen.webp`](./assets/screenshots/embedded-tui-fullscreen.webp) | https://raw.githubusercontent.com/371684029/oh-my-co-work/main/docs/assets/screenshots/embedded-tui-fullscreen.webp |
 | 熔炉 GUI | [`assets/screenshots/furnace-workspace-chat.webp`](./assets/screenshots/furnace-workspace-chat.webp) | https://raw.githubusercontent.com/371684029/oh-my-co-work/main/docs/assets/screenshots/furnace-workspace-chat.webp |
 | Grok 教程 | [`assets/screenshots/furnace-grok-guide.webp`](./assets/screenshots/furnace-grok-guide.webp) | https://raw.githubusercontent.com/371684029/oh-my-co-work/main/docs/assets/screenshots/furnace-grok-guide.webp |
+| 文档中心（独立页） | [`assets/screenshots/docs-hub.webp`](./assets/screenshots/docs-hub.webp) | https://raw.githubusercontent.com/371684029/oh-my-co-work/main/docs/assets/screenshots/docs-hub.webp |
+| 工作台第三栏文档中心 | [`assets/screenshots/docs-hub-rail.webp`](./assets/screenshots/docs-hub-rail.webp) | https://raw.githubusercontent.com/371684029/oh-my-co-work/main/docs/assets/screenshots/docs-hub-rail.webp |
 
 - 仓库：https://github.com/371684029/oh-my-co-work
 - 上手：[README.md](../README.md) · [demo.md](./demo.md) · [mvp.md](./mvp.md)

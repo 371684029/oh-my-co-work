@@ -22,6 +22,15 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-09 | A | docs/assets/screenshots/docs-hub.webp | 文档中心独立页三栏截图（群模板 / 会话文件 / 群报告正文）
+2026-09-09 | A | docs/assets/screenshots/docs-hub-rail.webp | 工作台第三栏文档中心预览截图
+2026-09-09 | M | README.md | 新增 4.x 协同文档中心小节并嵌入上述截图
+2026-09-09 | M | docs/ai-case-blog.md | 素材表补文档中心两张截图直链
+2026-09-09 | A | scripts/seed-docs-hub-demo.mjs | 为截图准备演示会话台账
+2026-09-09 | A | scripts/capture-docs-screenshots.mjs | Playwright 拍摄文档中心截图
+
+---
+
 2026-09-09 | M | web/src/views/settings/Groups.vue | serializeSteps 写出 step.refine，群模板炼化勾选可保存
 2026-09-09 | M | server/src/refine.js | extractMessageText 优先 stdout；persistRefineSpec 合并 config；规格必须有 title
 2026-09-09 | M | web/src/views/settings/Members.vue | 取消炼化只关 enabled，保留 format
