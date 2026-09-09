@@ -13,6 +13,7 @@ const ROLE_FILES = {
   [FURNACE_ROLE.MEMBER_ADAPT]: 'member-adapt.md',
   [FURNACE_ROLE.NODE_ADAPT]: 'node-adapt.md',
   [FURNACE_ROLE.REVIEW]: 'review.md',
+  [FURNACE_ROLE.REFINE]: 'refine.md',
 }
 
 export const SITUATION_LIMITS = {
@@ -259,5 +260,11 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
 export function resolveAdaptFurnaceRole({ stepAdapt, memberAdapt } = {}) {
   if (stepAdapt) return FURNACE_ROLE.NODE_ADAPT
   if (memberAdapt) return FURNACE_ROLE.MEMBER_ADAPT
+  return null
+}
+
+/** 4.5 炼化：成员被勾选炼化时，返回炼化角色壳。 */
+export function resolveRefineFurnaceRole({ refine } = {}) {
+  if (refine) return FURNACE_ROLE.REFINE
   return null
 }

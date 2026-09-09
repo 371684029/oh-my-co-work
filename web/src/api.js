@@ -95,6 +95,12 @@ export const api = {
     restore: (filename) =>
       req('/update/restore', { method: 'POST', body: JSON.stringify({ filename }) }),
   },
+  messages: {
+    find: (q, sessionId) =>
+      req(`/messages/search?q=${encodeURIComponent(q || '')}${
+        sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''
+      }`),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),

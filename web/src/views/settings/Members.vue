@@ -10,7 +10,15 @@
       <el-button type="primary" @click="openCreate()">新建成员</el-button>
     </div>
 
-    <el-table :data="list" stripe>
+    <el-input
+      v-model="searchQ"
+      class="page-search"
+      placeholder="搜索成员（支持拼音/首字母，如 cy、chengyuan）"
+      clearable
+      :prefix-icon="SearchIcon"
+    />
+
+    <el-table :data="filteredList" stripe>
       <el-table-column prop="display_name" label="显示名" min-width="120" />
       <el-table-column label="简介" min-width="140" show-overflow-tooltip>
         <template #default="{ row }">
@@ -56,6 +64,11 @@
         <el-form-item>
           <el-tooltip :content="adaptHover" placement="top" :show-after="300">
             <el-checkbox v-model="form.adapt">是否适配</el-checkbox>
+          </el-tooltip>
+        </el-form-item>
+        <el-form-item>
+          <el-tooltip content="开启后由熔炉炼化：格式化成员的输入/输出为文档友好形态，方便文档中心维护。未炼化成员的步骤可在群模板里单独勾选炼化（走格式化节点）。" placement="top" :show-after="300">
+            <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
         </el-form-item>
 
@@ -223,9 +236,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { ADAPT_OPTION_HOVER } from '@acw/shared'
+import { fuzzySearch } from '@acw/shared'
 
 const adaptHover = ADAPT_OPTION_HOVER
 
@@ -247,6 +262,20 @@ const scriptExts = [
 ]
 
 const list = ref([])
+const searchQ = ref('')
+const SearchIcon = Search
+// 成员模糊搜索（拼音/首字母/大小写/子序列），多字段取最优
+const filteredList = computed(() => {
+  const q = searchQ.value
+  if (!q || !q.trim()) return list.value
+  return fuzzySearch(list.value, q, (m) => [
+    m.display_name,
+    m.name,
+    m.config?.description,
+    m.config?.role,
+    m.kind,
+  ]).items.map((h) => h.item)
+})
 const drawer = ref(false)
 const drawerTitle = ref('')
 const readonly = ref(false)
@@ -288,6 +317,7 @@ function emptyForm() {
     description: '',
     kind: 'script',
     adapt: false,
+    refine: false,
     script: {
       mode: 'file',
       filePath: '',
@@ -417,6 +447,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     description: row.config?.description || '',
     kind: row.kind,
     adapt: !!row.config?.adapt,
+    refine: !!row.config?.refine?.enabled,
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
@@ -508,6 +539,13 @@ async function save() {
 
     if (prev?.role) baseConfig.role = prev.role
     if (form.value.adapt) baseConfig.adapt = true
+    // 4.5 熔炉炼化：开启时写入 config.refine（保留已有规格/状态）；取消则不再带 refine
+    if (form.value.refine) {
+      baseConfig.refine = {
+        ...(prev?.refine || {}),
+        enabled: true,
+      }
+    }
 
     const prevRow = form.value._editId && list.value.find((m) => m.id === form.value._editId)
     const body = {
@@ -579,6 +617,10 @@ onMounted(() => {
   align-items: flex-start;
   margin-bottom: 20px;
   gap: 16px;
+}
+.page-search {
+  max-width: 420px;
+  margin-bottom: 16px;
 }
 .page-title {
   margin: 0;

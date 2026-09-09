@@ -35,6 +35,44 @@
             <span v-if="needsHuman" class="human-attention-pill">需人工处理</span>
           </div>
           <div class="header-actions">
+            <el-popover
+              v-model:visible="chatSearchOpen"
+              placement="bottom-end"
+              width="480"
+              trigger="click"
+              popper-class="chat-search-popper"
+            >
+              <template #reference>
+                <el-button size="default" text bg @click="chatSearchOpen = !chatSearchOpen">
+                  搜索聊天
+                </el-button>
+              </template>
+              <div class="chat-search-box">
+                <el-input
+                  v-model="chatSearchQ"
+                  placeholder="搜索本会话聊天（支持拼音/首字母）"
+                  clearable
+                  @input="runChatSearch"
+                  @keyup.enter="runChatSearch"
+                />
+                <div v-if="chatSearchLoading" class="chat-search-empty">搜索中…</div>
+                <template v-else-if="chatSearchHits.length">
+                  <div
+                    v-for="(hit, i) in chatSearchHits"
+                    :key="hit.messageId || i"
+                    class="chat-search-hit"
+                    @click="jumpToChatHit(hit)"
+                  >
+                    <div class="chat-search-hit-meta">
+                      <span class="hit-sender">{{ hit.memberName || hit.role || '系统' }}</span>
+                      <span v-if="hit.sessionTitle" class="hit-session">{{ hit.sessionTitle }}</span>
+                    </div>
+                    <div class="chat-search-hit-snippet">{{ hit.snippet }}</div>
+                  </div>
+                </template>
+                <div v-else class="chat-search-empty">没有匹配的消息</div>
+              </div>
+            </el-popover>
             <el-button
               v-if="detail.session"
               size="default"
@@ -202,9 +240,10 @@
 </template>
 
 <script setup>
-import { onUnmounted, defineAsyncComponent } from 'vue'
+import { onUnmounted, defineAsyncComponent, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
+import { api } from '../api'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
 import SessionRail from './workbench/components/SessionRail.vue'
 import FlowRail from './workbench/components/FlowRail.vue'
@@ -227,6 +266,7 @@ import {
   formatSize,
   startingChat,
   startDemoChat,
+  selectSession,
   terminalPrefs,
   furnaceSurface,
 } from './workbench/composables/useSessionDetail'
@@ -268,6 +308,49 @@ initSessionDetail({ route, router })
 initTerminalSessions()
 initFurnaceSync({ route, router })
 startWorkbench()
+
+// —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——
+const chatSearchOpen = ref(false)
+const chatSearchQ = ref('')
+const chatSearchLoading = ref(false)
+const chatSearchHits = ref([])
+let chatSearchTimer = null
+let chatSearchSeq = 0
+
+function runChatSearch() {
+  // 防抖：避免每次击键都全量扫当前会话消息
+  clearTimeout(chatSearchTimer)
+  chatSearchTimer = setTimeout(fireChatSearch, 200)
+}
+
+async function fireChatSearch() {
+  const q = chatSearchQ.value.trim()
+  const sessionId = activeId.value
+  chatSearchHits.value = []
+  if (!q || !sessionId) return
+  const seq = ++chatSearchSeq
+  chatSearchLoading.value = true
+  try {
+    const res = await api.messages.find(q, sessionId)
+    // 竞态防护：仅采纳与当前查询一致的响应
+    if (seq !== chatSearchSeq) return
+    chatSearchHits.value = res.hits || []
+  } catch (e) {
+    if (seq !== chatSearchSeq) return
+    chatSearchHits.value = []
+    console.warn('[acw] chat search', e?.message || e)
+  } finally {
+    if (seq === chatSearchSeq) chatSearchLoading.value = false
+  }
+}
+
+function jumpToChatHit(hit) {
+  chatSearchOpen.value = false
+  chatSearchQ.value = ''
+  chatSearchHits.value = []
+  // 仅当命中来自其它会话时才切换；同会话命中停留在当前会话（弹层即定位入口）
+  if (hit.sessionId && hit.sessionId !== activeId.value) selectSession(hit.sessionId)
+}
 
 onUnmounted(() => {
   disposeFurnaceSync()
@@ -795,5 +878,49 @@ onUnmounted(() => {
   .wb-welcome {
     padding: 28px 20px 32px;
   }
+}
+</style>
+
+<style>
+/* 聊天搜索弹层（popper teleport 到 body，需全局样式） */
+.chat-search-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-search-empty {
+  color: #909399;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 4px;
+}
+.chat-search-hit {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.chat-search-hit:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.chat-search-hit-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.chat-search-hit-meta .hit-sender {
+  font-weight: 600;
+  font-size: 13px;
+}
+.chat-search-hit-meta .hit-session {
+  font-size: 12px;
+  color: #909399;
+}
+.chat-search-hit-snippet {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+  word-break: break-word;
 }
 </style>

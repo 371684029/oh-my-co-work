@@ -86,12 +86,14 @@ export const FURNACE_ROLE = {
   MEMBER_ADAPT: 'member_adapt',
   NODE_ADAPT: 'node_adapt',
   REVIEW: 'review',
+  REFINE: 'refine',
 }
 export const FURNACE_ROLE_LABEL = {
   session: '群聊主持',
   member_adapt: '成员适配',
   node_adapt: '节点适配',
   review: '系统审核',
+  refine: '炼化',
 }
 export const ADAPT_OPTION_HOVER =
   '开启后由熔炉做适配：优先改代码接到工作台；改不了代码再给该步骤打适配标记。改源文件前会打压缩包备份。'
@@ -1122,3 +1124,6 @@ export function formatScriptUserSummary({ ok, exitCode, stdout, stderr, label })
   }
   return `${who}失败`
 }
+
+// 4.6 全局模糊搜索：统一匹配器（shared/fuzzy）
+export * from "./fuzzy.js"

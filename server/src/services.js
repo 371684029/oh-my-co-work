@@ -8,6 +8,7 @@ import {
   normalizeStepFlow,
   flowNeedsWait,
 } from '@acw/shared'
+import { fuzzyMatch } from '@acw/shared'
 import {
   createSessionFromGroup,
   createSessionFromMember,
@@ -253,6 +254,9 @@ function normalizeSteps(steps) {
     if (s.adapt === true || s.adapt === 'true' || s.adapt === 1) {
       row.adapt = true
     }
+    if (s.refine === true || s.refine === 'true' || s.refine === 1) {
+      row.refine = true
+    }
     return row
   })
 }
@@ -438,6 +442,115 @@ export function getSessionDetail(id) {
         ? { path: session.context.announcementPath, markdown: null }
         : null,
   }
+}
+
+// —— 4.6 聊天消息模糊搜索 ——
+
+const SEARCH_HITS_MAX = 200
+const SEARCH_HITS_PER_SESSION = 20
+
+/** 从一条消息 content 里取可搜索文本（text 字段 / choices 数组 / 纯字符串） */
+function messageText(m) {
+  const c = m.content
+  if (c == null) return ''
+  if (typeof c === 'string') return c
+  let out = ''
+  if (typeof c.text === 'string') out += c.text
+  else if (c.text && typeof c.text === 'object' && typeof c.text.text === 'string') {
+    out += c.text.text
+  }
+  if (Array.isArray(c.choices)) {
+    const parts = c.choices
+      .filter(Boolean)
+      .map((ch) => {
+        if (typeof ch === 'string') return ch
+        if (typeof ch?.text === 'string') return ch.text
+        return ''
+      })
+      .filter(Boolean)
+    if (parts.length) out += (out ? '\n' : '') + parts.join('\n')
+  }
+  return out
+}
+
+/**
+ * 聊天消息模糊搜索（4.6）。匹配 content.text / content.choices 里的文案。
+ * @param {string} query
+ * @param {{ sessionId?: string }} [opts] 指定会话则只搜该会话，否则全库
+ * @returns {{ q, hits: Array<{ sessionId, sessionTitle, nodeInstanceId, messageId, role, memberId, memberName, snippet, at }> }}
+ */
+export function searchMessages(query, opts = {}) {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return { q: String(q || ''), hits: [] }
+  const { sessionId } = opts || {}
+  const hits = []
+
+  const memberName = (() => {
+    const rows = getDb().prepare('SELECT id, display_name FROM members').all()
+    const map = new Map(rows.map((r) => [r.id, r.display_name]))
+    return (mid) => (mid ? map.get(mid) || '' : '')
+  })()
+
+  const collect = (s, rows) => {
+    for (const m of rows) {
+      if (hits.length >= SEARCH_HITS_MAX) return
+      const text = messageText({ ...m, content: parseJson(m.content_json, {}) })
+      if (!text) continue
+      let bestAt = -1
+      let bestSnippet = ''
+      const lines = text.split(/\r?\n/)
+      let matchedAny = false
+      for (let i = 0; i < lines.length; i++) {
+        if (!fuzzyMatch(q, lines[i], 50)) continue
+        matchedAny = true
+        const raw = lines[i].trim()
+        const at = raw.toLowerCase().indexOf(q)
+        const from = Math.max(0, Math.floor((at < 0 ? 0 : at) - 160 / 2))
+        const snippet = raw.slice(from, from + 160)
+        // 分数取该文本块最优（此处以行序近似；命中即认为满足阈值）
+        if (bestSnippet === '') bestSnippet = snippet
+        bestAt = i
+        break
+      }
+      if (!matchedAny) continue
+      hits.push({
+        sessionId: s.id,
+        sessionTitle: s.title,
+        nodeInstanceId: m.node_instance_id || null,
+        messageId: m.id,
+        role: m.role,
+        memberId: m.member_id || null,
+        memberName: memberName(m.member_id),
+        snippet: bestSnippet,
+        at: bestAt,
+      })
+    }
+  }
+
+  if (sessionId) {
+    const s = getDb().prepare('SELECT id, title FROM sessions WHERE id = ?').get(sessionId)
+    if (!s) return { q, hits: [] }
+    const rows = getDb()
+      .prepare('SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC')
+      .all(sessionId)
+    collect(s, rows)
+    return { q, hits: hits.slice(0, SEARCH_HITS_PER_SESSION) }
+  }
+
+  const sessions = getDb().prepare('SELECT id, title FROM sessions ORDER BY updated_at DESC').all()
+  for (const s of sessions) {
+    if (hits.length >= SEARCH_HITS_MAX) break
+    const rows = getDb()
+      .prepare('SELECT * FROM messages WHERE session_id = ? ORDER BY created_at ASC')
+      .all(s.id)
+    let before = hits.length
+    collect(s, rows)
+    // 每会话最多 SEARCH_HITS_PER_SESSION 条
+    if (hits.length - before > SEARCH_HITS_PER_SESSION) {
+      hits.length = before + SEARCH_HITS_PER_SESSION
+    }
+  }
+  return { q, hits }
 }
 
 export function renameSession(id, title) {

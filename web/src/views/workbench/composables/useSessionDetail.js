@@ -1753,6 +1753,11 @@ function nodeHasAdapt(n) {
   return !!(n?.input?.adapt || n?.output?.adapt)
 }
 
+/** 4.5 炼化：节点 input 带 refine 标记（refined / fallback / source）即视为已炼化/走格式化节点 */
+function nodeHasRefine(n) {
+  return !!n?.input?.refine
+}
+
 function isSkippedFlowGroupExpanded(entry) {
   return !!expandedSkippedFlowGroups.value[entry.key]
 }
@@ -2332,6 +2337,7 @@ export {
   toggleSkippedFlowGroup,
   isSkippedFlowGroupExpanded,
   nodeHasAdapt,
+  nodeHasRefine,
   isClonedNode,
   isFlowHistoryNode,
   flowClass,

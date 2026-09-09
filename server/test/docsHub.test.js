@@ -154,6 +154,18 @@ test('searchDocs finds unique needle in announcement', () => {
   assert.ok(r.hits.some((h) => h.sessionId === session.id && h.snippet.includes(token)))
 })
 
+test('searchDocs fuzzy: 拼音命中中文行 + 会话标题命中', () => {
+  const session = seedSession('模糊检索组')
+  writeDoc(session.id, 'nodes/step-01-a.md', '今天完成成员管理模块')
+  docsHub.invalidateDocsCache()
+  // 全拼 chengyuan 命中「成员」
+  const r1 = docsHub.searchDocs('chengyuan')
+  assert.ok(r1.hits.some((h) => h.sessionId === session.id && h.snippet.includes('成员')))
+  // 会话标题命中「模糊检索组」的首字母
+  const r2 = docsHub.searchDocs('mhjs')
+  assert.ok(r2.hits.some((h) => h.sessionId === session.id && h.kind === 'index'))
+})
+
 test('exportGroupZip returns slug and a zip file', () => {
   const session = seedSession('导出组甲')
   writeDoc(session.id, 'ANNOUNCEMENT.md', '导出内容')

@@ -21,6 +21,7 @@ import {
 } from '@acw/shared'
 import { getAppSettings } from '../appSettings.js'
 import { prepareAdaptForMember, adaptStatusText } from '../adaptBackup.js'
+import { refineOutputForNode, produceRefineSpec, persistRefineSpec } from '../refine.js'
 import {
   resolveAdaptFurnaceRole,
 } from '../furnaceContext.js'
@@ -39,6 +40,7 @@ import {
   memberNeedsProjectParams,
   hasProjectParam1,
   resolveParamsMap,
+  parseMemberConfig,
 } from './store.js'
 import { skipArchiveNode, dismissPendingArchiveIfAny, archiveSession, refreshSessionAnnouncement } from './archive.js'
 
@@ -401,13 +403,56 @@ export async function advance(sessionId) {
     if (!afterRun || afterRun.status === SESSION_STATUS.ARCHIVED) {
       return
     }
+    // 4.5 熔炉炼化：节点完成后，把成员输入/输出整理成文档友好形态。
+    // 已炼化（有 config.refine.format）→ 按规格；未炼化但该步勾选炼化 → 走格式化节点。
+    const stepRefine = !!(step?.refine || parseJson(node.input_json, {}).refine)
+    // store.js 的 getMember 返回原始行（config 为 config_json 字符串），需 parseMemberConfig 解析。
+    const memberCfg = parseMemberConfig(member)
+    const memberForRefine = { ...member, config: memberCfg }
+    let refineOut = refineOutputForNode(result, memberForRefine, { forceRefine: stepRefine })
+    // 首次炼化：成员已开启炼化但尚无规格 → 产出并回写 config.refine.format，本轮起按规格。
+    if (refineOut.source === 'formatter' && memberCfg.refine?.enabled && !memberCfg.refine.format) {
+      try {
+        const spec = produceRefineSpec(memberForRefine)
+        const updated = persistRefineSpec(memberForRefine, spec)
+        refineOut = refineOutputForNode(result, updated, { forceRefine: stepRefine })
+      } catch (e) {
+        console.warn('[acw] refine spec', e?.message || e)
+      }
+    }
+    const refineInput =
+      refineOut.source !== 'none'
+        ? {
+            ...memberInput,
+            refine: {
+              enabled: true,
+              refined: refineOut.refined,
+              fallback: refineOut.fallback,
+              source: refineOut.source,
+            },
+            refineFormatted: refineOut.formatted,
+          }
+        : memberInput
     persistNodeIo(sessionId, node.id, {
-      input: memberInput,
+      input: refineInput,
       output: result,
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
       finished: true,
     })
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
+
+    if (refineOut.source !== 'none') {
+      addMessage(sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: {
+          text: `炼化：${
+            refineOut.refined ? '按成员炼化规格' : '格式化节点'
+          }已整理本次产出${refineOut.fallback ? '（成员尚未炼化，临时走格式化节点）' : ''}。`,
+        },
+      })
+    }
 
     // 节点完成：弹窗脚本默认保留黑窗；detach 同理。下一成员步开始时会统一释放。
     if (!result?.detached && !result?.preserveConsole) {

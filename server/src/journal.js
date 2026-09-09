@@ -23,6 +23,18 @@ function toMdBlock(obj) {
 }
 
 /**
+ * 炼化产物优先：节点上若带 `refineFormatted`（熔炉炼化后的文档友好正文），直接采用。
+ * @returns {string|null}
+ */
+export function refinedDocText(obj) {
+  if (obj && typeof obj === 'object') {
+    const t = obj.refineFormatted
+    if (typeof t === 'string' && t.trim()) return t
+  }
+  return null
+}
+
+/**
  * 写入/更新单节点 markdown
  * @returns {string} 相对 dataRoot 的路径
  */
@@ -43,6 +55,8 @@ export function writeNodeJournal({
     .replace(/\\/g, '/')
 
   const status = node.status || ''
+  const refinedOut = refinedDocText(input) || refinedDocText(output)
+  const outBlock = refinedOut ? `${refinedOut}\n` : toMdBlock(output)
   const body = `---
 session_id: "${yamlEscape(sessionId)}"
 session_title: "${yamlEscape(sessionTitle || '')}"
@@ -65,7 +79,7 @@ ${toMdBlock(input)}
 
 ## 输出
 
-${toMdBlock(output)}
+${outBlock}
 `
 
   fs.writeFileSync(abs, body, 'utf8')
@@ -177,7 +191,8 @@ export function writeSessionAnnouncement({
       inObj,
       outObj,
       inText: formatBusinessIo(inObj, 'input'),
-      outText: formatBusinessIo(outObj, 'output'),
+      outText:
+        refinedDocText(inObj) || refinedDocText(outObj) || formatBusinessIo(outObj, 'output'),
       outDigest: digestIoValue(outObj, { maxLen: 120 }),
       statusLabel: STATUS_LABEL[n.status] || n.status || '—',
     }

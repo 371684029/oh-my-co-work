@@ -5,10 +5,12 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { StringDecoder } from 'node:string_decoder'
 import { DATA_ROOT, getDb, parseJson } from './db.js'
 import { openLocalPath } from './fsBrowser.js'
 import { saveSessionAnnouncement } from './engine.js'
 import { writeZipArchive } from './adaptBackup.js'
+import { fuzzyMatch } from '@acw/shared'
 
 const MAX_READ_BYTES = 1024 * 1024
 const CACHE_TTL_MS = 60_000
@@ -46,11 +48,15 @@ function statFile(abs) {
 function scanSessionDir(sessionId) {
   const dir = path.join(journalRoot(), sessionId)
   const files = []
+  const seen = new Set()
   const push = (relName) => {
     const hit = classify(relName)
     if (!hit) return
     const abs = path.join(dir, ...relName.split('/'))
     if (!fs.existsSync(abs)) return
+    // 根目录误命名的 step-*.md 会被 classify 归一为 nodes/step-*.md，与 nodes 下真实文件指向同一绝对路径，去重避免重复条目。
+    if (seen.has(abs)) return
+    seen.add(abs)
     const st = statFile(abs)
     files.push({ name: hit.normalized, kind: hit.kind, title: hit.title, step: hit.step, ...st })
   }
@@ -239,18 +245,27 @@ export function readDoc(sessionId, name) {
   const n = truncated ? MAX_READ_BYTES : st.size
   const buf = Buffer.alloc(n)
   const fd = fs.openSync(abs, 'r')
+  let bytesRead = 0
   try {
-    fs.readSync(fd, buf, 0, n, 0)
+    // 循环读取：POSIX 允许单次 read 短读，读满 n 避免尾部残留 NUL。
+    while (bytesRead < n) {
+      const r = fs.readSync(fd, buf, bytesRead, n - bytesRead, bytesRead)
+      if (r <= 0) break
+      bytesRead += r
+    }
   } finally {
     fs.closeSync(fd)
   }
+  // StringDecoder 缓冲尾部不完整的多字节序列（不输出 U+FFFD），正文末尾被切断的半个字符被安全丢弃，
+  // 从而在 1MB 字节上限内避免产生替换字符。
+  const content = new StringDecoder('utf8').write(buf.subarray(0, bytesRead))
   return {
     sessionId,
     name: hit.normalized,
     kind: hit.kind,
     size: st.size,
     mtimeMs: st.mtimeMs,
-    content: buf.toString('utf8'),
+    content,
     truncated,
   }
 }
@@ -287,7 +302,9 @@ const PER_FILE_HITS = 3
 const SNIPPET_LEN = 160
 
 /**
- * 全文搜索（内存扫描，不引 FTS）：遍历白名单文档，逐行匹配关键词。
+ * 全文搜索（内存扫描，不引 FTS）：遍历白名单文档，逐行做模糊/拼音匹配。
+ * 匹配阈值 50（到「子串/全拼/首字母」级，不含裸子序列，避免长行噪音）。
+ * 另按会话/群标题命中，作为文档级入口。
  * @returns {{ q, hits: Array<{ sessionId, sessionTitle, groupTitle, name, kind, title, line, snippet, mtimeMs }> }}
  */
 export function searchDocs(q) {
@@ -296,6 +313,23 @@ export function searchDocs(q) {
   const { sessions } = scanAll()
   const hits = []
   for (const s of sessions) {
+    // 会话/群标题命中：作为文档级入口
+    if (
+      hits.length < MAX_SEARCH_HITS &&
+      (fuzzyMatch(needle, s.sessionTitle, 50) || fuzzyMatch(needle, s.groupTitle, 50))
+    ) {
+      hits.push({
+        sessionId: s.sessionId,
+        sessionTitle: s.sessionTitle,
+        groupTitle: s.groupTitle,
+        name: 'README.md',
+        kind: 'index',
+        title: `会话「${s.sessionTitle}」`,
+        line: 0,
+        snippet: `群：${s.groupTitle || ''} 会话：${s.sessionTitle}`,
+        mtimeMs: s.files.reduce((m, f) => Math.max(m, f.mtimeMs), 0) || 0,
+      })
+    }
     for (const f of s.files) {
       if (hits.length >= MAX_SEARCH_HITS) break
       let content
@@ -307,10 +341,10 @@ export function searchDocs(q) {
       const lines = content.split(/\r?\n/)
       let inFile = 0
       for (let i = 0; i < lines.length && inFile < PER_FILE_HITS; i++) {
-        if (!lines[i].toLowerCase().includes(needle)) continue
+        if (!fuzzyMatch(needle, lines[i], 50)) continue
         const raw = lines[i].trim()
         const at = raw.toLowerCase().indexOf(needle)
-        const from = Math.max(0, Math.floor(at - SNIPPET_LEN / 2))
+        const from = Math.max(0, Math.floor((at < 0 ? 0 : at) - SNIPPET_LEN / 2))
         const snippet = raw.slice(from, from + SNIPPET_LEN)
         hits.push({
           sessionId: s.sessionId,

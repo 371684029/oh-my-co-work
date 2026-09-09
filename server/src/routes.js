@@ -29,6 +29,7 @@ import {
   refreshSessionAnnouncement,
   saveSessionAnnouncement,
   restartFromNode,
+  searchMessages,
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
@@ -604,6 +605,17 @@ router.post('/sessions/:id/messages', async (req, res) => {
   }
 })
 
+/** 4.6 聊天消息模糊搜索（跨会话）。?q=关键词 &sessionId=可选限定某会话。 */
+router.get('/messages/search', (req, res) => {
+  try {
+    const q = String(req.query.q || '')
+    const sessionId = req.query.sessionId ? String(req.query.sessionId) : undefined
+    res.json(searchMessages(q, { sessionId }))
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 /** 上传附件（支持多文件；前端粘贴/选择后先上传再发消息） */
 router.post('/sessions/:id/files', (req, res) => {
   uploadMiddleware(req, res, (err) => {
@@ -858,7 +870,8 @@ router.get('/docs/export', (req, res) => {
     tmp = out.path
     const downloadName = String(out.filename || `${out.slug || 'docs'}.zip`).replace(/["\r\n\\]/g, '')
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    // 注意：res.download 会自行设置（并正确编码非 ASCII 的）Content-Disposition，
+    // 手动设置该头会被覆盖，故不在此设置，避免 RFC 6266 非法的裸非 ASCII filename。
     res.on('finish', cleanup)
     res.on('close', cleanup)
     res.download(out.path, downloadName, () => {
@@ -888,7 +901,7 @@ router.get('/docs/export-all', (_req, res) => {
     tmp = out.path
     const downloadName = String(out.filename || 'oh-my-co-work-all-docs.zip').replace(/["\r\n\\]/g, '')
     res.setHeader('Content-Type', 'application/zip')
-    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`)
+    // res.download 自行设置并正确编码 Content-Disposition，避免手动设置非法非 ASCII 头。
     res.on('finish', cleanup)
     res.on('close', cleanup)
     res.download(out.path, downloadName, () => {

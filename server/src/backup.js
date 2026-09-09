@@ -287,11 +287,17 @@ export function restoreBackup(filename, deps = {}) {
       restoreFromAside(aside)
     } catch (rb) {
       console.warn('[acw] restore rollback', rb?.message || rb)
+      // 回滚失败也必须在返回错误上暴露，避免调用方误以为已恢复原状。
+      err.rollbackError = rb
     }
     try {
       initDbFn()
     } catch (reopen) {
-      console.warn('[acw] restore reinit', reopen?.message || reopen)
+      // 二次重开失败不能只打 warn：数据库此时已关闭、连接为 null，
+      // 必须通过返回错误让调用方感知进程处于 DB 下线状态。
+      console.error('[acw] restore reinit', reopen?.message || reopen)
+      err.dbReopenFailed = true
+      err.dbReopenError = reopen
     }
     throw err
   } finally {

@@ -1,6 +1,6 @@
 # AGENT.md — oh-my-co-work 项目协作指引
 
-> 最后更新: 2026-09-02 · 适用于 oh-my-co-work v4.2.0
+> 最后更新: 2026-09-09 · 适用于 oh-my-co-work v4.2.0
 
 本文件面向所有在该仓库工作的贡献者和 AI Agent。阅读后再动手，能减少 80% 的格式和路径翻车。
 
@@ -166,6 +166,7 @@ start.bat
 5. **修改即文档**：改了路由、状态枚举、成员配置 schema，必须同步 README 或 docs
 6. **先看 tests**：修改 engine / runners / routes 前，先读 `server/test/` 同名或相邻测试
 7. **终端相关先看 terminalService.js**：不要直接在 engine 里拼 PTY 命令
+8. **编码任务直接动手**：收到编码任务时直接写代码，第一响应必须是代码。禁止输出规划、拆解、步骤说明；除非用户明确要求「先规划再写」。
 
 ---
 

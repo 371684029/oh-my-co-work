@@ -8,7 +8,15 @@
       <el-button type="primary" @click="openCreate()">新建群模板</el-button>
     </div>
 
-    <el-table :data="list" stripe>
+    <el-input
+      v-model="searchQ"
+      class="page-search"
+      placeholder="搜索群模板（支持拼音/首字母）"
+      clearable
+      :prefix-icon="SearchIcon"
+    />
+
+    <el-table :data="filteredList" stripe>
       <el-table-column prop="title" label="名称" />
       <el-table-column prop="work_folder" label="工作文件夹" show-overflow-tooltip />
       <el-table-column label="步骤数" width="90">
@@ -78,6 +86,20 @@
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
             <strong>流程步骤</strong>
             <el-button size="small" @click="addStep">+ 添加步骤</el-button>
+            <el-button size="small" @click="showBatch = !showBatch">+ 批量绑成员</el-button>
+          </div>
+          <div v-if="showBatch" class="batch-add">
+            <el-select
+              v-model="batchMemberIds"
+              multiple
+              filterable
+              placeholder="选择成员（可多选，每个成员生成一个步骤）"
+              style="flex: 1; min-width: 200px"
+            >
+              <el-option v-for="m in members" :key="m.id" :label="m.display_name" :value="m.id" />
+            </el-select>
+            <el-checkbox v-model="batchRefine" class="capture-check">熔炉炼化</el-checkbox>
+            <el-button size="small" type="primary" @click="applyBatchMembers">添加为步骤</el-button>
           </div>
           <div
             v-for="(s, i) in form.steps"
@@ -127,6 +149,9 @@
               </el-checkbox>
               <el-tooltip :content="adaptHover" placement="top" :show-after="300">
                 <el-checkbox v-model="s.adapt" class="capture-check">是否适配</el-checkbox>
+              </el-tooltip>
+              <el-tooltip content="开启后由熔炉炼化：格式化该步骤成员的输入/输出为文档友好形态；成员未炼化时走格式化节点。请为成员勾选「熔炉炼化」。" placement="top" :show-after="300">
+                <el-checkbox v-model="s.refine" class="capture-check">熔炉炼化</el-checkbox>
               </el-tooltip>
               <el-button size="small" @click="move(i, -1)" :disabled="i === 0">上移</el-button>
               <el-button size="small" @click="move(i, 1)" :disabled="i === form.steps.length - 1">
@@ -235,19 +260,36 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { ADAPT_OPTION_HOVER, isFurnaceMember } from '@acw/shared'
+import { fuzzySearch } from '@acw/shared'
 
 const adaptHover = ADAPT_OPTION_HOVER
 
 const router = useRouter()
 const list = ref([])
+const searchQ = ref('')
+const SearchIcon = Search
+// 群模板模糊搜索（拼音/首字母/大小写/子序列），多字段取最优
+const filteredList = computed(() => {
+  const q = searchQ.value
+  if (!q || !q.trim()) return list.value
+  return fuzzySearch(list.value, q, (g) => [
+    g.title,
+    g.description,
+    g.work_folder,
+  ]).items.map((h) => h.item)
+})
 const members = ref([])
 const appSettings = ref({ admin: null, resolvedAdmin: null })
 const drawer = ref(false)
 const drawerTitle = ref('')
 const readonly = ref(false)
+const showBatch = ref(false)
+const batchMemberIds = ref([])
+const batchRefine = ref(false)
 
 const globalAdminLabel = computed(() => {
   const r = appSettings.value?.resolvedAdmin
@@ -318,6 +360,7 @@ function stepForm(s = {}, index = 0) {
     flowKeys,
     captureParams: !!captureParams,
     adapt: !!s.adapt,
+    refine: !!s.refine,
   }
 }
 
@@ -477,6 +520,32 @@ function addStep() {
   )
 }
 
+// —— 4.5 群模板批量绑成员（末班）：多选成员 → 每个成员生成一个步骤，可逐步炼化 ——
+function applyBatchMembers() {
+  const flow = globalDefaultFlow()
+  const selected = batchMemberIds.value
+  if (!selected.length) {
+    ElMessage.warning('请先选择成员')
+    return
+  }
+  for (const id of selected) {
+    const mem = members.value.find((m) => m.id === id)
+    form.value.steps.push(
+      stepForm({
+        title: mem?.display_name || '新步骤',
+        type: 'member',
+        memberId: id,
+        flow,
+        refine: batchRefine.value,
+      }),
+    )
+  }
+  batchMemberIds.value = []
+  batchRefine.value = false
+  showBatch.value = false
+  ElMessage.success(`已添加 ${selected.length} 个成员步骤`)
+}
+
 function move(i, d) {
   const j = i + d
   const arr = form.value.steps
@@ -549,6 +618,16 @@ onMounted(load)
   align-items: flex-start;
   margin-bottom: 20px;
   gap: 16px;
+}
+.page-search {
+  max-width: 420px;
+  margin-bottom: 16px;
+}
+.batch-add {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 .page-title {
   margin: 0;

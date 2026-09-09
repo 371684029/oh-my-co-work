@@ -105,6 +105,15 @@
                       适配
                     </el-tag>
                     <el-tag
+                      v-if="nodeHasRefine(n)"
+                      size="small"
+                      type="success"
+                      effect="plain"
+                      round
+                    >
+                      炼化
+                    </el-tag>
+                    <el-tag
                       v-if="n.step_type === 'offsite'"
                       size="small"
                       type="warning"
@@ -571,6 +580,7 @@ import {
   isClonedNode,
   toggleNodeExpand,
   nodeHasAdapt,
+  nodeHasRefine,
   stepTypeLabel,
   isCurrent,
   offsiteEntryLabel,

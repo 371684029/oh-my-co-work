@@ -4,6 +4,10 @@
   "type": "module",
   "main": "index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./fuzzy": "./fuzzy.js"
+  },
+  "dependencies": {
+    "pinyin-pro": "^3.26.0"
   }
 }
