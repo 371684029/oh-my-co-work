@@ -4,31 +4,31 @@
       <button
         type="button"
         class="wb-right-tab"
-        :class="{ active: rightTab === 'flow' }"
-        @click="rightTab = 'flow'"
+        :class="{ active: flowStore.rightTab === 'flow' }"
+        @click="flowStore.rightTab = 'flow'"
       >
         流程
       </button>
       <button
         type="button"
         class="wb-right-tab"
-        :class="{ active: rightTab === 'announce' }"
-        @click="rightTab = 'announce'"
+        :class="{ active: flowStore.rightTab === 'announce' }"
+        @click="flowStore.rightTab = 'announce'"
       >
         群报告
       </button>
       <button
         type="button"
         class="wb-right-tab"
-        :class="{ active: rightTab === 'docs' }"
-        @click="rightTab = 'docs'"
+        :class="{ active: flowStore.rightTab === 'docs' }"
+        @click="flowStore.rightTab = 'docs'"
       >
         文档中心
       </button>
     </div>
 
     <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
-    <div v-show="rightTab === 'flow'" class="wb-right-pane">
+    <div v-show="flowStore.rightTab === 'flow'" class="wb-right-pane">
       <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
         已归档
         <template v-if="archiveOutcomeTag">
@@ -75,7 +75,7 @@
               :class="[
                 flowClass(n),
                 {
-                  open: expandedNodeId === n.id,
+                  open: flowStore.expandedNodeId === n.id,
                   'is-extra': n.step_type === 'offsite',
                   'is-offsite-current': isCurrentOffsiteSegment(n),
                   'is-offsite-archived': n.step_type === 'offsite' && !!n.output?.archived,
@@ -223,7 +223,7 @@
                     </span>
                     <span v-if="n.gate" class="meta-gate"> · 待确认</span>
                     <span class="flow-expand-caret">{{
-                      expandedNodeId === n.id ? '收起' : '展开'
+                      flowStore.expandedNodeId === n.id ? '收起' : '展开'
                     }}</span>
                   </div>
                 </button>
@@ -241,7 +241,7 @@
                     从这里继续
                   </el-button>
                 </div>
-                <div v-if="expandedNodeId === n.id" class="flow-io">
+                <div v-if="flowStore.expandedNodeId === n.id" class="flow-io">
                   <div class="flow-io-block">
                     <div class="flow-io-label">输入（用户说了啥）</div>
                     <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
@@ -289,7 +289,7 @@
     </div>
 
     <!-- Tab：群报告（# 参数 + 各节点入出 + 备注） -->
-    <div v-show="rightTab === 'announce'" class="wb-right-pane announce-pane">
+    <div v-show="flowStore.rightTab === 'announce'" class="wb-right-pane announce-pane">
       <div class="announce-toolbar">
         <span class="announce-title">群报告</span>
         <div class="announce-actions">
@@ -470,7 +470,7 @@
     </div>
 
     <!-- Tab：文档中心（第三栏集成） -->
-    <div v-show="rightTab === 'docs'" class="wb-right-pane docs-pane">
+    <div v-show="flowStore.rightTab === 'docs'" class="wb-right-pane docs-pane">
       <div class="docs-rail-toolbar">
         <div class="docs-rail-title-wrap">
           <AppLogo size="sm" class="docs-rail-logo" />
@@ -553,6 +553,7 @@
 </template>
 
 <script setup>
+import { useFlowStore } from '../../../stores/flow.js'
 import {
   detail,
   activeId,
@@ -561,8 +562,6 @@ import {
   offsiteMode,
   activeOffsiteNode,
   needsHuman,
-  rightTab,
-  expandedNodeId,
   flowEntries,
   flowAnchorNodeId,
   announceProgress,
@@ -608,6 +607,8 @@ import AppLogo from '../../../components/AppLogo.vue'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { openPath } from '../composables/useDocsHub'
+
+const flowStore = useFlowStore()
 
 const DOC_NAME_RE = /^(ANNOUNCEMENT\.md|README\.md|nodes\/step-\d{2}-[A-Za-z0-9_-]+\.md)$/
 
@@ -742,7 +743,7 @@ async function onExportRailGroupDocs() {
 }
 
 watch(
-  [activeId, () => rightTab.value],
+  [activeId, () => flowStore.rightTab],
   ([newId, newTab]) => {
     if (newTab === 'docs' && newId) {
       loadRailDocs()

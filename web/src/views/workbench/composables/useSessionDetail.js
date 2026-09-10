@@ -15,6 +15,7 @@ import {
 } from '@acw/shared'
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
+import { useFlowStore } from '../../../stores/flow.js'
 
 
 /**
@@ -61,9 +62,6 @@ const pendingFiles = ref([])
 const uploading = ref(false)
 
 // ===== 流程轨 =====
-const expandedNodeId = ref(null)
-const expandedSkippedFlowGroups = ref({})
-const rightTab = ref('flow')
 
 // ===== 群报告 =====
 const announceLoading = ref(false)
@@ -1147,7 +1145,7 @@ function flowClass(n) {
 }
 
 function toggleNodeExpand(n) {
-  expandedNodeId.value = expandedNodeId.value === n.id ? null : n.id
+  useFlowStore().expandedNodeId = useFlowStore().expandedNodeId === n.id ? null : n.id
 }
 
 /** 流程轨 I/O：业务摘要（用户输入 / 完成概况），不堆 id·路径·命令 */
@@ -1196,8 +1194,8 @@ async function selectSession(id) {
   activeId.value = id
   terminalBridge.resetTerminals?.()
   _router.replace(`/workbench/${id}`)
-  rightTab.value = 'flow' // 默认展示流程 Tab
-  expandedSkippedFlowGroups.value = {}
+  useFlowStore().rightTab = 'flow' // 默认展示流程 Tab
+  useFlowStore().expandedSkippedFlowGroups = {}
   terminalBridge.bindWs?.(id)
   await Promise.all([loadDetail(id), terminalBridge.loadTerminals?.(id)])
   terminalBridge.revealFurnaceTui?.()
@@ -1750,12 +1748,12 @@ function nodeHasRefine(n) {
 }
 
 function isSkippedFlowGroupExpanded(entry) {
-  return !!expandedSkippedFlowGroups.value[entry.key]
+  return !!useFlowStore().expandedSkippedFlowGroups[entry.key]
 }
 
 function toggleSkippedFlowGroup(entry) {
-  expandedSkippedFlowGroups.value = {
-    ...expandedSkippedFlowGroups.value,
+  useFlowStore().expandedSkippedFlowGroups = {
+    ...useFlowStore().expandedSkippedFlowGroups,
     [entry.key]: !isSkippedFlowGroupExpanded(entry),
   }
 }
@@ -1817,7 +1815,7 @@ const flowAnchorNodeId = computed(() => {
 })
 
 function scrollFlowToAnchor() {
-  if (rightTab.value !== 'flow') return
+  if (useFlowStore().rightTab !== 'flow') return
   const id = flowAnchorNodeId.value
   if (!id) return
   window.clearTimeout(flowScrollTimer)
@@ -1851,12 +1849,12 @@ async function restartFromNode(n) {
       nodeInstanceId: n.id,
       stepIndex: n.step_index,
     })
-    rightTab.value = 'flow'
+    useFlowStore().rightTab = 'flow'
     useComposerStore().footerCollapsed = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     const focusId = r.nodeInstanceId || n.id
-    expandedNodeId.value = focusId
+    useFlowStore().expandedNodeId = focusId
     scrollFlowToAnchor()
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
     const suffix = wasArchived
@@ -2166,9 +2164,9 @@ export function resetSessionState() {
   pendingFiles.value = []
   uploading.value = false
   useComposerStore().footerCollapsed = false
-  expandedNodeId.value = null
-  expandedSkippedFlowGroups.value = {}
-  rightTab.value = 'flow'
+  useFlowStore().expandedNodeId = null
+  useFlowStore().expandedSkippedFlowGroups = {}
+  useFlowStore().rightTab = 'flow'
   announceLoading.value = false
   announceOpenLoading.value = false
   notesSaving.value = false
@@ -2204,7 +2202,7 @@ export function initSessionDetail({ route, router }) {
   // 流程轨锚定滚动
   _stopWatchers.push(
     watch(
-      [flowAnchorNodeId, () => rightTab.value, () => detail.value?.nodes?.length],
+      [flowAnchorNodeId, () => useFlowStore().rightTab, () => detail.value?.nodes?.length],
       () => {
         scrollFlowToAnchor()
       },
@@ -2234,9 +2232,6 @@ export {
   senderRef,
   pendingFiles,
   uploading,
-  expandedNodeId,
-  expandedSkippedFlowGroups,
-  rightTab,
   announceLoading,
   announceOpenLoading,
   notesSaving,
