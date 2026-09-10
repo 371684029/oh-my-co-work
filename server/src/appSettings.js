@@ -199,13 +199,13 @@ function ensureSettingsFile() {
 
 /** 未人工确认归档时，超时自动归档（小时）；默认 3 */
 function defaultUpdateCheckSettings() {
-  // 4.7.0：降低打扰，启动检查更新默认关，交由关于面板手点
-  return { startup: false }
+  // 4.7.0：降低打扰，启动检查更新默认开启（仅用 Message 轻提示不弹窗）
+  return { startup: true }
 }
 
 function normalizeUpdateCheck(raw) {
   const r = raw && typeof raw === 'object' ? raw : {}
-  return { startup: r.startup === true }
+  return { startup: r.startup !== false }
 }
 
 export function normalizeAutoArchiveHours(v) {

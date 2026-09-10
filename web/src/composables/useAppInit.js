@@ -54,7 +54,7 @@ export function useAppInit() {
   async function startupCheckUpdate() {
     try {
       const s = await api.appSettings.get()
-      if (s.updateCheck?.startup !== true) return
+      if (s.updateCheck?.startup === false) return
       const r = await api.update.check()
       if (!r.checked || !r.hasUpdate) return
       ElMessage.info({
