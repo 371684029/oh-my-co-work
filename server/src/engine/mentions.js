@@ -1,7 +1,7 @@
 // @成员 临时协助：提及解析、串行执行队列、场外节点结果落地。
 // Imports: store, offsite.
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import { runMember } from '../runners.js'
 import {
   SESSION_STATUS,
@@ -308,7 +308,7 @@ async function runMentionedMembers(sessionId, text) {
     planned: mode === OFFSITE_MODE.PLANNED,
   }
   updateSession(sessionId, { context_json: JSON.stringify(ctxLive) })
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {
       sessionId,

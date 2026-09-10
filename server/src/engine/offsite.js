@@ -1,7 +1,7 @@
 // 场外协助（@成员 插队）节点：插入、复用、回归主线归档。
 // Imports: store only (below archive/advance/gates in the engine DAG).
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import {
   NODE_STATUS,
   OFFSITE_MODE,
@@ -263,7 +263,7 @@ export function archiveOffsiteOnReturnToMain(sessionId, {
     })
   }
 
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {
       sessionId,

@@ -44,3 +44,14 @@ export { handleGateAction } from './engine/gates.js'
 export { parseMemberMentions, invokeMentionedMembers } from './engine/mentions.js'
 
 export { postUserMessage } from './engine/userInput.js'
+
+import { engineBus } from './engine/events.js'
+import { emitSession, emitAll } from './bus.js'
+
+engineBus.on('ws_broadcast_session', (sessionId, payload) => {
+  emitSession(sessionId, payload)
+})
+
+engineBus.on('ws_broadcast_all', (payload) => {
+  emitAll(payload)
+})

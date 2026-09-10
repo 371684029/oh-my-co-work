@@ -1,7 +1,7 @@
 // 闸门动作：幂等、启动确认、归档确认、人工输入、同意/拒绝。
 // Imports: store, offsite, archive, adapterEvents, sessionLifecycle, advance.
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import {
   SESSION_STATUS,
   NODE_STATUS,
@@ -332,7 +332,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       } catch (e) {
         console.warn('[acw] furnace situation kickoff', e?.message || e)
       }
-      emitSession(sessionId, {
+      engineBus.emit('ws_broadcast_session', sessionId, {
         type: 'session.status',
         payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
       })

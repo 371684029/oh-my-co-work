@@ -1,7 +1,7 @@
 // 会话生命周期：创建（群聊 / 成员单聊）、克隆续跑、中断恢复。
 // Imports: store, offsite, archive, advance (gates sits above).
 import { getDb, parseJson } from '../db.js'
-import { emitSession, emitAll } from '../bus.js'
+import { engineBus } from './events.js'
 import { killSessionProcesses } from '../processRegistry.js'
 import {
   SESSION_STATUS,
@@ -153,8 +153,8 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       type: 'status',
       content: { text: `已与「${group.title}」开聊。发消息继续；@ 其他成员可临时协助。` },
     })
-    emitAll({ type: 'session.created', payload: { sessionId, groupId } })
-    emitSession(sessionId, {
+    engineBus.emit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
+    engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
     })
@@ -192,12 +192,12 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     },
   })
 
-  emitAll({ type: 'session.created', payload: { sessionId, groupId } })
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'gate.request',
     payload: { mode: 'session_start', sessionId, groupTitle: group.title },
   })
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: { sessionId, status: SESSION_STATUS.WAITING_HUMAN, pendingStart: true },
   })
@@ -554,7 +554,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         },
       },
     })
-    emitSession(sessionId, {
+    engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'session.restart',
       payload: {
         sessionId,
@@ -565,7 +565,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         forwardJump: true,
       },
     })
-    emitSession(sessionId, {
+    engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: {
         sessionId,
@@ -575,7 +575,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         forwardJump: true,
       },
     })
-    emitAll({
+    engineBus.emit('ws_broadcast_all', {
       type: 'session.restart',
       payload: { sessionId, stepIndex: idx, cloned: false, forwardJump: true },
     })
@@ -656,7 +656,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     },
   })
 
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.restart',
     payload: {
       sessionId,
@@ -668,7 +668,7 @@ export async function restartFromNode(sessionId, opts = {}) {
       sourceNodeInstanceId: target.id,
     },
   })
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {
       sessionId,
@@ -677,7 +677,7 @@ export async function restartFromNode(sessionId, opts = {}) {
       cloned: true,
     },
   })
-  emitAll({
+  engineBus.emit('ws_broadcast_all', {
     type: 'session.restart',
     payload: { sessionId, stepIndex: startIdx, cloned: true },
   })

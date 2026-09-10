@@ -1,7 +1,7 @@
 // 归档 / 解档 / 中断标记 / 群报告台账。
 // Imports: store, offsite (below advance/gates in the engine DAG).
 import { getDb, parseJson } from '../db.js'
-import { emitSession, emitAll } from '../bus.js'
+import { engineBus } from './events.js'
 import {
   NODE_STATUS,
   SESSION_STATUS,
@@ -201,7 +201,7 @@ export function refreshSessionAnnouncement(sessionId, opts = {}) {
     ctx.announcementManual = false
     ctx.announcementModes = usedModes || ['concise']
     updateSession(sessionId, { context_json: JSON.stringify(ctx) })
-    emitSession(sessionId, {
+    engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'announcement.updated',
       payload: { sessionId, path: rel, modes: usedModes, manual: false },
     })
@@ -222,7 +222,7 @@ export function saveSessionAnnouncement(sessionId, markdown) {
   ctx.announcementUpdatedAt = new Date().toISOString()
   ctx.announcementManual = true
   updateSession(sessionId, { context_json: JSON.stringify(ctx) })
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'announcement.updated',
     payload: { sessionId, path: rel, manual: true },
   })
@@ -320,11 +320,11 @@ export function archiveSession(sessionId, reason = 'manual') {
       /* ignore */
     }
   }
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.archived',
     payload: { sessionId, reason, processesKilled: killed.killed, pids: killed.pids },
   })
-  emitAll({
+  engineBus.emit('ws_broadcast_all', {
     type: 'session.archived',
     payload: { sessionId, reason, processesKilled: killed.killed },
   })
@@ -379,11 +379,11 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
       },
     })
   }
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: { sessionId, status: nextStatus, unarchived: true },
   })
-  emitAll({
+  engineBus.emit('ws_broadcast_all', {
     type: 'session.status',
     payload: { sessionId, status: nextStatus, unarchived: true },
   })
@@ -449,14 +449,14 @@ export function markInterruptedOnBoot() {
         policy: '不会自动推进；须人工选择。继续时若有未完成 running 节点会从该步重跑。释放进程请到设置。',
       },
     })
-    emitSession(s.id, {
+    engineBus.emit('ws_broadcast_session', s.id, {
       type: 'session.interrupted',
       payload: { sessionId: s.id, previousStatus: s.status },
     })
     ids.push(s.id)
   }
   if (ids.length) {
-    emitAll({ type: 'sessions.interrupted', payload: { ids } })
+    engineBus.emit('ws_broadcast_all', { type: 'sessions.interrupted', payload: { ids } })
     console.log(`[acw] interrupted ${ids.length} session(s) for recovery`)
   }
   // 已归档会话：清掉残留 console pid 文件，避免误报占用

@@ -2,7 +2,7 @@
 // Failures must not throw into the PTY watcher.
 // Imports: store, archive (below advance/gates in the engine DAG).
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import { SESSION_STATUS, nowIso } from '@acw/shared'
 import { appendAdapterReply } from '../terminal/adapters/jsonl.js'
 import { getSession, updateSession, addMessage, updateNode, updateMessageContent } from './store.js'
@@ -81,7 +81,7 @@ export function applyAdapterEvent({
           humanAction: 'pending',
         },
       })
-      emitSession(sessionId, {
+      engineBus.emit('ws_broadcast_session', sessionId, {
         type: 'gate.request',
         payload: {
           mode: 'adapter_question',

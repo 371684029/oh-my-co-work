@@ -1,7 +1,7 @@
 // Engine primitives: DB row access, session/node/message writes, ctx helpers.
 // Lowest engine layer — imported by every other engine module; imports nothing from engine/.
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import { writeNodeJournal } from '../journal.js'
 import {
   SYSTEM_PARAM_KEYS,
@@ -167,7 +167,7 @@ export function addMessage(sessionId, msg) {
     )
     .run(row)
   const out = { ...row, content: msg.content ?? {} }
-  emitSession(sessionId, { type: 'message', payload: out })
+  engineBus.emit('ws_broadcast_session', sessionId, { type: 'message', payload: out })
   return out
 }
 
@@ -178,7 +178,7 @@ export function updateMessageContent(id, content) {
     .prepare('UPDATE messages SET content_json = ? WHERE id = ?')
     .run(JSON.stringify(content ?? {}), id)
   const next = { ...row, content: content ?? {}, content_json: JSON.stringify(content ?? {}) }
-  emitSession(row.session_id, { type: 'message', payload: next })
+  engineBus.emit('ws_broadcast_session', row.session_id, { type: 'message', payload: next })
   return next
 }
 
@@ -201,7 +201,7 @@ export function updateNode(id, patch) {
       id,
     )
   const sessionId = n.session_id
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'node.status',
     payload: {
       nodeInstanceId: id,

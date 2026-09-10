@@ -1,7 +1,7 @@
 // advance() 主循环：节点推进、成员执行、审核闸门打开。
 // Imports: store, archive (sessionLifecycle/gates sit above and import from here).
 import { getDb, parseJson } from '../db.js'
-import { emitSession } from '../bus.js'
+import { engineBus } from './events.js'
 import { runMember } from '../runners.js'
 import {
   killSessionProcesses,
@@ -138,7 +138,7 @@ export async function advance(sessionId) {
           mode: OFFSITE_MODE.PLANNED,
         },
       })
-      emitSession(sessionId, {
+      engineBus.emit('ws_broadcast_session', sessionId, {
         type: 'session.status',
         payload: {
           sessionId,
@@ -155,7 +155,7 @@ export async function advance(sessionId) {
     updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
     updateNode(node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-    emitSession(sessionId, {
+    engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
     })
@@ -211,7 +211,7 @@ export async function advance(sessionId) {
           actions: ['submit'],
         },
       })
-      emitSession(sessionId, {
+      engineBus.emit('ws_broadcast_session', sessionId, {
         type: 'gate.request',
         payload: {
           nodeInstanceId: node.id,
@@ -284,7 +284,7 @@ export async function advance(sessionId) {
           policy: '缺 #1 时不启动脚本。闸门重试时本轮输入全文会作为 ACW_HUMAN_INPUT，不强制再切 #1。',
         },
       })
-      emitSession(sessionId, {
+      engineBus.emit('ws_broadcast_session', sessionId, {
         type: 'gate.request',
         payload: {
           nodeInstanceId: node.id,
@@ -643,7 +643,7 @@ export function openFlowGate(sessionId, node, payload) {
   } else {
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
   }
-  emitSession(sessionId, {
+  engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'gate.request',
     payload: {
       nodeInstanceId: node.id,
