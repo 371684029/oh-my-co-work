@@ -9,6 +9,14 @@ process.env.ACW_DATA_ROOT = dataRoot
 
 const { initDb, getDb } = await import('../src/db.js')
 initDb()
+  const __diDb = await import('../src/db.js');
+  ;(await import('../src/processRegistry.js')).setRegistryContext({ DATA_ROOT: __diDb.DATA_ROOT })
+  ;(await import('../src/terminal/terminalService.js')).setTerminalContext({ DATA_ROOT: __diDb.DATA_ROOT, dbGetter: () => __diDb.getDb() })
+  ;(await import('../src/engine/store.js')).setStoreContext({ dbGetter: () => __diDb.getDb() })
+
+
+
+
 const { createMember, getMember } = await import('../src/services.js')
 const { repairDemoKeepAliveMembers, stripScriptTimeoutMs } = await import('../src/demoRepair.js')
 const { MEMBER_KIND } = await import('@acw/shared')

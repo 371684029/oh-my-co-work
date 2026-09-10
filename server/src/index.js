@@ -6,6 +6,8 @@ import fs from 'node:fs'
 import { WebSocketServer } from 'ws'
 import { initDb, getDb, DATA_ROOT, ROOT } from './db.js'
 import { setRegistryContext } from './processRegistry.js'
+import { setTerminalContext } from './terminal/terminalService.js'
+import { setStoreContext } from './engine/store.js'
 import routes from './routes.js'
 import { subscribe, unsubscribe } from './bus.js'
 import { handleTerminalClientMessage, setAdapterEventHandler } from './terminal/terminalService.js'
@@ -33,6 +35,8 @@ const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
 initDb()
 setRegistryContext({ DATA_ROOT })
+setTerminalContext({ DATA_ROOT, dbGetter: () => getDb() })
+setStoreContext({ dbGetter: () => getDb() })
 setAdapterEventHandler(applyAdapterEvent)
 
 // R02：未归档进行中会话 → interrupted，等人选择继续/归档/放弃

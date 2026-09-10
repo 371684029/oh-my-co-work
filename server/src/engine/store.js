@@ -1,6 +1,23 @@
 // Engine primitives: DB row access, session/node/message writes, ctx helpers.
 // Lowest engine layer — imported by every other engine module; imports nothing from engine/.
-import { getDb, parseJson } from '../db.js'
+import { parseJson } from '../db.js'
+
+let injectedDbGetter = null
+export function setStoreContext(ctx) {
+  if (ctx && ctx.dbGetter) {
+    injectedDbGetter = ctx.dbGetter
+  } else if (ctx && ctx.db) {
+    // legacy static injection
+    injectedDbGetter = () => ctx.db
+  }
+}
+
+function getDb() {
+  if (injectedDbGetter) return injectedDbGetter()
+  console.warn('[acw] engine/store: getDb called before context injection!')
+  return null /* Throw if missing context in prod */
+}
+
 import { engineBus } from './events.js'
 import { writeNodeJournal } from '../journal.js'
 import {

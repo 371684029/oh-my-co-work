@@ -3,7 +3,32 @@ import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import * as pty from 'node-pty'
 import { uid } from '@acw/shared'
-import { DATA_ROOT, getDb } from '../db.js'
+
+let injectedDb = null
+let injectedDataRoot = null
+
+export function setTerminalContext(ctx) {
+  if (ctx) {
+    if (ctx.db) injectedDb = ctx.db
+    if (ctx.DATA_ROOT) injectedDataRoot = ctx.DATA_ROOT
+  }
+}
+
+
+
+function getDataRoot() {
+  if (injectedDataRoot) return injectedDataRoot;
+  return process.cwd();
+}
+function getDb() {
+
+  if (!injectedDb) {
+    console.warn('[acw] terminalService: getDb called before context injection!')
+    return null /* Throw if missing context in prod */
+  }
+  return injectedDb
+}
+
 import { emitSession } from '../bus.js'
 import { getAppSettings } from '../appSettings.js'
 import { redactText } from './redact.js'
@@ -318,7 +343,7 @@ export function runTerminal({
     const id = uid('term')
     const runId = uid('run')
     const logName = `terminal_${id}.log`
-    const logPath = path.join(DATA_ROOT, 'logs', logName)
+    const logPath = path.join(getDataRoot(), 'logs', logName)
     fs.mkdirSync(path.dirname(logPath), { recursive: true })
     const size = {
       cols: clampSize(cols, 100, 20, 300),

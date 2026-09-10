@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+
+
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -8,7 +10,17 @@ import { fileURLToPath } from 'node:url'
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-terminal-test-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
+
+const { initDb, getDb, DATA_ROOT } = await import('../src/db.js');
+initDb();
+const { setRegistryContext } = await import('../src/processRegistry.js');
+const { setTerminalContext } = await import('../src/terminal/terminalService.js');
+const { setStoreContext } = await import('../src/engine/store.js');
+setRegistryContext({ DATA_ROOT });
+setTerminalContext({ DATA_ROOT, dbGetter: () => getDb() });
+setStoreContext({ dbGetter: () => getDb() });
 const terminalService = await import('../src/terminal/terminalService.js')
+
 const bus = await import('../src/bus.js')
 
 function terminalOptions(sessionId, script) {

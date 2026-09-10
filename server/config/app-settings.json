@@ -10,8 +10,8 @@
     }
   },
   "grok": {
-    "command": "grok",
-    "configured": false,
+    "command": "grok-not-installed-acw",
+    "configured": true,
     "surface": "chat",
     "workspaceDir": "",
     "writeRules": true,
@@ -38,5 +38,8 @@
   "redact": {
     "enabled": true,
     "patternsText": ""
+  },
+  "updateCheck": {
+    "startup": true
   }
 }
