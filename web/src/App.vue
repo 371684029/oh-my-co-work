@@ -70,7 +70,6 @@
             <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
             <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
-          <span class="mvp-pill">MVP</span>
         </div>
       </template>
     </header>
@@ -415,16 +414,5 @@ function goGrokSettings() {
   color: var(--ecw-text-1, #1d1d1f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0.5px 0 rgba(0, 0, 0, 0.04);
   font-weight: 600;
-}
-
-.mvp-pill {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--ecw-accent, #007aff);
-  background: rgba(0, 122, 255, 0.1);
-  border: 0.5px solid rgba(0, 122, 255, 0.22);
-  padding: 4px 11px;
-  border-radius: 999px;
 }
 </style>

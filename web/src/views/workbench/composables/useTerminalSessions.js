@@ -1,3 +1,4 @@
+import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { isFurnaceMember } from '@acw/shared'
@@ -9,7 +10,6 @@ import {
   detail,
   members,
   loadDetail,
-  rightTab,
   terminalPrefs,
   sessions,
 } from './useSessionDetail'
@@ -289,7 +289,7 @@ function bindWs(sessionId) {
         // 默认保持「流程」Tab，不自动跳群报告
         // 群报告由节点 detail / # 参数驱动；备注在 context.notes
         if (ev.type === 'session.archived' || ev.type === 'session.restart') {
-          rightTab.value = 'flow'
+          useFlowStore().rightTab = 'flow'
         }
         sessions.value = await api.sessions.list()
       }
