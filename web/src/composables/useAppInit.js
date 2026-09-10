@@ -7,12 +7,15 @@ import {
   grokCanRun,
 } from './furnaceUi.js'
 import { fullscreenElement } from './fullscreen'
+import { useAppConfig } from './useAppConfig'
 
 export function useAppInit() {
   const isFullscreen = ref(false)
   const grokGuideOpen = ref(false)
   const grokGuideStatus = ref({})
   const grokExampleToml = ref('')
+
+  const { startupUpdateCheck, loadConfig } = useAppConfig()
 
   const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
 
@@ -53,8 +56,8 @@ export function useAppInit() {
   // 4.7.0 启动时检查更新（静默，仅发现新版本时轻提示）
   async function startupCheckUpdate() {
     try {
-      const s = await api.appSettings.get()
-      if (s.updateCheck?.startup === false) return
+      const s = await loadConfig()
+      if (!s || startupUpdateCheck.value === false) return
       const r = await api.update.check()
       if (!r.checked || !r.hasUpdate) return
       ElMessage.info({

@@ -22,6 +22,9 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-10 | A | web/src/composables/useAppConfig.js | 新增应用配置下沉状态管理模块
+2026-09-10 | M | web/src/composables/useAppInit.js | 接入 useAppConfig 统一更新检查状态读取
+2026-09-10 | M | web/src/views/settings/Prefs.vue | 接入 useAppConfig 统一启动更新检查状态管理与修改
 2026-09-09 | A | docs/assets/screenshots/docs-hub.webp | 文档中心独立页三栏截图（群模板 / 会话文件 / 群报告正文）
 2026-09-09 | A | docs/assets/screenshots/docs-hub-rail.webp | 工作台第三栏文档中心预览截图
 2026-09-09 | M | README.md | 新增 4.x 协同文档中心小节并嵌入上述截图

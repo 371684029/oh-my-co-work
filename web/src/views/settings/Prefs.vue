@@ -341,6 +341,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
+import { useAppConfig } from '../../composables/useAppConfig'
+
+const { startupUpdateCheck, setStartupUpdateCheck } = useAppConfig()
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
@@ -380,7 +383,6 @@ const lastExportTime = ref('')
 const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
-const startupUpdateCheck = ref(true)
 const savingStartupUpdate = ref(false)
 
 const resolvedHint = computed(() => {
@@ -672,10 +674,9 @@ async function saveGrok() {
 async function onToggleStartupUpdate(val) {
   savingStartupUpdate.value = true
   try {
-    await api.appSettings.update({ updateCheck: { startup: !!val } })
+    await setStartupUpdateCheck(val)
     ElMessage.success(val ? '已开启启动时检查更新' : '已关闭启动时检查更新')
   } catch (e) {
-    startupUpdateCheck.value = !val
     ElMessage.error(e.message)
   } finally {
     savingStartupUpdate.value = false
