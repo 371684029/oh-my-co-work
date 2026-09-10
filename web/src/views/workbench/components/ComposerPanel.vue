@@ -2,7 +2,7 @@
   <div
     class="wb-chat-footer"
     :class="{
-      'is-collapsed': footerCollapsed,
+      'is-collapsed': composerStore.footerCollapsed,
       'has-gate': !!pendingGate,
     }"
   >
@@ -12,21 +12,21 @@
         <button
           type="button"
           class="footer-toggle"
-          :class="{ 'is-collapsed': footerCollapsed }"
-          :title="footerCollapsed ? '展开输入区' : '折叠输入区'"
-          :aria-expanded="!footerCollapsed"
-          @click="footerCollapsed = !footerCollapsed"
+          :class="{ 'is-collapsed': composerStore.footerCollapsed }"
+          :title="composerStore.footerCollapsed ? '展开输入区' : '折叠输入区'"
+          :aria-expanded="!composerStore.footerCollapsed"
+          @click="composerStore.footerCollapsed = !composerStore.footerCollapsed"
         >
           <span class="footer-toggle-icon" aria-hidden="true">
             <i class="footer-chevron" />
           </span>
           <span class="footer-toggle-label">{{
-            footerCollapsed ? footerCollapsedHint : '收起'
+            composerStore.footerCollapsed ? footerCollapsedHint : '收起'
           }}</span>
         </button>
       </div>
 
-      <div v-show="!footerCollapsed" class="footer-body">
+      <div v-show="!composerStore.footerCollapsed" class="footer-body">
         <!-- 待确认说明统一走下方输入框 placeholder + 按钮，不再单独显示顶部大卡片 -->
 
         <div class="composer" :class="{ 'composer--gate': !!pendingGate }">
@@ -39,7 +39,7 @@
             class="composer-alert composer-alert--archived"
           />
           <div class="composer-shell" @keydown.capture="onComposerKeydown">
-            <div v-if="slashOpen" class="slash-panel">
+            <div v-if="composerStore.slashOpen" class="slash-panel">
               <div class="slash-panel-head">
                 <span class="slash-panel-head-title">斜杠指令</span>
                 <div class="slash-panel-head-end">
@@ -66,7 +66,7 @@
                 :key="c.id"
                 type="button"
                 class="slash-item"
-                :class="{ active: i === slashIndex }"
+                :class="{ active: i === composerStore.slashIndex }"
                 @mousedown.prevent="runSlash(c)"
               >
                 <code class="slash-token">/{{ c.slash }}</code>
@@ -74,7 +74,7 @@
                 <span class="slash-desc">{{ c.description }}</span>
               </button>
             </div>
-            <div v-if="atOpen" class="slash-panel at-panel">
+            <div v-if="composerStore.atOpen" class="slash-panel at-panel">
               <div class="slash-panel-head">
                 <span class="slash-panel-head-title">@ 提及</span>
                 <div class="slash-panel-head-end">
@@ -98,7 +98,7 @@
                 :key="m.id"
                 type="button"
                 class="slash-item"
-                :class="{ active: i === atIndex }"
+                :class="{ active: i === composerStore.atIndex }"
                 @mousedown.prevent="insertAtMember(m)"
               >
                 <span class="at-avatar">{{ (m.display_name || m.name || '?').slice(0, 1) }}</span>
@@ -109,7 +109,7 @@
                 >
               </button>
             </div>
-            <div v-if="hashOpen" class="slash-panel hash-panel">
+            <div v-if="composerStore.hashOpen" class="slash-panel hash-panel">
               <div class="slash-panel-head">
                 <span class="slash-panel-head-title"># 文本快捷</span>
                 <div class="slash-panel-head-end">
@@ -134,7 +134,7 @@
                 :key="h.key"
                 type="button"
                 class="slash-item"
-                :class="{ active: i === hashIndex }"
+                :class="{ active: i === composerStore.hashIndex }"
                 @mousedown.prevent="insertHashItem(h)"
               >
                 <code class="slash-token">{{ h.label }}</code>
@@ -322,24 +322,21 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
+import { useComposerStore } from '../../../stores/composer.js'
+
+const composerStore = useComposerStore()
+
 import {
   detail,
   pendingGate,
-  footerCollapsed,
   footerCollapsedHint,
   senderRef,
   activeId,
   pendingFiles,
   uploading,
-  slashOpen,
   filteredSlashCmds,
-  slashIndex,
-  atOpen,
   filteredAtMembers,
-  atIndex,
-  hashOpen,
   filteredHashItems,
-  hashIndex,
   showComposerHintI,
   composerToolbarHint,
   composerPlaceholder,

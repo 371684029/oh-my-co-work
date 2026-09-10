@@ -14,6 +14,8 @@ import {
   FURNACE_DISPLAY_NAME,
 } from '@acw/shared'
 import { api } from '../../../api'
+import { useComposerStore } from '../../../stores/composer.js'
+
 
 /**
  * 会话详情 / 消息 / 闸门 / 流程轨 / 群报告 的模块级单例状态（furnaceUi.js 同款模式）。
@@ -54,20 +56,9 @@ const gating = ref(false)
 const senderRef = ref(null)
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
-const slashOpen = ref(false)
-const slashQuery = ref('')
-const slashIndex = ref(0)
-const atOpen = ref(false)
-const atQuery = ref('')
-const atIndex = ref(0)
-const hashOpen = ref(false)
-const hashQuery = ref('')
-const hashIndex = ref(0)
 /** 待发送附件 */
 const pendingFiles = ref([])
 const uploading = ref(false)
-/** 底部闸门+输入区折叠 */
-const footerCollapsed = ref(false)
 
 // ===== 流程轨 =====
 const expandedNodeId = ref(null)
@@ -94,7 +85,7 @@ const furnaceSurface = ref('chat')
 const listFilter = ref('all')
 
 const filteredSlashCmds = computed(() => {
-  const q = (slashQuery.value || '').toLowerCase()
+  const q = (useComposerStore().slashQuery || '').toLowerCase()
   const list = slashCommands.value.filter((c) => c.enabled !== false)
   if (!q) return list
   return list.filter(
@@ -106,7 +97,7 @@ const filteredSlashCmds = computed(() => {
 })
 
 const filteredAtMembers = computed(() => {
-  const q = (atQuery.value || '').toLowerCase().trim()
+  const q = (useComposerStore().atQuery || '').toLowerCase().trim()
   const list = members.value || []
   if (!q) return list
   return list.filter(
@@ -615,7 +606,7 @@ const hashItems = computed(() => {
 })
 
 const filteredHashItems = computed(() => {
-  const q = (hashQuery.value || '').toLowerCase().trim().replace(/^#/, '')
+  const q = (useComposerStore().hashQuery || '').toLowerCase().trim().replace(/^#/, '')
   const list = hashItems.value
   const filtered = !q
     ? list
@@ -1450,16 +1441,16 @@ function syncSlashFromInput() {
   const text = readSenderText()
   // 仅当输入以 / 开头时当作指令模式（整段像 /editor）
   if (text.startsWith('/')) {
-    slashOpen.value = true
-    atOpen.value = false
-    hashOpen.value = false
+    useComposerStore().slashOpen = true
+    useComposerStore().atOpen = false
+    useComposerStore().hashOpen = false
     const body = text.slice(1)
-    slashQuery.value = body.split(/\s/)[0] || ''
-    slashIndex.value = 0
+    useComposerStore().slashQuery = body.split(/\s/)[0] || ''
+    useComposerStore().slashIndex = 0
   } else {
     // 删掉 /、清空输入、或改成普通消息：同步收起快捷指令气泡
-    slashOpen.value = false
-    slashQuery.value = ''
+    useComposerStore().slashOpen = false
+    useComposerStore().slashQuery = ''
   }
 }
 
@@ -1467,21 +1458,21 @@ function syncSlashFromInput() {
 function syncAtFromInput() {
   const text = readSenderText()
   if (text.startsWith('/')) {
-    atOpen.value = false
+    useComposerStore().atOpen = false
     return
   }
   // 最后一个未完成的 @片段（@ 后不含空格）
   const m = text.match(/(^|[\s])@([^\s@]*)$/)
   if (m) {
-    atOpen.value = true
-    slashOpen.value = false
-    hashOpen.value = false
-    atQuery.value = m[2] || ''
-    atIndex.value = 0
+    useComposerStore().atOpen = true
+    useComposerStore().slashOpen = false
+    useComposerStore().hashOpen = false
+    useComposerStore().atQuery = m[2] || ''
+    useComposerStore().atIndex = 0
   } else if (!text.endsWith('@')) {
     // 已选完 @名字 或无 @：关面板
-    atOpen.value = false
-    atQuery.value = ''
+    useComposerStore().atOpen = false
+    useComposerStore().atQuery = ''
   }
 }
 
@@ -1490,20 +1481,20 @@ function syncHashFromInput() {
   if (Date.now() < hashInsertLockUntil) return
   const text = readSenderTextRaw().replace(/\s+$/u, '')
   if (text.startsWith('/')) {
-    hashOpen.value = false
+    useComposerStore().hashOpen = false
     return
   }
   // 末尾 #片段：允许无前导空格（如 build#）
   const m = text.match(/(?:^|[\s])#([^\s#]*)$/u)
   if (m) {
-    hashOpen.value = true
-    slashOpen.value = false
-    atOpen.value = false
-    hashQuery.value = m[1] || ''
-    hashIndex.value = 0
+    useComposerStore().hashOpen = true
+    useComposerStore().slashOpen = false
+    useComposerStore().atOpen = false
+    useComposerStore().hashQuery = m[1] || ''
+    useComposerStore().hashIndex = 0
   } else if (!/#([^\s#]*)$/u.test(text)) {
-    hashOpen.value = false
-    hashQuery.value = ''
+    useComposerStore().hashOpen = false
+    useComposerStore().hashQuery = ''
   }
 }
 
@@ -1515,30 +1506,30 @@ function onSenderChange() {
 
 function onComposerKeydown(e) {
   // # 面板：群聊 / 文件夹 / #1…
-  if (hashOpen.value) {
+  if (useComposerStore().hashOpen) {
     const list = filteredHashItems.value
     if (e.key === 'Escape') {
       e.preventDefault()
-      hashOpen.value = false
+      useComposerStore().hashOpen = false
       return
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (!list.length) return
-      hashIndex.value = (hashIndex.value + 1) % list.length
+      useComposerStore().hashIndex = (useComposerStore().hashIndex + 1) % list.length
       return
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!list.length) return
-      hashIndex.value = (hashIndex.value - 1 + list.length) % list.length
+      useComposerStore().hashIndex = (useComposerStore().hashIndex - 1 + list.length) % list.length
       return
     }
     if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
       if (!list.length) return
       e.preventDefault()
       e.stopPropagation()
-      insertHashItem(list[hashIndex.value] || list[0])
+      insertHashItem(list[useComposerStore().hashIndex] || list[0])
       return
     }
     if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -1551,36 +1542,36 @@ function onComposerKeydown(e) {
   }
 
   // @ 面板：仅成员协助（节点重跑已从面板移除，避免误触重头跑）
-  if (atOpen.value) {
+  if (useComposerStore().atOpen) {
     const members = filteredAtMembers.value
     const total = members.length
     if (e.key === 'Escape') {
       e.preventDefault()
-      atOpen.value = false
+      useComposerStore().atOpen = false
       return
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (!total) return
-      atIndex.value = (atIndex.value + 1) % total
+      useComposerStore().atIndex = (useComposerStore().atIndex + 1) % total
       return
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!total) return
-      atIndex.value = (atIndex.value - 1 + total) % total
+      useComposerStore().atIndex = (useComposerStore().atIndex - 1 + total) % total
       return
     }
     if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
       if (!total) return
       e.preventDefault()
       e.stopPropagation()
-      insertAtMember(members[atIndex.value] || members[0])
+      insertAtMember(members[useComposerStore().atIndex] || members[0])
       return
     }
   }
 
-  if (!slashOpen.value) {
+  if (!useComposerStore().slashOpen) {
     if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       setTimeout(syncSlashFromInput, 0)
     }
@@ -1603,19 +1594,19 @@ function onComposerKeydown(e) {
   const list = filteredSlashCmds.value
   if (e.key === 'Escape') {
     e.preventDefault()
-    slashOpen.value = false
+    useComposerStore().slashOpen = false
     return
   }
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     if (!list.length) return
-    slashIndex.value = (slashIndex.value + 1) % list.length
+    useComposerStore().slashIndex = (useComposerStore().slashIndex + 1) % list.length
     return
   }
   if (e.key === 'ArrowUp') {
     e.preventDefault()
     if (!list.length) return
-    slashIndex.value = (slashIndex.value - 1 + list.length) % list.length
+    useComposerStore().slashIndex = (useComposerStore().slashIndex - 1 + list.length) % list.length
     return
   }
   if (e.key === 'Enter' && !e.shiftKey && list.length) {
@@ -1624,18 +1615,18 @@ function onComposerKeydown(e) {
     if (t.startsWith('/')) {
       e.preventDefault()
       e.stopPropagation()
-      runSlash(list[slashIndex.value] || list[0])
+      runSlash(list[useComposerStore().slashIndex] || list[0])
     }
   }
 }
 
 function toggleSlashPanel() {
-  atOpen.value = false
-  hashOpen.value = false
-  slashOpen.value = !slashOpen.value
-  if (slashOpen.value) {
-    slashQuery.value = ''
-    slashIndex.value = 0
+  useComposerStore().atOpen = false
+  useComposerStore().hashOpen = false
+  useComposerStore().slashOpen = !useComposerStore().slashOpen
+  if (useComposerStore().slashOpen) {
+    useComposerStore().slashQuery = ''
+    useComposerStore().slashIndex = 0
     // setText 是插入：只追加唤起符
     appendSenderText('/')
     syncSlashFromInput()
@@ -1645,28 +1636,28 @@ function toggleSlashPanel() {
 /** 关闭 / @ # 浮层（与 Esc 一致，不关输入框里的唤起符） */
 function closeComposerPanel(kind) {
   if (kind === 'slash') {
-    slashOpen.value = false
-    slashQuery.value = ''
+    useComposerStore().slashOpen = false
+    useComposerStore().slashQuery = ''
     return
   }
   if (kind === 'at') {
-    atOpen.value = false
-    atQuery.value = ''
+    useComposerStore().atOpen = false
+    useComposerStore().atQuery = ''
     return
   }
   if (kind === 'hash') {
-    hashOpen.value = false
-    hashQuery.value = ''
+    useComposerStore().hashOpen = false
+    useComposerStore().hashQuery = ''
   }
 }
 
 function toggleAtPanel() {
-  slashOpen.value = false
-  hashOpen.value = false
-  atOpen.value = !atOpen.value
-  if (atOpen.value) {
-    atQuery.value = ''
-    atIndex.value = 0
+  useComposerStore().slashOpen = false
+  useComposerStore().hashOpen = false
+  useComposerStore().atOpen = !useComposerStore().atOpen
+  if (useComposerStore().atOpen) {
+    useComposerStore().atQuery = ''
+    useComposerStore().atIndex = 0
     const cur = readSenderText()
     appendSenderText(cur && !/\s$/.test(cur) ? ' @' : '@')
     syncAtFromInput()
@@ -1674,12 +1665,12 @@ function toggleAtPanel() {
 }
 
 function toggleHashPanel() {
-  slashOpen.value = false
-  atOpen.value = false
-  hashOpen.value = !hashOpen.value
-  if (hashOpen.value) {
-    hashQuery.value = ''
-    hashIndex.value = 0
+  useComposerStore().slashOpen = false
+  useComposerStore().atOpen = false
+  useComposerStore().hashOpen = !useComposerStore().hashOpen
+  if (useComposerStore().hashOpen) {
+    useComposerStore().hashQuery = ''
+    useComposerStore().hashIndex = 0
     const cur = readSenderTextRaw()
     // 只追加唤起用 #（选中后 strip，不进正文）；勿把全文再 setText 一遍
     appendSenderText(cur && !/\s$/.test(cur) ? ' #' : '#')
@@ -1694,8 +1685,8 @@ async function insertAtMember(m) {
   const text = readSenderText()
   const replaced = text.replace(/(^|[\s])@([^\s@]*)$/, `$1@${name} `)
   const next = replaced === text ? `${text}@${name} ` : replaced
-  atOpen.value = false
-  atQuery.value = ''
+  useComposerStore().atOpen = false
+  useComposerStore().atQuery = ''
   await replaceSenderText(next)
 }
 
@@ -1708,11 +1699,11 @@ async function insertHashItem(h) {
   const raw = readSenderTextRaw()
   let stripped = stripTrailingHashTrigger(raw)
   // 面板已开但 model 尚未带上 #：仍按触发态剥离
-  if (hashOpen.value && stripped === raw.replace(/[ \t]+$/u, '')) {
+  if (useComposerStore().hashOpen && stripped === raw.replace(/[ \t]+$/u, '')) {
     stripped = stripTrailingHashTrigger(`${stripped}#`)
   }
-  hashOpen.value = false
-  hashQuery.value = ''
+  useComposerStore().hashOpen = false
+  useComposerStore().hashQuery = ''
   if (!insert) {
     await replaceSenderText(stripped)
     ElMessage.warning(`${h.name || h.label || '该项'}暂无内容可插入`)
@@ -1861,7 +1852,7 @@ async function restartFromNode(n) {
       stepIndex: n.step_index,
     })
     rightTab.value = 'flow'
-    footerCollapsed.value = false
+    useComposerStore().footerCollapsed = false
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
     const focusId = r.nodeInstanceId || n.id
@@ -1905,8 +1896,8 @@ async function runSlash(cmd) {
       url,
       args,
     })
-    slashOpen.value = false
-    slashQuery.value = ''
+    useComposerStore().slashOpen = false
+    useComposerStore().slashQuery = ''
     if (r.kind === 'url' && r.url) {
       window.open(r.url, '_blank', 'noopener')
       clearSender()
@@ -1934,7 +1925,7 @@ async function onSenderSubmit() {
     const token = text.slice(1).trim().split(/\s+/)[0] || ''
     const cmd =
       slashCommands.value.find((c) => c.enabled !== false && c.slash === token) ||
-      filteredSlashCmds.value[slashIndex.value]
+      filteredSlashCmds.value[useComposerStore().slashIndex]
     if (cmd) {
       await runSlash(cmd)
       return
@@ -2163,18 +2154,18 @@ export function resetSessionState() {
   gating.value = false
   senderRef.value = null
   hashInsertLockUntil = 0
-  slashOpen.value = false
-  slashQuery.value = ''
-  slashIndex.value = 0
-  atOpen.value = false
-  atQuery.value = ''
-  atIndex.value = 0
-  hashOpen.value = false
-  hashQuery.value = ''
-  hashIndex.value = 0
+  useComposerStore().slashOpen = false
+  useComposerStore().slashQuery = ''
+  useComposerStore().slashIndex = 0
+  useComposerStore().atOpen = false
+  useComposerStore().atQuery = ''
+  useComposerStore().atIndex = 0
+  useComposerStore().hashOpen = false
+  useComposerStore().hashQuery = ''
+  useComposerStore().hashIndex = 0
   pendingFiles.value = []
   uploading.value = false
-  footerCollapsed.value = false
+  useComposerStore().footerCollapsed = false
   expandedNodeId.value = null
   expandedSkippedFlowGroups.value = {}
   rightTab.value = 'flow'
@@ -2199,7 +2190,7 @@ export function initSessionDetail({ route, router }) {
   // 出现待处理闸门时自动展开底栏，避免漏操作
   _stopWatchers.push(
     watch(pendingGate, (g) => {
-      if (g) footerCollapsed.value = false
+      if (g) useComposerStore().footerCollapsed = false
     }),
   )
   // 路由 / 侧栏驱动：activeId 变化即加载
@@ -2241,18 +2232,8 @@ export {
   sending,
   gating,
   senderRef,
-  slashOpen,
-  slashQuery,
-  slashIndex,
-  atOpen,
-  atQuery,
-  atIndex,
-  hashOpen,
-  hashQuery,
-  hashIndex,
   pendingFiles,
   uploading,
-  footerCollapsed,
   expandedNodeId,
   expandedSkippedFlowGroups,
   rightTab,
