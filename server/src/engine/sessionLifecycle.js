@@ -1,7 +1,7 @@
 // 会话生命周期：创建（群聊 / 成员单聊）、克隆续跑、中断恢复。
 // Imports: store, offsite, archive, advance (gates sits above).
 import { getDb, parseJson } from '../db.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import { killSessionProcesses } from '../processRegistry.js'
 import {
   SESSION_STATUS,
@@ -137,13 +137,13 @@ export function createSessionFromGroup(groupId, { title } = {}) {
   // 不再挂归档尾节点：释放资源改到设置里手动操作
 
   if (isAdhoc) {
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: { text: `已与「${group.title}」开聊。发消息继续；@ 其他成员可临时协助。` },
     })
-    engineBus.emit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
-    engineBus.emit('ws_broadcast_session', sessionId, {
+    engineEmit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
+    engineEmit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
     })
@@ -158,12 +158,12 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     return getSession(sessionId)
   }
 
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'status',
     content: { text: `任务已创建，使用模板「${group.title}」。请确认后开始。` },
   })
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'gate',
     node_instance_id: null,
@@ -181,12 +181,12 @@ export function createSessionFromGroup(groupId, { title } = {}) {
     },
   })
 
-  engineBus.emit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_all', { type: 'session.created', payload: { sessionId, groupId } })
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'gate.request',
     payload: { mode: 'session_start', sessionId, groupTitle: group.title },
   })
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: { sessionId, status: SESSION_STATUS.WAITING_HUMAN, pendingStart: true },
   })
@@ -229,7 +229,7 @@ function resumeAdhocIfStillPendingStart(sessionId) {
   delete ctx.pendingStart
   const nextStatus =
     session.status === SESSION_STATUS.ARCHIVED ? SESSION_STATUS.ACTIVE : SESSION_STATUS.ACTIVE
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     status: nextStatus,
     context_json: JSON.stringify(ctx),
   })
@@ -320,7 +320,7 @@ export function bypassAbandonedNodes(sessionId, { keepNodeIds = [], beforeStepIn
       node.status === NODE_STATUS.PENDING
     if (!abandon) continue
     const prevOut = parseJson(node.output_json, {})
-    engineBus.emit('update_node', node.id, {
+    engineEmit('update_node', node.id, {
       status: NODE_STATUS.SKIPPED,
       finished_at: at,
       output_json: JSON.stringify({
@@ -468,7 +468,7 @@ export async function restartFromNode(sessionId, opts = {}) {
 
   const ctx = parseJson(session.context_json, {})
   delete ctx.pendingArchive
-  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+  engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
 
   const targetDone =
     target.status === NODE_STATUS.SUCCEEDED || target.status === NODE_STATUS.SKIPPED
@@ -488,7 +488,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     // 仅把「执行中」收回待跑以便重入；已在待确认的保留闸门，勿清空产出重跑
     if (target.status === NODE_STATUS.RUNNING) {
       const prevOut = parseJson(target.output_json, {})
-      engineBus.emit('update_node', target.id, {
+      engineEmit('update_node', target.id, {
         status: NODE_STATUS.PENDING,
         finished_at: null,
         started_at: null,
@@ -521,14 +521,14 @@ export async function restartFromNode(sessionId, opts = {}) {
       sourceNodeInstanceId: target.id,
       sourceStepIndex: idx,
     }
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.ACTIVE,
       current_step_index: idx,
       context_json: JSON.stringify(ctx2),
       archive_reason: null,
       archived_at: null,
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: {
@@ -543,7 +543,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         },
       },
     })
-    engineBus.emit('ws_broadcast_session', sessionId, {
+    engineEmit('ws_broadcast_session', sessionId, {
       type: 'session.restart',
       payload: {
         sessionId,
@@ -554,7 +554,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         forwardJump: true,
       },
     })
-    engineBus.emit('ws_broadcast_session', sessionId, {
+    engineEmit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: {
         sessionId,
@@ -564,7 +564,7 @@ export async function restartFromNode(sessionId, opts = {}) {
         forwardJump: true,
       },
     })
-    engineBus.emit('ws_broadcast_all', {
+    engineEmit('ws_broadcast_all', {
       type: 'session.restart',
       payload: { sessionId, stepIndex: idx, cloned: false, forwardJump: true },
     })
@@ -620,7 +620,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     sourceStepIndex: idx,
   }
 
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     status: SESSION_STATUS.ACTIVE,
     current_step_index: startIdx,
     context_json: JSON.stringify(ctx2),
@@ -628,7 +628,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     archived_at: null,
   })
 
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'status',
     content: {
@@ -645,7 +645,7 @@ export async function restartFromNode(sessionId, opts = {}) {
     },
   })
 
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.restart',
     payload: {
       sessionId,
@@ -657,7 +657,7 @@ export async function restartFromNode(sessionId, opts = {}) {
       sourceNodeInstanceId: target.id,
     },
   })
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {
       sessionId,
@@ -666,7 +666,7 @@ export async function restartFromNode(sessionId, opts = {}) {
       cloned: true,
     },
   })
-  engineBus.emit('ws_broadcast_all', {
+  engineEmit('ws_broadcast_all', {
     type: 'session.restart',
     payload: { sessionId, stepIndex: startIdx, cloned: true },
   })
@@ -704,7 +704,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     .replace(/^discard_interrupted$/, 'discard')
 
   if (act === 'archive' || act === 'discard') {
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'gate',
       content: {
@@ -727,7 +727,7 @@ export async function resolveInterruptedSession(sessionId, action) {
         n.status === NODE_STATUS.RUNNING ||
         n.status === NODE_STATUS.WAITING_HUMAN
       ) {
-        engineBus.emit('persist_node_io', sessionId, n.id, {
+        engineEmit('persist_node_io', sessionId, n.id, {
           input: parseJson(n.input_json, {}),
           output: {
             ...parseJson(n.output_json, {}),
@@ -747,11 +747,11 @@ export async function resolveInterruptedSession(sessionId, action) {
       resolution: 'discard',
     }
     delete ctx.pendingArchive
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.FAILED,
       context_json: JSON.stringify(ctx),
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: {
@@ -774,7 +774,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     resolution: 'resume',
   }
 
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'user',
     type: 'gate',
     content: {
@@ -790,7 +790,7 @@ export async function resolveInterruptedSession(sessionId, action) {
     .all(sessionId)
   const interruptedNode = nodes.find((n) => parseJson(n.output_json, {})?.interrupted === true)
   if (interruptedNode) {
-    engineBus.emit('update_node', interruptedNode.id, {
+    engineEmit('update_node', interruptedNode.id, {
       status: NODE_STATUS.PENDING,
       output_json: JSON.stringify({
         ...parseJson(interruptedNode.output_json, {}),
@@ -800,12 +800,12 @@ export async function resolveInterruptedSession(sessionId, action) {
       finished_at: null,
     })
     // 该步之后若曾误推进，保持其后 pending
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.ACTIVE,
       current_step_index: interruptedNode.step_index,
       context_json: JSON.stringify(ctx),
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: { text: `从中断节点「${interruptedNode.title}」继续执行…` },
@@ -815,11 +815,11 @@ export async function resolveInterruptedSession(sessionId, action) {
   }
 
   if (ctx.pendingStart) {
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.WAITING_HUMAN,
       context_json: JSON.stringify(ctx),
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: { text: '已恢复到开聊确认，请继续操作。' },
@@ -833,11 +833,11 @@ export async function resolveInterruptedSession(sessionId, action) {
 
   const waiting = nodes.find((n) => n.status === NODE_STATUS.WAITING_HUMAN)
   if (waiting || prevStatus === SESSION_STATUS.WAITING_HUMAN) {
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.WAITING_HUMAN,
       context_json: JSON.stringify(ctx),
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: { text: '已恢复到待确认，请继续操作。' },
@@ -845,11 +845,11 @@ export async function resolveInterruptedSession(sessionId, action) {
     return { ok: true, resumed: true, waitingHuman: true }
   }
 
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     status: SESSION_STATUS.ACTIVE,
     context_json: JSON.stringify(ctx),
   })
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'status',
     content: { text: '已恢复，继续推进流程…' },

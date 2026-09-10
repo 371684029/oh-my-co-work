@@ -1,7 +1,7 @@
 // 场外协助（@成员 插队）节点：插入、复用、回归主线归档。
 // Imports: store only (below archive/advance/gates in the engine DAG).
 import { getDb, parseJson } from '../db.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import {
   NODE_STATUS,
   OFFSITE_MODE,
@@ -10,7 +10,7 @@ import {
   nowIso,
   uid,
 } from '@acw/shared'
-import { getSession, updateSession, addMessage, persistNodeIo } from './store.js'
+import { getSession, updateSession } from './store.js'
 
 /**
  * 场外插入游标：当前主线步索引（开场未跑则为 0 → 插到最前）。
@@ -64,6 +64,7 @@ function insertOffsiteAtCursor(sessionId, { title } = {}) {
     const session = getSession(sessionId)
     const cur = Number(session?.current_step_index)
     if (Number.isFinite(cur) && cur >= insertIdx) {
+      // 事务内必须直写：engineEmit 出事务后才会落到别的连接语义上，这里要同一 BEGIN
       updateSession(sessionId, { current_step_index: cur + 1 })
     }
   })
@@ -215,7 +216,7 @@ export function archiveOffsiteOnReturnToMain(sessionId, {
     if (!hung && !pinned) continue
 
     const prev = parseJson(n.output_json, {})
-    persistNodeIo(sessionId, n.id, {
+    engineEmit('persist_node_io', sessionId, n.id, {
       input: parseJson(n.input_json, {}),
       output: {
         ...prev,
@@ -246,11 +247,11 @@ export function archiveOffsiteOnReturnToMain(sessionId, {
     resumeTitle,
     resumeNodeId,
   }
-  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+  engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
 
   if (!silent && (closed.length || hadActive)) {
     const where = resumeTitle ? `「${resumeTitle}」` : '主线节点'
-    addMessage(sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: {
@@ -263,7 +264,7 @@ export function archiveOffsiteOnReturnToMain(sessionId, {
     })
   }
 
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {
       sessionId,
@@ -299,7 +300,7 @@ export function appendOffsiteNodeChat(sessionId, nodeId, text) {
   const prevOut = parseJson(node.output_json, {})
   const prevHuman = String(prevIn.humanInput || '').trim()
   const humanInput = prevHuman ? `${prevHuman}\n${note}` : note
-  persistNodeIo(sessionId, nodeId, {
+  engineEmit('persist_node_io', sessionId, nodeId, {
     input: {
       ...prevIn,
       kind: 'offsite',

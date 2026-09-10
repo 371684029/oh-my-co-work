@@ -1,7 +1,7 @@
 // advance() 主循环：节点推进、成员执行、审核闸门打开。
 // Imports: store, archive (sessionLifecycle/gates sit above and import from here).
 import { getDb, parseJson } from '../db.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import { runMember } from '../runners.js'
 import {
   killSessionProcesses,
@@ -54,23 +54,23 @@ export async function advance(sessionId) {
     const node = nodes.find((n) => n.step_index === idx)
     if (!node) {
       idx += 1
-      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) {
       idx += 1
-      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     if (node.status === NODE_STATUS.WAITING_HUMAN) {
-      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
+      engineEmit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
       return
     }
 
     if (node.status === NODE_STATUS.RUNNING) {
-      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
+      engineEmit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
       return
     }
 
@@ -78,14 +78,14 @@ export async function advance(sessionId) {
     if (node.step_type === STEP_TYPE.ARCHIVE) {
       skipArchiveNode(sessionId, node, 'completed')
       idx += 1
-      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
     if (node.step_type === STEP_TYPE.OFFSITE) {
       const title = node.title || '临时协助'
-      engineBus.emit('persist_node_io', sessionId, node.id, {
+      engineEmit('persist_node_io', sessionId, node.id, {
         input: {
           kind: 'offsite',
           prompt: title,
@@ -100,7 +100,7 @@ export async function advance(sessionId) {
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      engineBus.emit('persist_session', sessionId, {
+      engineEmit('persist_session', sessionId, {
         status: SESSION_STATUS.WAITING_HUMAN,
         current_step_index: idx,
       })
@@ -112,9 +112,9 @@ export async function advance(sessionId) {
         mode: OFFSITE_MODE.PLANNED,
         planned: true,
       }
-      engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+      engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
       touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -124,7 +124,7 @@ export async function advance(sessionId) {
           mode: OFFSITE_MODE.PLANNED,
         },
       })
-      engineBus.emit('ws_broadcast_session', sessionId, {
+      engineEmit('ws_broadcast_session', sessionId, {
         type: 'session.status',
         payload: {
           sessionId,
@@ -138,10 +138,10 @@ export async function advance(sessionId) {
     }
 
     // run step
-    engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
-    engineBus.emit('update_node', node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
+    engineEmit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
+    engineEmit('update_node', node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-    engineBus.emit('ws_broadcast_session', sessionId, {
+    engineEmit('ws_broadcast_session', sessionId, {
       type: 'session.status',
       payload: { sessionId, status: SESSION_STATUS.ACTIVE, currentStepIndex: idx },
     })
@@ -174,7 +174,7 @@ export async function advance(sessionId) {
       const prompt = captureParams
         ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；同会话内递增追加，不覆盖；新开聊另起一套。节点输出整段不切分）`
         : basePrompt
-      engineBus.emit('persist_node_io', sessionId, node.id, {
+      engineEmit('persist_node_io', sessionId, node.id, {
         input: {
           kind: 'human',
           prompt: basePrompt,
@@ -184,9 +184,9 @@ export async function advance(sessionId) {
         output: { waiting: true, ...(cloneMeta || {}) },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      engineEmit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
       touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'gate',
         node_instance_id: node.id,
@@ -197,7 +197,7 @@ export async function advance(sessionId) {
           actions: ['submit'],
         },
       })
-      engineBus.emit('ws_broadcast_session', sessionId, {
+      engineEmit('ws_broadcast_session', sessionId, {
         type: 'gate.request',
         payload: {
           nodeInstanceId: node.id,
@@ -212,13 +212,13 @@ export async function advance(sessionId) {
     // member step
     const member = node.member_id ? getMember(node.member_id) : null
     if (!member) {
-      engineBus.emit('persist_node_io', sessionId, node.id, {
+      engineEmit('persist_node_io', sessionId, node.id, {
         input: { memberId: node.member_id },
         output: { error: '成员不存在' },
         status: NODE_STATUS.FAILED,
         finished: true,
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'text',
         node_instance_id: node.id,
@@ -242,7 +242,7 @@ export async function advance(sessionId) {
     }
 
     if (memberNeedsProjectParams(member) && !hasProjectParam1(ctx)) {
-      engineBus.emit('persist_node_io', sessionId, node.id, {
+      engineEmit('persist_node_io', sessionId, node.id, {
         input: {
           memberId: member.id,
           memberName: member.display_name,
@@ -257,8 +257,8 @@ export async function advance(sessionId) {
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'gate',
         node_instance_id: node.id,
@@ -270,7 +270,7 @@ export async function advance(sessionId) {
           policy: '缺 #1 时不启动脚本。闸门重试时本轮输入全文会作为 ACW_HUMAN_INPUT，不强制再切 #1。',
         },
       })
-      engineBus.emit('ws_broadcast_session', sessionId, {
+      engineEmit('ws_broadcast_session', sessionId, {
         type: 'gate.request',
         payload: {
           nodeInstanceId: node.id,
@@ -303,7 +303,7 @@ export async function advance(sessionId) {
             role: furnaceRole,
             nodeId: node.id,
           })
-          engineBus.emit('add_message', sessionId, {
+          engineEmit('add_message', sessionId, {
             role: 'system',
             type: 'status',
             node_instance_id: node.id,
@@ -330,7 +330,7 @@ export async function advance(sessionId) {
         }
       }
       runMemberAs = adaptPrep.member || member
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -358,13 +358,13 @@ export async function advance(sessionId) {
           }
         : {}),
     }
-    engineBus.emit('persist_node_io', sessionId, node.id, {
+    engineEmit('persist_node_io', sessionId, node.id, {
       input: memberInput,
       output: { running: true },
       status: NODE_STATUS.RUNNING,
     })
 
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
@@ -419,7 +419,7 @@ export async function advance(sessionId) {
             refineFormatted: refineOut.formatted,
           }
         : memberInput
-    engineBus.emit('persist_node_io', sessionId, node.id, {
+    engineEmit('persist_node_io', sessionId, node.id, {
       input: refineInput,
       output: result,
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
@@ -428,7 +428,7 @@ export async function advance(sessionId) {
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
 
     if (refineOut.source !== 'none') {
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -445,7 +445,7 @@ export async function advance(sessionId) {
       try {
         const killed = killMemberProcesses(sessionId, member.id)
         if (killed.killed > 0) {
-          engineBus.emit('add_message', sessionId, {
+          engineEmit('add_message', sessionId, {
             role: 'system',
             type: 'status',
             content: {
@@ -458,7 +458,7 @@ export async function advance(sessionId) {
       }
     }
 
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: result.ok ? 'text' : 'text',
@@ -530,7 +530,7 @@ export async function advance(sessionId) {
 
     // 三项全关：默认直接流转，避免卡死
     idx += 1
-    engineBus.emit('persist_session', sessionId, { current_step_index: idx })
+    engineEmit('persist_session', sessionId, { current_step_index: idx })
   }
 
   // 全部步骤完成：群聊默认归档释放资源；成员单聊（adhoc）保持进行中
@@ -562,7 +562,7 @@ function finishMainlineIfComplete(sessionId) {
     dismissPendingArchiveIfAny(sessionId, 'completed')
     const s = getSession(sessionId)
     if (s && s.status !== SESSION_STATUS.ARCHIVED && s.status !== SESSION_STATUS.INTERRUPTED) {
-      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE })
+      engineEmit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE })
     }
     return
   }
@@ -571,11 +571,10 @@ function finishMainlineIfComplete(sessionId) {
 
 /** 打开流转闸门（人工/管理员）；审核态先置 pending */
 export function openFlowGate(sessionId, node, payload) {
-  engineBus.emit('update_node', node.id, { status: NODE_STATUS.WAITING_HUMAN })
-  engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+  engineEmit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
   // 把 flow/votes 记在节点 output，便于同意时合并
   const prev = parseJson(node.output_json, {})
-  engineBus.emit('update_node', node.id, {
+  engineEmit('update_node', node.id, {
     status: NODE_STATUS.WAITING_HUMAN,
     output_json: JSON.stringify({
       ...prev,
@@ -590,7 +589,7 @@ export function openFlowGate(sessionId, node, payload) {
       humanAction: 'pending',
     }),
   })
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'gate',
     node_instance_id: node.id,
@@ -616,7 +615,7 @@ export function openFlowGate(sessionId, node, payload) {
         role: FURNACE_ROLE.REVIEW,
         nodeId: node.id,
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -629,7 +628,7 @@ export function openFlowGate(sessionId, node, payload) {
   } else {
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
   }
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'gate.request',
     payload: {
       nodeInstanceId: node.id,

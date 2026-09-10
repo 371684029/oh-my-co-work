@@ -5,10 +5,17 @@
 import { spawn, execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { DATA_ROOT } from './db.js'
 
-let injectedDataRoot = process.cwd()
+/** 可选覆盖；未调用时与 db.DATA_ROOT（含 ACW_DATA_ROOT）一致，禁止回退到 cwd */
+let injectedDataRoot = null
+
 export function setRegistryContext(ctx) {
   if (ctx && ctx.DATA_ROOT) injectedDataRoot = ctx.DATA_ROOT
+}
+
+export function resolveRegistryDataRoot() {
+  return injectedDataRoot || DATA_ROOT
 }
 
 
@@ -30,18 +37,18 @@ function ensureSession(sessionId) {
 }
 
 function sessionPidFile(sessionId) {
-  return path.join(injectedDataRoot, 'console', `session_${sessionId}.pids`)
+  return path.join(resolveRegistryDataRoot(), 'console', `session_${sessionId}.pids`)
 }
 
 function runPidFile(sessionId, runId) {
-  return path.join(injectedDataRoot, 'console', `run_${sessionId}_${runId}.pid`)
+  return path.join(resolveRegistryDataRoot(), 'console', `run_${sessionId}_${runId}.pid`)
 }
 
 /** 会话级持久化 PID，避免仅内存表、或 Start-Process 子进程漏登 */
 export function rememberSessionPid(sessionId, pid, tag = '') {
   if (!sessionId || !pid || pid <= 0) return
   try {
-    const dir = path.join(injectedDataRoot, 'console')
+    const dir = path.join(resolveRegistryDataRoot(), 'console')
     fs.mkdirSync(dir, { recursive: true })
     const line = `${pid}${tag ? `\t${tag}` : ''}\n`
     fs.appendFileSync(sessionPidFile(sessionId), line, 'utf8')
@@ -166,7 +173,7 @@ export function cleanupArchivedSessionPidFiles(sessionIds) {
   for (const id of ids) {
     try {
       clearSessionPidFile(id)
-      const dir = path.join(injectedDataRoot, 'console')
+      const dir = path.join(resolveRegistryDataRoot(), 'console')
       if (!fs.existsSync(dir)) continue
       for (const name of fs.readdirSync(dir)) {
         if (name.startsWith(`run_${id}_`) && name.endsWith('.pid')) {
@@ -339,7 +346,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
   }
   if (preservePids.size > 0) {
     try {
-      const dir = path.join(injectedDataRoot, 'console')
+      const dir = path.join(resolveRegistryDataRoot(), 'console')
       fs.mkdirSync(dir, { recursive: true })
       const lines = [...preservePids].map((p) => `${p}\tdetach\n`).join('')
       fs.writeFileSync(sessionPidFile(sessionId), lines, 'utf8')
@@ -352,7 +359,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
 
   // 清理该会话残留 run_*.pid（detach 的 target 文件保留，供真正归档杀）
   try {
-    const dir = path.join(injectedDataRoot, 'console')
+    const dir = path.join(resolveRegistryDataRoot(), 'console')
     if (fs.existsSync(dir)) {
       for (const name of fs.readdirSync(dir)) {
         if (name.startsWith(`run_${sessionId}_`) && name.endsWith('.pid')) {
@@ -386,7 +393,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
 export function writeRunTargetPid(sessionId, runId, pid) {
   if (!sessionId || !runId || !pid) return
   try {
-    const dir = path.join(injectedDataRoot, 'console')
+    const dir = path.join(resolveRegistryDataRoot(), 'console')
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(runPidFile(sessionId, runId), String(pid), 'utf8')
     rememberSessionPid(sessionId, pid, 'target')
@@ -406,7 +413,7 @@ export function getRunPidFilePath(sessionId, runId) {
  */
 export function launchArchiveControlWindow({ sessionId, runId, title, apiBase }) {
   if (process.platform !== 'win32') return null
-  const dir = path.join(injectedDataRoot, 'console')
+  const dir = path.join(resolveRegistryDataRoot(), 'console')
   fs.mkdirSync(dir, { recursive: true })
   const file = path.join(dir, `ctl_${sessionId}_${runId}.hta`)
   const base = (

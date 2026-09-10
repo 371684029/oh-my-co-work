@@ -1,7 +1,7 @@
 // 闸门动作：幂等、启动确认、归档确认、人工输入、同意/拒绝。
 // Imports: store, offsite, archive, adapterEvents, sessionLifecycle, advance.
 import { getDb, parseJson } from '../db.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import {
   SESSION_STATUS,
   NODE_STATUS,
@@ -75,7 +75,7 @@ function rememberGateIdempotency(sessionId, key, result) {
       })
   }
   ctx.gateIdempotency = next
-  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+  engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
 }
 
 export async function handleGateAction(sessionId, { action, text, nodeInstanceId, idempotencyKey, questionId, choice }) {
@@ -190,15 +190,15 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       if (!pendingStart) throw new Error('当前没有待确认的启动')
       if (action === 'cancel_start' || action === 'reject') {
         delete ctxStart.pendingStart
-        engineBus.emit('persist_session', sessionId, {
+        engineEmit('persist_session', sessionId, {
           context_json: JSON.stringify(ctxStart),
         })
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'user',
           type: 'gate',
           content: { text: '已取消启动', action: 'cancel_start', mode: 'session_start' },
         })
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'system',
           type: 'status',
           content: { text: '未启动流程，任务已关闭' },
@@ -271,13 +271,13 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       }
 
       const autoTitleStart = syncAutoSessionTitle(ctxStart, getGroup(session.group_id))
-      engineBus.emit('persist_session', sessionId, {
+      engineEmit('persist_session', sessionId, {
         status: SESSION_STATUS.ACTIVE,
         context_json: JSON.stringify(ctxStart),
         ...(autoTitleStart ? { title: autoTitleStart } : {}),
       })
 
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'user',
         type: 'gate',
         content: {
@@ -288,7 +288,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         },
       })
       if (parsed?.list?.length) {
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'system',
           type: 'status',
           content: {
@@ -298,7 +298,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
           },
         })
       } else if (inputText.trim() && callArgsOnly) {
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'system',
           type: 'status',
           content: {
@@ -307,7 +307,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
           },
         })
       } else {
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'system',
           type: 'status',
           content: { text: '已确认启动，开始执行流程…' },
@@ -320,7 +320,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       } catch (e) {
         console.warn('[acw] furnace situation kickoff', e?.message || e)
       }
-      engineBus.emit('ws_broadcast_session', sessionId, {
+      engineEmit('ws_broadcast_session', sessionId, {
         type: 'session.status',
         payload: { sessionId, status: SESSION_STATUS.ACTIVE, pendingStart: false },
       })
@@ -352,7 +352,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       if (!pending) throw new Error('当前没有待确认的归档')
       const archNote = text != null ? String(text).trim() : ''
       if (action === 'defer_archive' || action === 'reject') {
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'user',
           type: 'gate',
           content: {
@@ -371,9 +371,9 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
             actionLabel: '暂不归档',
             text: archNote,
           })
-          engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(c) })
+          engineEmit('persist_session', sessionId, { context_json: JSON.stringify(c) })
         }
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'system',
           type: 'status',
           content: {
@@ -385,7 +385,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         refreshSessionAnnouncement(sessionId)
         return { deferred: true, pendingArchive: pending }
       }
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'user',
         type: 'gate',
         content: {
@@ -405,7 +405,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
           text: archNote,
         })
         c.lastHumanInput = archNote
-        engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(c) })
+        engineEmit('persist_session', sessionId, { context_json: JSON.stringify(c) })
       }
       refreshSessionAnnouncement(sessionId)
       const reason = pending.reason || 'manual'
@@ -507,13 +507,13 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         },
       )
       const autoTitleNeed = syncAutoSessionTitle(ctx, group)
-      engineBus.emit('persist_session', sessionId, {
+      engineEmit('persist_session', sessionId, {
         context_json: JSON.stringify(ctx),
         status: SESSION_STATUS.ACTIVE,
         current_step_index: node.step_index,
         ...(autoTitleNeed ? { title: autoTitleNeed } : {}),
       })
-      engineBus.emit('persist_node_io', sessionId, node.id, {
+      engineEmit('persist_node_io', sessionId, node.id, {
         input: {
           ...prevIn,
           submitted: fullText,
@@ -527,13 +527,13 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         },
         status: NODE_STATUS.PENDING,
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'user',
         type: 'text',
         node_instance_id: node.id,
         content: { text: fullText, params: parsed.map },
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         content: {
@@ -586,7 +586,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
     }
 
     const autoTitleHuman = syncAutoSessionTitle(ctx, group)
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       context_json: JSON.stringify(ctx),
       status: SESSION_STATUS.ACTIVE,
       ...(autoTitleHuman ? { title: autoTitleHuman } : {}),
@@ -602,7 +602,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       outPayload.paramsPreview = formatAddedParamsText(parsed.added, parsed.startIndex)
     }
 
-    engineBus.emit('persist_node_io', sessionId, node.id, {
+    engineEmit('persist_node_io', sessionId, node.id, {
       input: {
         ...prevIn,
         submitted: fullText || '',
@@ -612,14 +612,14 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       status: NODE_STATUS.SUCCEEDED,
       finished: true,
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'text',
       node_instance_id: node.id,
       content: { text: fullText || '(空)', params: parsed?.map || undefined },
     })
     if (parsed?.added?.length) {
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         content: {
@@ -631,7 +631,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
     }
     // 人工步结束：刷新群报告后继续（无 bat；成功/失败语义由后续节点决定）
     refreshSessionAnnouncement(sessionId)
-    engineBus.emit('persist_session', sessionId, { current_step_index: node.step_index + 1 })
+    engineEmit('persist_session', sessionId, { current_step_index: node.step_index + 1 })
     setImmediate(() => advance(sessionId).catch(console.error))
     return { ok: true, submitted: true }
   }
@@ -647,7 +647,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
         nodeInstanceId: node.id,
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'user',
         type: 'gate',
         node_instance_id: node.id,
@@ -657,12 +657,12 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
           mode: 'path_busy',
         },
       })
-      engineBus.emit('update_node', node.id, {
+      engineEmit('update_node', node.id, {
         status: NODE_STATUS.PENDING,
         output_json: JSON.stringify({ retriedPathBusy: true }),
         finished_at: null,
       })
-      engineBus.emit('persist_session', sessionId, {
+      engineEmit('persist_session', sessionId, {
         status: SESSION_STATUS.ACTIVE,
         current_step_index: node.step_index,
       })
@@ -708,7 +708,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       : !!(votes.human || votes.admin)
 
     const baseLabel = action === 'admin_approve' ? `${FURNACE_DISPLAY_NAME}已同意` : '已同意'
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'gate',
       node_instance_id: node.id,
@@ -733,11 +733,11 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
     }
 
     if (!passed) {
-      engineBus.emit('update_node', node.id, {
+      engineEmit('update_node', node.id, {
         status: NODE_STATUS.WAITING_HUMAN,
         output_json: JSON.stringify(outWithNote),
       })
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         content: {
@@ -750,14 +750,14 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       return { ok: true, passed: false }
     }
 
-    engineBus.emit('update_node', node.id, {
+    engineEmit('update_node', node.id, {
       status: NODE_STATUS.SUCCEEDED,
       finished_at: nowIso(),
       output_json: JSON.stringify({ ...outWithNote, passed: true }),
     })
     // 同意后刷新群报告（含附言与节点产出）
     refreshSessionAnnouncement(sessionId)
-    engineBus.emit('persist_session', sessionId, {
+    engineEmit('persist_session', sessionId, {
       status: SESSION_STATUS.ACTIVE,
       current_step_index: node.step_index + 1,
     })
@@ -780,7 +780,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       nodeTitle: node.title || `步骤 ${Number(node.step_index) + 1}`,
       nodeInstanceId: node.id,
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'gate',
       node_instance_id: node.id,
@@ -791,7 +791,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       },
     })
     // 明确拒绝 = 不通过（保留产出 + 附言）
-    engineBus.emit('update_node', node.id, {
+    engineEmit('update_node', node.id, {
       status: NODE_STATUS.FAILED,
       finished_at: nowIso(),
       output_json: JSON.stringify({
@@ -802,7 +802,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         rejected: true,
       }),
     })
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: { text: note ? `明确拒绝：${note}` : '明确拒绝，节点不通过' },

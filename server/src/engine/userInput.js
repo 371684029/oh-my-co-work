@@ -14,7 +14,7 @@ import {
   isMentionAssistOnly,
 } from '@acw/shared'
 import { getSession, getGroup, getMember, syncAutoSessionTitle,  } from './store.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import { ensureOffsiteNode, resolveOffsiteMode, appendOffsiteNodeChat } from './offsite.js'
 import { unarchiveSession, refreshSessionAnnouncement } from './archive.js'
 import { syncFurnaceSessionContext } from '../furnaceSituation.js'
@@ -85,7 +85,7 @@ export function recordUserChatInput(
     nodeInstanceId: nodeInstanceId || undefined,
   })
   const autoTitle = syncAutoSessionTitle(ctx, group)
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     context_json: JSON.stringify(ctx),
     ...(autoTitle ? { title: autoTitle } : {}),
   })
@@ -108,7 +108,7 @@ function appendPendingGateNote(sessionId, node, text) {
   const action = prev.humanAction === 'approve' || prev.humanAction === 'reject'
     ? prev.humanAction
     : 'pending'
-  engineBus.emit('update_node', node.id, {
+  engineEmit('update_node', node.id, {
     status: NODE_STATUS.WAITING_HUMAN,
     output_json: JSON.stringify({
       ...prev,
@@ -183,7 +183,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
         nodeInstanceId: node.id,
       })
       if (atts.length) {
-        engineBus.emit('add_message', sessionId, {
+        engineEmit('add_message', sessionId, {
           role: 'user',
           type: 'text',
           content,
@@ -216,7 +216,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
           (parseJson(node.output_json, {}).needParams ||
             parseJson(node.output_json, {}).reason === 'missing_param_1')))
     )
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'text',
       node_instance_id: offsiteNode?.id || null,
@@ -258,7 +258,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       ? ensureOffsiteNode(sessionId, { expand: true })
       : null
     const offsiteMode = offsiteNode ? resolveOffsiteMode(live, offsiteNode) : null
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'user',
       type: 'text',
       node_instance_id: offsiteNode?.id || null,
