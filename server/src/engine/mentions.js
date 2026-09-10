@@ -11,15 +11,7 @@ import {
   extractCallArgsFromMention,
   injectCallArgsParam,
 } from '@acw/shared'
-import {
-  getSession,
-  getGroup,
-  updateSession,
-  updateNode,
-  addMessage,
-  persistNodeIo,
-  resolveParamsMap,
-} from './store.js'
+import { getSession, getGroup, resolveParamsMap,  } from './store.js'
 import { ensureOffsiteNode, resolveOffsiteMode, isOffsiteArchived } from './offsite.js'
 
 function escapeRegExp(s) {
@@ -111,16 +103,16 @@ async function runMentionedMembers(sessionId, text) {
     planned: mode === OFFSITE_MODE.PLANNED,
     mentionText: String(text || '').slice(0, 500),
   }
-  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
 
   const prevOut = parseJson(offsite.output_json, {})
   const history = Array.isArray(prevOut.assists) ? prevOut.assists : []
-  updateNode(offsite.id, {
+  engineBus.emit('update_node', offsite.id, {
     status: NODE_STATUS.RUNNING,
     started_at: startedAt,
     finished_at: null,
   })
-  persistNodeIo(sessionId, offsite.id, {
+  engineBus.emit('persist_node_io', sessionId, offsite.id, {
     input: {
       kind: 'offsite',
       text: String(text || ''),
@@ -140,7 +132,7 @@ async function runMentionedMembers(sessionId, text) {
     status: NODE_STATUS.RUNNING,
   })
 
-  addMessage(sessionId, {
+  engineBus.emit('add_message', sessionId, {
     role: 'system',
     type: 'status',
     node_instance_id: offsite.id,
@@ -160,7 +152,7 @@ async function runMentionedMembers(sessionId, text) {
       offsite = ensureOffsiteNode(sessionId, { expand: true })
     }
 
-    addMessage(sessionId, {
+    engineBus.emit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
@@ -202,7 +194,7 @@ async function runMentionedMembers(sessionId, text) {
       offsite = ensureOffsiteNode(sessionId, { expand: true })
     }
 
-    addMessage(sessionId, {
+    engineBus.emit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
@@ -249,7 +241,7 @@ async function runMentionedMembers(sessionId, text) {
 
   if (startArchived) {
     // 回主线后的异步收尾 = 新场外段落，写完即归档（线性扩展）
-    persistNodeIo(sessionId, offsite.id, {
+    engineBus.emit('persist_node_io', sessionId, offsite.id, {
       input: {
         kind: 'offsite',
         text: String(text || ''),
@@ -271,7 +263,7 @@ async function runMentionedMembers(sessionId, text) {
       status: NODE_STATUS.SUCCEEDED,
       finished: true,
     })
-    addMessage(sessionId, {
+    engineBus.emit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       node_instance_id: offsite.id,
@@ -285,7 +277,7 @@ async function runMentionedMembers(sessionId, text) {
     return { invoked, offsiteNodeId: offsite.id, offsiteMode: mode, lateExpand: true }
   }
 
-  persistNodeIo(sessionId, offsite.id, {
+  engineBus.emit('persist_node_io', sessionId, offsite.id, {
     input: parseJson(cur?.input_json, {}),
     output: {
       ...curOut,
@@ -307,7 +299,7 @@ async function runMentionedMembers(sessionId, text) {
     mode,
     planned: mode === OFFSITE_MODE.PLANNED,
   }
-  updateSession(sessionId, { context_json: JSON.stringify(ctxLive) })
+  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctxLive) })
   engineBus.emit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: {

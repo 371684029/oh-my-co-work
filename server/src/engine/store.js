@@ -109,7 +109,7 @@ export function bindGateHumanInput(sessionId, {
       nodeInstanceId,
     })
   }
-  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
   return { full, note }
 }
 

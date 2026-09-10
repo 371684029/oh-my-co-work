@@ -27,21 +27,7 @@ import {
 } from '../furnaceContext.js'
 import { syncFurnaceSessionContext, touchFurnaceWorkflow } from '../furnaceSituation.js'
 import { formatFurnaceRoleNotice } from '../furnaceGrokInject.js'
-import {
-  getMember,
-  getGroup,
-  getSession,
-  updateSession,
-  updateNode,
-  addMessage,
-  persistNodeIo,
-  resolveStepForNode,
-  templateStepIndexOf,
-  memberNeedsProjectParams,
-  hasProjectParam1,
-  resolveParamsMap,
-  parseMemberConfig,
-} from './store.js'
+import { getMember, getGroup, getSession, resolveStepForNode, templateStepIndexOf, memberNeedsProjectParams, hasProjectParam1, resolveParamsMap, parseMemberConfig,  } from './store.js'
 import { skipArchiveNode, dismissPendingArchiveIfAny, archiveSession, refreshSessionAnnouncement } from './archive.js'
 
 export async function advance(sessionId) {
@@ -68,23 +54,23 @@ export async function advance(sessionId) {
     const node = nodes.find((n) => n.step_index === idx)
     if (!node) {
       idx += 1
-      updateSession(sessionId, { current_step_index: idx })
+      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) {
       idx += 1
-      updateSession(sessionId, { current_step_index: idx })
+      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     if (node.status === NODE_STATUS.WAITING_HUMAN) {
-      updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
+      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN, current_step_index: idx })
       return
     }
 
     if (node.status === NODE_STATUS.RUNNING) {
-      updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
+      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
       return
     }
 
@@ -92,14 +78,14 @@ export async function advance(sessionId) {
     if (node.step_type === STEP_TYPE.ARCHIVE) {
       skipArchiveNode(sessionId, node, 'completed')
       idx += 1
-      updateSession(sessionId, { current_step_index: idx })
+      engineBus.emit('persist_session', sessionId, { current_step_index: idx })
       continue
     }
 
     // 额外节点：可插在流程中间；走到此处则挂起（如中途点外卖），不自动跳过
     if (node.step_type === STEP_TYPE.OFFSITE) {
       const title = node.title || '临时协助'
-      persistNodeIo(sessionId, node.id, {
+      engineBus.emit('persist_node_io', sessionId, node.id, {
         input: {
           kind: 'offsite',
           prompt: title,
@@ -114,7 +100,7 @@ export async function advance(sessionId) {
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      updateSession(sessionId, {
+      engineBus.emit('persist_session', sessionId, {
         status: SESSION_STATUS.WAITING_HUMAN,
         current_step_index: idx,
       })
@@ -126,9 +112,9 @@ export async function advance(sessionId) {
         mode: OFFSITE_MODE.PLANNED,
         planned: true,
       }
-      updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+      engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
       touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -152,8 +138,8 @@ export async function advance(sessionId) {
     }
 
     // run step
-    updateSession(sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
-    updateNode(node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
+    engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE, current_step_index: idx })
+    engineBus.emit('update_node', node.id, { status: NODE_STATUS.RUNNING, started_at: nowIso() })
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
     engineBus.emit('ws_broadcast_session', sessionId, {
       type: 'session.status',
@@ -188,7 +174,7 @@ export async function advance(sessionId) {
       const prompt = captureParams
         ? `${basePrompt}\n（空格或换行分隔多段 → #1、#2…；同会话内递增追加，不覆盖；新开聊另起一套。节点输出整段不切分）`
         : basePrompt
-      persistNodeIo(sessionId, node.id, {
+      engineBus.emit('persist_node_io', sessionId, node.id, {
         input: {
           kind: 'human',
           prompt: basePrompt,
@@ -198,9 +184,9 @@ export async function advance(sessionId) {
         output: { waiting: true, ...(cloneMeta || {}) },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
       touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'gate',
         node_instance_id: node.id,
@@ -226,13 +212,13 @@ export async function advance(sessionId) {
     // member step
     const member = node.member_id ? getMember(node.member_id) : null
     if (!member) {
-      persistNodeIo(sessionId, node.id, {
+      engineBus.emit('persist_node_io', sessionId, node.id, {
         input: { memberId: node.member_id },
         output: { error: '成员不存在' },
         status: NODE_STATUS.FAILED,
         finished: true,
       })
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'text',
         node_instance_id: node.id,
@@ -256,7 +242,7 @@ export async function advance(sessionId) {
     }
 
     if (memberNeedsProjectParams(member) && !hasProjectParam1(ctx)) {
-      persistNodeIo(sessionId, node.id, {
+      engineBus.emit('persist_node_io', sessionId, node.id, {
         input: {
           memberId: member.id,
           memberName: member.display_name,
@@ -271,8 +257,8 @@ export async function advance(sessionId) {
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
-      updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
-      addMessage(sessionId, {
+      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'gate',
         node_instance_id: node.id,
@@ -317,7 +303,7 @@ export async function advance(sessionId) {
             role: furnaceRole,
             nodeId: node.id,
           })
-          addMessage(sessionId, {
+          engineBus.emit('add_message', sessionId, {
             role: 'system',
             type: 'status',
             node_instance_id: node.id,
@@ -344,7 +330,7 @@ export async function advance(sessionId) {
         }
       }
       runMemberAs = adaptPrep.member || member
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -372,13 +358,13 @@ export async function advance(sessionId) {
           }
         : {}),
     }
-    persistNodeIo(sessionId, node.id, {
+    engineBus.emit('persist_node_io', sessionId, node.id, {
       input: memberInput,
       output: { running: true },
       status: NODE_STATUS.RUNNING,
     })
 
-    addMessage(sessionId, {
+    engineBus.emit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
@@ -433,7 +419,7 @@ export async function advance(sessionId) {
             refineFormatted: refineOut.formatted,
           }
         : memberInput
-    persistNodeIo(sessionId, node.id, {
+    engineBus.emit('persist_node_io', sessionId, node.id, {
       input: refineInput,
       output: result,
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
@@ -442,7 +428,7 @@ export async function advance(sessionId) {
     touchFurnaceWorkflow(sessionId, { nodeId: node.id, keepRole: true })
 
     if (refineOut.source !== 'none') {
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,
@@ -459,7 +445,7 @@ export async function advance(sessionId) {
       try {
         const killed = killMemberProcesses(sessionId, member.id)
         if (killed.killed > 0) {
-          addMessage(sessionId, {
+          engineBus.emit('add_message', sessionId, {
             role: 'system',
             type: 'status',
             content: {
@@ -472,7 +458,7 @@ export async function advance(sessionId) {
       }
     }
 
-    addMessage(sessionId, {
+    engineBus.emit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: result.ok ? 'text' : 'text',
@@ -544,7 +530,7 @@ export async function advance(sessionId) {
 
     // 三项全关：默认直接流转，避免卡死
     idx += 1
-    updateSession(sessionId, { current_step_index: idx })
+    engineBus.emit('persist_session', sessionId, { current_step_index: idx })
   }
 
   // 全部步骤完成：群聊默认归档释放资源；成员单聊（adhoc）保持进行中
@@ -576,7 +562,7 @@ function finishMainlineIfComplete(sessionId) {
     dismissPendingArchiveIfAny(sessionId, 'completed')
     const s = getSession(sessionId)
     if (s && s.status !== SESSION_STATUS.ARCHIVED && s.status !== SESSION_STATUS.INTERRUPTED) {
-      updateSession(sessionId, { status: SESSION_STATUS.ACTIVE })
+      engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.ACTIVE })
     }
     return
   }
@@ -585,11 +571,11 @@ function finishMainlineIfComplete(sessionId) {
 
 /** 打开流转闸门（人工/管理员）；审核态先置 pending */
 export function openFlowGate(sessionId, node, payload) {
-  updateNode(node.id, { status: NODE_STATUS.WAITING_HUMAN })
-  updateSession(sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+  engineBus.emit('update_node', node.id, { status: NODE_STATUS.WAITING_HUMAN })
+  engineBus.emit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
   // 把 flow/votes 记在节点 output，便于同意时合并
   const prev = parseJson(node.output_json, {})
-  updateNode(node.id, {
+  engineBus.emit('update_node', node.id, {
     status: NODE_STATUS.WAITING_HUMAN,
     output_json: JSON.stringify({
       ...prev,
@@ -604,7 +590,7 @@ export function openFlowGate(sessionId, node, payload) {
       humanAction: 'pending',
     }),
   })
-  addMessage(sessionId, {
+  engineBus.emit('add_message', sessionId, {
     role: 'system',
     type: 'gate',
     node_instance_id: node.id,
@@ -630,7 +616,7 @@ export function openFlowGate(sessionId, node, payload) {
         role: FURNACE_ROLE.REVIEW,
         nodeId: node.id,
       })
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         node_instance_id: node.id,

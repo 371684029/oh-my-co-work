@@ -5,7 +5,7 @@ import { getDb, parseJson } from '../db.js'
 import { engineBus } from './events.js'
 import { SESSION_STATUS, nowIso } from '@acw/shared'
 import { appendAdapterReply } from '../terminal/adapters/jsonl.js'
-import { getSession, updateSession, addMessage, updateNode, updateMessageContent } from './store.js'
+import { getSession } from './store.js'
 import { refreshSessionAnnouncement } from './archive.js'
 
 export function applyAdapterEvent({
@@ -21,7 +21,7 @@ export function applyAdapterEvent({
   if (!session || session.status === SESSION_STATUS.ARCHIVED) return
   try {
     if (event.type === 'message') {
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: event.role === 'user' ? 'user' : 'assistant',
         member_id: memberId || null,
         node_instance_id: nodeInstanceId || null,
@@ -32,7 +32,7 @@ export function applyAdapterEvent({
     }
     if (event.type === 'tool.start' || event.type === 'tool.end') {
       const started = event.type === 'tool.start'
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'assistant',
         member_id: memberId || null,
         node_instance_id: nodeInstanceId || null,
@@ -65,8 +65,8 @@ export function applyAdapterEvent({
         memberId: memberId || null,
       })
       ctx.pendingAdapterQuestions = pending
-      updateSession(sessionId, { context_json: JSON.stringify(ctx) })
-      addMessage(sessionId, {
+      engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+      engineBus.emit('add_message', sessionId, {
         role: 'system',
         type: 'gate',
         node_instance_id: nodeInstanceId || null,
@@ -93,7 +93,7 @@ export function applyAdapterEvent({
       return
     }
     if (event.type === 'result') {
-      addMessage(sessionId, {
+      engineBus.emit('add_message', sessionId, {
         role: 'assistant',
         member_id: memberId || null,
         node_instance_id: nodeInstanceId || null,
@@ -109,7 +109,7 @@ export function applyAdapterEvent({
         const node = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeInstanceId)
         if (node) {
           const prev = parseJson(node.output_json, {})
-          updateNode(nodeInstanceId, {
+          engineBus.emit('update_node', nodeInstanceId, {
             output_json: JSON.stringify({
               ...prev,
               adapterResult: {
@@ -164,7 +164,7 @@ export function answerAdapterQuestion(sessionId, { questionId, text, choice, act
     }
   }
   ctx.pendingAdapterQuestions = pending.filter((item) => item.id !== q.id)
-  updateSession(sessionId, { context_json: JSON.stringify(ctx) })
+  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
   const row = getDb()
     .prepare(
       `SELECT * FROM messages WHERE session_id = ? AND type = 'gate' ORDER BY created_at DESC`,
@@ -173,14 +173,14 @@ export function answerAdapterQuestion(sessionId, { questionId, text, choice, act
     .find((m) => parseJson(m.content_json, {})?.questionId === q.id)
   if (row) {
     const content = parseJson(row.content_json, {})
-    updateMessageContent(row.id, {
+    engineBus.emit('update_message', row.id, {
       ...content,
       humanAction: action === 'reject' ? 'reject' : 'approve',
       answered: true,
       answer: answerText,
     })
   }
-  addMessage(sessionId, {
+  engineBus.emit('add_message', sessionId, {
     role: 'user',
     type: 'gate',
     node_instance_id: q.nodeInstanceId || null,

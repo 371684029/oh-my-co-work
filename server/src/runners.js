@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process'
+import { DATA_ROOT } from './db.js'
 import path from 'node:path'
 import fs from 'node:fs'
-import { DATA_ROOT } from './db.js'
+
 import {
   registerProcess,
   unregisterProcess,
@@ -600,6 +601,7 @@ export async function runMember(
     }
 
     return runProcess({
+      context: { DATA_ROOT: typeof DATA_ROOT !== 'undefined' ? DATA_ROOT : (global.DATA_ROOT || process.env.DATA_ROOT || process.cwd()) },
       launch,
       cwd,
       env,
@@ -711,7 +713,7 @@ function buildScriptSummary({ ok, exitCode, stdout, stderr, label }) {
   return formatScriptUserSummary({ ok, exitCode, stdout, stderr, label })
 }
 
-function runProcess({
+function runProcess({ context,
   launch,
   cwd,
   env,
@@ -733,7 +735,7 @@ function runProcess({
     const chunks = []
     const errChunks = []
     const runId = uid('run')
-    const captureLog = path.join(DATA_ROOT, 'logs', `run_${runId}.console.log`)
+    const captureLog = path.join(context?.DATA_ROOT || process.cwd(), 'logs', `run_${runId}.console.log`)
     const displayLabel = label || filePath || command || 'script'
     const targetPidFile =
       sessionId && showConsole && isWin ? getRunPidFilePath(sessionId, runId) : null
@@ -929,7 +931,7 @@ function runProcess({
       const logName = `run_${Date.now()}.log`
       try {
         fs.writeFileSync(
-          path.join(DATA_ROOT, 'logs', logName),
+          path.join(context?.DATA_ROOT || process.cwd(), 'logs', logName),
           `cwd=${cwd}\npid=${pid}\ncode=${code}\ndetach=${!!detach}\nruntime=${launch.label}\nlabel=${displayLabel}\ncmd=${launch.cmd} ${(launch.args || []).join(' ')}\n--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}\n`,
         )
       } catch {
