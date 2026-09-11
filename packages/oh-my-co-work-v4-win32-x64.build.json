@@ -6,8 +6,8 @@
   "version": "4.7.0",
   "major": 4,
   "platform": "win32-x64",
-  "sourceCommit": "86ef6fa923faea46037962c270bf0496e2b75018",
-  "builtAt": "2026-09-11T07:43:11.775Z",
+  "sourceCommit": "89467c7073a8bfc6eb7b5568a9686a2a179831e6",
+  "builtAt": "2026-09-11T07:47:18.409Z",
   "needsNpmInstall": false,
   "requiredAssets": [
     "web/dist/assets/spritesheet-*.webp"
