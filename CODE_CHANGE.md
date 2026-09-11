@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-10 | A | docs/5.0.0-desktop-plan.md | 新增 5.0.0 桌面原生客户端实施计划文档
 2026-09-10 | A | web/src/composables/useDesktopBridge.js | 新增桌面环境探测与通用 Bridge API 存根
 2026-09-10 | A | web/test/desktopBridge.test.mjs | 新增桌面探测与 Bridge 回退单测
 2026-09-10 | M | docs/4.7.0-plan.md | 维护 4.7.0 ~ 5.0.0 桌面化与演进规划文档
