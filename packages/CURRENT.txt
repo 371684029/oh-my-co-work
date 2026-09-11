@@ -5,9 +5,9 @@ needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.darwin-arm64=oh-my-co-work-v4-darwin-arm64.zip
-size.darwin-arm64=24273874
-commit.darwin-arm64=718a47452cf96f13208d0a34ae9b634a3a2f8e30
-built.darwin-arm64=2026-09-11T07:04:01.708Z
+size.darwin-arm64=24273829
+commit.darwin-arm64=86ef6fa923faea46037962c270bf0496e2b75018
+built.darwin-arm64=2026-09-11T07:43:08.931Z
 file.linux-x64=oh-my-co-work-v4-linux-x64.zip
 size.linux-x64=24432018
 commit.linux-x64=718a47452cf96f13208d0a34ae9b634a3a2f8e30
