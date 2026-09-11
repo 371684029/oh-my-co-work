@@ -43,6 +43,20 @@ export function useDesktopBridge() {
     return false
   }
 
+  async function launchWorkflow(sessionIdOrGroupId) {
+    if (typeof window !== 'undefined' && window.__ACW_DESKTOP_API__?.launchWorkflow) {
+      return await window.__ACW_DESKTOP_API__.launchWorkflow(sessionIdOrGroupId)
+    }
+    return false
+  }
+
+  async function applyDesktopUpdate(manifest) {
+    if (typeof window !== 'undefined' && window.__ACW_DESKTOP_API__?.applyDesktopUpdate) {
+      return await window.__ACW_DESKTOP_API__.applyDesktopUpdate(manifest)
+    }
+    return false
+  }
+
   return {
     detectedEnv,
     bridgeVersion,
@@ -51,5 +65,7 @@ export function useDesktopBridge() {
     initDesktopBridge,
     notify,
     minimizeToTray,
+    launchWorkflow,
+    applyDesktopUpdate,
   }
 }

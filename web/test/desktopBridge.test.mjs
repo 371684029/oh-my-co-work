@@ -50,3 +50,37 @@ test('useDesktopBridge handles fallback notify and minimizeToTray gracefully', a
 
   delete globalThis.window
 })
+
+test('useDesktopBridge handles launchWorkflow and applyDesktopUpdate extension methods', async () => {
+  const { initDesktopBridge, launchWorkflow, applyDesktopUpdate } = useDesktopBridge()
+
+  let launchedSession = ''
+  let updateManifest = null
+
+  const mockWin = {
+    __ACW_DESKTOP_ENV__: 'electron',
+    __ACW_DESKTOP_API__: {
+      launchWorkflow: async (sid) => {
+        launchedSession = sid
+        return true
+      },
+      applyDesktopUpdate: async (manifest) => {
+        updateManifest = manifest
+        return true
+      },
+    },
+  }
+
+  globalThis.window = mockWin
+  initDesktopBridge(mockWin)
+
+  const wfRes = await launchWorkflow('session-123')
+  assert.equal(wfRes, true)
+  assert.equal(launchedSession, 'session-123')
+
+  const updateRes = await applyDesktopUpdate({ version: '4.9.0' })
+  assert.equal(updateRes, true)
+  assert.deepEqual(updateManifest, { version: '4.9.0' })
+
+  delete globalThis.window
+})

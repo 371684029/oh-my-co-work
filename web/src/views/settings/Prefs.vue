@@ -10,6 +10,22 @@
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
+          <div class="prefs-title">桌面运行环境</div>
+          <p class="prefs-hint">
+            运行模式：<strong>{{ isDesktop ? `桌面端 (${desktopEnv})` : 'Web 网页模式' }}</strong>。
+            <span v-if="isDesktop">已连接桌面容器 Bridge v{{ bridgeVersion }}（支持原生托盘与系统通知）。</span>
+            <span v-else>可通过原生桌面壳/Tauri 容器拉起以使用独立托盘与全局快捷键。</span>
+          </p>
+        </div>
+        <el-tag :type="isDesktop ? 'success' : 'info'" size="small">
+          {{ isDesktop ? desktopEnv : 'Web' }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-row">
+        <div class="prefs-text">
           <div class="prefs-title">显示演示示例</div>
           <p class="prefs-hint">
             关闭后，成员 / 群模板 / 会话列表中隐藏「示例回声」「示例命令」「演示流」等演示数据（不删除）。
@@ -342,8 +358,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import { useAppConfig } from '../../composables/useAppConfig'
+import { useDesktopBridge } from '../../composables/useDesktopBridge'
 
 const { startupUpdateCheck, setStartupUpdateCheck } = useAppConfig()
+const { isDesktop, desktopEnv, bridgeVersion } = useDesktopBridge()
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)
