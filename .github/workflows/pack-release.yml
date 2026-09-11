@@ -192,7 +192,8 @@ jobs:
           ## 运行包（打包产物，非源码）· v${VER}
 
           解压后双击 \`start.bat\` / 运行 \`./start.sh\`。
-          **不需要 npm install**（依赖已打进包内；仍需本机 Node.js ≥ 18）。
+          Windows 包会打开桌面窗口（内含 Electron 与 Node，一般不用再装 Node.js）。
+          其它系统 **不需要 npm install**（依赖已打进包内；仍需本机 Node.js ≥ 18）。
 
           请下载与本机系统匹配的 zip：
           - \`*-win32-x64.zip\` → Windows

@@ -8,8 +8,10 @@ import {
   grokCanRun,
 } from './furnaceUi.js'
 import { fullscreenElement } from './fullscreen'
+import { useDesktopBridge } from './useDesktopBridge.js'
 
 export function useAppInit() {
+  const desktop = useDesktopBridge()
   const isFullscreen = ref(false)
   const grokGuideOpen = ref(false)
   const grokGuideStatus = ref({})
@@ -88,6 +90,7 @@ export function useAppInit() {
   }
 
   onMounted(() => {
+    desktop.initDesktopBridge()
     document.addEventListener('fullscreenchange', syncFullscreenState)
     syncFullscreenState()
     refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
@@ -105,5 +108,7 @@ export function useAppInit() {
     grokCanContinue,
     refreshGrokGate,
     ensureFurnaceGrokWired,
+    isDesktop: desktop.isDesktop,
+    desktopEnv: desktop.desktopEnv,
   }
 }

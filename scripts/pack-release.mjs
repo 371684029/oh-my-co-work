@@ -15,9 +15,14 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import https from 'node:https'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+
+/** Windows 桌面包内嵌运行时（与 CI Node 20 ABI、win32 原生模块对齐） */
+const PACK_NODE_VERSION = '20.18.3'
+const PACK_ELECTRON_VERSION = '32.3.3'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -177,6 +182,16 @@ function writeStartBat(dest) {
       '@echo off',
       'chcp 65001 >nul',
       'cd /d "%~dp0"',
+      'if exist "desktop\\electron.exe" (',
+      '  start "" /D "%~dp0" "desktop\\electron.exe" "%~dp0."',
+      '  exit /b 0',
+      ')',
+      'if exist "runtime\\node.exe" (',
+      '  echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
+      '  "runtime\\node.exe" start.mjs',
+      '  if errorlevel 1 pause',
+      '  exit /b %errorlevel%',
+      ')',
       'where node >nul 2>nul',
       'if errorlevel 1 (',
       '  echo [acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org',
@@ -191,6 +206,101 @@ function writeStartBat(dest) {
     ].join('\r\n'),
     'utf8',
   )
+}
+
+function downloadHttps(url, dest) {
+  return new Promise((resolve, reject) => {
+    const go = (u, hops = 0) => {
+      if (hops > 8) return reject(new Error(`下载重定向过多: ${url}`))
+      https
+        .get(u, { headers: { 'User-Agent': 'oh-my-co-work-pack' } }, (res) => {
+          const loc = res.headers.location
+          if (res.statusCode >= 300 && res.statusCode < 400 && loc) {
+            res.resume()
+            return go(loc, hops + 1)
+          }
+          if (res.statusCode !== 200) {
+            res.resume()
+            return reject(new Error(`下载失败 ${res.statusCode}: ${u}`))
+          }
+          fs.mkdirSync(path.dirname(dest), { recursive: true })
+          const out = fs.createWriteStream(dest)
+          res.pipe(out)
+          out.on('finish', () => out.close((err) => (err ? reject(err) : resolve(dest))))
+          out.on('error', reject)
+        })
+        .on('error', reject)
+    }
+    go(url)
+  })
+}
+
+function unzipTo(zipPath, destDir) {
+  fs.mkdirSync(destDir, { recursive: true })
+  execFileSync('unzip', ['-q', '-o', zipPath, '-d', destDir], { stdio: 'inherit' })
+}
+
+async function cachedDownload(url, cacheName) {
+  const cacheDir = path.join(OUT_ROOT, 'cache')
+  const dest = path.join(cacheDir, cacheName)
+  if (fs.existsSync(dest) && fs.statSync(dest).size > 1024) {
+    console.log('[pack] cache hit', cacheName)
+    return dest
+  }
+  const tmp = dest + '.part'
+  if (fs.existsSync(tmp)) fs.rmSync(tmp)
+  console.log('[pack] download', url)
+  await downloadHttps(url, tmp)
+  fs.renameSync(tmp, dest)
+  return dest
+}
+
+function copyElectronAppFiles(stage) {
+  const electronDest = path.join(stage, 'electron')
+  fs.mkdirSync(electronDest, { recursive: true })
+  for (const name of ['main.js', 'preload.js', 'icon.png']) {
+    copyFile(path.join(ROOT, 'electron', name), path.join(electronDest, name))
+  }
+  const libDest = path.join(electronDest, 'lib')
+  fs.mkdirSync(libDest, { recursive: true })
+  for (const name of ['urls.mjs', 'server.mjs']) {
+    copyFile(path.join(ROOT, 'electron', 'lib', name), path.join(libDest, name))
+  }
+}
+
+async function embedWin32Desktop(stage) {
+  copyElectronAppFiles(stage)
+
+  const nodeZip = await cachedDownload(
+    `https://nodejs.org/dist/v${PACK_NODE_VERSION}/node-v${PACK_NODE_VERSION}-win-x64.zip`,
+    `node-v${PACK_NODE_VERSION}-win-x64.zip`,
+  )
+  const nodeExtract = path.join(OUT_ROOT, 'cache', `node-v${PACK_NODE_VERSION}-win-x64-extract`)
+  if (fs.existsSync(nodeExtract)) fs.rmSync(nodeExtract, { recursive: true, force: true })
+  unzipTo(nodeZip, nodeExtract)
+  const nodeRoot = path.join(nodeExtract, `node-v${PACK_NODE_VERSION}-win-x64`)
+  const runtime = path.join(stage, 'runtime')
+  fs.mkdirSync(runtime, { recursive: true })
+  const nodeExe = path.join(nodeRoot, 'node.exe')
+  if (!fs.existsSync(nodeExe)) throw new Error('Node 官方 zip 内缺少 node.exe')
+  copyFile(nodeExe, path.join(runtime, 'node.exe'))
+  for (const extra of fs.readdirSync(nodeRoot)) {
+    if (!/\.(dll|exe)$/i.test(extra)) continue
+    if (extra.toLowerCase() === 'node.exe') continue
+    copyFile(path.join(nodeRoot, extra), path.join(runtime, extra))
+  }
+
+  const electronZip = await cachedDownload(
+    `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+    `electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+  )
+  const desktop = path.join(stage, 'desktop')
+  if (fs.existsSync(desktop)) fs.rmSync(desktop, { recursive: true, force: true })
+  unzipTo(electronZip, desktop)
+  const electronExe = path.join(desktop, 'electron.exe')
+  if (!fs.existsSync(electronExe)) throw new Error('Electron zip 内缺少 electron.exe')
+  const defaultApp = path.join(desktop, 'resources', 'default_app.asar')
+  if (fs.existsSync(defaultApp)) fs.rmSync(defaultApp)
 }
 
 function writeStartSh(dest) {
@@ -560,7 +670,8 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '# oh-my-co-work 运行包（提交在 git）',
     '',
     '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
-    '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
+    '解压后直接启动，**不需要再执行 npm install**。',
+    'Windows 包内含 Electron 桌面窗口与 Node 运行时，一般不用先装 Node.js；macOS/Linux 仍需本机 Node.js ≥ 18。',
     '',
     '## 版本策略',
     '',
@@ -579,7 +690,7 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '',
     '## 启动',
     '',
-    '解压对应平台的 zip → Windows 双击 `start.bat`；macOS/Linux 运行 `./start.sh`。',
+    '解压对应平台的 zip → Windows 双击 `start.bat` 打开桌面窗口；macOS/Linux 运行 `./start.sh`。',
     '',
   ]
   fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
@@ -684,6 +795,7 @@ async function mainAsync() {
     version: ver,
     private: true,
     type: 'module',
+    main: target.platform === 'win32' ? 'electron/main.js' : undefined,
     description: 'oh-my-co-work 运行包（打包产物，非源码）',
     engines: { node: '>=18' },
     dependencies: {
@@ -697,6 +809,7 @@ async function mainAsync() {
         ] || '^1.1.0',
     },
   }
+  if (!distPkg.main) delete distPkg.main
   fs.writeFileSync(
     path.join(stage, 'package.json'),
     JSON.stringify(distPkg, null, 2) + '\n',
@@ -723,6 +836,11 @@ async function mainAsync() {
   writeStartBat(path.join(stage, 'start.bat'))
   writeStartSh(path.join(stage, 'start.sh'))
 
+  if (target.platform === 'win32') {
+    console.log('[pack] embed Windows desktop (Electron + Node runtime)…')
+    await embedWin32Desktop(stage)
+  }
+
   const userReadme = [
     '# oh-my-co-work 运行包',
     '',
@@ -732,18 +850,24 @@ async function mainAsync() {
     '',
     '## 需要',
     '',
-    '- 本机已安装 Node.js ≥ 18（https://nodejs.org；推荐 Node 22+）',
+    plat.startsWith('win32')
+      ? '- Windows x64。包内已带 Electron 窗口和 Node 运行时，**一般不用再装 Node.js**。'
+      : '- 本机已安装 Node.js ≥ 18（https://nodejs.org；推荐 Node 22+）',
     '- **通常不需要**再执行 npm install（依赖已打进包内）',
-    '- Node 22+：即使 better-sqlite3 与本机 Node 不匹配，也会自动用内置 sqlite 启动',
+    ...(plat.startsWith('win32')
+      ? []
+      : ['- Node 22+：即使 better-sqlite3 与本机 Node 不匹配，也会自动用内置 sqlite 启动']),
     '',
     '## 启动',
     '',
     '| 系统 | 操作 |',
     '|------|------|',
-    '| Windows | 双击 start.bat |',
+    '| Windows | 双击 start.bat（打开桌面窗口；关窗藏托盘，托盘「退出」才停服务） |',
     '| macOS / Linux | ./start.sh 或 node start.mjs |',
     '',
-    '关闭浏览器不会自动停服务；请在启动窗口 Ctrl+C 结束。',
+    plat.startsWith('win32')
+      ? '关闭桌面窗口默认藏到托盘，不会停后台。请用托盘菜单「退出」。'
+      : '关闭浏览器不会自动停服务；请在启动窗口 Ctrl+C 结束。',
     '',
     '数据目录：解压目录下的 data/',
     '',
@@ -769,6 +893,7 @@ async function mainAsync() {
     schemaVersion: 1,
     name: 'oh-my-co-work',
     kind: 'runtime-bundle',
+    desktop: target.platform === 'win32' ? 'electron+bundled-node' : 'browser',
     version: ver,
     major,
     platform: plat,

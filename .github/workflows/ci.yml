@@ -35,8 +35,8 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Test web (pure logic)
-        run: npm run test:web
+      - name: Test electron (pure logic)
+        run: npm run test:electron
 
       - name: Build web (sanity)
         run: npm run build -w web

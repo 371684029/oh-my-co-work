@@ -10,6 +10,23 @@
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
+          <div class="prefs-title">运行环境</div>
+          <p class="prefs-hint">
+            当前是
+            <strong>{{ isDesktop ? `桌面窗口（${desktopEnv}）` : '浏览器网页' }}</strong>。
+            <span v-if="isDesktop">关窗会藏到托盘，托盘菜单可退出并停掉后台服务。</span>
+            <span v-else>Windows 运行包双击 start.bat 会打开桌面窗口，不必先开浏览器。</span>
+          </p>
+        </div>
+        <el-tag :type="isDesktop ? 'success' : 'info'" size="small">
+          {{ isDesktop ? desktopEnv : 'Web' }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-row">
+        <div class="prefs-text">
           <div class="prefs-title">显示演示示例</div>
           <p class="prefs-hint">
             关闭后，成员 / 群模板 / 会话列表中隐藏「示例回声」「示例命令」「演示流」等演示数据（不删除）。
@@ -341,6 +358,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
+import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
+
+const { isDesktop, desktopEnv, initDesktopBridge } = useDesktopBridge()
+initDesktopBridge()
 
 const showDemo = ref(true)
 const showScriptPopup = ref(true)

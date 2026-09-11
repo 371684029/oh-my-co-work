@@ -137,6 +137,26 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
     throw new Error('仍包含已退役的旧版 furnace-idle GIF/PNG')
   }
 
+  if (platform === 'win32') {
+    const need = [
+      { re: /\/electron\/main\.js$/, label: 'electron/main.js' },
+      { re: /\/electron\/preload\.js$/, label: 'electron/preload.js' },
+      { re: /\/electron\/icon\.png$/, label: 'electron/icon.png' },
+      { re: /\/desktop\/electron\.exe$/, label: 'desktop/electron.exe' },
+      { re: /\/runtime\/node\.exe$/, label: 'runtime/node.exe' },
+    ]
+    for (const item of need) {
+      const hit = entries.find((e) => item.re.test(`/${e}`))
+      if (!hit) throw new Error(`Windows 桌面包缺少 ${item.label}`)
+      if (item.label.endsWith('.exe')) {
+        const bytes = unzipBytes(zipPath, hit)
+        if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
+          throw new Error(`${item.label} 不是 Windows PE（缺少 MZ 头）`)
+        }
+      }
+    }
+  }
+
   const nativeCheck = NATIVE_MAGIC_CHECK[platform]
   const loadedNativeEntries = resolveLoadedNativeEntries(entries, platformTag)
   const mismatched = []

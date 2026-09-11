@@ -28,6 +28,7 @@ function buildFixtureZip({
   spritesheetBytes,
   includeOldAsset,
   nativeFiles,
+  skipWinDesktop,
 }) {
   const platform = platformTag.match(/^(win32|linux|darwin)-/)[1]
   const root = path.join(dir, platformTag)
@@ -62,6 +63,16 @@ function buildFixtureZip({
   if (includeOldAsset) {
     fs.writeFileSync(path.join(root, 'web/dist/assets/furnace-idle-old.gif'), Buffer.from([0]))
   }
+  if (platform === 'win32' && !skipWinDesktop) {
+    fs.mkdirSync(path.join(root, 'electron'), { recursive: true })
+    fs.writeFileSync(path.join(root, 'electron/main.js'), 'export {}\n')
+    fs.writeFileSync(path.join(root, 'electron/preload.js'), 'export {}\n')
+    fs.writeFileSync(path.join(root, 'electron/icon.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    fs.mkdirSync(path.join(root, 'desktop'), { recursive: true })
+    fs.writeFileSync(path.join(root, 'desktop/electron.exe'), PLATFORM_MAGIC.win32)
+    fs.mkdirSync(path.join(root, 'runtime'), { recursive: true })
+    fs.writeFileSync(path.join(root, 'runtime/node.exe'), PLATFORM_MAGIC.win32)
+  }
   const zipPath = path.join(dir, `${platformTag}.zip`)
   execFileSync('zip', ['-qr', zipPath, platformTag], { cwd: dir })
   return zipPath
@@ -88,6 +99,24 @@ test('verifyPackedZip passes a well-formed win32-x64 package', () => {
     })
     const info = verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' })
     assert.equal(info.platform, 'win32-x64')
+  })
+})
+
+test('verifyPackedZip rejects a win32 package missing bundled Electron', () => {
+  withTmpDir((dir) => {
+    const spritesheetBytes = fs.existsSync(SOURCE_SPRITESHEET)
+      ? fs.readFileSync(SOURCE_SPRITESHEET)
+      : Buffer.from('fake-sprite')
+    const zipPath = buildFixtureZip({
+      dir,
+      platformTag: 'win32-x64',
+      spritesheetBytes,
+      skipWinDesktop: true,
+    })
+    assert.throws(
+      () => verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' }),
+      /Windows 桌面包缺少/,
+    )
   })
 })
 

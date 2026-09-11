@@ -21,7 +21,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['server/**/*.js', 'shared/**/*.js', 'scripts/**/*.mjs', 'scripts/**/*.js', '*.mjs', 'start.mjs', '**/vite.config.js'],
+    files: ['server/**/*.js', 'shared/**/*.js', 'scripts/**/*.mjs', 'scripts/**/*.js', 'electron/**/*.js', 'electron/**/*.mjs', '*.mjs', 'start.mjs', '**/vite.config.js'],
     languageOptions: {
       globals: { ...globals.node },
     },
@@ -72,7 +72,7 @@ export default [
     },
   },
   {
-    files: ['server/test/**/*.js', 'web/test/**/*.mjs', 'scripts/selftest-*.mjs'],
+    files: ['server/test/**/*.js', 'web/test/**/*.mjs', 'electron/test/**/*.mjs', 'scripts/selftest-*.mjs'],
     rules: {
       'no-unused-vars': 'off',
     },

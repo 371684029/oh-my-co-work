@@ -22,6 +22,13 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-11 | A | electron/lib/urls.mjs electron/lib/server.mjs electron/test/urls-server.test.mjs electron/icon.png | 桌面壳可测的工作台 URL、拉起 Node 服务、托盘图标
+2026-09-11 | M | electron/main.js electron/preload.js | 自动起服务、关窗藏托盘、history 路由、更新不假成功、去掉 Alt+Space
+2026-09-11 | M | scripts/pack-release.mjs scripts/verify-pack.mjs | Windows 包内嵌 Electron+Node，校验 PE 与桌面入口
+2026-09-11 | M | web/src/composables/useAppInit.js web/src/views/settings/About.vue Prefs.vue | 桌面桥接到关于页与设置
+2026-09-11 | M | package.json server/web/shared about.json | 版本 4.7.0；dev:desktop 用 electron .
+
+---
 2026-09-09 | A | docs/assets/screenshots/docs-hub.webp | 文档中心独立页三栏截图（群模板 / 会话文件 / 群报告正文）
 2026-09-09 | A | docs/assets/screenshots/docs-hub-rail.webp | 工作台第三栏文档中心预览截图
 2026-09-09 | M | README.md | 新增 4.x 协同文档中心小节并嵌入上述截图

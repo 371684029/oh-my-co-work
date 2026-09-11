@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.6.0-409eff?style=flat-square" alt="version 4.6.0" />
+  <img src="https://img.shields.io/badge/version-4.7.0-409eff?style=flat-square" alt="version 4.7.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -167,7 +167,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`；本机仍需 Node.js 18+。当前源码版本 **4.6.0**；仓库 `packages/` 内 zip 构建元数据仍为 4.2.0，待下次发布流水线重打。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.7.0**。Windows zip 双击 `start.bat` 打开桌面窗口（包内含 Electron 与 Node，一般不用先装 Node.js）；macOS / Linux 仍需本机 Node.js 18+。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -286,8 +286,8 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.2.1：文档中心解耦与工作台三栏集成（内嵌台账预览与群导出）、设置页新增一键备份（本地快照+下载）与一键导出（全量文档 ZIP）、熔炉通栏满屏与元信息胶囊卡片美化（深度思考与耗时结构化呈现）、下载安全与竞态加固
 - [x] 4.5.0：熔炉炼化——成员/步骤炼化字段、执行后格式化进台账（stdout 优先）、规格回写不覆盖其它 config
 - [x] 4.6.0：四维模糊搜索 + 审查修复——拼音阈值与打分排序、文档中心竞态、备份恢复拒绝符号链接、活库损坏可恢复、协议相对链接外链处理
-- [ ] 后续：托盘独立窗、多终端标签治理、更多 CLI Adapter
-- [ ] 桌面壳、托盘与系统通知
+- [x] 4.7.0：Windows 桌面窗口运行包——start.bat 打开 Electron 工作台并拉起服务，包内 Node+Electron，关窗藏托盘
+- [ ] 后续：macOS/Linux 桌面壳、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
 

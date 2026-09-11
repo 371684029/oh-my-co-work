@@ -1,6 +1,6 @@
 {
   "name": "oh-my-co-work",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "private": true,
   "type": "module",
   "description": "群聊式多智能体协同台 MVP",
@@ -12,8 +12,7 @@
   "main": "electron/main.js",
   "scripts": {
     "dev": "npm run dev -w server",
-    "dev:desktop": "electron electron/main.js",
-    "build:desktop": "electron-builder",
+    "dev:desktop": "electron .",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "seed": "npm run seed -w server",
@@ -25,36 +24,14 @@
     "build": "npm run build -w web",
     "lint": "eslint .",
     "test": "npm run test -w server",
-    "test:web": "node --test web/test/*.test.mjs"
+    "test:web": "node --test web/test/*.test.mjs",
+    "test:electron": "node --test electron/test/*.test.mjs"
   },
   "engines": {
     "node": ">=18"
   },
-  "build": {
-    "appId": "com.ohmycowork.app",
-    "productName": "oh-my-co-work",
-    "files": [
-      "electron/**/*",
-      "web/dist/**/*",
-      "server/**/*",
-      "shared/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release/desktop"
-    },
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
-    },
-    "win": {
-      "target": ["nsis", "portable"]
-    },
-    "linux": {
-      "target": ["AppImage", "deb"]
-    }
-  },
   "devDependencies": {
+    "electron": "^32.3.3",
     "esbuild": "^0.25.12",
     "eslint": "^9.39.5",
     "eslint-plugin-vue": "^9.33.0",

@@ -1,55 +1,93 @@
-import { app, BrowserWindow, Notification, Tray, Menu, globalShortcut, ipcMain } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  Notification,
+  Tray,
+  Menu,
+  ipcMain,
+  dialog,
+  nativeImage,
+} from 'electron'
+import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { desktopUpdateResult, workbenchUrl } from './lib/urls.mjs'
+import {
+  isServerUp,
+  resolveNodeBin,
+  resolveServerEntry,
+  spawnAppServer,
+  stopChild,
+  waitHealth,
+} from './lib/server.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 let mainWindow = null
 let tray = null
+let trayOk = false
 let isQuitting = false
+let serverChild = null
+let appRoot = ''
+let port = 3780
+
+function appOrigin() {
+  return `http://127.0.0.1:${port}`
+}
+
+function resolveAppRoot() {
+  const fromArg = process.argv.find((a, i) => i > 0 && a && !a.startsWith('-') && fs.existsSync(path.join(a, 'package.json')))
+  if (fromArg) return path.resolve(fromArg)
+  try {
+    const fromElectron = app.getAppPath()
+    if (fromElectron && fs.existsSync(path.join(fromElectron, 'package.json'))) {
+      return fromElectron
+    }
+  } catch {
+    /* app 尚未 ready */
+  }
+  return path.resolve(__dirname, '..')
+}
+
+function showMainWindow() {
+  if (!mainWindow) return
+  mainWindow.show()
+  mainWindow.focus()
+}
 
 function createTray() {
   if (tray) return
-  const iconPath = path.join(__dirname, '../web/src/assets/furnace-idle.png')
+  const iconPath = path.join(__dirname, 'icon.png')
+  if (!fs.existsSync(iconPath)) return
   try {
-    tray = new Tray(iconPath)
-    tray.setToolTip('oh-my-co-work · 终端守护者')
-
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: '打开工作台',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.show()
-            mainWindow.focus()
-          }
+    const image = nativeImage.createFromPath(iconPath)
+    if (image.isEmpty()) return
+    tray = new Tray(image)
+    tray.setToolTip('oh-my-co-work')
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        { label: '打开工作台', click: () => showMainWindow() },
+        {
+          label: '隐藏到托盘',
+          click: () => {
+            if (mainWindow) mainWindow.hide()
+          },
         },
-      },
-      {
-        label: '隐藏到托盘',
-        click: () => {
-          if (mainWindow) mainWindow.hide()
+        { type: 'separator' },
+        {
+          label: '退出',
+          click: () => {
+            isQuitting = true
+            app.quit()
+          },
         },
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          isQuitting = true
-          app.quit()
-        },
-      },
-    ])
-
-    tray.setContextMenu(contextMenu)
-    tray.on('double-click', () => {
-      if (mainWindow) {
-        mainWindow.show()
-        mainWindow.focus()
-      }
-    })
+      ]),
+    )
+    tray.on('double-click', () => showMainWindow())
+    trayOk = true
   } catch {
-    /* 无图形界面或打包虚拟环境下静默处理 */
+    trayOk = false
   }
 }
 
@@ -60,27 +98,19 @@ async function createMainWindow() {
     minWidth: 1024,
     minHeight: 600,
     title: 'oh-my-co-work',
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   })
 
-  // 开发环境定位到 本地 Web/Vite 服务或静态产物
-  const devUrl = process.env.ACW_DESKTOP_DEV_URL || 'http://127.0.0.1:3780'
+  await mainWindow.loadURL(appOrigin() + '/workbench')
 
-  try {
-    await mainWindow.loadURL(devUrl)
-  } catch {
-    // 静态产物备用地址
-    const indexPath = path.join(__dirname, '../web/dist/index.html')
-    mainWindow.loadFile(indexPath).catch(() => {})
-  }
-
-  // 点击窗口关闭按钮 X 时，藏到托盘而不是直接彻底退出
   mainWindow.on('close', (evt) => {
-    if (!isQuitting) {
+    if (!isQuitting && trayOk) {
       evt.preventDefault()
       mainWindow.hide()
     }
@@ -91,81 +121,96 @@ async function createMainWindow() {
   })
 }
 
-// 注册 IPC 消息处理
-ipcMain.handle('acw:notify', (_evt, { title, options }) => {
-  if (Notification.isSupported()) {
-    const notification = new Notification({ title, ...options })
+function registerIpc() {
+  ipcMain.handle('acw:notify', (_evt, payload) => {
+    const title = String(payload?.title || '')
+    const body = String(payload?.options?.body || '')
+    if (!title) return false
+    if (!Notification.isSupported()) return false
+    const notification = new Notification({ title, body })
     notification.show()
     return true
-  }
-  return false
-})
+  })
 
-ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) => {
-  // 预留桌面静默自更新处理句柄
-  return !!manifest
-})
+  ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) => desktopUpdateResult(manifest))
 
-ipcMain.handle('acw:minimize-to-tray', () => {
-  if (mainWindow) {
+  ipcMain.handle('acw:minimize-to-tray', () => {
+    if (!mainWindow) return false
+    if (!trayOk) return false
     mainWindow.hide()
     return true
-  }
-  return false
-})
+  })
 
-ipcMain.handle('acw:launch-workflow', (_evt, sessionIdOrGroupId) => {
-  if (mainWindow) {
-    mainWindow.show()
-    mainWindow.focus()
-    const devUrl = process.env.ACW_DESKTOP_DEV_URL || 'http://127.0.0.1:3780'
-    const targetUrl = `${devUrl}/#/workbench?session=${encodeURIComponent(sessionIdOrGroupId || '')}`
-    mainWindow.loadURL(targetUrl).catch(() => {})
+  ipcMain.handle('acw:launch-workflow', (_evt, sessionIdOrGroupId) => {
+    if (!mainWindow) return false
+    showMainWindow()
+    const target = workbenchUrl(appOrigin(), sessionIdOrGroupId)
+    mainWindow.loadURL(target).catch(() => {})
     return true
-  }
-  return false
-})
-
-function registerGlobalHotkeys() {
-  const hotkey = process.platform === 'darwin' ? 'Option+Space' : 'Alt+Space'
-  try {
-    globalShortcut.register(hotkey, () => {
-      if (mainWindow) {
-        if (mainWindow.isVisible() && mainWindow.isFocused()) {
-          mainWindow.hide()
-        } else {
-          mainWindow.show()
-          mainWindow.focus()
-        }
-      }
-    })
-  } catch {
-    /* 快捷键占用或非 GUI 命令行测试场景静默处理 */
-  }
+  })
 }
 
-app.whenReady().then(() => {
-  createMainWindow()
-  createTray()
-  registerGlobalHotkeys()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+async function ensureServer() {
+  port = Number(process.env.ACW_PORT || 3780)
+  if (await isServerUp(port)) return
+  const nodeBin = resolveNodeBin(appRoot)
+  const entry = resolveServerEntry(appRoot)
+  fs.mkdirSync(path.join(appRoot, 'data'), { recursive: true })
+  const logPath = path.join(appRoot, 'data', 'desktop-server.log')
+  const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+  serverChild = spawnAppServer({
+    appRoot,
+    port,
+    nodeBin,
+    entry,
+    logStream,
+  })
+  serverChild.on('exit', (code) => {
+    if (!isQuitting && code) {
+      dialog.showErrorBox('oh-my-co-work', `后台服务已退出（${code}）。可查看 data/desktop-server.log`)
     }
   })
-})
+  await waitHealth(port)
+}
+
+registerIpc()
+
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => showMainWindow())
+
+  app.whenReady().then(async () => {
+    appRoot = resolveAppRoot()
+    process.chdir(appRoot)
+    try {
+      await ensureServer()
+      createTray()
+      await createMainWindow()
+    } catch (e) {
+      dialog.showErrorBox('oh-my-co-work 启动失败', String(e?.message || e))
+      isQuitting = true
+      app.quit()
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow()
+      } else {
+        showMainWindow()
+      }
+    })
+  })
+}
 
 app.on('before-quit', () => {
   isQuitting = true
-})
-
-app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
+  stopChild(serverChild)
+  serverChild = null
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  if (trayOk && !isQuitting) return
+  app.quit()
 })

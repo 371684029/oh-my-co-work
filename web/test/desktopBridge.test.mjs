@@ -62,14 +62,6 @@ test('detectDesktopEnvironment correctly identifies electron when process.versio
   assert.equal(detectDesktopEnvironment(mockWin), 'electron')
 })
 
-test('build configuration for electron-builder is present in root package.json', async () => {
-  const pkgModule = await import('../../package.json', { with: { type: 'json' } })
-  const pkg = pkgModule.default
-  assert.equal(pkg.main, 'electron/main.js')
-  assert.equal(pkg.build.appId, 'com.ohmycowork.app')
-  assert.ok(Array.isArray(pkg.build.mac.target))
-})
-
 test('useDesktopBridge handles launchWorkflow and applyDesktopUpdate extension methods', async () => {
   const { initDesktopBridge, launchWorkflow, applyDesktopUpdate } = useDesktopBridge()
 
@@ -85,7 +77,7 @@ test('useDesktopBridge handles launchWorkflow and applyDesktopUpdate extension m
       },
       applyDesktopUpdate: async (manifest) => {
         updateManifest = manifest
-        return true
+        return { ok: false, reason: 'not-implemented' }
       },
     },
   }
@@ -98,7 +90,8 @@ test('useDesktopBridge handles launchWorkflow and applyDesktopUpdate extension m
   assert.equal(launchedSession, 'session-123')
 
   const updateRes = await applyDesktopUpdate({ version: '4.9.0' })
-  assert.equal(updateRes, true)
+  assert.equal(updateRes.ok, false)
+  assert.equal(updateRes.reason, 'not-implemented')
   assert.deepEqual(updateManifest, { version: '4.9.0' })
 
   delete globalThis.window
