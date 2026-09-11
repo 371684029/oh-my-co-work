@@ -131,8 +131,8 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   if (info.platform !== platformTag) {
     throw new Error(`BUILD_INFO platform=${info.platform || '空'}，应为 ${platformTag}`)
   }
-  if (info.kind !== 'runtime-bundle') {
-    throw new Error(`BUILD_INFO kind=${info.kind || '空'}，应为 runtime-bundle`)
+  if (info.kind !== 'runtime-bundle' && info.kind !== 'desktop-bundle') {
+    throw new Error(`BUILD_INFO kind=${info.kind || '空'}，应为 runtime-bundle 或 desktop-bundle`)
   }
   if (expectedVersion && info.version !== expectedVersion) {
     throw new Error(`BUILD_INFO version=${info.version}，应为 ${expectedVersion}`)
@@ -154,7 +154,7 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
     throw new Error('仍包含已退役的旧版 furnace-idle GIF/PNG')
   }
 
-  if (platform === 'win32') {
+  if (info.kind === 'desktop-bundle') {
     const need = [
       { re: /\/electron\/main\.js$/, label: 'electron/main.js' },
       { re: /\/electron\/preload\.js$/, label: 'electron/preload.js' },

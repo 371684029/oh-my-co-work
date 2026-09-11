@@ -46,6 +46,21 @@ jobs:
           ACW_PACK_TARGET: ${{ matrix.target }}
         run: npm run pack
 
+      - name: Pack Windows desktop zip (Electron, not committed)
+        if: matrix.target == 'win32-x64'
+        run: npm run pack:desktop-win
+
+      - name: Verify Windows desktop zip
+        if: matrix.target == 'win32-x64'
+        run: |
+          set -euo pipefail
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          node scripts/verify-pack.mjs \
+            --zip "release/oh-my-co-work-v${MAJOR}-win32-x64-desktop.zip" \
+            --platform win32-x64 \
+            --version "$VER"
+
       - name: Verify packed zip
         run: |
           set -euo pipefail
@@ -93,6 +108,15 @@ jobs:
           path: |
             packages/oh-my-co-work-v*.zip
             packages/oh-my-co-work-v*.build.json
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Upload Windows desktop zip
+        if: matrix.target == 'win32-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: oh-my-co-work-win32-x64-desktop
+          path: release/oh-my-co-work-v*-desktop.zip
           if-no-files-found: error
           retention-days: 3
 
@@ -178,6 +202,12 @@ jobs:
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
         run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
 
+      - name: Download Windows desktop zip
+        uses: actions/download-artifact@v4
+        with:
+          name: oh-my-co-work-win32-x64-desktop
+          path: upload-desktop
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,17 +215,18 @@ jobs:
           set -euo pipefail
           mkdir -p upload
           cp -f packages/oh-my-co-work-v*.zip upload/
+          cp -f upload-desktop/*.zip upload/ || true
           ls -la upload
           SHORT=$(git rev-parse --short HEAD)
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           NOTES=$(cat <<EOF
           ## 运行包（打包产物，非源码）· v${VER}
 
-          解压后双击 \`start.bat\` / 运行 \`./start.sh\`。
-          Windows 包会打开桌面窗口（内含 Electron 与 Node，一般不用再装 Node.js）。
-          其它系统 **不需要 npm install**（依赖已打进包内；仍需本机 Node.js ≥ 18）。
+          **Windows 桌面窗口（推荐）**：下载 \`*-win32-x64-desktop.zip\`，解压后双击 \`start.bat\`。
+          包内含 Electron 与 Node，一般不用再装 Node.js。关窗藏托盘，托盘「退出」才停服务。
+          （体积超过 GitHub 仓库 100MB 限制，不进 \`packages/\`。）
 
-          请下载与本机系统匹配的 zip：
+          轻量运行包（需本机 Node.js ≥ 18，打开浏览器）：
           - \`*-win32-x64.zip\` → Windows
           - \`*-linux-x64.zip\` → Linux
           - \`*-darwin-*.zip\` → macOS
@@ -204,7 +235,7 @@ jobs:
           提交：\`${SHORT}\`
           EOF
           )
-          if gh release view latest >/dev/null 2>&1; then
+          if gh release view latest >/dev/null 2>/dev/null; then
             gh release delete latest --yes --cleanup-tag
           fi
           gh release create latest upload/*.zip \

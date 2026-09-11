@@ -28,7 +28,8 @@ function buildFixtureZip({
   spritesheetBytes,
   includeOldAsset,
   nativeFiles,
-  skipWinDesktop,
+  kind = 'runtime-bundle',
+  omitDesktop,
 }) {
   const platform = platformTag.match(/^(win32|linux|darwin)-/)[1]
   const root = path.join(dir, platformTag)
@@ -38,7 +39,7 @@ function buildFixtureZip({
     JSON.stringify({
       schemaVersion: 1,
       name: 'oh-my-co-work',
-      kind: 'runtime-bundle',
+      kind,
       version: '3.7.0',
       major: 3,
       platform: platformTag,
@@ -63,7 +64,7 @@ function buildFixtureZip({
   if (includeOldAsset) {
     fs.writeFileSync(path.join(root, 'web/dist/assets/furnace-idle-old.gif'), Buffer.from([0]))
   }
-  if (platform === 'win32' && !skipWinDesktop) {
+  if (kind === 'desktop-bundle' && !omitDesktop) {
     fs.mkdirSync(path.join(root, 'electron'), { recursive: true })
     fs.writeFileSync(path.join(root, 'electron/main.js'), 'export {}\n')
     fs.writeFileSync(path.join(root, 'electron/preload.js'), 'export {}\n')
@@ -102,7 +103,7 @@ test('verifyPackedZip passes a well-formed win32-x64 package', () => {
   })
 })
 
-test('verifyPackedZip rejects a win32 package missing bundled Electron', () => {
+test('verifyPackedZip rejects a desktop-bundle missing Electron', () => {
   withTmpDir((dir) => {
     const spritesheetBytes = fs.existsSync(SOURCE_SPRITESHEET)
       ? fs.readFileSync(SOURCE_SPRITESHEET)
@@ -111,7 +112,8 @@ test('verifyPackedZip rejects a win32 package missing bundled Electron', () => {
       dir,
       platformTag: 'win32-x64',
       spritesheetBytes,
-      skipWinDesktop: true,
+      kind: 'desktop-bundle',
+      omitDesktop: true,
     })
     assert.throws(
       () => verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' }),

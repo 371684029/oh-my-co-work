@@ -157,9 +157,20 @@
 
 ## 快速开始
 
-### 直接使用运行包
+### Windows 桌面窗口（推荐）
 
-在 [`packages/`](./packages/) 或 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台压缩包：
+下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里的 **`oh-my-co-work-v4-win32-x64-desktop.zip`**（内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。
+
+解压后双击 `start.bat`。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
+
+<img src="./docs/assets/screenshots/windows-desktop.png" alt="Windows 桌面窗口：oh-my-co-work 工作台" width="100%" />
+<p align="center"><sub>4.7.0 桌面包：独立窗口打开工作台，自动拉起本机服务</sub></p>
+
+源码开发也可以：`npm install` 后执行 `npm run dev:desktop`（需本机已能访问工作台 API，或让 Electron 自行拉起 `server`）。
+
+### 轻量运行包（浏览器）
+
+在 [`packages/`](./packages/) 或 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台压缩包（**需本机 Node.js ≥ 18**，打开系统浏览器）：
 
 ```text
 Windows  → 解压后双击 start.bat
@@ -167,7 +178,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.7.0**。Windows zip 双击 `start.bat` 打开桌面窗口（包内含 Electron 与 Node，一般不用先装 Node.js）；macOS / Linux 仍需本机 Node.js 18+。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.7.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -286,7 +297,7 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.2.1：文档中心解耦与工作台三栏集成（内嵌台账预览与群导出）、设置页新增一键备份（本地快照+下载）与一键导出（全量文档 ZIP）、熔炉通栏满屏与元信息胶囊卡片美化（深度思考与耗时结构化呈现）、下载安全与竞态加固
 - [x] 4.5.0：熔炉炼化——成员/步骤炼化字段、执行后格式化进台账（stdout 优先）、规格回写不覆盖其它 config
 - [x] 4.6.0：四维模糊搜索 + 审查修复——拼音阈值与打分排序、文档中心竞态、备份恢复拒绝符号链接、活库损坏可恢复、协议相对链接外链处理
-- [x] 4.7.0：Windows 桌面窗口运行包——start.bat 打开 Electron 工作台并拉起服务，包内 Node+Electron，关窗藏托盘
+- [x] 4.7.0：Windows 桌面窗口包——`*-win32-x64-desktop.zip` 双击 start.bat 打开 Electron 工作台并拉起服务（包内 Node+Electron，关窗藏托盘）；轻量 zip 仍进 `packages/`
 - [ ] 后续：macOS/Linux 桌面壳、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目

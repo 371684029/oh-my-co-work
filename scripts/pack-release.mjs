@@ -23,6 +23,14 @@ import { createRequire } from 'node:module'
 /** Windows 桌面包内嵌运行时（与 CI Node 20 ABI、win32 原生模块对齐） */
 const PACK_NODE_VERSION = '20.18.3'
 const PACK_ELECTRON_VERSION = '32.3.3'
+/** GitHub 仓库文件硬限制 100MB；含 Electron 的桌面包只放 release/ 与 GitHub Release */
+const GIT_ZIP_MAX_BYTES = 95 * 1024 * 1024
+
+function wantDesktopPack() {
+  if (process.argv.includes('--desktop')) return true
+  const v = String(process.env.ACW_PACK_DESKTOP || '').trim().toLowerCase()
+  return v === '1' || v === 'true' || v === 'yes'
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -66,7 +74,9 @@ function platformTag() {
 }
 
 function packTarget() {
-  const tag = String(process.env.ACW_PACK_TARGET || platformTag()).trim()
+  const tag = String(
+    process.env.ACW_PACK_TARGET || (process.argv.includes('--desktop') ? 'win32-x64' : platformTag()),
+  ).trim()
   const match = tag.match(/^(win32|linux|darwin)-(x64|arm64)$/)
   if (!match) {
     throw new Error(
@@ -590,6 +600,7 @@ function parseCurrentTxt(raw) {
 }
 
 function platformFromZipName(name) {
+  if (/desktop\.zip$/i.test(name)) return null
   // oh-my-co-work-v2-linux-x64.zip → linux-x64
   const m = String(name).match(/^oh-my-co-work-v\d+-(.+)\.zip$/i)
   return m ? m[1] : null
@@ -670,8 +681,9 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '# oh-my-co-work 运行包（提交在 git）',
     '',
     '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
-    '解压后直接启动，**不需要再执行 npm install**。',
-    'Windows 包内含 Electron 桌面窗口与 Node 运行时，一般不用先装 Node.js；macOS/Linux 仍需本机 Node.js ≥ 18。',
+    '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
+    '',
+    'Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载 `*-win32-x64-desktop.zip`。',
     '',
     '## 版本策略',
     '',
@@ -690,7 +702,8 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '',
     '## 启动',
     '',
-    '解压对应平台的 zip → Windows 双击 `start.bat` 打开桌面窗口；macOS/Linux 运行 `./start.sh`。',
+    '解压对应平台的 zip → Windows 双击 `start.bat`（浏览器）；macOS/Linux 运行 `./start.sh`。',
+    'Windows 桌面窗口请用 Release 里的 `*-win32-x64-desktop.zip`。',
     '',
   ]
   fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
@@ -754,14 +767,22 @@ async function mainAsync() {
   const sha = gitCommit()
   const builtAt = new Date().toISOString()
   const target = packTarget()
+  const desktopPack = wantDesktopPack()
+  if (desktopPack && target.platform !== 'win32') {
+    throw new Error('ACW_PACK_DESKTOP=1 仅支持 ACW_PACK_TARGET=win32-x64')
+  }
   const plat = target.tag
-  const folderName = `oh-my-co-work-v${major}-${plat}`
+  const folderName = desktopPack
+    ? `oh-my-co-work-v${major}-${plat}-desktop`
+    : `oh-my-co-work-v${major}-${plat}`
   const stage = path.join(OUT_ROOT, folderName)
   const gitZipName = `${folderName}.zip`
   const gitZipPath = path.join(PACKAGES_DIR, gitZipName)
 
   console.log(
-    '[pack] kind=runtime-bundle platform=',
+    '[pack] kind=',
+    desktopPack ? 'desktop-bundle' : 'runtime-bundle',
+    'platform=',
     plat,
     'version=',
     ver,
@@ -795,7 +816,7 @@ async function mainAsync() {
     version: ver,
     private: true,
     type: 'module',
-    main: target.platform === 'win32' ? 'electron/main.js' : undefined,
+    main: desktopPack ? 'electron/main.js' : undefined,
     description: 'oh-my-co-work 运行包（打包产物，非源码）',
     engines: { node: '>=18' },
     dependencies: {
@@ -836,7 +857,7 @@ async function mainAsync() {
   writeStartBat(path.join(stage, 'start.bat'))
   writeStartSh(path.join(stage, 'start.sh'))
 
-  if (target.platform === 'win32') {
+  if (desktopPack) {
     console.log('[pack] embed Windows desktop (Electron + Node runtime)…')
     await embedWin32Desktop(stage)
   }
@@ -850,11 +871,11 @@ async function mainAsync() {
     '',
     '## 需要',
     '',
-    plat.startsWith('win32')
+    plat.startsWith('win32') && desktopPack
       ? '- Windows x64。包内已带 Electron 窗口和 Node 运行时，**一般不用再装 Node.js**。'
       : '- 本机已安装 Node.js ≥ 18（https://nodejs.org；推荐 Node 22+）',
     '- **通常不需要**再执行 npm install（依赖已打进包内）',
-    ...(plat.startsWith('win32')
+    ...(plat.startsWith('win32') && desktopPack
       ? []
       : ['- Node 22+：即使 better-sqlite3 与本机 Node 不匹配，也会自动用内置 sqlite 启动']),
     '',
@@ -862,10 +883,12 @@ async function mainAsync() {
     '',
     '| 系统 | 操作 |',
     '|------|------|',
-    '| Windows | 双击 start.bat（打开桌面窗口；关窗藏托盘，托盘「退出」才停服务） |',
+    desktopPack
+      ? '| Windows | 双击 start.bat（打开桌面窗口；关窗藏托盘，托盘「退出」才停服务） |'
+      : '| Windows | 双击 start.bat（需本机 Node.js；会打开浏览器） |',
     '| macOS / Linux | ./start.sh 或 node start.mjs |',
     '',
-    plat.startsWith('win32')
+    desktopPack
       ? '关闭桌面窗口默认藏到托盘，不会停后台。请用托盘菜单「退出」。'
       : '关闭浏览器不会自动停服务；请在启动窗口 Ctrl+C 结束。',
     '',
@@ -892,8 +915,8 @@ async function mainAsync() {
   const buildInfo = {
     schemaVersion: 1,
     name: 'oh-my-co-work',
-    kind: 'runtime-bundle',
-    desktop: target.platform === 'win32' ? 'electron+bundled-node' : 'browser',
+    kind: desktopPack ? 'desktop-bundle' : 'runtime-bundle',
+    desktop: desktopPack ? 'electron+bundled-node' : 'browser',
     version: ver,
     major,
     platform: plat,
@@ -939,6 +962,33 @@ async function mainAsync() {
   }
 
   fs.mkdirSync(PACKAGES_DIR, { recursive: true })
+  const size = fs.statSync(zipPath).size
+
+  if (desktopPack || size > GIT_ZIP_MAX_BYTES) {
+    console.log(
+      '[pack] ok',
+      zipPath,
+      `(${size} bytes)`,
+      desktopPack
+        ? '——桌面包不写入 packages/（GitHub 单文件 100MB 限制）'
+        : '——超过 git 体积上限，未写入 packages/',
+    )
+    if (process.env.GITHUB_OUTPUT) {
+      fs.appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        [
+          `artifact=${zipPath}`,
+          `artifact_name=${gitZipName}`,
+          `version=${ver}`,
+          `major=${major}`,
+          `platform=${plat}`,
+          `desktop=1`,
+        ].join('\n') + '\n',
+      )
+    }
+    return zipPath
+  }
+
   // 去掉旧的无平台后缀包名（历史遗留）
   const legacy = path.join(PACKAGES_DIR, `oh-my-co-work-v${major}.zip`)
   if (fs.existsSync(legacy)) {
@@ -954,10 +1004,10 @@ async function mainAsync() {
   // 一个大版本只留当前最新：删掉其它大版本的全部运行包
   pruneOlderMajorZips(major)
 
-  const size = fs.statSync(gitZipPath).size
-  writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, size })
+  const gitSize = fs.statSync(gitZipPath).size
+  writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, size: gitSize })
 
-  console.log('[pack] ok', gitZipPath, `(${size} bytes)`)
+  console.log('[pack] ok', gitZipPath, `(${gitSize} bytes)`)
   console.log('[pack] user: unzip → start.bat / ./start.sh （无需 npm install）')
 
   if (process.env.GITHUB_OUTPUT) {

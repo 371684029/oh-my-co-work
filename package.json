@@ -20,6 +20,7 @@
     "start:server": "npm run start -w server",
     "backup": "node scripts/backup.mjs",
     "pack": "node scripts/pack-release.mjs",
+    "pack:desktop-win": "node scripts/pack-release.mjs --desktop",
     "validate:packages": "node scripts/validate-release-packages.mjs",
     "build": "npm run build -w web",
     "lint": "eslint .",
