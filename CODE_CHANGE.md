@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-10 | A | web/src/composables/useDesktopBridge.js | 新增桌面环境探测与通用 Bridge API 存根
+2026-09-10 | A | web/test/desktopBridge.test.mjs | 新增桌面探测与 Bridge 回退单测
+2026-09-10 | M | docs/4.7.0-plan.md | 维护 4.7.0 ~ 5.0.0 桌面化与演进规划文档
+2026-09-10 | M | docs/README.md | 补 4.7.0 ~ 5.0.0 演进大纲索引条目
 2026-09-10 | A | web/src/composables/useAppConfig.js | 新增应用配置下沉状态管理模块
 2026-09-10 | M | web/src/composables/useAppInit.js | 接入 useAppConfig 统一更新检查状态读取
 2026-09-10 | M | web/src/views/settings/Prefs.vue | 接入 useAppConfig 统一启动更新检查状态管理与修改
