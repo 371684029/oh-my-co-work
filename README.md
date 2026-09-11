@@ -163,7 +163,7 @@
 
 解压后双击 `start.bat`，应立刻出现窗口（先显示「正在启动本机服务」，再进入工作台）。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
 
-若黑窗一闪什么都没有：请重新下载 **desktop.zip**（旧包里的 `start.bat` 会被路径末尾反斜杠吃掉引号，启动失败）。仍不行时看解压目录里的 `data/desktop-launch.log` 和 `data/desktop-server.log`。
+请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 
 <img src="./docs/assets/screenshots/windows-desktop.png" alt="Windows 桌面窗口：oh-my-co-work 工作台" width="100%" />
 <p align="center"><sub>4.7.0 桌面包：独立窗口打开工作台，自动拉起本机服务</sub></p>

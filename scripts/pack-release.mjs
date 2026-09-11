@@ -240,7 +240,7 @@ async function cachedDownload(url, cacheName) {
 function copyElectronAppFiles(stage) {
   const electronDest = path.join(stage, 'electron')
   fs.mkdirSync(electronDest, { recursive: true })
-  for (const name of ['main.js', 'preload.js', 'icon.png']) {
+  for (const name of ['main.js', 'preload.js', 'icon.png', 'bootstrap.cjs']) {
     copyFile(path.join(ROOT, 'electron', name), path.join(electronDest, name))
   }
   const libDest = path.join(electronDest, 'lib')
@@ -281,8 +281,7 @@ async function embedWin32Desktop(stage) {
   unzipTo(electronZip, desktop)
   const electronExe = path.join(desktop, 'electron.exe')
   if (!fs.existsSync(electronExe)) throw new Error('Electron zip 内缺少 electron.exe')
-  const defaultApp = path.join(desktop, 'resources', 'default_app.asar')
-  if (fs.existsSync(defaultApp)) fs.rmSync(defaultApp)
+  copyFile(path.join(ROOT, 'scripts', 'desktop-launch.mjs'), path.join(stage, 'desktop-launch.mjs'))
 }
 
 function writeStartSh(dest) {
@@ -788,7 +787,7 @@ async function mainAsync() {
     version: ver,
     private: true,
     type: 'module',
-    main: desktopPack ? 'electron/main.js' : undefined,
+    main: desktopPack ? 'electron/bootstrap.cjs' : undefined,
     description: 'oh-my-co-work 运行包（打包产物，非源码）',
     engines: { node: '>=18' },
     dependencies: {

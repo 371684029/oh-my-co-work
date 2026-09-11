@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-11 | A | scripts/desktop-launch.mjs electron/bootstrap.cjs | 桌面包改用包内 node spawn Electron，启动失败 pause 并写 electron.log
+2026-09-11 | M | scripts/windowsStartBat.mjs electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs package.json | 不再 cmd start；保留 default_app.asar；单例锁跟解压目录走
+2026-09-11 | M | electron/test/start-bat.test.mjs README.md | 断言不用 start；说明看 electron.log
+
 2026-09-11 | M | start.bat | cd 改用 %~dp0. 避免路径末尾反斜杠吃掉引号
 2026-09-11 | A | scripts/windowsStartBat.mjs electron/lib/splash.mjs electron/test/start-bat.test.mjs | 修复 start.bat 引号被 %~dp0 反斜杠吃掉导致窗口一闪就没；启动先出 splash 再等健康检查
 2026-09-11 | M | electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs README.md | 桌面包打包 splash.mjs；README 说明需换新 desktop.zip

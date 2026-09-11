@@ -51,6 +51,16 @@ function resolveAppRoot() {
   return path.resolve(__dirname, '..')
 }
 
+function appendLog(message) {
+  try {
+    const root = appRoot || resolveAppRoot()
+    fs.mkdirSync(path.join(root, 'data'), { recursive: true })
+    fs.appendFileSync(path.join(root, 'data', 'electron.log'), `[${new Date().toISOString()}] ${message}\n`)
+  } catch {
+    /* ignore */
+  }
+}
+
 function showMainWindow() {
   if (!mainWindow) return
   mainWindow.show()
@@ -187,21 +197,42 @@ async function ensureServer() {
 
 registerIpc()
 
+appRoot = resolveAppRoot()
+try {
+  const userData = path.join(appRoot, 'data', 'electron-profile')
+  fs.mkdirSync(userData, { recursive: true })
+  app.setPath('userData', userData)
+} catch {
+  /* ignore */
+}
+
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
+  appendLog('second instance, quit')
   app.quit()
 } else {
-  app.on('second-instance', () => showMainWindow())
+  app.on('second-instance', () => {
+    if (!mainWindow) {
+      createMainWindow().catch((e) => appendLog(`second-instance createWindow ${e}`))
+    } else {
+      showMainWindow()
+    }
+  })
 
   app.whenReady().then(async () => {
     appRoot = resolveAppRoot()
     process.chdir(appRoot)
+    appendLog(`whenReady appRoot=${appRoot} port=${process.env.ACW_PORT || 3780}`)
     try {
       createTray()
       await createMainWindow()
+      appendLog('splash window shown')
       await ensureServer()
+      appendLog('server ready')
       await loadWorkbench()
+      appendLog('workbench loaded')
     } catch (e) {
+      appendLog(`startup failed ${e?.stack || e}`)
       dialog.showErrorBox('oh-my-co-work 启动失败', String(e?.message || e))
       isQuitting = true
       app.quit()

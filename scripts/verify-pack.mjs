@@ -157,10 +157,13 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   if (info.kind === 'desktop-bundle') {
     const need = [
       { re: /\/electron\/main\.js$/, label: 'electron/main.js' },
+      { re: /\/electron\/bootstrap\.cjs$/, label: 'electron/bootstrap.cjs' },
       { re: /\/electron\/preload\.js$/, label: 'electron/preload.js' },
       { re: /\/electron\/icon\.png$/, label: 'electron/icon.png' },
       { re: /\/electron\/lib\/splash\.mjs$/, label: 'electron/lib/splash.mjs' },
+      { re: /\/desktop-launch\.mjs$/, label: 'desktop-launch.mjs' },
       { re: /\/desktop\/electron\.exe$/, label: 'desktop/electron.exe' },
+      { re: /\/desktop\/resources\/default_app\.asar$/, label: 'desktop/resources/default_app.asar' },
       { re: /\/runtime\/node\.exe$/, label: 'runtime/node.exe' },
     ]
     for (const item of need) {

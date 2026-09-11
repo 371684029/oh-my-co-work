@@ -9,7 +9,7 @@
     "server",
     "web"
   ],
-  "main": "electron/main.js",
+  "main": "electron/bootstrap.cjs",
   "scripts": {
     "dev": "npm run dev -w server",
     "dev:desktop": "electron .",
