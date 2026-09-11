@@ -44,13 +44,30 @@ function normalizeEntry(entry) {
 }
 
 function unzipList(zipPath) {
-  return execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
+  return execFileSync('python3', [
+    '-c',
+    'import zipfile,sys; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))',
+    zipPath,
+  ], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
     .split(/\r?\n/)
     .filter(Boolean)
 }
 
 function unzipBytes(zipPath, entry) {
   return execFileSync('unzip', ['-p', zipPath, entry], { maxBuffer: 1024 * 1024 * 64 })
+}
+
+function unzipHead(zipPath, entry, n = 4) {
+  return execFileSync(
+    'python3',
+    [
+      '-c',
+      'import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); sys.stdout.buffer.write(z.open(sys.argv[2]).read(int(sys.argv[3])))',
+      zipPath,
+      entry,
+      String(n),
+    ],
+  )
 }
 
 function platformOf(tag) {
@@ -149,7 +166,7 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
       const hit = entries.find((e) => item.re.test(`/${e}`))
       if (!hit) throw new Error(`Windows 桌面包缺少 ${item.label}`)
       if (item.label.endsWith('.exe')) {
-        const bytes = unzipBytes(zipPath, hit)
+        const bytes = unzipHead(zipPath, hit, 2)
         if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
           throw new Error(`${item.label} 不是 Windows PE（缺少 MZ 头）`)
         }
