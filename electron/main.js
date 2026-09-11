@@ -13,6 +13,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { desktopUpdateResult, workbenchUrl } from './lib/urls.mjs'
+import { splashDataUrl } from './lib/splash.mjs'
 import {
   isServerUp,
   resolveNodeBin,
@@ -99,6 +100,7 @@ async function createMainWindow() {
     minHeight: 600,
     title: 'oh-my-co-work',
     icon: path.join(__dirname, 'icon.png'),
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -107,7 +109,7 @@ async function createMainWindow() {
     },
   })
 
-  await mainWindow.loadURL(appOrigin() + '/workbench')
+  await mainWindow.loadURL(splashDataUrl())
 
   mainWindow.on('close', (evt) => {
     if (!isQuitting && trayOk) {
@@ -119,6 +121,11 @@ async function createMainWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+}
+
+async function loadWorkbench() {
+  if (!mainWindow) return
+  await mainWindow.loadURL(appOrigin() + '/workbench')
 }
 
 function registerIpc() {
@@ -165,6 +172,11 @@ async function ensureServer() {
     entry,
     logStream,
   })
+  serverChild.on('error', (err) => {
+    if (!isQuitting) {
+      dialog.showErrorBox('oh-my-co-work', `无法启动后台服务：${err?.message || err}`)
+    }
+  })
   serverChild.on('exit', (code) => {
     if (!isQuitting && code) {
       dialog.showErrorBox('oh-my-co-work', `后台服务已退出（${code}）。可查看 data/desktop-server.log`)
@@ -185,9 +197,10 @@ if (!gotLock) {
     appRoot = resolveAppRoot()
     process.chdir(appRoot)
     try {
-      await ensureServer()
       createTray()
       await createMainWindow()
+      await ensureServer()
+      await loadWorkbench()
     } catch (e) {
       dialog.showErrorBox('oh-my-co-work 启动失败', String(e?.message || e))
       isQuitting = true

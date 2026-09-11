@@ -1,0 +1,32 @@
+/** Windows 双击入口。%~dp0 末尾带 \\，不能写 /D "%~dp0"，否则引号被吃掉、窗口一闪就没。 */
+export function windowsStartBat() {
+  return [
+    '@echo off',
+    'chcp 65001 >nul',
+    'cd /d "%~dp0."',
+    'if not exist "data" mkdir data',
+    'echo [%date% %time%] start.bat cwd=%CD%>> data\\desktop-launch.log',
+    'if exist "desktop\\electron.exe" (',
+    '  echo [%date% %time%] launching electron>> data\\desktop-launch.log',
+    '  start "oh-my-co-work" /D "%~dp0." "%~dp0desktop\\electron.exe" "."',
+    '  exit /b 0',
+    ')',
+    'if exist "runtime\\node.exe" (',
+    '  echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
+    '  "runtime\\node.exe" start.mjs',
+    '  if errorlevel 1 pause',
+    '  exit /b %errorlevel%',
+    ')',
+    'where node >nul 2>nul',
+    'if errorlevel 1 (',
+    '  echo [acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org',
+    '  pause',
+    '  exit /b 1',
+    ')',
+    'echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
+    'echo [acw] 提示：关闭本窗口即可结束服务（关浏览器不会停）',
+    'node start.mjs',
+    'if errorlevel 1 pause',
+    '',
+  ].join('\r\n')
+}

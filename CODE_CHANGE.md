@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-11 | M | start.bat | cd 改用 %~dp0. 避免路径末尾反斜杠吃掉引号
+2026-09-11 | A | scripts/windowsStartBat.mjs electron/lib/splash.mjs electron/test/start-bat.test.mjs | 修复 start.bat 引号被 %~dp0 反斜杠吃掉导致窗口一闪就没；启动先出 splash 再等健康检查
+2026-09-11 | M | electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs README.md | 桌面包打包 splash.mjs；README 说明需换新 desktop.zip
+
 2026-09-11 | A | docs/assets/screenshots/windows-desktop.png | Windows 桌面窗口工作台截图
 2026-09-11 | M | README.md | 单独写清 Windows 桌面包（Release desktop.zip）与轻量运行包
 2026-09-11 | M | scripts/pack-release.mjs | 桌面包 --desktop 不进 git（超 100MB）；轻量 zip 仍入库

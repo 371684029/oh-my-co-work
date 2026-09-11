@@ -19,6 +19,7 @@ import https from 'node:https'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { windowsStartBat } from './windowsStartBat.mjs'
 
 /** Windows 桌面包内嵌运行时（与 CI Node 20 ABI、win32 原生模块对齐） */
 const PACK_NODE_VERSION = '20.18.3'
@@ -186,36 +187,7 @@ function copyDir(src, dest) {
 }
 
 function writeStartBat(dest) {
-  fs.writeFileSync(
-    dest,
-    [
-      '@echo off',
-      'chcp 65001 >nul',
-      'cd /d "%~dp0"',
-      'if exist "desktop\\electron.exe" (',
-      '  start "" /D "%~dp0" "desktop\\electron.exe" "%~dp0."',
-      '  exit /b 0',
-      ')',
-      'if exist "runtime\\node.exe" (',
-      '  echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
-      '  "runtime\\node.exe" start.mjs',
-      '  if errorlevel 1 pause',
-      '  exit /b %errorlevel%',
-      ')',
-      'where node >nul 2>nul',
-      'if errorlevel 1 (',
-      '  echo [acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org',
-      '  pause',
-      '  exit /b 1',
-      ')',
-      'echo [acw] 正在启动 oh-my-co-work（运行包，无需 npm install）…',
-      'echo [acw] 提示：关闭本窗口即可结束服务（关浏览器不会停）',
-      'node start.mjs',
-      'if errorlevel 1 pause',
-      '',
-    ].join('\r\n'),
-    'utf8',
-  )
+  fs.writeFileSync(dest, windowsStartBat(), 'utf8')
 }
 
 function downloadHttps(url, dest) {
@@ -273,7 +245,7 @@ function copyElectronAppFiles(stage) {
   }
   const libDest = path.join(electronDest, 'lib')
   fs.mkdirSync(libDest, { recursive: true })
-  for (const name of ['urls.mjs', 'server.mjs']) {
+  for (const name of ['urls.mjs', 'server.mjs', 'splash.mjs']) {
     copyFile(path.join(ROOT, 'electron', 'lib', name), path.join(libDest, name))
   }
 }
