@@ -32,9 +32,6 @@
         <div class="about-version-row">
           <span class="about-label">当前版本</span>
           <el-tag type="info" effect="plain" round class="version-tag">v{{ data.version }}</el-tag>
-          <el-tag :type="isDesktop ? 'success' : 'info'" size="small" style="margin-left: 8px">
-            {{ isDesktop ? `桌面端 (${desktopEnv})` : 'Web 端' }}
-          </el-tag>
         </div>
       </section>
 
@@ -168,9 +165,6 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import AppLogo from '../../components/AppLogo.vue'
-import { useDesktopBridge } from '../../composables/useDesktopBridge'
-
-const { isDesktop, desktopEnv } = useDesktopBridge()
 
 const data = ref({
   productName: 'oh-my-co-work',

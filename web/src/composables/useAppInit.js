@@ -1,23 +1,19 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, h, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
+import router from '../router'
 import {
   setGrokConfigured,
   setFurnaceGrokGate,
   grokCanRun,
 } from './furnaceUi.js'
 import { fullscreenElement } from './fullscreen'
-import { useAppConfig } from './useAppConfig'
-import { useDesktopBridge } from './useDesktopBridge'
 
 export function useAppInit() {
-  const { initDesktopBridge, isDesktop, desktopEnv } = useDesktopBridge()
   const isFullscreen = ref(false)
   const grokGuideOpen = ref(false)
   const grokGuideStatus = ref({})
   const grokExampleToml = ref('')
-
-  const { startupUpdateCheck, loadConfig } = useAppConfig()
 
   const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
 
@@ -55,16 +51,36 @@ export function useAppInit() {
     }
   }
 
-  // 4.7.0 启动时检查更新（静默，仅发现新版本时轻提示）
-  async function startupCheckUpdate() {
+  // 4.7.0 启动时检查更新（静默，仅发现新版本时轻提示；可点进关于页）
+  async function startupCheckUpdate(settings) {
     try {
-      const s = await loadConfig()
-      if (!s || startupUpdateCheck.value === false) return
+      const s = settings && typeof settings === 'object' ? settings : await api.appSettings.get()
+      if (!s || s.updateCheck?.startup === false) return
       const r = await api.update.check()
       if (!r.checked || !r.hasUpdate) return
-      ElMessage.info({
-        message: `发现新版本 v${r.latest}，前往设置 → 关于查看详情`,
+      const rawNotes = String(r.notes || '').replace(/\s+/g, ' ').trim()
+      const notesPreview = rawNotes.slice(0, 80)
+      ElMessage({
+        type: 'info',
         duration: 8000,
+        showClose: true,
+        message: h('span', { style: 'line-height:1.45' }, [
+          `发现新版本 v${r.latest}`,
+          notesPreview ? `：${notesPreview}${rawNotes.length > 80 ? '…' : ''}` : '',
+          ' · ',
+          h(
+            'button',
+            {
+              type: 'button',
+              style:
+                'padding:0;border:0;background:none;color:#409eff;cursor:pointer;text-decoration:underline;font:inherit',
+              onClick: () => {
+                router.push('/settings/about')
+              },
+            },
+            '前往关于查看详情',
+          ),
+        ]),
       })
     } catch {
       // 静默失败，不打扰用户
@@ -72,11 +88,9 @@ export function useAppInit() {
   }
 
   onMounted(() => {
-    initDesktopBridge()
     document.addEventListener('fullscreenchange', syncFullscreenState)
     syncFullscreenState()
-    refreshGrokGate()
-    startupCheckUpdate()
+    refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
   })
 
   onUnmounted(() => {
@@ -85,8 +99,6 @@ export function useAppInit() {
 
   return {
     isFullscreen,
-    isDesktop,
-    desktopEnv,
     grokGuideOpen,
     grokGuideStatus,
     grokExampleToml,

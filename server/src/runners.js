@@ -601,7 +601,7 @@ export async function runMember(
     }
 
     return runProcess({
-      context: { DATA_ROOT: typeof DATA_ROOT !== 'undefined' ? DATA_ROOT : (global.DATA_ROOT || process.env.DATA_ROOT || process.cwd()) },
+      context: { DATA_ROOT },
       launch,
       cwd,
       env,
@@ -735,7 +735,7 @@ function runProcess({ context,
     const chunks = []
     const errChunks = []
     const runId = uid('run')
-    const captureLog = path.join(context?.DATA_ROOT || process.cwd(), 'logs', `run_${runId}.console.log`)
+    const captureLog = path.join(context?.DATA_ROOT || DATA_ROOT, 'logs', `run_${runId}.console.log`)
     const displayLabel = label || filePath || command || 'script'
     const targetPidFile =
       sessionId && showConsole && isWin ? getRunPidFilePath(sessionId, runId) : null
@@ -931,7 +931,7 @@ function runProcess({ context,
       const logName = `run_${Date.now()}.log`
       try {
         fs.writeFileSync(
-          path.join(context?.DATA_ROOT || process.cwd(), 'logs', logName),
+          path.join(context?.DATA_ROOT || DATA_ROOT, 'logs', logName),
           `cwd=${cwd}\npid=${pid}\ncode=${code}\ndetach=${!!detach}\nruntime=${launch.label}\nlabel=${displayLabel}\ncmd=${launch.cmd} ${(launch.args || []).join(' ')}\n--- stdout ---\n${stdout}\n--- stderr ---\n${stderr}\n`,
         )
       } catch {

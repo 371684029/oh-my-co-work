@@ -1,7 +1,7 @@
 // 归档 / 解档 / 中断标记 / 群报告台账。
 // Imports: store, offsite (below advance/gates in the engine DAG).
 import { getDb, parseJson } from '../db.js'
-import { engineBus } from './events.js'
+import { engineEmit } from './events.js'
 import {
   NODE_STATUS,
   SESSION_STATUS,
@@ -37,7 +37,7 @@ export function ensureArchiveTailNode(sessionId) {
 export function skipArchiveNode(sessionId, node, reason = 'completed') {
   if (!node) return
   if (node.status === NODE_STATUS.SUCCEEDED || node.status === NODE_STATUS.SKIPPED) return
-  engineBus.emit('persist_node_io', sessionId, node.id, {
+  engineEmit('persist_node_io', sessionId, node.id, {
     input: { kind: 'archive', skipped: true, reason },
     output: { skipped: true, skipReason: 'settings_release', reason },
     status: NODE_STATUS.SKIPPED,
@@ -78,7 +78,7 @@ export function dismissPendingArchiveIfAny(sessionId, reason = 'completed') {
         ? SESSION_STATUS.FAILED
         : SESSION_STATUS.ACTIVE
   }
-  engineBus.emit('persist_session', sessionId, patch)
+  engineEmit('persist_session', sessionId, patch)
   return null
 }
 
@@ -90,7 +90,7 @@ function markArchiveNodeDone(sessionId, { reason, note } = {}) {
     .get(sessionId, STEP_TYPE.ARCHIVE)
   if (!node) return null
   const prev = parseJson(node.output_json, {})
-  engineBus.emit('persist_node_io', sessionId, node.id, {
+  engineEmit('persist_node_io', sessionId, node.id, {
     input: parseJson(node.input_json, { kind: 'archive' }),
     output: {
       ...prev,
@@ -200,8 +200,8 @@ export function refreshSessionAnnouncement(sessionId, opts = {}) {
     ctx.announcementUpdatedAt = new Date().toISOString()
     ctx.announcementManual = false
     ctx.announcementModes = usedModes || ['concise']
-    engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
-    engineBus.emit('ws_broadcast_session', sessionId, {
+    engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+    engineEmit('ws_broadcast_session', sessionId, {
       type: 'announcement.updated',
       payload: { sessionId, path: rel, modes: usedModes, manual: false },
     })
@@ -221,13 +221,13 @@ export function saveSessionAnnouncement(sessionId, markdown) {
   ctx.announcementPath = rel
   ctx.announcementUpdatedAt = new Date().toISOString()
   ctx.announcementManual = true
-  engineBus.emit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'announcement.updated',
     payload: { sessionId, path: rel, manual: true },
   })
   // 聊天里留一条系统提示（可选、轻量）
-  engineBus.emit('add_message', sessionId, {
+  engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'status',
     content: { text: '群报告已由人工更新', announcement: true },
@@ -267,7 +267,7 @@ export function archiveSession(sessionId, reason = 'manual') {
       .get(sessionId, STEP_TYPE.OFFSITE)
     if (off && (off.status === NODE_STATUS.RUNNING || off.status === NODE_STATUS.WAITING_HUMAN)) {
       const prev = parseJson(off.output_json, {})
-      engineBus.emit('update_node', off.id, {
+      engineEmit('update_node', off.id, {
         status: NODE_STATUS.PENDING,
         output_json: JSON.stringify({ ...prev, archivedIdle: true }),
         finished_at: t,
@@ -289,7 +289,7 @@ export function archiveSession(sessionId, reason = 'manual') {
   } catch {
     /* ignore */
   }
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     status: SESSION_STATUS.ARCHIVED,
     archive_reason: reason,
     archived_at: t,
@@ -297,7 +297,7 @@ export function archiveSession(sessionId, reason = 'manual') {
   })
   if (killed.killed > 0) {
     try {
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         content: {
@@ -309,7 +309,7 @@ export function archiveSession(sessionId, reason = 'manual') {
     }
   } else {
     try {
-      engineBus.emit('add_message', sessionId, {
+      engineEmit('add_message', sessionId, {
         role: 'system',
         type: 'status',
         content: {
@@ -320,11 +320,11 @@ export function archiveSession(sessionId, reason = 'manual') {
       /* ignore */
     }
   }
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.archived',
     payload: { sessionId, reason, processesKilled: killed.killed, pids: killed.pids },
   })
-  engineBus.emit('ws_broadcast_all', {
+  engineEmit('ws_broadcast_all', {
     type: 'session.archived',
     payload: { sessionId, reason, processesKilled: killed.killed },
   })
@@ -363,14 +363,14 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
     )
     .get(sessionId, NODE_STATUS.WAITING_HUMAN, STEP_TYPE.OFFSITE)
   const nextStatus = waiting ? SESSION_STATUS.WAITING_HUMAN : SESSION_STATUS.ACTIVE
-  engineBus.emit('persist_session', sessionId, {
+  engineEmit('persist_session', sessionId, {
     status: nextStatus,
     archive_reason: null,
     archived_at: null,
     context_json: JSON.stringify(ctx),
   })
   if (!silent) {
-    engineBus.emit('add_message', sessionId, {
+    engineEmit('add_message', sessionId, {
       role: 'system',
       type: 'status',
       content: {
@@ -379,11 +379,11 @@ export function unarchiveSession(sessionId, { silent = false, reason = 'manual' 
       },
     })
   }
-  engineBus.emit('ws_broadcast_session', sessionId, {
+  engineEmit('ws_broadcast_session', sessionId, {
     type: 'session.status',
     payload: { sessionId, status: nextStatus, unarchived: true },
   })
-  engineBus.emit('ws_broadcast_all', {
+  engineEmit('ws_broadcast_all', {
     type: 'session.status',
     payload: { sessionId, status: nextStatus, unarchived: true },
   })
@@ -411,7 +411,7 @@ export function markInterruptedOnBoot() {
       .all(s.id, NODE_STATUS.RUNNING)
     for (const n of running) {
       const prev = parseJson(n.output_json, {})
-      engineBus.emit('update_node', n.id, {
+      engineEmit('update_node', n.id, {
         status: NODE_STATUS.WAITING_HUMAN,
         output_json: JSON.stringify({
           ...prev,
@@ -428,18 +428,18 @@ export function markInterruptedOnBoot() {
       pendingResume: true,
       runningNodes: running.map((n) => n.id),
     }
-    engineBus.emit('persist_session', s.id, {
+    engineEmit('persist_session', s.id, {
       status: SESSION_STATUS.INTERRUPTED,
       context_json: JSON.stringify(ctx),
     })
-    engineBus.emit('add_message', s.id, {
+    engineEmit('add_message', s.id, {
       role: 'system',
       type: 'status',
       content: {
         text: '检测到服务重启或异常退出，本任务已暂停。请选择：继续 / 放弃。进程可在设置里释放。',
       },
     })
-    engineBus.emit('add_message', s.id, {
+    engineEmit('add_message', s.id, {
       role: 'system',
       type: 'gate',
       content: {
@@ -449,14 +449,14 @@ export function markInterruptedOnBoot() {
         policy: '不会自动推进；须人工选择。继续时若有未完成 running 节点会从该步重跑。释放进程请到设置。',
       },
     })
-    engineBus.emit('ws_broadcast_session', s.id, {
+    engineEmit('ws_broadcast_session', s.id, {
       type: 'session.interrupted',
       payload: { sessionId: s.id, previousStatus: s.status },
     })
     ids.push(s.id)
   }
   if (ids.length) {
-    engineBus.emit('ws_broadcast_all', { type: 'sessions.interrupted', payload: { ids } })
+    engineEmit('ws_broadcast_all', { type: 'sessions.interrupted', payload: { ids } })
     console.log(`[acw] interrupted ${ids.length} session(s) for recovery`)
   }
   // 已归档会话：清掉残留 console pid 文件，避免误报占用
