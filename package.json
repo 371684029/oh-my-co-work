@@ -9,8 +9,11 @@
     "server",
     "web"
   ],
+  "main": "electron/main.js",
   "scripts": {
     "dev": "npm run dev -w server",
+    "dev:desktop": "electron electron/main.js",
+    "build:desktop": "electron-builder",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "seed": "npm run seed -w server",
@@ -26,6 +29,30 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "build": {
+    "appId": "com.ohmycowork.app",
+    "productName": "oh-my-co-work",
+    "files": [
+      "electron/**/*",
+      "web/dist/**/*",
+      "server/**/*",
+      "shared/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release/desktop"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"]
+    }
   },
   "devDependencies": {
     "esbuild": "^0.25.12",
