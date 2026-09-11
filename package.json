@@ -9,8 +9,10 @@
     "server",
     "web"
   ],
+  "main": "electron/main.js",
   "scripts": {
     "dev": "npm run dev -w server",
+    "dev:desktop": "electron electron/main.js",
     "dev:server": "npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "seed": "npm run seed -w server",

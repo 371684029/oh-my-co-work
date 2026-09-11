@@ -51,6 +51,17 @@ test('useDesktopBridge handles fallback notify and minimizeToTray gracefully', a
   delete globalThis.window
 })
 
+test('detectDesktopEnvironment correctly identifies electron when process.versions.electron is present', () => {
+  const mockWin = {
+    process: {
+      versions: {
+        electron: '30.0.0',
+      },
+    },
+  }
+  assert.equal(detectDesktopEnvironment(mockWin), 'electron')
+})
+
 test('useDesktopBridge handles launchWorkflow and applyDesktopUpdate extension methods', async () => {
   const { initDesktopBridge, launchWorkflow, applyDesktopUpdate } = useDesktopBridge()
 
