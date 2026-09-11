@@ -21,7 +21,7 @@ export default [
   },
   js.configs.recommended,
   {
-    files: ['server/**/*.js', 'shared/**/*.js', 'scripts/**/*.mjs', 'scripts/**/*.js', 'electron/**/*.js', 'electron/**/*.mjs', '*.mjs', 'start.mjs', '**/vite.config.js'],
+    files: ['server/**/*.js', 'shared/**/*.js', 'scripts/**/*.mjs', 'scripts/**/*.js', 'electron/**/*.js', 'electron/**/*.mjs', 'electron/**/*.cjs', '*.mjs', 'start.mjs', '**/vite.config.js'],
     languageOptions: {
       globals: { ...globals.node },
     },
