@@ -118,7 +118,8 @@ ipcMain.handle('acw:launch-workflow', (_evt, sessionIdOrGroupId) => {
   if (mainWindow) {
     mainWindow.show()
     mainWindow.focus()
-    const targetUrl = `http://127.0.0.1:3780/#/workbench?session=${encodeURIComponent(sessionIdOrGroupId || '')}`
+    const devUrl = process.env.ACW_DESKTOP_DEV_URL || 'http://127.0.0.1:3780'
+    const targetUrl = `${devUrl}/#/workbench?session=${encodeURIComponent(sessionIdOrGroupId || '')}`
     mainWindow.loadURL(targetUrl).catch(() => {})
     return true
   }
