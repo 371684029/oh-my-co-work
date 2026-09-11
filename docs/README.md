@@ -21,7 +21,7 @@
 | [crucible-gui-plain.md](./crucible-gui-plain.md) | **GUI 可读正文**：去 TUI 框线/底栏，不把整屏抄进聊天区 |
 | [refactor-3.8-plan.md](./refactor-3.8-plan.md) | **3.8 重构与加固计划**：引擎拆分 / 工作台拆分 / lint 与令牌收紧（已实施） |
 | [4.7.0-plan.md](./4.7.0-plan.md) | **4.7 ~ 5.0 演进与桌面化大纲**：体验治理/配置下沉 (4.7.0 已完成)、前端解耦 (4.7.x)、引擎事件化 (4.8.0)、桌面化融合 (4.9.0/5.0.0) |
-| [5.0.0-desktop-plan.md](./5.0.0-desktop-plan.md) | **5.0.0 桌面原生客户端计划**：Tauri/Sidecar 架构、系统托盘、全局快捷键、原生通知与多平台构建流水线 |
+| [5.0.0-desktop-plan.md](./5.0.0-desktop-plan.md) | **5.0.0 桌面原生客户端计划**：Electron 架构 (TypeScript/Node.js)、系统托盘、全局快捷键、原生通知与多平台构建流水线 |
 | [docs-4x-plan.md](./docs-4x-plan.md) | **4.x 协同文档中心计划**：4.0.0 文档中心（已实施）、4.1.0 检索导出、4.2.0 发布更新与本地历史保留（备份/恢复/迁移链规范） |
 | [selftest.md](./selftest.md) | **自测体系**：node:test 分层（139+23 例）、表征测试/依赖注入/轮询三套路、静态核查与发布闸门 |
 | [data-storage.md](./data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
