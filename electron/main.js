@@ -19,6 +19,7 @@ import {
   resolveNodeBin,
   resolveServerEntry,
   spawnAppServer,
+  openAppendFd,
   stopChild,
   waitHealth,
 } from './lib/server.mjs'
@@ -174,14 +175,19 @@ async function ensureServer() {
   const entry = resolveServerEntry(appRoot)
   fs.mkdirSync(path.join(appRoot, 'data'), { recursive: true })
   const logPath = path.join(appRoot, 'data', 'desktop-server.log')
-  const logStream = fs.createWriteStream(logPath, { flags: 'a' })
+  const logFd = openAppendFd(logPath)
   serverChild = spawnAppServer({
     appRoot,
     port,
     nodeBin,
     entry,
-    logStream,
+    logFd,
   })
+  try {
+    fs.closeSync(logFd)
+  } catch {
+    /* 子进程已复制 fd */
+  }
   serverChild.on('error', (err) => {
     if (!isQuitting) {
       dialog.showErrorBox('oh-my-co-work', `无法启动后台服务：${err?.message || err}`)

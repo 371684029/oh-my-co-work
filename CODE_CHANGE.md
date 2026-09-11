@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-11 | M | electron/lib/server.mjs electron/main.js electron/test/urls-server.test.mjs | 后台服务日志改 openSync fd，禁止未打开 WriteStream 当 stdio（Windows 启动失败弹窗）
+
 2026-09-11 | M | eslint.config.js | electron/*.cjs 使用 Node 全局，避免 bootstrap.cjs 把 CI lint 打红
 2026-09-11 | M | scripts/windowsStartBat.mjs electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs package.json | 不再 cmd start；保留 default_app.asar；单例锁跟解压目录走
 2026-09-11 | M | electron/test/start-bat.test.mjs README.md | 断言不用 start；说明看 electron.log

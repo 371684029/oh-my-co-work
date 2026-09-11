@@ -52,17 +52,37 @@ export async function isServerUp(port) {
   }
 }
 
-export function spawnAppServer({ appRoot, port, nodeBin, entry, logStream }) {
+export function openAppendFd(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  return fs.openSync(filePath, 'a')
+}
+
+/** spawn stdio 必须是已打开的 fd。WriteStream 在 'open' 之前 fd 为 null，Windows 上会直接抛 stdio invalid。 */
+export function stdioForChildLog(logFd) {
+  if (logFd == null) return 'ignore'
+  if (typeof logFd === 'object') {
+    const fd = logFd.fd
+    if (typeof fd !== 'number' || fd < 0) {
+      throw new Error('日志文件尚未打开，不能作为子进程 stdio')
+    }
+    return ['ignore', fd, fd]
+  }
+  if (typeof logFd !== 'number' || logFd < 0) {
+    throw new Error('logFd 必须是已打开的文件描述符')
+  }
+  return ['ignore', logFd, logFd]
+}
+
+export function spawnAppServer({ appRoot, port, nodeBin, entry, logFd }) {
   const env = {
     ...process.env,
     ACW_PORT: String(port),
     ACW_AUTO_EXIT: '0',
   }
-  const stdio = logStream ? ['ignore', logStream, logStream] : 'ignore'
   return spawn(nodeBin, [entry], {
     cwd: appRoot,
     env,
-    stdio,
+    stdio: stdioForChildLog(logFd),
     windowsHide: true,
   })
 }

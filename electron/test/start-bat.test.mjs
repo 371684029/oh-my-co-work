@@ -35,4 +35,6 @@ test('desktop-launch 把解压目录作为 Electron 的应用路径', () => {
   assert.equal(calls[0].opts.cwd, dir)
   assert.equal(calls[0].opts.detached, true)
   assert.equal(calls[0].opts.windowsHide, false)
+  assert.equal(typeof calls[0].opts.stdio[1], 'number')
+  assert.equal(calls[0].opts.stdio[2], calls[0].opts.stdio[1])
 })
