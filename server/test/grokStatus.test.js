@@ -9,6 +9,7 @@ process.env.GROK_HOME = home
 
 const {
   probeGrokStatus,
+  probeCursorStatus,
   loadGrokExampleConfig,
 } = await import('../src/grokStatus.js')
 const { grokCanRun, grokSetupNeeded } = await import('@acw/shared')
@@ -60,4 +61,11 @@ test('setup is not needed when probe can run, even without settings opt-in', () 
   assert.equal(grokSetupNeeded({ installed: true, loggedIn: true, configured: true, canRun: true }), false)
   assert.equal(grokSetupNeeded({ installed: true, loggedIn: true, configured: false, canRun: true }), false)
   assert.equal(grokSetupNeeded(null), true)
+})
+
+test('probeCursorStatus reports status structure', () => {
+  const s = probeCursorStatus({ command: 'cursor-nonexistent-command-xyz' })
+  assert.equal(typeof s.installed, 'boolean')
+  assert.equal(s.command, 'cursor-nonexistent-command-xyz')
+  assert.equal(s.install, 'https://cursor.com')
 })

@@ -64,12 +64,13 @@ onMounted(async () => {
     allowProposedApi: false,
     convertEol: false,
     cursorBlink: prefs.cursorBlink !== false,
-    cursorStyle: 'bar',
+    cursorStyle: 'block',
     fontFamily: "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace",
-    fontSize: Number(prefs.fontSize) || 13,
-    lineHeight: 1.3,
-    letterSpacing: 0,
-    scrollback: Number(prefs.scrollback) || 5000,
+    fontSize: Number(prefs.fontSize) || 13.5,
+    lineHeight: 1.35,
+    letterSpacing: 0.2,
+    scrollback: Math.max(10000, Number(prefs.scrollback) || 10000),
+    smoothScrollDuration: 120,
     theme,
   })
   fitAddon = new FitAddon()

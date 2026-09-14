@@ -10,14 +10,35 @@
           <button
             type="button"
             class="furnace-btn"
-            title="关掉这层皮，回到群聊。Grok 进程还在，对话也会继续堆；要清上下文请关熔炉或新开。"
+            title="关掉这层皮，回到群聊。Agent 进程后台常驻；要清上下文请关熔炉或新开。"
             @click="$emit('close')"
           >
             返回群聊
           </button>
           <span class="furnace-divider" />
+          <div class="furnace-agent-tabs">
+            <button
+              type="button"
+              class="furnace-agent-tab"
+              :class="{ active: activeAgent === 'grok' }"
+              title="Grok CLI Agent (Cmd+1 / Ctrl+1)"
+              @click="activeAgent = 'grok'"
+            >
+              <span class="agent-dot grok" />
+              Grok CLI
+            </button>
+            <button
+              type="button"
+              class="furnace-agent-tab"
+              :class="{ active: activeAgent === 'cursor' }"
+              title="Cursor CLI Agent (Cmd+2 / Ctrl+2)"
+              @click="activeAgent = 'cursor'"
+            >
+              <span class="agent-dot cursor" />
+              Cursor CLI
+            </button>
+          </div>
           <div class="furnace-identity">
-            <strong>熔炉</strong>
             <span class="furnace-state">{{ statusText }}</span>
           </div>
         </div>
@@ -325,7 +346,7 @@
 </template>
 
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onUnmounted, ref, watch } from 'vue'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
@@ -359,6 +380,7 @@ const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
+const activeAgent = ref('grok')
 const tuiHistoryOpen = ref(false)
 const tuiHistStick = ref(true)
 
@@ -460,6 +482,26 @@ watch(
   },
   { deep: true, flush: 'post' },
 )
+
+function onKeyDown(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+    e.preventDefault()
+    activeAgent.value = 'grok'
+  } else if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+    e.preventDefault()
+    activeAgent.value = 'cursor'
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', onKeyDown)
+}
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeyDown)
+  }
+})
 </script>
 
 <style scoped>
@@ -523,6 +565,60 @@ watch(
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.furnace-agent-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.furnace-workspace:not(.is-chat) .furnace-agent-tabs {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.furnace-agent-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 550;
+  background: transparent;
+  color: #8b90a0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.furnace-agent-tab.active {
+  background: #fff;
+  color: #1d1d1f;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.furnace-workspace:not(.is-chat) .furnace-agent-tab.active {
+  background: #2d313c;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.agent-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.agent-dot.grok {
+  background: #34c759;
+}
+
+.agent-dot.cursor {
+  background: #5e5ce6;
 }
 
 .furnace-identity {

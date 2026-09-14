@@ -65,6 +65,22 @@ function authLooksPresent(authPath) {
   }
 }
 
+export function probeCursorStatus({ command = 'cursor' } = {}) {
+  const installed = commandOnPath(command) || commandOnPath('cursor-agent')
+  const gaps = []
+  if (!installed) gaps.push('install')
+  return {
+    installed,
+    loggedIn: installed,
+    configured: installed,
+    ready: installed,
+    canRun: installed,
+    gaps,
+    command: String(command || 'cursor').trim() || 'cursor',
+    install: 'https://cursor.com',
+  }
+}
+
 export function probeGrokStatus({ command = 'grok' } = {}) {
   const home = grokHomeDir()
   const configPath = path.join(home, 'config.toml')
