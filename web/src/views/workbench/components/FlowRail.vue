@@ -12,15 +12,7 @@
       <button
         type="button"
         class="wb-right-tab"
-        :class="{ active: flowStore.rightTab === 'announce' }"
-        @click="flowStore.rightTab = 'announce'"
-      >
-        群报告
-      </button>
-      <button
-        type="button"
-        class="wb-right-tab"
-        :class="{ active: flowStore.rightTab === 'docs' }"
+        :class="{ active: flowStore.rightTab === 'announce' || flowStore.rightTab === 'docs' }"
         @click="flowStore.rightTab = 'docs'"
       >
         文档中心
@@ -926,6 +918,9 @@ watch(
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ecw-text-1, #1d1d1f);
+  white-space: nowrap;
+  writing-mode: horizontal-tb;
+  word-break: break-word;
 }
 
 .announce-actions {
@@ -1491,7 +1486,9 @@ watch(
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ecw-text-1, #1d1d1f);
+  writing-mode: horizontal-tb;
   white-space: nowrap;
+  word-break: break-word;
 }
 
 .docs-rail-actions {

@@ -71,6 +71,22 @@
             <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
         </el-form-item>
+        <el-form-item label="炼化 skills（第三方 Agent 调起指令）">
+          <div class="refine-skill-box">
+            <el-input
+              v-model="refineSkillPrompt"
+              type="textarea"
+              :rows="3"
+              readonly
+            />
+            <el-button size="small" type="primary" plain @click="copyRefineSkillPrompt">
+              复制炼化 Skill 指令
+            </el-button>
+          </div>
+          <div class="field-hint">
+            使用 Cursor 等外部第三方 Agent 时，复制此指令粘贴给 Agent。Agent 将手动调用 <code>agent-refine-skill</code> 主动传输改动与结论至文档中心。
+          </div>
+        </el-form-item>
 
 
         <template v-if="form.kind === 'script'">
@@ -281,6 +297,18 @@ const drawerTitle = ref('')
 const readonly = ref(false)
 const viewRow = ref(null)
 const form = ref(emptyForm())
+const refineSkillPrompt = ref(
+  '请在完成本次代码修改后，调用 agent-refine-skill 技能，将【输入】（用户需求）、【输出/改动】（git diff 摘要）及【结论】主动同步写回 cowork 文档中心。',
+)
+
+function copyRefineSkillPrompt() {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(refineSkillPrompt.value)
+    ElMessage.success('已复制炼化 Skill 指令到剪贴板')
+  } else {
+    ElMessage.info(refineSkillPrompt.value)
+  }
+}
 const scriptTab = ref('basic')
 const installDir = ref('')
 
