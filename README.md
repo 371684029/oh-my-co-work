@@ -121,7 +121,7 @@
 - **TUI**：原 Grok / Cursor 终端。菜单和快捷键走这里。隐藏时不把 PTY 缩成几列。首次进入后切皮不拆终端。
 - **双 Agent**：顶栏切换 Grok CLI 与 Cursor CLI；熔炉聚焦时 `Ctrl/Cmd+1`、`Ctrl/Cmd+2` 有效。Cursor 命令默认为 `cursor-agent`（设置可改）。未安装时不会假装已登录。
 - **缩小到三栏**：熔炉仍在中栏；**返回群聊**只关这层皮，进程还在。
-- 设置「开熔炉默认」铺满 TUI（GUI 入口已隐藏）。Grok / Cursor CLI 顶栏 Tab 切换，互不杀进程。
+- 设置「开熔炉默认」铺满 TUI（GUI 入口已隐藏）。Grok / Cursor CLI 顶栏 Tab 切换，互不杀进程。熔炉默认能做用户交代的任何事，系统审核与闸门更专业。
 
 ## 4.x：协同文档中心
 
@@ -165,7 +165,7 @@
 
 下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里的 **`oh-my-co-work-v4-win32-x64-desktop.zip`**（内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。
 
-解压后双击 `start.bat`（或 `desktop/oh-my-co-work.exe` 同目录下的启动脚本），应立刻出现窗口（先显示 Logo 与「正在启动本机服务」，再进入工作台）。托盘与 exe 图标与首页 Logo 一致。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
+解压后双击 `start.bat`（或 `desktop/oh-my-co-work.exe` 同目录下的启动脚本），应立刻出现全屏窗口（先显示 Logo 与「正在启动本机服务」，再进入工作台）。托盘与 exe 图标与首页 Logo 一致。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
 
 请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 

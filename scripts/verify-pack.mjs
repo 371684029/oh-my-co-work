@@ -162,6 +162,7 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
       { re: /\/electron\/icon\.png$/, label: 'electron/icon.png' },
       { re: /\/electron\/icon\.ico$/, label: 'electron/icon.ico' },
       { re: /\/electron\/lib\/splash\.mjs$/, label: 'electron/lib/splash.mjs' },
+      { re: /\/electron\/lib\/windowState\.mjs$/, label: 'electron/lib/windowState.mjs' },
       { re: /\/desktop-launch\.mjs$/, label: 'desktop-launch.mjs' },
       { re: /\/desktop\/oh-my-co-work\.exe$/, label: 'desktop/oh-my-co-work.exe' },
       { re: /\/desktop\/resources\/default_app\.asar$/, label: 'desktop/resources/default_app.asar' },

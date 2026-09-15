@@ -245,7 +245,7 @@ function copyElectronAppFiles(stage) {
   }
   const libDest = path.join(electronDest, 'lib')
   fs.mkdirSync(libDest, { recursive: true })
-  for (const name of ['urls.mjs', 'server.mjs', 'splash.mjs']) {
+  for (const name of ['urls.mjs', 'server.mjs', 'splash.mjs', 'windowState.mjs']) {
     copyFile(path.join(ROOT, 'electron', 'lib', name), path.join(libDest, name))
   }
 }

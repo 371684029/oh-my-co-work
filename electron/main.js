@@ -14,6 +14,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { desktopUpdateResult, workbenchUrl } from './lib/urls.mjs'
 import { splashDataUrl } from './lib/splash.mjs'
+import { applyDesktopOpenState } from './lib/windowState.mjs'
 import {
   isServerUp,
   resolveNodeBin,
@@ -118,7 +119,7 @@ async function createMainWindow() {
     minHeight: 600,
     title: 'oh-my-co-work',
     icon: appIconPath(),
-    show: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -128,6 +129,8 @@ async function createMainWindow() {
   })
 
   await mainWindow.loadURL(splashDataUrl())
+  applyDesktopOpenState(mainWindow)
+  mainWindow.show()
 
   mainWindow.on('close', (evt) => {
     if (!isQuitting && trayOk) {

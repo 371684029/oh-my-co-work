@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { windowsStartBat } from '../../scripts/windowsStartBat.mjs'
 import { splashDataUrl, splashHtml } from '../lib/splash.mjs'
+import { applyDesktopOpenState } from '../lib/windowState.mjs'
 import { electronExe, spawnElectron } from '../../scripts/desktop-launch.mjs'
 
 test('start.bat 用包内 node 拉 Electron，不用 cmd start', () => {
@@ -47,4 +48,14 @@ test('desktop-launch 把解压目录作为 Electron 的应用路径', () => {
   assert.equal(calls[0].opts.windowsHide, false)
   assert.equal(typeof calls[0].opts.stdio[1], 'number')
   assert.equal(calls[0].opts.stdio[2], calls[0].opts.stdio[1])
+})
+
+test('桌面窗口打开时最大化并进入系统全屏', () => {
+  const calls = []
+  const win = {
+    maximize: () => calls.push('maximize'),
+    setFullScreen: (v) => calls.push(`fullscreen:${v}`),
+  }
+  assert.equal(applyDesktopOpenState(win), true)
+  assert.deepEqual(calls, ['maximize', 'fullscreen:true'])
 })

@@ -19,16 +19,18 @@ import { getAppSettings } from './appSettings.js'
 export const FURNACE_AGENTS_BEGIN = '<!-- oh-my-co-work-furnace:begin -->'
 export const FURNACE_AGENTS_END = '<!-- oh-my-co-work-furnace:end -->'
 
-/** 短启动词：点名角色 + 四句自我介绍，禁止复述 ACTIVE。 */
+/** 短启动词：通用能力 + 本轮强项，禁止复述 ACTIVE。 */
 const LAUNCH_PROMPT = {
   [FURNACE_ROLE.SESSION]:
-    '熔炉主持。读 AGENTS.md。用不超过四句介绍你能做什么（看当前格、提醒缺输入、不改编排），然后停，等用户。勿复述 ACTIVE 全文。',
+    '熔炉。读 AGENTS.md。默认能做任何用户交代的事；系统审核与闸门更专业。四句内说明后停，等用户。勿复述 ACTIVE 全文。',
   [FURNACE_ROLE.MEMBER_ADAPT]:
-    '熔炉成员适配。读 AGENTS.md。四句内说明：只把当前执行者接到工作台。然后停。勿复述全文。',
+    '熔炉。读 AGENTS.md。默认通用；本轮更擅长把当前执行者接到工作台。四句内说明后停。勿复述全文。',
   [FURNACE_ROLE.NODE_ADAPT]:
-    '熔炉节点适配。读 AGENTS.md。四句内说明：只接当前这一格。然后停。勿复述全文。',
+    '熔炉。读 AGENTS.md。默认通用；本轮更擅长接当前这一格。四句内说明后停。勿复述全文。',
   [FURNACE_ROLE.REVIEW]:
-    '熔炉审核。读 AGENTS.md。四句内说明：只对当前格通过或拒绝。然后停。勿复述全文。',
+    '熔炉。读 AGENTS.md。默认通用；本轮系统审核与闸门更专业。四句内说明后停。勿复述全文。',
+  [FURNACE_ROLE.REFINE]:
+    '熔炉。读 AGENTS.md。默认通用；本轮更擅长把输入输出炼成文档。四句内说明后停。勿复述全文。',
 }
 
 export function defaultGrokWorkspaceDir() {
@@ -160,9 +162,9 @@ export function grokRulesWriteAllowed(grok = {}, { ready } = {}) {
 function composeAgentsInner(pack) {
   const sit = clipFurnaceText(pack?.situationText || '', 420)
   return [
-    '你是 oh-my-co-work「熔炉」：本机协同台里的 Grok，不是独立聊天窗。',
-    `角色：${pack?.label || '主持'}（${pack?.role || ''}）。只做节点一览里标了「现在」的那一格。`,
-    '用户可以：问进度/缺什么、适配接到工作台、过闸只说通过或拒绝、打开 inbox/ 相对路径附件。',
+    '你是 oh-my-co-work「熔炉」：本机协同台里的 Agent，不是独立聊天窗。',
+    `本轮侧重：${pack?.label || '主持'}（${pack?.role || ''}）。默认能做用户交代的任何事；系统审核、闸门、流程地图更专业。`,
+    '用户拥有最高指导权。节点一览是地图，默认盯当前格；用户要你做别的，照做。',
     '菜单和模型在 TUI。需要细节再读 ACTIVE.md，不要把全文贴进对话。',
     sit ? `此刻：${sit}` : '',
     // 官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起

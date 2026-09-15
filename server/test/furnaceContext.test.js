@@ -99,12 +99,14 @@ test('situation slots copy a node map not a single scenario', () => {
   assert.ok(text.includes('当前节点：#2 拉数据'))
   assert.ok(text.includes('勾了适配'))
   assert.ok(text.includes('上一节点产出：参数已齐'))
-  assert.ok(text.includes('只处理当前节点'))
+  assert.ok(text.includes('默认处理当前节点'))
+  assert.ok(text.includes('用户要求其它任务照做'))
   const packed = composeFurnaceContext(FURNACE_ROLE.SESSION, {
     situation: { intent: '先问缺哪一步', groupTitle: '采集流水线' },
   })
   assert.ok(packed.includes('熔炉本轮：群聊主持'))
   assert.ok(packed.includes('节点一览'))
+  assert.ok(packed.includes('用户拥有最高指导权'))
 })
 
 test('situation clips oversized intent', () => {

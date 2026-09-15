@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | A | electron/lib/windowState.mjs | 桌面窗口打开时最大化并系统全屏
+2026-09-15 | M | electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs | 启动铺满屏幕；桌面包带上 windowState.mjs
+2026-09-15 | M | server/config/furnace/prompts/*.md server/src/furnaceContext.js server/src/furnaceGrokInject.js | 熔炉默认通用，审核/闸门作为更专业能力而非唯一职责
+2026-09-15 | M | README.md server/config/furnace/README.md CODE_CHANGE.md | 同步全屏与熔炉权限口径
+
+---
 2026-09-15 | A | electron/icon.ico scripts/app-icons.mjs scripts/win-exe-icon.mjs | 首页 Logo 生成托盘/窗口 PNG 与 Windows ICO，打包时写入 exe
 2026-09-15 | M | electron/icon.png electron/main.js electron/lib/splash.mjs | 托盘与窗口改用 Logo；启动页带图标
 2026-09-15 | M | scripts/pack-release.mjs scripts/desktop-launch.mjs scripts/windowsStartBat.mjs scripts/verify-pack.mjs | 桌面包 electron.exe 改名为 oh-my-co-work.exe 并打图标

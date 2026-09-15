@@ -67,7 +67,7 @@ export function ensureFurnaceWorkspace() {
         '`ACTIVE.md` = 当前角色 + 此刻在做什么。`SITUATION.md` 是情境副本。',
         '`AGENTS.md` = 给 Grok 的短合同（标记块）。长文不要贴进对话。',
         '`inbox/` = GUI 上传的附件，Grok 用相对路径打开。',
-        '不要把多套角色 prompt 拼在一起。',
+        '用户拥有最高指导权：默认能做交代的任何事；系统审核与闸门更专业。',
         '',
       ].join('\n'),
       'utf8',
@@ -144,7 +144,7 @@ export function composeFurnaceSituation(facts = {}) {
     `它是什么：${clipFurnaceText(nowWhat || now.status, lim.field) || '（无）'}`,
     `状态：${clipFurnaceText(now.statusLabel || now.status, 80) || '（无）'}`,
     `上一节点产出：${clipFurnaceText(now.prevOutput, lim.prevOut) || '（无）'}`,
-    '合同：只处理当前节点。节点一览里其它行只是地图，不要提前执行、不要改编排。',
+    '合同：节点一览是地图。默认处理当前节点；用户要求其它任务照做。不要擅自改编排，除非用户要求。',
   ]
   const params = Array.isArray(facts.params) ? facts.params.slice(0, lim.params) : []
   const paramLines = params.length
@@ -182,9 +182,9 @@ export function composeFurnaceContext(role, { situation } = {}) {
   return [
     `# 熔炉本轮：${label}`,
     '',
-    `角色 id：\`${role}\``,
-    '只使用下面这一套角色。其它角色的 prompt / 记忆视为不存在。',
-    '先读「此刻在做什么」里的节点一览和当前节点，再按 Prompt 行动。',
+    `本轮侧重：${label}（\`${role}\`）`,
+    '用户拥有最高指导权。下面是本轮更专业的上下文，不是能力上限：默认仍能做用户交代的任何事。',
+    '先读「此刻在做什么」里的节点一览和当前节点；用户另有指示时按用户。',
     '',
     '## 此刻在做什么',
     '',

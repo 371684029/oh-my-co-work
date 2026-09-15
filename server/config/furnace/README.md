@@ -1,12 +1,12 @@
 # 熔炉上下文（进仓库）
 
-角色壳各一份 prompt、一份记忆种子。运行时只装当前这一套，并拼上会话情境，写成 `data/furnace/ACTIVE.md`。
+角色壳各一份 prompt、一份记忆种子。运行时装入当前侧重的一套，并拼上会话情境，写成 `data/furnace/ACTIVE.md`。默认是通用 Agent；系统审核与闸门更专业，不是能力上限。
 
 设计见 [docs/crucible-3.2.md](../../../docs/crucible-3.2.md)。
 
 | 文件 | 作用 |
 | --- | --- |
-| `prompts/session.md` | 群聊主持：读懂这场群在做什么 |
+| `prompts/session.md` | 群聊主持：通用 Agent，审核/闸门更专业 |
 | `prompts/member-adapt.md` | 把当前成员接到工作台 |
 | `prompts/node-adapt.md` | 把当前步骤接到工作台 |
 | `prompts/review.md` | 闸门通过 / 拒绝 |
