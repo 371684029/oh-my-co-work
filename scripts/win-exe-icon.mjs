@@ -21,6 +21,8 @@ export function stampWinExeIcon(exePath, icoPath) {
     }
   }
   ResEdit.Resource.IconGroupEntry.replaceIconsForResource(res.entries, groupId, lang, icons)
-  res.outputResource(exe, true)
+  // 不要 outputResource(exe, true)：图标比 Electron 原资源大时会报
+  // “New resource data is larger than original”，必须允许扩展资源节。
+  res.outputResource(exe)
   fs.writeFileSync(exePath, Buffer.from(exe.generate()))
 }

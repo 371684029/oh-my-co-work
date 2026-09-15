@@ -284,13 +284,9 @@ async function embedWin32Desktop(stage) {
   const brandedExe = path.join(desktop, 'oh-my-co-work.exe')
   fs.renameSync(electronExe, brandedExe)
   const ico = path.join(ROOT, 'electron', 'icon.ico')
-  try {
-    const { stampWinExeIcon } = await import('./win-exe-icon.mjs')
-    stampWinExeIcon(brandedExe, ico)
-    console.log('[pack] stamped icon onto desktop/oh-my-co-work.exe')
-  } catch (err) {
-    console.warn('[pack] 未能写入 exe 图标:', err?.message || err)
-  }
+  const { stampWinExeIcon } = await import('./win-exe-icon.mjs')
+  stampWinExeIcon(brandedExe, ico)
+  console.log('[pack] stamped icon onto desktop/oh-my-co-work.exe')
   copyFile(path.join(ROOT, 'scripts', 'desktop-launch.mjs'), path.join(stage, 'desktop-launch.mjs'))
 }
 

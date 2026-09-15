@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | M | scripts/win-exe-icon.mjs scripts/pack-release.mjs | 打 exe 图标时扩展资源节，避免 Logo ICO 比原图标大而写入失败
+2026-09-15 | M | electron/test/icons.test.mjs | 有 Electron zip 缓存时断言能把 Logo ICO 打进 exe
 2026-09-15 | R | 4.7.0-plan.md 4.8.0-plan.md 4.9.0-plan.md → docs/ | 版本计划统一放 docs，方便对照落地
 2026-09-15 | M | docs/4.7.0-plan.md docs/4.8.0-plan.md docs/4.9.0-plan.md docs/README.md | 4.8/4.9 补落地跟踪；索引指向计划文档
 2026-09-15 | M | README.md AGENT.md | 版本 4.9.0；文档表与路线图同步 4.8/4.9
