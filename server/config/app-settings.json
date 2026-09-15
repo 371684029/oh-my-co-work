@@ -12,7 +12,7 @@
   "grok": {
     "command": "grok",
     "configured": false,
-    "surface": "chat",
+    "surface": "tui",
     "workspaceDir": "",
     "writeRules": true,
     "rulesAcknowledged": false

@@ -37,6 +37,7 @@
     "eslint": "^9.39.5",
     "eslint-plugin-vue": "^9.33.0",
     "globals": "^17.11.0",
-    "playwright": "^1.61.1"
+    "playwright": "^1.61.1",
+    "resedit": "^3.1.0"
   }
 }

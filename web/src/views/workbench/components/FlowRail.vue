@@ -280,188 +280,7 @@
       </div>
     </div>
 
-    <!-- Tab：群报告（# 参数 + 各节点入出 + 备注） -->
-    <div v-show="isDocsHubTab" class="wb-right-pane announce-pane">
-      <div class="announce-toolbar">
-        <span class="announce-title">群报告</span>
-        <div class="announce-actions">
-          <el-button
-            size="small"
-            plain
-            :disabled="!activeId"
-            @click="openDocsHub"
-          >
-            打开 MD
-          </el-button>
-          <el-button
-            size="small"
-            text
-            :disabled="!activeId"
-            :loading="announceOpenLoading"
-            :title="announceMdHint"
-            @click="openAnnouncementMd"
-          >
-            系统打开
-          </el-button>
-          <el-button
-            size="small"
-            type="primary"
-            plain
-            :disabled="!activeId"
-            :loading="announceLoading"
-            @click="rebuildAnnouncement"
-          >
-            刷新报告
-          </el-button>
-        </div>
-      </div>
-
-      <div v-if="detail" class="announce-card">
-        <div class="announce-card-head">
-          <div class="announce-card-title">{{ detail.session.title || '未命名任务' }}</div>
-          <div class="announce-card-meta">
-            <el-tag size="small" round effect="plain" :type="statusType(detail.session.status)">
-              {{ statusLabel(detail.session.status) }}
-            </el-tag>
-            <el-tag
-              v-if="archiveOutcomeTag"
-              size="small"
-              round
-              effect="dark"
-              :type="archiveOutcomeTag.type"
-            >
-              {{ archiveOutcomeTag.label }}
-            </el-tag>
-            <span v-if="detail.session.updated_at" class="announce-card-time">{{
-              formatTime(detail.session.updated_at)
-            }}</span>
-          </div>
-        </div>
-
-        <div class="announce-section">
-          <div class="announce-section-title"># 参数</div>
-          <div
-            v-if="sessionParamsList.length || sessionGroupCard || sessionGroupFolder"
-            class="announce-params"
-          >
-            <div v-if="sessionGroupCard" class="announce-param announce-param--card">
-              <div class="announce-param-head">
-                <code>#群聊</code>
-                <span class="announce-param-head-label">群聊名片</span>
-              </div>
-              <pre class="announce-param-card-body">{{ sessionGroupCard }}</pre>
-            </div>
-            <div v-if="sessionGroupFolder" class="announce-param">
-              <code>#文件夹</code>
-              <span :title="sessionGroupFolder">{{ sessionGroupFolder }}</span>
-            </div>
-            <div
-              v-for="(v, i) in sessionParamsList"
-              :key="i"
-              class="announce-param"
-            >
-              <code>#{{ i + 1 }}</code>
-              <span :title="v">{{ v }}</span>
-            </div>
-          </div>
-          <p v-else class="announce-empty-line">
-            暂无 · 开聊后有 #群聊 / #文件夹；人工提交后有 #1…
-          </p>
-        </div>
-
-        <div v-if="announceKickoff" class="announce-section">
-          <div class="announce-section-title">启动说明</div>
-          <pre class="announce-io-block">{{ announceKickoff }}</pre>
-        </div>
-
-        <div class="announce-section">
-          <div class="announce-section-title">节点输入 / 输出</div>
-          <ul v-if="announceProgress.length" class="announce-steps">
-            <li v-for="row in announceProgress" :key="row.id" class="announce-step">
-              <span class="announce-step-idx">{{ row.idx }}</span>
-              <div class="announce-step-main">
-                <div class="announce-step-top">
-                  <span class="announce-step-name">{{ row.title }}</span>
-                  <el-tag size="small" round :type="row.tagType" effect="plain">{{
-                    row.statusLabel
-                  }}</el-tag>
-                </div>
-                <div v-if="row.nodeHash?.length" class="announce-step-hash">
-                  <div
-                    v-for="h in row.nodeHash"
-                    :key="h.key"
-                    class="announce-param announce-param--inline"
-                  >
-                    <code>{{ h.key }}</code>
-                    <span :title="h.value">{{ h.value }}</span>
-                  </div>
-                </div>
-                <div v-if="row.inText" class="announce-io">
-                  <span class="announce-io-label">入</span>
-                  <pre class="announce-io-block">{{ row.inText }}</pre>
-                </div>
-                <div v-if="row.outText" class="announce-io">
-                  <span class="announce-io-label">出</span>
-                  <pre class="announce-io-block">{{ row.outText }}</pre>
-                </div>
-                <div v-if="row.note" class="announce-io announce-io--note">
-                  <span class="announce-io-label">审</span>
-                  <p class="announce-step-digest">{{ row.note }}</p>
-                </div>
-                <p
-                  v-if="!row.inText && !row.outText && !row.note && row.pendingHint"
-                  class="announce-step-digest"
-                >
-                  {{ row.pendingHint }}
-                </p>
-              </div>
-            </li>
-          </ul>
-          <p v-else class="announce-empty-line">暂无步骤</p>
-        </div>
-
-        <div v-if="announceUserNotes.length" class="announce-section">
-          <div class="announce-section-title">用户参与</div>
-          <ul class="announce-notes-list">
-            <li v-for="(u, i) in announceUserNotes" :key="i" class="announce-note-item">
-              <span class="announce-note-meta"
-                >{{ u.actionLabel }}<template v-if="u.nodeTitle"> · {{ u.nodeTitle }}</template></span
-              >
-              <span class="announce-note-text">{{ u.text }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="announce-section announce-notes-section">
-          <div class="announce-section-title">备注</div>
-          <el-input
-            v-model="sessionNotesDraft"
-            type="textarea"
-            :rows="4"
-            maxlength="2000"
-            show-word-limit
-            placeholder="写给自己/团队的备注（不覆盖自动进度）"
-            :disabled="!activeId || notesSaving"
-          />
-          <div class="announce-notes-actions">
-            <el-button
-              size="small"
-              type="primary"
-              :loading="notesSaving"
-              :disabled="!activeId"
-              @click="saveSessionNotes"
-            >
-              保存备注
-            </el-button>
-          </div>
-        </div>
-      </div>
-      <div v-else class="announce-empty">
-        <p>选择会话后查看群报告</p>
-      </div>
-    </div>
-
-    <!-- Tab：文档中心（第三栏集成） -->
+    <!-- Tab：文档中心（含原群报告 MD，不再单独占一栏） -->
     <div v-show="isDocsHubTab" class="wb-right-pane docs-pane">
       <div class="docs-rail-toolbar">
         <div class="docs-rail-title-wrap">
@@ -486,6 +305,26 @@
             @click="onExportRailGroupDocs"
           >
             导出群
+          </el-button>
+          <el-button
+            size="small"
+            text
+            :disabled="!activeId"
+            :loading="announceOpenLoading"
+            :title="announceMdHint"
+            @click="openAnnouncementMd"
+          >
+            系统打开
+          </el-button>
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            :disabled="!activeId"
+            :loading="announceLoading"
+            @click="rebuildAnnouncement"
+          >
+            刷新报告
           </el-button>
           <el-button
             size="small"
@@ -534,9 +373,33 @@
         <div v-else-if="selectedDocLoading" class="docs-rail-empty">
           读取中…
         </div>
+
+        <div class="docs-rail-notes">
+          <div class="docs-rail-notes-title">备注</div>
+          <el-input
+            v-model="sessionNotesDraft"
+            type="textarea"
+            :rows="3"
+            maxlength="2000"
+            show-word-limit
+            placeholder="写给自己/团队的备注（不覆盖自动进度）"
+            :disabled="!activeId || notesSaving"
+          />
+          <div class="docs-rail-notes-actions">
+            <el-button
+              size="small"
+              type="primary"
+              :loading="notesSaving"
+              :disabled="!activeId"
+              @click="saveSessionNotes"
+            >
+              保存备注
+            </el-button>
+          </div>
+        </div>
       </div>
 
-      <div v-else class="announce-empty">
+      <div v-else class="docs-rail-empty">
         <p>选择会话后查看文档中心</p>
       </div>
     </div>
@@ -556,13 +419,8 @@ import {
   needsHuman,
   flowEntries,
   flowAnchorNodeId,
-  announceProgress,
-  announceUserNotes,
-  announceKickoff,
-  sessionParamsList,
-  sessionGroupCard,
-  sessionGroupFolder,
   sessionNotesDraft,
+  sessionGroupFolder,
   announceLoading,
   announceOpenLoading,
   notesSaving,
@@ -586,8 +444,6 @@ import {
   formatIo,
   nodeBypassed,
   statusLabel,
-  statusType,
-  formatTime,
   openAnnouncementMd,
   openDocsHub,
   rebuildAnnouncement,
@@ -903,338 +759,6 @@ watch(
 
 .wb-right-pane {
   min-height: 0;
-}
-
-.announce-pane {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 0 1 auto;
-  overflow: visible;
-  margin-bottom: 16px;
-}
-
-.announce-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.announce-title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ecw-text-1, #1d1d1f);
-  writing-mode: horizontal-tb;
-  white-space: normal;
-  word-break: break-word;
-}
-
-.announce-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.announce-card {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 14px 14px 18px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 249, 252, 0.88) 100%);
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.announce-card-head {
-  margin-bottom: 14px;
-  padding-bottom: 12px;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
-}
-
-.announce-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ecw-text-1, #1d1d1f);
-  line-height: 1.35;
-  margin-bottom: 8px;
-  word-break: break-word;
-}
-
-.announce-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.announce-card-time {
-  font-size: 11px;
-  color: var(--ecw-text-3, #86868b);
-  margin-left: 2px;
-}
-
-.announce-section {
-  margin-bottom: 16px;
-}
-
-.announce-section:last-child {
-  margin-bottom: 0;
-}
-
-.announce-section-title {
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ecw-text-3, #86868b);
-  margin-bottom: 8px;
-}
-
-.announce-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.announce-step {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 10px 10px 8px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-}
-
-.announce-step-idx {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ecw-accent, #007aff);
-  background: rgba(0, 122, 255, 0.1);
-}
-
-.announce-step-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.announce-step-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.announce-step-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ecw-text-1, #1d1d1f);
-  line-height: 1.35;
-}
-
-.announce-step-digest {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--ecw-text-2, #6e6e73);
-  word-break: break-word;
-}
-
-.announce-io {
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.announce-io-label {
-  align-self: flex-start;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--ecw-accent, #007aff);
-  background: rgba(0, 122, 255, 0.1);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.announce-io--note .announce-io-label {
-  color: #e6a23c;
-  background: rgba(230, 162, 60, 0.12);
-}
-
-.announce-io-block {
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--ecw-text-1, #1d1d1f);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
-  max-height: 180px;
-  overflow: auto;
-}
-
-.announce-notes-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.announce-note-item {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.announce-note-meta {
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--ecw-text-3, #86868b);
-}
-
-.announce-note-text {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ecw-text-1, #1d1d1f);
-  word-break: break-word;
-}
-
-.announce-empty-line {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--ecw-text-3, #86868b);
-}
-
-.announce-params {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.announce-step-hash {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0 0 8px;
-}
-
-.announce-param--inline {
-  padding: 6px 8px !important;
-  background: rgba(0, 122, 255, 0.04) !important;
-}
-
-.announce-param--inline span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.announce-param {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ecw-text-1, #1d1d1f);
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-  word-break: break-word;
-}
-
-.announce-param code {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 650;
-  color: var(--ecw-accent, #007aff);
-  background: rgba(0, 122, 255, 0.08);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.announce-param--card {
-  flex-direction: column;
-  gap: 6px;
-}
-
-.announce-param-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.announce-param-head-label {
-  font-size: 11px;
-  color: var(--ecw-text-3, #86868b);
-}
-
-.announce-param-card-body {
-  margin: 0;
-  width: 100%;
-  max-height: 160px;
-  overflow: auto;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 0.5px solid rgba(0, 0, 0, 0.05);
-  font-size: 11.5px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
-  color: var(--ecw-text-2, #6e6e73);
-  box-sizing: border-box;
-}
-
-.announce-notes-section :deep(.el-textarea__inner) {
-  border-radius: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-  min-height: 96px;
-}
-
-.announce-notes-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 8px;
-}
-
-.announce-empty {
-  padding: 28px 12px;
-  text-align: center;
-  color: var(--ecw-text-3, #86868b);
-  font-size: 13px;
 }
 
 .flow-archive-hint {
@@ -1622,5 +1146,28 @@ watch(
   text-align: center;
   font-size: 12px;
   color: var(--ecw-text-3, #86868b);
+}
+
+.docs-rail-notes {
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.docs-rail-notes-title {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ecw-text-3, #86868b);
+  margin-bottom: 8px;
+  writing-mode: horizontal-tb;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.docs-rail-notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 </style>

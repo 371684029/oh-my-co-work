@@ -44,6 +44,7 @@
         </div>
         <div class="furnace-actions">
           <button
+            v-if="guiEnabled"
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
@@ -53,6 +54,7 @@
             GUI
           </button>
           <button
+            v-if="guiEnabled"
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'tui' }"
@@ -374,7 +376,7 @@ const props = defineProps({
   connectionStatus: { type: String, default: 'open' },
   prefs: { type: Object, default: () => ({}) },
   defaultPagefill: { type: Boolean, default: true },
-  defaultSurface: { type: String, default: 'chat' },
+  defaultSurface: { type: String, default: 'tui' },
   sessionId: { type: String, default: '' },
 })
 const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'ensure-agent', 'input', 'resize', 'select', 'download-log', 'gap'])
@@ -383,7 +385,9 @@ const logEl = ref(null)
 const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
-const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
+/** 4.8：默认隐藏 GUI 入口，熔炉只走双 Agent TUI */
+const guiEnabled = false
+const surface = ref(guiEnabled && props.defaultSurface === 'chat' ? 'chat' : 'tui')
 const activeAgent = ref(inferFurnaceAgent(props.terminal))
 const agentLabel = computed(() => (activeAgent.value === 'cursor' ? 'Cursor' : 'Grok'))
 const tuiHistoryOpen = ref(false)

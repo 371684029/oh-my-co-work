@@ -14,7 +14,8 @@ test('stripAnsiTail keeps only the end of a long dump', () => {
   assert.ok(tail.includes('y'))
 })
 
-test('normalizeFurnaceSurface defaults to chat', () => {
-  assert.equal(normalizeFurnaceSurface(''), FURNACE_SURFACE.CHAT)
+test('normalizeFurnaceSurface defaults to tui', () => {
+  assert.equal(normalizeFurnaceSurface(''), FURNACE_SURFACE.TUI)
   assert.equal(normalizeFurnaceSurface('tui'), FURNACE_SURFACE.TUI)
+  assert.equal(normalizeFurnaceSurface('chat'), FURNACE_SURFACE.CHAT)
 })

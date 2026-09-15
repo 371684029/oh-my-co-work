@@ -22,6 +22,16 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | A | electron/icon.ico scripts/app-icons.mjs scripts/win-exe-icon.mjs | 首页 Logo 生成托盘/窗口 PNG 与 Windows ICO，打包时写入 exe
+2026-09-15 | M | electron/icon.png electron/main.js electron/lib/splash.mjs | 托盘与窗口改用 Logo；启动页带图标
+2026-09-15 | M | scripts/pack-release.mjs scripts/desktop-launch.mjs scripts/windowsStartBat.mjs scripts/verify-pack.mjs | 桌面包 electron.exe 改名为 oh-my-co-work.exe 并打图标
+2026-09-15 | M | web/src/views/workbench/components/FlowRail.vue web/src/views/Workbench.vue | 第三栏去掉重复群报告面板，只留文档中心
+2026-09-15 | M | web/src/components/terminal/FurnaceWorkspace.vue web/src/composables/useFurnaceWorkspace.js web/src/views/settings/Prefs.vue | 隐藏熔炉 GUI 入口，默认 TUI
+2026-09-15 | M | server/src/appSettings.js shared/index.js server/config/app-settings.json | 熔炉 surface 默认 tui
+2026-09-15 | M | package.json package-lock.json | 打包打 exe 图标用 resedit
+2026-09-15 | M | README.md docs/brand-logo.md CODE_CHANGE.md | 同步托盘/exe 图标与文档中心第三栏口径
+
+---
 2026-09-11 | M | electron/lib/server.mjs electron/main.js electron/test/urls-server.test.mjs | 后台服务日志改 openSync fd，禁止未打开 WriteStream 当 stdio（Windows 启动失败弹窗）
 
 2026-09-11 | M | eslint.config.js | electron/*.cjs 使用 Node 全局，避免 bootstrap.cjs 把 CI lint 打红

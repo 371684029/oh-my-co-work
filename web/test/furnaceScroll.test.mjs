@@ -10,6 +10,11 @@ const vueSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceW
 const viewSrc = fs.readFileSync(path.join(root, 'src/components/terminal/TerminalView.vue'), 'utf8')
 const hookSrc = fs.readFileSync(path.join(root, 'src/composables/useFurnaceWorkspace.js'), 'utf8')
 
+test('熔炉默认隐藏 GUI 入口', () => {
+  assert.match(vueSrc, /const guiEnabled = false/)
+  assert.match(vueSrc, /v-if="guiEnabled"/)
+})
+
 test('GUI 对话区是独立滚动容器，不靠撑高整页', () => {
   assert.match(layoutCss, /\.furnace-log[\s\S]*flex:\s*1 1 0%/)
   assert.match(layoutCss, /\.furnace-log[\s\S]*overflow-y:\s*scroll/)

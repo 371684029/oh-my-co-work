@@ -178,8 +178,8 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉默认铺满页面：GUI 或 TUI。Grok 与 Cursor CLI 分属独立 PTY，顶栏 Tab 切换，互不杀进程。
-        仅缺安装或登录时打开教程。完整步骤见
+        熔炉默认铺满 TUI。Grok 与 Cursor CLI 分属独立 PTY，顶栏 Tab 切换，互不杀进程。
+        GUI 入口已隐藏（4.8 专心双 Agent 终端）。仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
       <el-form label-position="top" class="admin-form">
@@ -196,10 +196,9 @@
         </el-form-item>
         <el-form-item label="开熔炉默认">
           <el-radio-group v-model="grok.surface">
-            <el-radio value="chat">铺满 GUI</el-radio>
             <el-radio value="tui">铺满 TUI</el-radio>
           </el-radio-group>
-          <p class="prefs-resolved">都是整页。工具栏可随时在 GUI / TUI 之间切换，并「缩小」回三栏。</p>
+          <p class="prefs-resolved">GUI 入口已隐藏。工具栏可「满屏 / 退出满屏」或缩小回三栏。</p>
         </el-form-item>
         <el-form-item label="改源文件前打压缩包备份">
           <el-switch v-model="adaptBackup" />
@@ -402,7 +401,7 @@ const exportingDocs = ref(false)
 const lastBackupFile = ref('')
 const lastBackupSummary = ref('')
 const lastExportTime = ref('')
-const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'chat' })
+const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'tui' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
 const startupUpdateCheck = ref(true)
@@ -444,7 +443,7 @@ async function load() {
         command: s.grok.command || 'grok',
         cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
-        surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
+        surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
       }
     }
     adaptBackup.value = s.adapt?.backup !== false
@@ -676,7 +675,7 @@ async function saveGrok() {
         command: String(grok.value.command || 'grok').trim() || 'grok',
         cursorCommand: String(grok.value.cursorCommand || 'cursor-agent').trim() || 'cursor-agent',
         configured: !!grok.value.configured,
-        surface: grok.value.surface === 'tui' ? 'tui' : 'chat',
+        surface: grok.value.surface === 'chat' ? 'chat' : 'tui',
       },
       adapt: { backup: adaptBackup.value !== false },
     })
@@ -685,7 +684,7 @@ async function saveGrok() {
         command: s.grok.command || 'grok',
         cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
-        surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
+        surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
       }
     }
     if (s.adapt) adaptBackup.value = s.adapt.backup !== false

@@ -69,8 +69,9 @@ function buildFixtureZip({
     fs.writeFileSync(path.join(root, 'electron/main.js'), 'export {}\n')
     fs.writeFileSync(path.join(root, 'electron/preload.js'), 'export {}\n')
     fs.writeFileSync(path.join(root, 'electron/icon.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    fs.writeFileSync(path.join(root, 'electron/icon.ico'), Buffer.from([0, 0, 1, 0]))
     fs.mkdirSync(path.join(root, 'desktop'), { recursive: true })
-    fs.writeFileSync(path.join(root, 'desktop/electron.exe'), PLATFORM_MAGIC.win32)
+    fs.writeFileSync(path.join(root, 'desktop/oh-my-co-work.exe'), PLATFORM_MAGIC.win32)
     fs.mkdirSync(path.join(root, 'runtime'), { recursive: true })
     fs.writeFileSync(path.join(root, 'runtime/node.exe'), PLATFORM_MAGIC.win32)
   }

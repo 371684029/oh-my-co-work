@@ -240,7 +240,7 @@ async function cachedDownload(url, cacheName) {
 function copyElectronAppFiles(stage) {
   const electronDest = path.join(stage, 'electron')
   fs.mkdirSync(electronDest, { recursive: true })
-  for (const name of ['main.js', 'preload.js', 'icon.png', 'bootstrap.cjs']) {
+  for (const name of ['main.js', 'preload.js', 'icon.png', 'icon.ico', 'bootstrap.cjs']) {
     copyFile(path.join(ROOT, 'electron', name), path.join(electronDest, name))
   }
   const libDest = path.join(electronDest, 'lib')
@@ -281,6 +281,16 @@ async function embedWin32Desktop(stage) {
   unzipTo(electronZip, desktop)
   const electronExe = path.join(desktop, 'electron.exe')
   if (!fs.existsSync(electronExe)) throw new Error('Electron zip 内缺少 electron.exe')
+  const brandedExe = path.join(desktop, 'oh-my-co-work.exe')
+  fs.renameSync(electronExe, brandedExe)
+  const ico = path.join(ROOT, 'electron', 'icon.ico')
+  try {
+    const { stampWinExeIcon } = await import('./win-exe-icon.mjs')
+    stampWinExeIcon(brandedExe, ico)
+    console.log('[pack] stamped icon onto desktop/oh-my-co-work.exe')
+  } catch (err) {
+    console.warn('[pack] 未能写入 exe 图标:', err?.message || err)
+  }
   copyFile(path.join(ROOT, 'scripts', 'desktop-launch.mjs'), path.join(stage, 'desktop-launch.mjs'))
 }
 

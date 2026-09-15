@@ -68,9 +68,16 @@ function showMainWindow() {
   mainWindow.focus()
 }
 
+function appIconPath() {
+  const ico = path.join(__dirname, 'icon.ico')
+  const png = path.join(__dirname, 'icon.png')
+  if (process.platform === 'win32' && fs.existsSync(ico)) return ico
+  return png
+}
+
 function createTray() {
   if (tray) return
-  const iconPath = path.join(__dirname, 'icon.png')
+  const iconPath = appIconPath()
   if (!fs.existsSync(iconPath)) return
   try {
     const image = nativeImage.createFromPath(iconPath)
@@ -110,7 +117,7 @@ async function createMainWindow() {
     minWidth: 1024,
     minHeight: 600,
     title: 'oh-my-co-work',
-    icon: path.join(__dirname, 'icon.png'),
+    icon: appIconPath(),
     show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

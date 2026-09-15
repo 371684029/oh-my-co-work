@@ -46,19 +46,19 @@ test('getAppSettings exposes grok defaults without requiring configured', () => 
   assert.equal(typeof s.grok.command, 'string')
   assert.ok(s.grok.command.length > 0)
   assert.equal(typeof s.grok.configured, 'boolean')
-  assert.equal(s.grok.surface, 'chat')
+  assert.equal(s.grok.surface, 'tui')
 })
 
 test('grok.configured defaults on', () => {
   assert.equal(defaultGrokSettings().configured, true)
-  assert.equal(defaultGrokSettings().surface, 'chat')
+  assert.equal(defaultGrokSettings().surface, 'tui')
 })
 
 test('grok.surface tui persists', () => {
-  updateAppSettings({ grok: { surface: 'tui' } })
-  assert.equal(getAppSettings().grok.surface, 'tui')
   updateAppSettings({ grok: { surface: 'chat' } })
   assert.equal(getAppSettings().grok.surface, 'chat')
+  updateAppSettings({ grok: { surface: 'tui' } })
+  assert.equal(getAppSettings().grok.surface, 'tui')
 })
 
 test('ensureAdminMember seeds 熔炉 with stable unified_admin key', () => {

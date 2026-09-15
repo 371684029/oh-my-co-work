@@ -44,7 +44,7 @@ export function defaultGrokSettings() {
     cursorCommand: 'cursor-agent',
     configured: true,
     /** chat=满屏气泡皮；tui=满屏原终端 */
-    surface: 'chat',
+    surface: 'tui',
     workspaceDir: '',
     writeRules: true,
     rulesAcknowledged: false,

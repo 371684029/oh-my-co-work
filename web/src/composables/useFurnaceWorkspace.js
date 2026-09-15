@@ -278,14 +278,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
     nextTick(() => window.dispatchEvent(new Event('resize')))
   })
 
-  watch(
-    () => [isStopped.value, showBody.value],
-    () => {
-      if (isStopped.value && !showBody.value) surface.value = 'chat'
-    },
-    { immediate: true },
-  )
-
   watch(isRunning, (on) => {
     if (on && surface.value === 'chat') {
       nextTick(() => composerEl.value?.focus?.())

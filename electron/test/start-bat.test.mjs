@@ -12,13 +12,23 @@ test('start.bat 用包内 node 拉 Electron，不用 cmd start', () => {
   assert.equal(bat.includes('start "oh-my-co-work"'), false)
   assert.equal(bat.includes('/D "%~dp0"'), false)
   assert.equal(bat.includes('cd /d "%~dp0."'), true)
+  assert.equal(bat.includes('oh-my-co-work.exe'), true)
   assert.equal(bat.includes('desktop-launch.mjs'), true)
   assert.equal(bat.includes('runtime\\node.exe'), true)
   assert.equal(bat.includes('pause'), true)
 })
 
+test('desktop-launch 优先带图标的 oh-my-co-work.exe', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
+  fs.mkdirSync(path.join(dir, 'desktop'))
+  fs.writeFileSync(path.join(dir, 'desktop', 'oh-my-co-work.exe'), '')
+  fs.writeFileSync(path.join(dir, 'desktop', 'electron.exe'), '')
+  assert.equal(electronExe(dir), path.join(dir, 'desktop', 'oh-my-co-work.exe'))
+})
+
 test('splash 页立刻能显示启动中', () => {
   assert.match(splashHtml(), /正在启动本机服务/)
+  assert.match(splashHtml(), /data:image\/png;base64,/)
   assert.match(splashDataUrl(), /^data:text\/html/)
 })
 

@@ -77,7 +77,7 @@ const terminalPrefs = ref({
   autoCollapseOnExit: false,
   scrollback: 5000,
 })
-const furnaceSurface = ref('chat')
+const furnaceSurface = ref('tui')
 
 // ===== 会话列表筛选 =====
 const listFilter = ref('all')
@@ -1176,8 +1176,7 @@ async function loadLists() {
   try {
     const s = await api.appSettings.get()
     if (s?.terminal) terminalPrefs.value = { ...terminalPrefs.value, ...s.terminal }
-    if (s?.grok?.surface === 'tui') furnaceSurface.value = 'tui'
-    else furnaceSurface.value = 'chat'
+    furnaceSurface.value = 'tui'
   } catch {
     /* keep defaults */
   }
@@ -2179,7 +2178,7 @@ export function resetSessionState() {
     autoCollapseOnExit: false,
     scrollback: 5000,
   }
-  furnaceSurface.value = 'chat'
+  furnaceSurface.value = 'tui'
 }
 
 export function initSessionDetail({ route, router }) {

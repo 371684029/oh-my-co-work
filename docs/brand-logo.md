@@ -54,6 +54,7 @@
 | `web/public/favicon.svg` | 浏览器标签 |
 | `web/public/logo.svg` / `logo-mark.jpg` | 静态访问 / 示意渲染 |
 | `docs/assets/logo.svg` / `logo-mark.jpg` | 文档与 README |
+| `electron/icon.png` / `electron/icon.ico` | 桌面窗口、系统托盘、Windows `oh-my-co-work.exe`（由 `logo-mark.jpg` 生成） |
 
 ---
 

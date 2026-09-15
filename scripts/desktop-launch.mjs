@@ -12,6 +12,8 @@ export function resolveAppRoot(fromUrl = import.meta.url) {
 }
 
 export function electronExe(appRoot) {
+  const branded = path.join(appRoot, 'desktop', 'oh-my-co-work.exe')
+  if (fs.existsSync(branded)) return branded
   return path.join(appRoot, 'desktop', 'electron.exe')
 }
 
@@ -57,7 +59,7 @@ async function main() {
   const exe = electronExe(appRoot)
   if (!fs.existsSync(exe)) {
     appendLog(appRoot, `missing ${exe}`)
-    console.error('desktop\\electron.exe not found')
+    console.error('desktop\\oh-my-co-work.exe (or electron.exe) not found')
     process.exit(1)
   }
   appendLog(appRoot, `spawn ${exe} app=${appRoot}`)

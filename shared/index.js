@@ -127,9 +127,9 @@ export const FURNACE_SURFACE = {
 }
 
 export function normalizeFurnaceSurface(v) {
-  return String(v || '').trim() === FURNACE_SURFACE.TUI
-    ? FURNACE_SURFACE.TUI
-    : FURNACE_SURFACE.CHAT
+  return String(v || '').trim() === FURNACE_SURFACE.CHAT
+    ? FURNACE_SURFACE.CHAT
+    : FURNACE_SURFACE.TUI
 }
 
 export const FURNACE_AGENT = {

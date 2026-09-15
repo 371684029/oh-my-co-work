@@ -1,4 +1,23 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function logoDataUri() {
+  try {
+    const png = fs.readFileSync(path.join(__dirname, '../icon.png'))
+    return 'data:image/png;base64,' + png.toString('base64')
+  } catch {
+    return ''
+  }
+}
+
 export function splashHtml() {
+  const logo = logoDataUri()
+  const img = logo
+    ? `<img src="${logo}" width="72" height="72" alt="oh-my-co-work" style="display:block;margin:0 auto 14px;border-radius:16px" />`
+    : ''
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -18,6 +37,7 @@ export function splashHtml() {
 </head>
 <body>
   <div class="box">
+    ${img}
     <h1>oh-my-co-work</h1>
     <p>正在启动本机服务，请稍候…</p>
   </div>

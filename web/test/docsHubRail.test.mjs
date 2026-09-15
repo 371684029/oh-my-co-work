@@ -15,6 +15,8 @@ test('右侧栏群报告并进文档中心，不再单独占一个 Tab', () => {
   assert.match(railSrc, /isDocsHubTab/)
   assert.match(railSrc, /文档中心/)
   assert.doesNotMatch(railSrc, />\s*群报告\s*<\/button>/)
+  assert.doesNotMatch(railSrc, /announce-pane/)
+  assert.doesNotMatch(railSrc, /announce-title/)
   assert.match(railSrc, /v-show="isDocsHubTab"/)
   assert.match(railSrc, /white-space:\s*normal/)
   assert.match(railSrc, /writing-mode:\s*horizontal-tb/)

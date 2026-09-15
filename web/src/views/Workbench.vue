@@ -236,7 +236,7 @@
       </div>
     </section>
 
-    <!-- 右：流程轨 / 群报告 -->
+    <!-- 右：流程轨 / 文档中心 -->
     <FlowRail />
   </div>
 </template>
