@@ -178,7 +178,7 @@
     <section class="prefs-card">
       <div class="prefs-title">Grok Build</div>
       <p class="prefs-hint">
-        熔炉默认铺满页面：GUI 或 TUI（同一条 grok 进程）。可点「缩小」回到工作台三栏。
+        熔炉默认铺满页面：GUI 或 TUI。Grok 与 Cursor CLI 分属独立 PTY，顶栏 Tab 切换，互不杀进程。
         仅缺安装或登录时打开教程。完整步骤见
         <router-link to="/settings/grok">Grok Build 教程</router-link>。
       </p>
@@ -189,6 +189,10 @@
         </el-form-item>
         <el-form-item label="启动命令">
           <el-input v-model="grok.command" placeholder="grok" />
+        </el-form-item>
+        <el-form-item label="Cursor CLI 命令">
+          <el-input v-model="grok.cursorCommand" placeholder="cursor-agent" />
+          <p class="prefs-resolved">熔炉顶栏「Cursor CLI」会 spawn 此命令（默认 cursor-agent，探测时也会试 agent）。</p>
         </el-form-item>
         <el-form-item label="开熔炉默认">
           <el-radio-group v-model="grok.surface">
@@ -398,7 +402,7 @@ const exportingDocs = ref(false)
 const lastBackupFile = ref('')
 const lastBackupSummary = ref('')
 const lastExportTime = ref('')
-const grok = ref({ command: 'grok', configured: true, surface: 'chat' })
+const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'chat' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
 const startupUpdateCheck = ref(true)
@@ -438,6 +442,7 @@ async function load() {
     if (s.grok) {
       grok.value = {
         command: s.grok.command || 'grok',
+        cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
       }
@@ -669,6 +674,7 @@ async function saveGrok() {
     const s = await api.appSettings.update({
       grok: {
         command: String(grok.value.command || 'grok').trim() || 'grok',
+        cursorCommand: String(grok.value.cursorCommand || 'cursor-agent').trim() || 'cursor-agent',
         configured: !!grok.value.configured,
         surface: grok.value.surface === 'tui' ? 'tui' : 'chat',
       },
@@ -677,6 +683,7 @@ async function saveGrok() {
     if (s.grok) {
       grok.value = {
         command: s.grok.command || 'grok',
+        cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'tui' ? 'tui' : 'chat',
       }

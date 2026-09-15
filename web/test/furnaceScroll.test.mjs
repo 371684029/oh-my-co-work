@@ -36,3 +36,17 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
   assert.doesNotMatch(viewSrc, /scrollLines/)
   assert.doesNotMatch(viewSrc, /1049/)
 })
+
+test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => {
+  assert.match(vueSrc, /furnaceHotkeyTargeted/)
+  assert.match(vueSrc, /setActiveAgent/)
+  assert.match(vueSrc, /ensure-agent/)
+  assert.match(vueSrc, /Ctrl\/Cmd\+1/)
+})
+
+test('xterm 尊重 prefs.scrollback 与 fontSize，不再强行抬到 10000', () => {
+  assert.match(viewSrc, /Number\(prefs\.fontSize\) \|\| 13/)
+  assert.match(viewSrc, /Number\(prefs\.scrollback\) > 0 \? Number\(prefs\.scrollback\) : 5000/)
+  assert.doesNotMatch(viewSrc, /Math\.max\(10000/)
+})
+

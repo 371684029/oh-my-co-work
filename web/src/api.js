@@ -49,6 +49,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ sessionId, markdown }),
       }),
+    refine: (payload) => req('/docs/refine', { method: 'POST', body: JSON.stringify(payload) }),
+    refinePrompt: (sessionId) =>
+      req(
+        `/docs/refine-prompt${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ''}`,
+      ),
     openPath: (path) =>
       req('/docs/open-path', { method: 'POST', body: JSON.stringify({ path }) }),
     search: (q) => req(`/docs/search?q=${encodeURIComponent(q)}`),
@@ -138,7 +143,11 @@ export const api = {
         body: '{}',
       }),
     closeFurnace: (id) => req(`/sessions/${id}/furnace/close`, { method: 'POST', body: '{}' }),
-    reopenFurnace: (id) => req(`/sessions/${id}/furnace/reopen`, { method: 'POST', body: '{}' }),
+    reopenFurnace: (id, body = {}) =>
+      req(`/sessions/${id}/furnace/reopen`, {
+        method: 'POST',
+        body: JSON.stringify(body || {}),
+      }),
     downloadTerminalLog: async (id, terminalId) => {
       const token = await accessToken()
       const res = await fetch(`${BASE}/sessions/${id}/terminals/${terminalId}/log`, {

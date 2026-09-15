@@ -41,6 +41,7 @@ function normalizeAdapt(raw) {
 export function defaultGrokSettings() {
   return {
     command: 'grok',
+    cursorCommand: 'cursor-agent',
     configured: true,
     /** chat=满屏气泡皮；tui=满屏原终端 */
     surface: 'chat',
@@ -54,6 +55,8 @@ function normalizeGrok(raw) {
   const d = defaultGrokSettings()
   if (!raw || typeof raw !== 'object') return d
   const command = String(raw.command || d.command).trim() || d.command
+  const cursorCommand =
+    String(raw.cursorCommand || d.cursorCommand).trim() || d.cursorCommand
   const off =
     raw.configured === false ||
     raw.configured === 'false' ||
@@ -67,6 +70,7 @@ function normalizeGrok(raw) {
     raw.writeRules === '0'
   return {
     command,
+    cursorCommand,
     configured: raw.configured === undefined || raw.configured === null ? d.configured : !off,
     surface,
     workspaceDir: raw.workspaceDir != null ? String(raw.workspaceDir).trim() : d.workspaceDir,

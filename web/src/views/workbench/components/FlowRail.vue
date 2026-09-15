@@ -12,7 +12,7 @@
       <button
         type="button"
         class="wb-right-tab"
-        :class="{ active: flowStore.rightTab === 'announce' || flowStore.rightTab === 'docs' }"
+        :class="{ active: isDocsHubTab }"
         @click="flowStore.rightTab = 'docs'"
       >
         文档中心
@@ -281,7 +281,7 @@
     </div>
 
     <!-- Tab：群报告（# 参数 + 各节点入出 + 备注） -->
-    <div v-show="flowStore.rightTab === 'announce'" class="wb-right-pane announce-pane">
+    <div v-show="isDocsHubTab" class="wb-right-pane announce-pane">
       <div class="announce-toolbar">
         <span class="announce-title">群报告</span>
         <div class="announce-actions">
@@ -462,7 +462,7 @@
     </div>
 
     <!-- Tab：文档中心（第三栏集成） -->
-    <div v-show="flowStore.rightTab === 'docs'" class="wb-right-pane docs-pane">
+    <div v-show="isDocsHubTab" class="wb-right-pane docs-pane">
       <div class="docs-rail-toolbar">
         <div class="docs-rail-title-wrap">
           <AppLogo size="sm" class="docs-rail-logo" />
@@ -601,6 +601,15 @@ import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { openPath } from '../composables/useDocsHub'
 
 const flowStore = useFlowStore()
+const isDocsHubTab = computed(
+  () => flowStore.rightTab === 'docs' || flowStore.rightTab === 'announce',
+)
+watch(
+  () => flowStore.rightTab,
+  (tab) => {
+    if (tab === 'announce') flowStore.rightTab = 'docs'
+  },
+)
 
 const DOC_NAME_RE = /^(ANNOUNCEMENT\.md|README\.md|nodes\/step-\d{2}-[A-Za-z0-9_-]+\.md)$/
 
@@ -900,8 +909,9 @@ watch(
   display: flex;
   flex-direction: column;
   min-height: 0;
-  flex: 1;
-  overflow: hidden;
+  flex: 0 1 auto;
+  overflow: visible;
+  margin-bottom: 16px;
 }
 
 .announce-toolbar {
@@ -918,8 +928,8 @@ watch(
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ecw-text-1, #1d1d1f);
-  white-space: nowrap;
   writing-mode: horizontal-tb;
+  white-space: normal;
   word-break: break-word;
 }
 
@@ -1473,7 +1483,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: max-content;
+  min-width: 0;
+  flex: 1 1 auto;
   margin-right: auto;
 }
 
@@ -1487,7 +1498,7 @@ watch(
   letter-spacing: -0.02em;
   color: var(--ecw-text-1, #1d1d1f);
   writing-mode: horizontal-tb;
-  white-space: nowrap;
+  white-space: normal;
   word-break: break-word;
 }
 

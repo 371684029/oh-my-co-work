@@ -21,8 +21,8 @@
               type="button"
               class="furnace-agent-tab"
               :class="{ active: activeAgent === 'grok' }"
-              title="Grok CLI Agent (Cmd+1 / Ctrl+1)"
-              @click="activeAgent = 'grok'"
+              title="Grok CLI Agent（熔炉聚焦时 Ctrl/Cmd+1）"
+              @click="setActiveAgent('grok')"
             >
               <span class="agent-dot grok" />
               Grok CLI
@@ -31,8 +31,8 @@
               type="button"
               class="furnace-agent-tab"
               :class="{ active: activeAgent === 'cursor' }"
-              title="Cursor CLI Agent (Cmd+2 / Ctrl+2)"
-              @click="activeAgent = 'cursor'"
+              title="Cursor CLI Agent（熔炉聚焦时 Ctrl/Cmd+2）"
+              @click="setActiveAgent('cursor')"
             >
               <span class="agent-dot cursor" />
               Cursor CLI
@@ -85,7 +85,7 @@
           <details class="furnace-more">
             <summary class="furnace-btn" title="关掉或新开 Grok 进程；返回群聊只关皮">进程</summary>
             <div class="furnace-more-menu">
-              <button type="button" class="furnace-more-item" @click="$emit('reopen')">新开熔炉</button>
+              <button type="button" class="furnace-more-item" @click="emit('reopen', { agent: activeAgent })">新开熔炉</button>
               <button
                 v-if="isRunning"
                 type="button"
@@ -109,16 +109,20 @@
           <div class="furnace-thread">
             <div v-if="showFail" class="furnace-welcome is-fail">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
-              <h3>Grok 没在跑，所以这里是空的</h3>
+              <h3>{{ agentLabel }} 没在跑，所以这里是空的</h3>
               <p>{{ failHint }}</p>
               <ul>
-                <li>先确认本机终端能直接运行 <code>grok</code>（已安装并在 PATH 里）</li>
+                <li>
+                  先确认本机终端能直接运行
+                  <code>{{ activeAgent === 'cursor' ? 'cursor-agent' : 'grok' }}</code>
+                  （已安装并在 PATH 里）
+                </li>
                 <li>Windows 运行包请关掉窗口后重开，让新 PATH 生效</li>
-                <li>聊太长、模型发懵时点「新开熔炉」：杀掉这条 Grok，再开一条空对话</li>
+                <li>聊太长、模型发懵时点「新开熔炉」：杀掉当前 Agent，再开一条空对话</li>
               </ul>
               <div class="furnace-chips">
                 <button type="button" class="furnace-chip" @click="surface = 'tui'">看 TUI 报错</button>
-                <button type="button" class="furnace-chip" @click="$emit('reopen')">新开熔炉</button>
+                <button type="button" class="furnace-chip" @click="emit('reopen', { agent: activeAgent })">新开熔炉</button>
                 <button type="button" class="furnace-chip" @click="$emit('close')">返回群聊</button>
               </div>
             </div>
@@ -154,7 +158,7 @@
               class="furnace-turn"
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
-              <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+              <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : agentLabel }}</span>
               <div class="furnace-bubble">
                 <template v-if="turn.role === 'assistant'">
                   <div
@@ -222,7 +226,7 @@
               </div>
             </div>
             <div v-if="awaitingReply" class="furnace-turn is-assistant is-pending">
-              <span class="furnace-turn-label">Grok</span>
+              <span class="furnace-turn-label">{{ agentLabel }}</span>
               <div class="furnace-bubble is-pending">正在写…</div>
             </div>
           </div>
@@ -329,7 +333,7 @@
               class="furnace-tui-line"
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
-              <span>{{ turn.role === 'user' ? '你' : 'Grok' }}</span>
+              <span>{{ turn.role === 'user' ? '你' : agentLabel }}</span>
               <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
             </div>
           </div>
@@ -346,14 +350,14 @@
 </template>
 
 <script setup>
-import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
-import { parseFurnaceTurnText } from '@acw/shared'
+import { parseFurnaceTurnText, inferFurnaceAgent } from '@acw/shared'
 
 const turnMetaCache = new Map()
 function getTurnMeta(text) {
@@ -373,14 +377,15 @@ const props = defineProps({
   defaultSurface: { type: String, default: 'chat' },
   sessionId: { type: String, default: '' },
 })
-const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'input', 'resize', 'select', 'download-log', 'gap'])
+const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'ensure-agent', 'input', 'resize', 'select', 'download-log', 'gap'])
 const workspaceRoot = ref(null)
 const logEl = ref(null)
 const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
 const surface = ref(props.defaultSurface === 'tui' ? 'tui' : 'chat')
-const activeAgent = ref('grok')
+const activeAgent = ref(inferFurnaceAgent(props.terminal))
+const agentLabel = computed(() => (activeAgent.value === 'cursor' ? 'Cursor' : 'Grok'))
 const tuiHistoryOpen = ref(false)
 const tuiHistStick = ref(true)
 
@@ -483,19 +488,44 @@ watch(
   { deep: true, flush: 'post' },
 )
 
+function setActiveAgent(kind) {
+  const next = kind === 'cursor' ? 'cursor' : 'grok'
+  activeAgent.value = next
+  emit('ensure-agent', next)
+}
+
+watch(
+  () => props.terminal?.id,
+  () => {
+    activeAgent.value = inferFurnaceAgent(props.terminal)
+  },
+)
+
+function furnaceHotkeyTargeted(e) {
+  const root = workspaceRoot.value
+  if (!root || typeof window === 'undefined') return false
+  const path = typeof e.composedPath === 'function' ? e.composedPath() : []
+  if (path.includes(root)) return true
+  return root.contains(e.target) || root.contains(document.activeElement)
+}
+
 function onKeyDown(e) {
-  if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+  if (!furnaceHotkeyTargeted(e)) return
+  if (!(e.metaKey || e.ctrlKey)) return
+  if (e.key === '1') {
     e.preventDefault()
-    activeAgent.value = 'grok'
-  } else if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+    setActiveAgent('grok')
+  } else if (e.key === '2') {
     e.preventDefault()
-    activeAgent.value = 'cursor'
+    setActiveAgent('cursor')
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', onKeyDown)
-}
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeyDown)
+  }
+})
 
 onUnmounted(() => {
   if (typeof window !== 'undefined') {

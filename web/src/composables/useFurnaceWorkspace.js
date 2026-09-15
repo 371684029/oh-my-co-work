@@ -1,5 +1,5 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable, takeFurnaceAssistantDelta } from '@acw/shared'
+import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable, inferFurnaceAgent, takeFurnaceAssistantDelta } from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import { PET_CREDIT_SHORT } from './furnacePetAtlas.js'
@@ -72,7 +72,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
     const err = String(props.terminal.lastError || props.terminal.error?.message || '').trim()
     if (err) return err
     if (props.terminal.status === 'failed') {
-      return '本机没有把 grok 跑起来。常见原因：没装 Grok、没进 PATH、或还没登录。'
+      const agent = inferFurnaceAgent(props.terminal)
+      const cmd = agent === 'cursor' ? 'cursor-agent' : 'grok'
+      return `本机没有把 ${cmd} 跑起来。常见原因：没装、没进 PATH、或还没登录。`
     }
     if (props.terminal.exitCode != null && Number(props.terminal.exitCode) !== 0) {
       return `进程已退出（exit ${props.terminal.exitCode}）。`

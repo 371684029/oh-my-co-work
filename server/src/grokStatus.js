@@ -65,19 +65,38 @@ function authLooksPresent(authPath) {
   }
 }
 
-export function probeCursorStatus({ command = 'cursor' } = {}) {
-  const installed = commandOnPath(command) || commandOnPath('cursor-agent')
+const CURSOR_CLI_CANDIDATES = ['cursor-agent', 'agent']
+
+export function probeCursorStatus({ command } = {}) {
+  const requested = String(command || '').trim()
+  const allowFallback =
+    !requested || requested === 'cursor' || CURSOR_CLI_CANDIDATES.includes(requested)
+  const candidates = []
+  if (requested) candidates.push(requested)
+  if (allowFallback) {
+    for (const name of CURSOR_CLI_CANDIDATES) {
+      if (!candidates.includes(name)) candidates.push(name)
+    }
+  }
+  let resolved = ''
+  for (const name of candidates) {
+    if (commandOnPath(name)) {
+      resolved = name
+      break
+    }
+  }
+  const installed = !!resolved
   const gaps = []
   if (!installed) gaps.push('install')
   return {
     installed,
-    loggedIn: installed,
+    loggedIn: false,
     configured: installed,
     ready: installed,
     canRun: installed,
     gaps,
-    command: String(command || 'cursor').trim() || 'cursor',
-    install: 'https://cursor.com',
+    command: resolved || requested || 'cursor-agent',
+    install: 'https://cursor.com/docs/cli/overview',
   }
 }
 

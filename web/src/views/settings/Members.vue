@@ -84,7 +84,9 @@
             </el-button>
           </div>
           <div class="field-hint">
-            使用 Cursor 等外部第三方 Agent 时，复制此指令粘贴给 Agent。Agent 将手动调用 <code>agent-refine-skill</code> 主动传输改动与结论至文档中心。
+            使用 Cursor 等外部第三方 Agent 时，复制此指令粘贴给 Agent。Agent 会调用本机
+            <code>POST /api/docs/refine</code>
+            把改动与结论写入当前会话群报告（文档中心）。
           </div>
         </el-form-item>
 
@@ -298,16 +300,30 @@ const readonly = ref(false)
 const viewRow = ref(null)
 const form = ref(emptyForm())
 const refineSkillPrompt = ref(
-  '请在完成本次代码修改后，调用 agent-refine-skill 技能，将【输入】（用户需求）、【输出/改动】（git diff 摘要）及【结论】主动同步写回 cowork 文档中心。',
+  '请在完成本次代码修改后，调用 agent-refine-skill：POST /api/docs/refine，JSON 含 sessionId、input、output、conclusion。',
 )
 
-function copyRefineSkillPrompt() {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(refineSkillPrompt.value)
-    ElMessage.success('已复制炼化 Skill 指令到剪贴板')
-  } else {
-    ElMessage.info(refineSkillPrompt.value)
+async function refreshRefineSkillPrompt() {
+  try {
+    const r = await api.docs.refinePrompt()
+    if (r?.prompt) refineSkillPrompt.value = r.prompt
+  } catch {
+    /* 保留本地兜底文案 */
   }
+}
+
+async function copyRefineSkillPrompt() {
+  await refreshRefineSkillPrompt()
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(refineSkillPrompt.value)
+      ElMessage.success('已复制炼化 Skill 指令到剪贴板')
+      return
+    }
+  } catch {
+    /* 非安全上下文或权限拒绝 */
+  }
+  ElMessage.info(refineSkillPrompt.value)
 }
 const scriptTab = ref('basic')
 const installDir = ref('')
@@ -640,6 +656,7 @@ async function remove(row) {
 onMounted(() => {
   load()
   loadInstallDir()
+  refreshRefineSkillPrompt()
 })
 </script>
 
@@ -673,6 +690,12 @@ onMounted(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   line-height: 1.45;
+}
+.refine-skill-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 .switch-hint {
   margin-left: 10px;

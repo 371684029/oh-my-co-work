@@ -4,7 +4,7 @@
  * 要清上下文必须杀进程再 spawn 一条新 grok。
  */
 import { getDb, parseJson } from './db.js'
-import { isFurnaceMember, MEMBER_KIND } from '@acw/shared'
+import { isFurnaceMember, MEMBER_KIND, normalizeFurnaceAgent } from '@acw/shared'
 import { listMembers, getGroup } from './services.js'
 import { runMember } from './runners.js'
 import { syncFurnaceSessionContext } from './furnaceSituation.js'
@@ -56,13 +56,14 @@ export function closeFurnace(sessionId) {
   return { ok: true, closed: true, killed }
 }
 
-export async function reopenFurnace(sessionId) {
+export async function reopenFurnace(sessionId, { agent } = {}) {
   const session = requireSession(sessionId)
   const member = furnaceMember()
   if (!member) throw new Error('未找到熔炉成员')
   if (member.kind !== MEMBER_KIND.SCRIPT) {
     throw new Error('熔炉还没接到 Grok，请先在设置里打开 Grok Build')
   }
+  const furnaceAgent = normalizeFurnaceAgent(agent)
   const nodeInstanceId = furnaceNodeId(sessionId, member.id)
   if (!nodeInstanceId) {
     throw new Error('这场会话还没有熔炉节点，请先从流程里开一次熔炉')
@@ -80,6 +81,7 @@ export async function reopenFurnace(sessionId) {
       ...ctx,
       sessionTitle: session.title,
       params: ctx.params || {},
+      furnaceAgent,
     },
     sessionId,
     nodeInstanceId,
@@ -91,6 +93,7 @@ export async function reopenFurnace(sessionId) {
     summary: result?.summary || '',
     terminalId: result?.terminalId || result?.data?.terminalId || null,
     nodeInstanceId,
+    furnaceAgent,
     replaced: true,
   }
 }

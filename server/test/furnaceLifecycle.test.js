@@ -54,3 +54,18 @@ test('reopenFurnace refuses a chat that has no furnace node', async () => {
   const session = createSessionFromMember(echo.id)
   await assert.rejects(() => reopenFurnace(session.id), /熔炉节点/)
 })
+
+test('reopenFurnace with cursor agent still binds the furnace node', async () => {
+  updateAppSettings({
+    grok: {
+      command: 'grok-not-installed-acw',
+      cursorCommand: 'cursor-agent-not-installed-acw',
+      configured: true,
+    },
+  })
+  const member = ensureAdminMember()
+  const session = createSessionFromMember(member.id)
+  const r = await reopenFurnace(session.id, { agent: 'cursor' })
+  assert.equal(r.furnaceAgent, 'cursor')
+  assert.equal(r.nodeInstanceId, furnaceNodeId(session.id, member.id))
+})

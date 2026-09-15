@@ -503,12 +503,19 @@ export async function runMember(
 
     let cwd = resolveCwdForScript(script, mode === 'file' ? filePath : null)
     let furnaceLaunch = null
+    let furnaceAgent = null
     if (isFurnaceMember(member)) {
-      const fx = applyFurnaceGrokRuntime({ member, sessionId, command })
+      const fx = applyFurnaceGrokRuntime({
+        member,
+        sessionId,
+        command,
+        furnaceAgent: sessionContext?.furnaceAgent,
+      })
       if (fx) {
         if (mode !== 'file') command = fx.command
         cwd = fx.cwd
         furnaceLaunch = fx.launch || null
+        furnaceAgent = fx.furnaceAgent || null
       }
     }
     if (!cwd) {
@@ -597,6 +604,7 @@ export async function runMember(
         cols: isFurnaceMember(member) ? 120 : script.terminal?.cols,
         rows: isFurnaceMember(member) ? 40 : script.terminal?.rows,
         adapter: script.adapter || script.terminal?.adapter || null,
+        furnaceAgent,
       })
     }
 

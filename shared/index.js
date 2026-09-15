@@ -132,6 +132,33 @@ export function normalizeFurnaceSurface(v) {
     : FURNACE_SURFACE.CHAT
 }
 
+export const FURNACE_AGENT = {
+  GROK: 'grok',
+  CURSOR: 'cursor',
+}
+
+export function normalizeFurnaceAgent(v) {
+  return String(v || '').trim().toLowerCase() === FURNACE_AGENT.CURSOR
+    ? FURNACE_AGENT.CURSOR
+    : FURNACE_AGENT.GROK
+}
+
+/** 从终端公开字段判断当前熔炉 Agent（显式 furnaceAgent 优先） */
+export function inferFurnaceAgent(terminal) {
+  const explicit = String(terminal?.furnaceAgent || '').trim().toLowerCase()
+  if (explicit === FURNACE_AGENT.CURSOR || explicit === FURNACE_AGENT.GROK) return explicit
+  const blob = `${terminal?.command || ''} ${terminal?.runtime || ''} ${terminal?.label || ''}`
+  if (/(^|[\s/\\])cursor-agent(\.exe)?(\s|$)/i.test(blob)) return FURNACE_AGENT.CURSOR
+  if (/(^|[\s/\\])cursor(\.exe)?(\s|$)/i.test(blob)) return FURNACE_AGENT.CURSOR
+  return FURNACE_AGENT.GROK
+}
+
+/** Cursor CLI：能在 PATH 里找到即可 spawn，不做登录态猜测 */
+export function cursorCanRun(probe) {
+  if (!probe) return false
+  return !!probe.canRun || !!probe.installed
+}
+
 export {
   renderPtyPlainText,
   furnaceGuiTranscript,

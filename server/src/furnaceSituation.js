@@ -7,8 +7,10 @@ import {
   FURNACE_ROLE,
   isFurnaceMember,
   nodeStatusLabel,
+  normalizeFurnaceAgent,
   stepTypeLabel,
 } from '@acw/shared'
+import { probeCursorStatus } from './grokStatus.js'
 import {
   activateFurnaceRole,
   currentFurnaceRole,
@@ -201,15 +203,26 @@ export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
   }
 }
 
-export function applyFurnaceGrokRuntime({ member, sessionId, command } = {}) {
+export function applyFurnaceGrokRuntime({ member, sessionId, command, furnaceAgent } = {}) {
   if (!isFurnaceMember(member)) return null
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
-  const rawCmd = String(command || 'grok').trim() || 'grok'
+  const agent = normalizeFurnaceAgent(furnaceAgent)
+  const grok = getAppSettings().grok || {}
+  let rawCmd
+  if (agent === 'cursor') {
+    const probe = probeCursorStatus({ command: grok.cursorCommand })
+    rawCmd = String(probe.command || grok.cursorCommand || 'cursor-agent').trim() || 'cursor-agent'
+  } else {
+    rawCmd = String(command || grok.command || 'grok').trim() || 'grok'
+  }
+  const launch = grokPtyLaunch(rawCmd)
+  launch.label = agent === 'cursor' ? 'cursor' : 'grok'
   return {
     command: rawCmd,
-    launch: grokPtyLaunch(rawCmd),
+    launch,
     cwd: prepared.cwd,
     wrote: prepared.wrote,
+    furnaceAgent: agent,
   }
 }
 

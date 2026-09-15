@@ -53,7 +53,7 @@ import { getAppSettings,
   purgeDemoData,
   resolveGlobalAdminMember,
 } from './appSettings.js'
-import { probeGrokStatus, loadGrokExampleConfig } from './grokStatus.js'
+import { probeGrokStatus, probeCursorStatus, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
 import * as docsHub from './docsHub.js'
 import * as updateCheck from './updateCheck.js'
@@ -79,6 +79,7 @@ import {
   readTerminalLogPath,
 } from './terminal/terminalService.js'
 import { closeFurnace, reopenFurnace } from './furnaceLifecycle.js'
+import { appendAgentRefine, buildRefineSkillPrompt } from './agentRefine.js'
 
 const router = Router()
 
@@ -578,7 +579,7 @@ router.post('/sessions/:id/furnace/close', (req, res) => {
 })
 router.post('/sessions/:id/furnace/reopen', async (req, res) => {
   try {
-    res.json(await reopenFurnace(req.params.id))
+    res.json(await reopenFurnace(req.params.id, { agent: req.body?.agent }))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }
@@ -735,8 +736,10 @@ router.get('/settings/app', (_req, res) => {
 })
 router.get('/grok/status', (_req, res) => {
   const command = getAppSettings().grok?.command || 'grok'
+  const cursorCommand = getAppSettings().grok?.cursorCommand || 'cursor-agent'
   res.json({
     ...probeGrokStatus({ command }),
+    cursor: probeCursorStatus({ command: cursorCommand }),
     exampleToml: loadGrokExampleConfig(),
   })
 })
@@ -836,6 +839,20 @@ router.post('/docs/announcement', (req, res) => {
     res.json(docsHub.saveAnnouncement(sessionId, markdown))
   } catch (e) {
     res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/docs/refine-prompt', (req, res) => {
+  res.json({ prompt: buildRefineSkillPrompt({ sessionId: req.query.sessionId }) })
+})
+
+router.post('/docs/refine', (req, res) => {
+  try {
+    const { sessionId, input, output, conclusion, source } = req.body || {}
+    res.json(appendAgentRefine({ sessionId, input, output, conclusion, source }))
+  } catch (e) {
+    const status = e.code === 'NO_SESSION' || e.code === 'BAD_SESSION' ? 400 : 400
+    res.status(status).json({ error: e.message })
   }
 })
 

@@ -1,7 +1,7 @@
 import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { isFurnaceMember } from '@acw/shared'
+import { inferFurnaceAgent, isFurnaceMember } from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
 import { api, connectSessionWs } from '../../../api'
 import {
@@ -41,8 +41,9 @@ function isFurnaceTuiContext(terminal) {
     const mem = members.value.find((x) => x.id === fromId)
     if (isFurnaceMember(mem)) return true
   }
-  const cmd = `${terminal?.command || ''} ${terminal?.label || ''}`
-  return /(^|[\s/\\])grok(\.exe)?(\s|$)/i.test(cmd)
+  const cmd = `${terminal?.command || ''} ${terminal?.label || ''} ${terminal?.runtime || ''}`
+  if (terminal?.furnaceAgent === 'cursor' || terminal?.furnaceAgent === 'grok') return true
+  return /(^|[\s/\\])(grok|cursor-agent|cursor)(\.exe)?(\s|$)/i.test(cmd)
 }
 
 const furnaceTuiPagefill = computed(() => isFurnaceTuiContext(activeTerminal.value))
@@ -140,15 +141,21 @@ async function closeFurnaceProcess() {
   }
 }
 
-async function reopenFurnaceProcess({ skipConfirm = false, quiet = false } = {}) {
+async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent } = {}) {
   if (!activeId.value) return
-  const live = (terminalSessions.value || []).some(
-    (t) => isFurnaceTuiContext(t) && isTerminalRunning(t.status),
+  const furnaceAgent = inferFurnaceAgent({ furnaceAgent: agent })
+  const liveSame = (terminalSessions.value || []).some(
+    (t) =>
+      isFurnaceTuiContext(t) &&
+      isTerminalRunning(t.status) &&
+      inferFurnaceAgent(t) === furnaceAgent,
   )
-  if (live && !skipConfirm) {
+  if (liveSame && !skipConfirm) {
     try {
       await ElMessageBox.confirm(
-        '会结束当前 Grok，再开一条空对话。工作台会话还在。',
+        furnaceAgent === 'cursor'
+          ? '会结束当前 Cursor CLI，再开一条空对话。Grok 进程还在。'
+          : '会结束当前 Grok，再开一条空对话。Cursor CLI 若在跑会留下。工作台会话还在。',
         '新开熔炉',
         {
           type: 'warning',
@@ -161,16 +168,48 @@ async function reopenFurnaceProcess({ skipConfirm = false, quiet = false } = {})
     }
   }
   try {
-    const r = await api.sessions.reopenFurnace(activeId.value)
+    const r = await api.sessions.reopenFurnace(activeId.value, { agent: furnaceAgent })
     await loadTerminals(activeId.value)
     const tid = r?.terminalId
     if (tid) revealFurnaceTui(tid)
     if (quiet) return
-    if (r?.ok) ElMessage.success('已新开熔炉，Grok 对话已清空')
-    else ElMessage.warning(r?.summary || '新开熔炉未成功')
+    if (r?.ok) {
+      ElMessage.success(
+        furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空',
+      )
+    } else ElMessage.warning(r?.summary || '新开熔炉未成功')
   } catch (e) {
     ElMessage.error(e.message || '新开熔炉失败')
   }
+}
+
+async function ensureFurnaceAgent(agent) {
+  if (!activeId.value) return
+  const furnaceAgent = inferFurnaceAgent({ furnaceAgent: agent })
+  const live = (terminalSessions.value || []).find(
+    (t) =>
+      isFurnaceTuiContext(t) &&
+      isTerminalRunning(t.status) &&
+      inferFurnaceAgent(t) === furnaceAgent,
+  )
+  if (live) {
+    openTerminal(live.id)
+    return live
+  }
+  if (furnaceAgent === 'cursor') {
+    try {
+      const probe = await api.grok.status()
+      if (!probe?.cursor?.canRun && !probe?.cursor?.installed) {
+        ElMessage.warning(
+          `本机 PATH 里没有 Cursor CLI（${probe?.cursor?.command || 'cursor-agent'}）。可到设置填写启动命令。`,
+        )
+        return null
+      }
+    } catch {
+      /* 探测失败仍尝试 spawn */
+    }
+  }
+  return reopenFurnaceProcess({ skipConfirm: true, quiet: furnaceAgent === 'grok', agent: furnaceAgent })
 }
 
 function onTerminalSeqGap() {
@@ -370,6 +409,7 @@ export {
   killTerminal,
   closeFurnaceProcess,
   reopenFurnaceProcess,
+  ensureFurnaceAgent,
   onTerminalSeqGap,
   downloadTerminalLog,
   loadTerminals,

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import * as pty from 'node-pty'
-import { uid } from '@acw/shared'
+import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
 import { emitSession } from '../bus.js'
 import { getAppSettings } from '../appSettings.js'
@@ -47,20 +47,26 @@ function redactOpts() {
   return { enabled: r.enabled !== false, patternsText: r.patternsText || '' }
 }
 
-function countRunningTerminals(sessionId, { exceptMemberId } = {}) {
-  return [...terminals.values()].filter(
-    (t) =>
-      t.sessionId === sessionId &&
-      (t.status === 'running' || t.status === 'starting') &&
-      (!exceptMemberId || t.memberId !== exceptMemberId),
-  ).length
+function countRunningTerminals(sessionId, { exceptMemberId, exceptPair } = {}) {
+  return [...terminals.values()].filter((t) => {
+    if (t.sessionId !== sessionId) return false
+    if (t.status !== 'running' && t.status !== 'starting') return false
+    if (exceptPair?.memberId && t.memberId === exceptPair.memberId) {
+      if (inferFurnaceAgent(t) === exceptPair.furnaceAgent) return false
+    } else if (exceptMemberId && t.memberId === exceptMemberId) {
+      return false
+    }
+    return true
+  }).length
 }
 
-function stopMemberTerminals(sessionId, memberId) {
+function stopMemberTerminals(sessionId, memberId, { furnaceAgent } = {}) {
   if (!sessionId || !memberId) return
+  const onlyAgent = furnaceAgent === 'cursor' || furnaceAgent === 'grok' ? furnaceAgent : null
   for (const entry of [...terminals.values()]) {
     if (entry.sessionId !== sessionId || entry.memberId !== memberId) continue
     if (entry.status !== 'running' && entry.status !== 'starting') continue
+    if (onlyAgent && inferFurnaceAgent(entry) !== onlyAgent) continue
     killTerminal(entry.id, 'replaced')
   }
 }
@@ -124,6 +130,8 @@ function publicTerminal(entry, { includeReplay = false } = {}) {
     runId: entry.runId,
     label: entry.label,
     runtime: entry.runtime,
+    command: entry.command || null,
+    furnaceAgent: entry.furnaceAgent || null,
     cwd: entry.cwd,
     status: entry.status,
     pid: entry.pid,
@@ -279,6 +287,7 @@ export function runTerminal({
   cols = 100,
   rows = 30,
   adapter = null,
+  furnaceAgent = null,
 }) {
   return new Promise((resolve) => {
     // 常驻终端（keepAlive）会在启动成功后先行 resolve，让流程节点推进；
@@ -299,8 +308,13 @@ export function runTerminal({
       return
     }
 
-    // 同成员再开终端会先替换旧 PTY，配额按「替换后仍存活的其它终端」计。
-    const running = countRunningTerminals(sessionId, { exceptMemberId: memberId || undefined })
+    const agentKind = furnaceAgent === 'cursor' || furnaceAgent === 'grok' ? furnaceAgent : null
+    // 同成员再开终端会先替换旧 PTY；双 Agent 只替换同一 Agent，另一路常驻。
+    const running = countRunningTerminals(sessionId, {
+      exceptMemberId: agentKind ? undefined : memberId || undefined,
+      exceptPair:
+        agentKind && memberId ? { memberId, furnaceAgent: agentKind } : undefined,
+    })
     if (running >= quotaLimits().maxConcurrent) {
       settle({
         ok: false,
@@ -311,8 +325,10 @@ export function runTerminal({
     }
 
     if (memberId) {
-      stopMemberTerminals(sessionId, memberId)
-      killMemberProcesses(sessionId, memberId, { includeDetach: true })
+      stopMemberTerminals(sessionId, memberId, { furnaceAgent: agentKind })
+      if (!agentKind) {
+        killMemberProcesses(sessionId, memberId, { includeDetach: true })
+      }
     }
 
     const id = uid('term')
@@ -332,6 +348,10 @@ export function runTerminal({
       memberId: memberId || null,
       label: label || '终端',
       runtime: launch?.label || 'terminal',
+      command: [launch?.cmd, ...(Array.isArray(launch?.args) ? launch.args : [])]
+        .filter(Boolean)
+        .join(' '),
+      furnaceAgent: agentKind,
       cwd,
       status: 'starting',
       pid: null,

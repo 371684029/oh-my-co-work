@@ -100,6 +100,7 @@
           @kill="killTerminal"
           @close-furnace="closeFurnaceProcess"
           @reopen="reopenFurnaceProcess"
+          @ensure-agent="ensureFurnaceAgent"
           @input="sendTerminalInput"
           @resize="resizeTerminal"
           @select="openTerminal"
@@ -282,6 +283,7 @@ import {
   killTerminal,
   closeFurnaceProcess,
   reopenFurnaceProcess,
+  ensureFurnaceAgent,
   sendTerminalInput,
   resizeTerminal,
   openTerminal,
