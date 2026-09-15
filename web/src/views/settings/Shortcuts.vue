@@ -61,7 +61,7 @@
       </el-table-column>
     </el-table>
 
-    <el-drawer v-model="drawer" :title="drawerTitle" size="440px" destroy-on-close>
+    <el-drawer v-model="drawer" :title="drawerTitle" size="440px" destroy-on-close append-to-body>
       <el-form label-position="top">
         <el-form-item label="显示名称" required>
           <el-input v-model="form.name" placeholder="如：打开编辑器" />

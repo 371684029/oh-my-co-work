@@ -22,6 +22,10 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | M | web/src/App.vue web/src/views/settings/Members.vue Groups.vue Shortcuts.vue | 设置页藏桌宠；抽屉 append-to-body，避免挡住炼化勾选与内嵌终端
+2026-09-15 | A | web/test/membersDrawer.test.mjs | 锁设置抽屉不被桌宠盖住
+
+---
 2026-09-15 | A | electron/lib/windowState.mjs | 桌面窗口打开时最大化并系统全屏
 2026-09-15 | M | electron/main.js scripts/pack-release.mjs scripts/verify-pack.mjs | 启动铺满屏幕；桌面包带上 windowState.mjs
 2026-09-15 | M | server/config/furnace/prompts/*.md server/src/furnaceContext.js server/src/furnaceGrokInject.js | 熔炉默认通用，审核/闸门作为更专业能力而非唯一职责

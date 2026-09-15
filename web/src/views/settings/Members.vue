@@ -26,6 +26,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="kind" label="类型" width="90" />
+      <el-table-column label="炼化" width="88">
+        <template #default="{ row }">
+          <el-tag v-if="row.config?.refine?.enabled" size="small" type="success" effect="plain">开</el-tag>
+          <span v-else class="muted-dash">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="运行" min-width="160" show-overflow-tooltip>
         <template #default="{ row }">
           {{ runSummary(row) }}
@@ -46,6 +52,7 @@
       :title="drawerTitle"
       size="480px"
       destroy-on-close
+      append-to-body
       class="member-settings-drawer"
     >
       <el-form v-if="!readonly" label-position="top">
@@ -67,11 +74,11 @@
           </el-tooltip>
         </el-form-item>
         <el-form-item>
-          <el-tooltip content="开启后由熔炉炼化：格式化成员的输入/输出为文档友好形态，方便文档中心维护。未炼化成员的步骤可在群模板里单独勾选炼化（走格式化节点）。" placement="top" :show-after="300">
+          <el-tooltip content="保存后生效。该成员在群聊里跑完，会把输入/输出整理进文档中心。不是点一下立刻改脚本。" placement="top" :show-after="300">
             <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
         </el-form-item>
-        <el-form-item label="炼化 skills（第三方 Agent 调起指令）">
+        <el-form-item v-if="form.refine" label="炼化 skills（第三方 Agent 调起指令）">
           <div class="refine-skill-box">
             <el-input
               v-model="refineSkillPrompt"
@@ -141,7 +148,7 @@
                   <el-option label="普通执行（兼容现有脚本）" value="pipe" />
                 </el-select>
                 <div class="field-hint">
-                  默认内嵌终端：对话中出现终端卡，可进入中栏交互。仅非交互脚本才改回普通执行。
+                  默认内嵌终端：<strong>保存后</strong>开聊该成员，对话里会出现终端卡，可进中栏交互。仅非交互脚本才改回普通执行。
                 </div>
               </el-form-item>
 
@@ -667,6 +674,9 @@ onMounted(() => {
   align-items: flex-start;
   margin-bottom: 20px;
   gap: 16px;
+}
+.muted-dash {
+  color: var(--el-text-color-secondary);
 }
 .page-search {
   max-width: 420px;

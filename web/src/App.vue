@@ -77,7 +77,7 @@
       <router-view />
     </main>
     <FurnaceSprite
-      v-show="!furnaceWorkspaceOpen && !isDocsRoute"
+      v-show="!furnaceWorkspaceOpen && !isDocsRoute && nav !== 'settings'"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
       @click="onFurnaceClick"

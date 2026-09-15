@@ -33,7 +33,7 @@
       </el-table-column>
     </el-table>
 
-    <el-drawer v-model="drawer" :title="drawerTitle" size="520px" destroy-on-close>
+    <el-drawer v-model="drawer" :title="drawerTitle" size="520px" destroy-on-close append-to-body>
       <template v-if="!readonly">
         <el-form label-position="top">
           <el-form-item label="群名称" required>
@@ -126,6 +126,7 @@
                 v-model="s.memberId"
                 placeholder="绑定成员"
                 style="width: 160px"
+                @change="(id) => onStepMemberChange(s, id)"
               >
                 <el-option
                   v-for="m in members"
@@ -511,14 +512,21 @@ function view(row) {
 
 function addStep() {
   const flow = globalDefaultFlow()
+  const first = members.value[0]
   form.value.steps.push(
     stepForm({
       title: '新步骤',
       type: 'member',
-      memberId: members.value[0]?.id || null,
+      memberId: first?.id || null,
       flow,
+      refine: !!first?.config?.refine?.enabled,
     }),
   )
+}
+
+function onStepMemberChange(step, memberId) {
+  const mem = members.value.find((m) => m.id === memberId)
+  if (mem?.config?.refine?.enabled) step.refine = true
 }
 
 // —— 4.5 群模板批量绑成员（末班）：多选成员 → 每个成员生成一个步骤，可逐步炼化 ——
@@ -537,7 +545,7 @@ function applyBatchMembers() {
         type: 'member',
         memberId: id,
         flow,
-        refine: batchRefine.value,
+        refine: batchRefine.value || !!mem?.config?.refine?.enabled,
       }),
     )
   }
