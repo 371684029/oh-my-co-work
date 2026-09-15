@@ -257,12 +257,13 @@ export function writeZipArchive(entries, zipPath) {
   return zipPath
 }
 
-export function createAdaptBackup({ files, memberId, sessionId, nodeId } = {}) {
+export function createAdaptBackup({ files, memberId, sessionId, nodeId, kind = 'adapt' } = {}) {
   const list = (files || []).map((f) => (typeof f === 'string' ? { path: f } : f))
   if (!list.length) throw new Error('没有可备份的适配文件')
-  const dir = path.join(DATA_ROOT, 'backups', 'adapt', safeId(memberId))
+  const folder = kind === 'refine' ? 'refine' : 'adapt'
+  const dir = path.join(DATA_ROOT, 'backups', folder, safeId(memberId))
   fs.mkdirSync(dir, { recursive: true })
-  const base = `adapt-${stamp()}`
+  const base = `${folder}-${stamp()}`
   const zipPath = path.join(dir, `${base}.zip`)
   const zipEntries = list.map((f, i) => ({
     path: f.path,

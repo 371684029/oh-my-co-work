@@ -9,7 +9,7 @@
 | `prompts/session.md` | 群聊主持：通用 Agent，审核/闸门更专业 |
 | `prompts/member-adapt.md` | 把当前成员接到工作台 |
 | `prompts/node-adapt.md` | 把当前步骤接到工作台 |
-| `prompts/review.md` | 闸门通过 / 拒绝 |
+| `prompts/refine.md` | 把成员输入/输出炼成文档；保存时改源契约 |
 
 `SITUATION.md` 是本场节点地图（哪个节点是什么）。不要把多套角色 prompt 拼在一起。
 配置示例见 `grok-config.example.toml`（`api_key` 一律写「秘钥」）。

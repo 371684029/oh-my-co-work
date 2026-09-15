@@ -151,7 +151,7 @@
               <el-tooltip :content="adaptHover" placement="top" :show-after="300">
                 <el-checkbox v-model="s.adapt" class="capture-check">是否适配</el-checkbox>
               </el-tooltip>
-              <el-tooltip content="开启后由熔炉炼化：格式化该步骤成员的输入/输出为文档友好形态；成员未炼化时走格式化节点。请为成员勾选「熔炉炼化」。" placement="top" :show-after="300">
+              <el-tooltip content="点保存立刻按炼化契约改该步成员源脚本（ACW 输入 + stdout 标题）；跑完再写入文档中心。" placement="top" :show-after="300">
                 <el-checkbox v-model="s.refine" class="capture-check">熔炉炼化</el-checkbox>
               </el-tooltip>
               <el-button size="small" @click="move(i, -1)" :disabled="i === 0">上移</el-button>

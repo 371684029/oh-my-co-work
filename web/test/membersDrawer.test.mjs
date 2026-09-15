@@ -14,4 +14,6 @@ test('设置页藏桌宠，抽屉挂到 body，避免挡住炼化/内嵌终端',
   assert.match(members, /append-to-body/)
   assert.match(groups, /append-to-body/)
   assert.match(members, /row\.config\?\.refine\?\.enabled/)
+  assert.match(members, /ACW 输入环境变量/)
+  assert.match(members, /马上改源文件/)
 })

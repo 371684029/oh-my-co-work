@@ -35,7 +35,7 @@ async function poll(fn, times = 60) {
   return out
 }
 
-test('createMember 透传 config.refine；updateMember 保留', () => {
+test('createMember 勾选炼化立刻写入 format（不等跑完）', () => {
   const m = createMember({
     name: `ref-${Date.now()}-${Math.random()}`,
     displayName: '炼化成员',
@@ -44,7 +44,9 @@ test('createMember 透传 config.refine；updateMember 保留', () => {
   })
   const got = getMember(m.id)
   assert.equal(got.config.refine.enabled, true)
-  assert.equal(got.config.refine.status, 'pending')
+  assert.equal(got.config.refine.status, 'done')
+  assert.ok(got.config.refine.format.title)
+  assert.equal(got.config.refine.format.output.channel, 'stdout')
 })
 
 test('createGroup 透传 step.refine；normalizeSteps 归一为布尔', () => {
@@ -69,18 +71,19 @@ test('createGroup 透传 step.refine；normalizeSteps 归一为布尔', () => {
 
 const FLOW_OFF = { admin: false, auto: false, human: false }
 
-test('advance 集成：步骤勾炼化(未炼化成员)完成后 input 带 refine 标记与格式化文本', async () => {
+test('advance 集成：步骤勾炼化保存后成员已有规格，完成后 source=spec', async () => {
   const m = createMember({
     name: `i-${Date.now()}-${Math.random()}`,
     displayName: '文档员',
     kind: MEMBER_KIND.ECHO,
-    config: { defaultText: '节点产出内容' }, // 未开启炼化
+    config: { defaultText: '节点产出内容' },
   })
   const g = createGroup({
     title: '集成组',
     workFolder: process.cwd(),
     steps: [{ title: '炼化步', type: 'member', memberId: m.id, gate: false, flow: FLOW_OFF, refine: true }],
   })
+  assert.equal(getMember(m.id).config.refine.enabled, true)
   const session = createSessionFromGroup(g.id)
   await handleGateAction(session.id, { action: 'approve_start', text: '开始' })
   const detail = await poll(() => {
@@ -91,9 +94,9 @@ test('advance 集成：步骤勾炼化(未炼化成员)完成后 input 带 refin
   assert.ok(detail, '会话应完成')
   const node = detail.nodes.find((n) => n.input?.refine)
   assert.ok(node, '完成的节点应带 refine 标记')
-  assert.equal(node.input.refine.fallback, true) // 未炼化 → 格式化节点
-  assert.equal(node.input.refine.source, 'formatter')
-  assert.ok(node.input.refineFormatted.includes('文档员 产出'))
+  assert.equal(node.input.refine.fallback, false)
+  assert.equal(node.input.refine.source, 'spec')
+  assert.ok(node.input.refineFormatted.includes('文档员'))
   assert.ok(node.input.refineFormatted.includes('节点产出内容'))
 })
 

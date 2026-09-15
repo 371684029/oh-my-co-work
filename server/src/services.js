@@ -30,6 +30,7 @@ import {
 import { killSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
 import { readSessionAnnouncement } from './journal.js'
+import { applyRefineOnMemberSave } from './refineSource.js'
 
 function memberRow(r) {
   if (!r) return null
@@ -117,6 +118,28 @@ function finalizeMemberScript(script) {
   return enriched
 }
 
+function persistRefineOnSave(member) {
+  if (!member?.id || !member.config?.refine?.enabled) return member
+  const { nextConfig, prep } = applyRefineOnMemberSave(member)
+  getDb()
+    .prepare(`UPDATE members SET config_json = ?, updated_at = ? WHERE id = ?`)
+    .run(JSON.stringify(nextConfig), nowIso(), member.id)
+  const row = getMember(member.id)
+  return row ? { ...row, refinePrep: prep } : member
+}
+
+function refineMembersForSteps(steps) {
+  for (const s of steps || []) {
+    if (!s?.refine || !s.memberId) continue
+    const m = getMember(s.memberId)
+    if (!m) continue
+    persistRefineOnSave({
+      ...m,
+      config: { ...(m.config || {}), refine: { ...(m.config?.refine || {}), enabled: true } },
+    })
+  }
+}
+
 export function createMember(body) {
   const id = uid('mem')
   const t = nowIso()
@@ -144,7 +167,7 @@ export function createMember(body) {
       t,
       t,
     )
-  return getMember(id)
+  return persistRefineOnSave(getMember(id))
 }
 
 export function cloneMember(id, overrides = {}) {
@@ -195,7 +218,7 @@ export function updateMember(id, body = {}) {
       `UPDATE members SET name=?, display_name=?, kind=?, work_folder=?, config_json=?, updated_at=? WHERE id=?`,
     )
     .run(name, displayName, kind, workFolder, JSON.stringify(config), t, id)
-  return getMember(id)
+  return persistRefineOnSave(getMember(id))
 }
 
 export function deleteMember(id) {
@@ -283,7 +306,9 @@ export function createGroup(body) {
       t,
       t,
     )
-  return getGroup(id)
+  const group = getGroup(id)
+  refineMembersForSteps(steps)
+  return group
 }
 
 export function cloneGroup(id, overrides = {}) {
@@ -324,6 +349,7 @@ export function updateGroup(id, body = {}) {
       `UPDATE groups SET title=?, description=?, work_folder=?, steps_json=?, config_json=?, updated_at=? WHERE id=?`,
     )
     .run(title, description, workFolder, JSON.stringify(steps), JSON.stringify(config), t, id)
+  refineMembersForSteps(steps)
   return getGroup(id)
 }
 

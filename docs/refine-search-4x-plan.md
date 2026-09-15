@@ -27,7 +27,7 @@
 - 成员 `config.refine` 透传 + `Members.vue`「熔炉炼化」复选框；群模板批量绑成员（`Groups.vue`）+ 逐步炼化 + `normalizeSteps` 透传 `step.refine`。
 - 测试：`refine.test.js`(7)、`refineField.test.js`(4，含 advance 集成)。
 
-> **偏差/后置**（见 §8 开放问题）：① 熔炉 REFINE 角色**自动产出成员格式规格**已接入——`advance.js` 在首次遇到已炼化成员且无 `config.refine.format` 时，调用 `produceRefineSpec`/`persistRefineSpec` 产出并回写规格（默认从成员名派生 `{title}`，`opts.author` 可注入熔炉/测试替身），此后该成员走 `source:'spec'`；② 流程轨「炼化」角标已接（`useSessionDetail.nodeHasRefine` + `FlowRail.vue` 绿色角标）；③ **web 聊天搜索 UI 已接**（Workbench 头部「搜索聊天」弹层，调 `/messages/search`，点击命中跳转会话）；④ **炼化正文已真正渲染进文档中心**——`journal.js` 的 `refinedDocText()` 让 `refineFormatted` 优先写入 `step-*.md` 输出段与群报告 `ANNOUNCEMENT.md` 出参（回归测试锁定）；⑤ 炼化不改成员源文件，故**无需**适配那样的 zip 备份（本设计仅格式化输出文本）。**唯一留待真实熔炉**的是：把 `defaultRefineSpecAuthor` 换成真正的 REFINE 角色推理（当前为确定性兜底，`opts.author` 注入口已留好）。
+> **偏差/后置**（见 §8 开放问题）：① 熔炉 REFINE 角色**自动产出成员格式规格**已接入——保存成员时立刻 `produceRefineSpec`/`applyRefineOnMemberSave`（源文件写入 `ACW-REFINE` 契约并 zip 备份到 `data/backups/refine`）；`advance.js` 在首次跑完时若尚无 `config.refine.format` 仍会补规格。② 流程轨「炼化」角标已接。③ web 聊天搜索 UI 已接。④ 炼化正文写入文档中心。⑤ **保存当下改源文件**（不再等群聊跑完才改脚本）。**唯一留待真实熔炉**的是：把 `defaultRefineSpecAuthor` 换成真正的 REFINE 角色推理（当前为确定性兜底）。
 
 ---
 
@@ -44,7 +44,7 @@
 | 维度 | 适配(adapt，已存在) | 炼化(refine，4.5 新增) |
 |------|---------------------|------------------------|
 | 目的 | 把成员/步骤**接到工作台**（改代码、开 JSONL 侧通道、zip 备份），让工具能跑起来进台账 | 把成员的**输入/输出格式化成文档友好形态**，方便文档中心维护 |
-| 时机 | **执行前**（成员跑之前做准备，advance.js:307-351） | **执行后**（成员产出后格式化输出进文档）+ 成员级一次性格式化规格 |
+| 时机 | **执行前**（成员跑之前做准备） | **保存当下改源契约** + **执行后**把本次产出按规格写入文档中心 |
 | 字段 | `member.config.adapt` / `step.adapt` | 新增（见 §3.1） |
 | 熔炉角色 | `member-adapt` / `node-adapt` | 新增 `refine/format` 角色（或复用壳换语义，见 §3.2） |
 | 兜底 | 改不了代码 → 打「适配标记」 | 成员未炼化 → 走「格式化节点」 |
@@ -72,7 +72,7 @@
 
 1. **炼化与适配解耦**：不改动现有 `adapt` 的触发/语义/字段；炼化走独立字段、独立熔炉角色、独立 hook。避免破坏已验证的适配链路。
 2. **复用熔炉骨架**：炼化复用 `syncFurnaceSessionContext`（写 ACTIVE.md/SITUATION.md）+ `activateFurnaceRole` + `furnaceGrokInject`（AGENTS.md/rules）+ 备份机制，**只换角色语义与触发时机**。
-3. **执行后格式化是核心新增**：现有 advance 链只有执行前 `prepareAdaptForMember`；炼化的"输出格式化"需在节点**完成后**挂一个后处理 hook（新增）。
+3. **保存当下改源 + 执行后进台账**：勾选炼化并保存时立刻写入 `ACW-REFINE` 契约（输入环境变量、stdout 标题）并持久化 `format`；节点完成后仍把本次产出按规格写入文档中心。
 4. **单一事实源**：炼化产出的格式规格落成员 `config_json`（JSON，免 schema 迁移）；搜索**不建 FTS/不建第二索引库**。
 5. **搜索统一匹配工具**：抽到 `shared/` 侧一个纯函数（server + web 复用），关键词拆分、大小写、拼音首字母/全拼、子序列容错打分。不继续散落内联 includes。
 6. **客户端优先，量大再下沉**：成员/群模板全量本地过滤（数据本就全量返回）；聊天/文档视消息量决定内存扫描 vs SQLite 查询（见 §3.4）。
@@ -99,7 +99,7 @@
 ```
 
 - 依据：成员唯一事实来源是 `config_json`（services.js `memberRow` 解析），加键即可，无需 ALTER。
-- `enabled` 由「添加成员」时的「是否炼化」开关控制；`status`/`format` 由熔炉执行后回填。
+- `enabled` 由「添加成员」时的「是否炼化」开关控制；`status`/`format` 在**保存当下**回填（并改源）；跑完再写台账。
 
 **群模板（groups）**——「末班 = 批量绑成员」需要新增批量绑定能力。现状 `steps_json[]` 每步仅 `{ id, title, type, memberId, gate, flow, captureParams, adapt }`（services.js `normalizeSteps`，每步绑一个成员）。
 

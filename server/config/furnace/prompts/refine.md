@@ -7,9 +7,9 @@
 - 读懂该成员的输入（`input`）与输出（`output`），抽出一份**稳定的格式规格**（JSON），用于后续每次产出的文档化：
   - 明确该成员**输入模板**（期望的关键字段/结构）；
   - 明确该成员**输出模板**（产出应按何结构/标题/要点呈现，便于写进 `step-*.md` 台账与群报告 `ANNOUNCEMENT.md`）。
-- 只把格式规格写进成员的 `config.refine.format`（JSON），并回填 `config.refine.status = "done"` 与 `refinedAt`。
-- **不要改成员源文件、脚本、命令或工作目录**；炼化只定义如何呈现/归档，不碰适配备份。
-- 不改运行逻辑本身；产物仍走既有会话展示与 `step-*.md` 台账。
+- 把格式规格写进成员的 `config.refine.format`（JSON），并回填 `config.refine.status = "done"` 与 `refinedAt`。
+- **保存成员/步骤勾选炼化时立刻改源文件**：写入 `ACW-REFINE` 契约块（绑定 `ACW_HUMAN_INPUT` / `ACW_PARAM_1`，stdout 打文档标题）。改之前必须已有压缩包备份（`data/backups/refine`）。已有标记则不要重复插入。
+- 跑完后仍把本次产出按规格写进台账；不碰适配备份目录。
 
 ## 原则
 

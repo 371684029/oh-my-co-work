@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | A | server/src/refineSource.js server/test/refineSource.test.js | 勾选炼化并保存时立刻改源脚本（ACW 输入 + stdout 标题）并 zip 备份
+2026-09-15 | M | server/src/services.js server/src/adaptBackup.js | 成员/群模板保存触发炼化改源；备份目录 backups/refine
+2026-09-15 | M | web/src/views/settings/Members.vue Groups.vue | 文案改为保存当下改脚本；保存成功提示改写了哪些文件
+2026-09-15 | M | server/config/furnace/prompts/refine.md docs/script-guide.md docs/refine-search-4x-plan.md docs/4.9.0-plan.md README.md | 炼化改为保存当下改源，跑完再进文档中心
+2026-09-15 | M | web/test/membersDrawer.test.mjs | 锁保存当下改源文案
+
 2026-09-15 | M | scripts/win-exe-icon.mjs scripts/pack-release.mjs | 打 exe 图标时扩展资源节，避免 Logo ICO 比原图标大而写入失败
 2026-09-15 | M | electron/test/icons.test.mjs | 有 Electron zip 缓存时断言能把 Logo ICO 打进 exe
 2026-09-15 | R | 4.7.0-plan.md 4.8.0-plan.md 4.9.0-plan.md → docs/ | 版本计划统一放 docs，方便对照落地

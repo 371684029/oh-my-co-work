@@ -74,9 +74,10 @@
           </el-tooltip>
         </el-form-item>
         <el-form-item>
-          <el-tooltip content="保存后生效。该成员在群聊里跑完，会把输入/输出整理进文档中心。不是点一下立刻改脚本。" placement="top" :show-after="300">
+          <el-tooltip content="点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。" placement="top" :show-after="300">
             <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
+          <div class="field-hint">勾上并保存后会马上改源文件（如 newBranch.bat），不是等群聊跑完才改。跑完仍会把产出整理进文档中心。</div>
         </el-form-item>
         <el-form-item v-if="form.refine" label="炼化 skills（第三方 Agent 调起指令）">
           <div class="refine-skill-box">
@@ -317,6 +318,15 @@ async function refreshRefineSkillPrompt() {
   } catch {
     /* 保留本地兜底文案 */
   }
+}
+
+function refineSavedHint(saved, refineOn) {
+  if (!refineOn) return '已保存'
+  const prep = saved?.refinePrep
+  const names = (prep?.patched || []).map((p) => String(p).split(/[/\\]/).pop()).filter(Boolean)
+  if (names.length) return `已保存，并按炼化契约改写 ${names.join('、')}`
+  if (prep?.fallback) return '已保存炼化规格；没有可改的源文件时，跑完仍会整理进文档中心'
+  return '已保存；源文件已按炼化契约处理'
 }
 
 async function copyRefineSkillPrompt() {
@@ -634,16 +644,17 @@ async function save() {
             }
           : { ...baseConfig },
     }
+    let saved
     if (form.value._editId) {
-      await api.members.update(form.value._editId, body)
+      saved = await api.members.update(form.value._editId, body)
     } else if (form.value._cloneFrom) {
-      await api.members.clone(form.value._cloneFrom, body)
+      saved = await api.members.clone(form.value._cloneFrom, body)
     } else {
-      await api.members.create(body)
+      saved = await api.members.create(body)
     }
     drawer.value = false
     await load()
-    ElMessage.success('已保存')
+    ElMessage.success(refineSavedHint(saved, form.value.refine))
   } catch (e) {
     ElMessage.error(e.message)
   }
