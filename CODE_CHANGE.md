@@ -22,6 +22,11 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-09-15 | R | 4.7.0-plan.md 4.8.0-plan.md 4.9.0-plan.md → docs/ | 版本计划统一放 docs，方便对照落地
+2026-09-15 | M | docs/4.7.0-plan.md docs/4.8.0-plan.md docs/4.9.0-plan.md docs/README.md | 4.8/4.9 补落地跟踪；索引指向计划文档
+2026-09-15 | M | README.md AGENT.md | 版本 4.9.0；文档表与路线图同步 4.8/4.9
+2026-09-15 | M | package.json package-lock.json server/web/shared/package.json server/config/about.json | 版本号 4.9.0 与 changelog
+
 2026-09-15 | M | web/src/App.vue web/src/views/settings/Members.vue Groups.vue Shortcuts.vue | 设置页藏桌宠；抽屉 append-to-body，避免挡住炼化勾选与内嵌终端
 2026-09-15 | A | web/test/membersDrawer.test.mjs | 锁设置抽屉不被桌宠盖住
 

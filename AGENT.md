@@ -207,3 +207,4 @@ start.bat
 - `docs/crucible-grok-client.md` — 熔炉如何托管本机 `grok` CLI（PTY，不是 Chat API）
 - `docs/script-guide.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/demo.md` — 演示流完整操作路径
+- `docs/4.8.0-plan.md` / `docs/4.9.0-plan.md` — 当前小版本计划与落地跟踪（只放 `docs/`，改行为时同步顶部跟踪表）

@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.7.0-409eff?style=flat-square" alt="version 4.7.0" />
+  <img src="https://img.shields.io/badge/version-4.9.0-409eff?style=flat-square" alt="version 4.9.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -52,7 +52,7 @@
 - **像群聊一样协作**：一个工作流就是一个群聊，一个 Agent / 脚本就是一个成员。
 - **关键决定交给人**：启动、参数、审核都可以设置人工闸门；群聊同意最后一步即完成并归档。
 - **过程始终可见**：左边看会话，中间对话和执行，右边看流程与报告。
-- **终端不再跳出去**：真实 PTY 内嵌 TUI。熔炉是本机官方 `grok` / `cursor-agent` CLI 的宿主（不是自研 Chat API）：默认铺满 **GUI**，可切 **TUI**、可缩小回三栏。顶栏 **Grok CLI / Cursor CLI** 各走独立 PTY，切 Tab 不杀另一路。未装 Grok 或未登录时点桌宠弹出 Grok Build 教程。
+- **终端不再跳出去**：真实 PTY 内嵌 TUI。熔炉是本机官方 `grok` / `cursor-agent` CLI 的宿主（不是自研 Chat API）：默认铺满 **TUI**，可缩小回三栏。顶栏 **Grok CLI / Cursor CLI** 各走独立 PTY，切 Tab 不杀另一路。未装 Grok 或未登录时点桌宠弹出 Grok Build 教程。
 - **数据留在本机**：SQLite、Markdown 台账、附件和日志全部保存在本地。
 - **面向谁**：需要把多步脚本与 Agent 串起来、关键点必须人拍板的个人开发者和小团队。单机优先，不替代 Cursor / Grok 本体。
 - **AI 放在哪一层**：**L3 流程嵌入**为主（群聊节点 + 人工闸门）；熔炉 Grok 提供 L2 代理；不做 L4 无人值守全自治。
@@ -116,7 +116,7 @@
 <img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：GUI 欢迎卡、李慕婉头像、底部输入、可缩小回三栏" width="100%" />
 
 - 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。立绘从该 git 复制，**MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者**（见 `web/src/assets/pets/LICENSE`）。
-- 默认 **GUI**：欢迎卡说明能干啥；Grok 开口后只显示当前屏可读正文（去 TUI 框线和底栏）。底部输入、短指令芯片。附件落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程（不是 Grok 原生传文件）。只留一张大卡通头像。
+- 3.7 当时默认 **GUI**（欢迎卡 + 可读正文）。**4.8 起**产品默认铺满 **TUI**，GUI 入口已隐藏。附件仍可落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程。
 - 开炉写入 `data/furnace/AGENTS.md` 短规则 + `.grok/rules/session.md`（官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起写进去，由 grok 自己按目录发现）。长文在 `ACTIVE.md`，禁止复述。不写 `~/.grok/AGENTS.md`。
 - **TUI**：原 Grok / Cursor 终端。菜单和快捷键走这里。隐藏时不把 PTY 缩成几列。首次进入后切皮不拆终端。
 - **双 Agent**：顶栏切换 Grok CLI 与 Cursor CLI；熔炉聚焦时 `Ctrl/Cmd+1`、`Ctrl/Cmd+2` 有效。Cursor 命令默认为 `cursor-agent`（设置可改）。未安装时不会假装已登录。
@@ -146,7 +146,7 @@
 |------|------|
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
 | 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
-| 熔炉 | 右侧桌宠；干活面 GUI/TUI；顶栏 **Grok CLI / Cursor CLI** 独立 PTY；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清当前 Agent 对话；短 AGENTS + rules 文件；GUI 附件写路径进同一进程 |
+| 熔炉 | 右侧桌宠；干活面默认 **TUI**；顶栏 **Grok CLI / Cursor CLI** 独立 PTY；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清当前 Agent 对话；短 AGENTS + rules 文件 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏；滚动缓冲跟随设置，不强制 10000 行 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程；折叠态直接标出实际用了哪个成员 |
@@ -170,7 +170,7 @@
 请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 
 <img src="./docs/assets/screenshots/windows-desktop.png" alt="Windows 桌面窗口：oh-my-co-work 工作台" width="100%" />
-<p align="center"><sub>4.7.0 桌面包：独立窗口打开工作台，自动拉起本机服务</sub></p>
+<p align="center"><sub>4.9.0 桌面包：Logo 图标 exe、默认全屏打开工作台并拉起本机服务</sub></p>
 
 源码开发也可以：`npm install` 后执行 `npm run dev:desktop`（需本机已能访问工作台 API，或让 Electron 自行拉起 `server`）。
 
@@ -184,7 +184,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.7.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.9.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -270,6 +270,8 @@ packages/  可直接运行的三平台压缩包
 | [3.8 重构与加固计划](./docs/refactor-3.8-plan.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（已实施） |
 | [自测体系](./docs/selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
 | [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0）；检索导出（4.1.0）；更新检查与备份恢复（4.2.0） |
+| [4.8.0 双引擎 TUI](./docs/4.8.0-plan.md) | Cursor CLI + 熔炉、默认 TUI、桌面全屏；文内落地跟踪 |
+| [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
 | [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
@@ -304,7 +306,9 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.5.0：熔炉炼化——成员/步骤炼化字段、执行后格式化进台账（stdout 优先）、规格回写不覆盖其它 config
 - [x] 4.6.0：四维模糊搜索 + 审查修复——拼音阈值与打分排序、文档中心竞态、备份恢复拒绝符号链接、活库损坏可恢复、协议相对链接外链处理
 - [x] 4.7.0：Windows 桌面窗口包——`*-win32-x64-desktop.zip` 双击 start.bat 打开 Electron 工作台并拉起服务（包内 Node+Electron，关窗藏托盘）；轻量 zip 仍进 `packages/`
-- [ ] 后续：macOS/Linux 桌面壳、多终端标签治理、更多 CLI Adapter
+- [x] 4.8.0：群聊第三栏 Cursor CLI / 熔炉双 Tab、独立 PTY；熔炉默认 TUI；桌面启动全屏；熔炉默认通用 Agent（审核/闸门更专业）
+- [x] 4.9.0：托盘与 `oh-my-co-work.exe` 用首页 Logo；第三栏只留文档中心；炼化 Skill 可复制；设置抽屉不被桌宠挡住
+- [ ] 后续：macOS/Linux 桌面壳、无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
 
