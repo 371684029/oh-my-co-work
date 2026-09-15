@@ -16,11 +16,11 @@ Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js�
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
-| darwin-arm64 | [`oh-my-co-work-v4-darwin-arm64.zip`](./oh-my-co-work-v4-darwin-arm64.zip) | 24277398 | `497622d6ead4` | 2026-09-15T01:53:15.126Z |
-| linux-x64 | [`oh-my-co-work-v4-linux-x64.zip`](./oh-my-co-work-v4-linux-x64.zip) | 24435542 | `497622d6ead4` | 2026-09-15T01:53:12.400Z |
-| win32-x64 | [`oh-my-co-work-v4-win32-x64.zip`](./oh-my-co-work-v4-win32-x64.zip) | 24271658 | `497622d6ead4` | 2026-09-15T01:53:10.403Z |
+| darwin-arm64 | [`oh-my-co-work-v4-darwin-arm64.zip`](./oh-my-co-work-v4-darwin-arm64.zip) | 24274942 | `3981f84a5283` | 2026-09-15T03:28:39.437Z |
+| linux-x64 | [`oh-my-co-work-v4-linux-x64.zip`](./oh-my-co-work-v4-linux-x64.zip) | 24433084 | `3981f84a5283` | 2026-09-15T03:28:43.081Z |
+| win32-x64 | [`oh-my-co-work-v4-win32-x64.zip`](./oh-my-co-work-v4-win32-x64.zip) | 24269201 | `3981f84a5283` | 2026-09-15T03:28:40.890Z |
 
-版本：`4.7.0`（大版本 v4）
+版本：`4.9.0`（大版本 v4）
 
 ## 启动
 
