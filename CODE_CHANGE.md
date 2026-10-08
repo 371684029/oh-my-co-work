@@ -22,6 +22,8 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-10-08 | M | packages/oh-my-co-work-v4-*.zip packages/*.build.json packages/CURRENT.txt packages/README.md | 对齐最新 main（9afa13a / 4.9.0）重打三平台轻量运行包；Windows 桌面包仍在 release/ 与 GitHub latest Release（不进 git）
+
 2026-09-15 | A | server/src/refineSource.js server/test/refineSource.test.js | 勾选炼化并保存时立刻改源脚本（ACW 输入 + stdout 标题）并 zip 备份
 2026-09-15 | M | server/src/services.js server/src/adaptBackup.js | 成员/群模板保存触发炼化改源；备份目录 backups/refine
 2026-09-15 | M | web/src/views/settings/Members.vue Groups.vue | 文案改为保存当下改脚本；保存成功提示改写了哪些文件
