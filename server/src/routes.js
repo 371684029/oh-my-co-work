@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import express, { Router } from 'express'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
@@ -962,6 +962,31 @@ router.post('/update/backup', (req, res) => {
     res.status(500).json({ error: e.message })
   }
 })
+
+router.post(
+  '/backup/import',
+  express.raw({ type: '*/*', limit: '2gb' }),
+  (req, res) => {
+    let target = ''
+    try {
+      const buf = req.body
+      if (!Buffer.isBuffer(buf) || buf.length < 2 || buf[0] !== 0x1f || buf[1] !== 0x8b) {
+        return res.status(400).json({ error: '请选择 .tar.gz 备份包' })
+      }
+      const dir = path.resolve(DATA_ROOT, 'backups')
+      fs.mkdirSync(dir, { recursive: true })
+      const name = `acw-backup-imported-${Date.now()}.tar.gz`
+      target = path.join(dir, name)
+      fs.writeFileSync(target, buf)
+      res.json(restoreBackup(name))
+    } catch (e) {
+      if (target && e.code && fs.existsSync(target) && e.code !== 'RESTORE_BUSY') {
+        try { fs.rmSync(target, { force: true }) } catch { /* ignore */ }
+      }
+      res.status(e.code === 'RESTORE_BUSY' ? 409 : 400).json({ error: e.message, code: e.code })
+    }
+  },
+)
 
 router.post('/update/restore', (req, res) => {
   try {

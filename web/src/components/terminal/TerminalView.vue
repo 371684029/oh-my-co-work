@@ -11,6 +11,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -80,7 +81,18 @@ onMounted(async () => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
     const confirmPaste = (props.prefs?.pastePolicy || 'confirm') !== 'allow'
-    if (confirmPaste && lineBreaks > 1 && !window.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`)) {
+    if (confirmPaste && lineBreaks > 1) {
+      ElMessageBox.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`, '粘贴确认', {
+        confirmButtonText: '粘贴',
+        cancelButtonText: '取消',
+        type: 'warning',
+        closeOnPressEscape: true,
+      })
+        .then(() => {
+          if (isRunning.value) emit('input', data)
+        })
+        .catch(() => {})
+        .finally(() => nextTick(() => setTimeout(() => xterm?.focus(), 50)))
       return
     }
     emit('input', data)

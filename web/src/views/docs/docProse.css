@@ -1,0 +1,137 @@
+.doc-prose {
+  --dp-text: #1f2329;
+  --dp-sub: #646a73;
+  --dp-line: #dee0e3;
+  --dp-fill: #f5f6f7;
+  --dp-link: #3370ff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--dp-text);
+  word-break: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+
+.doc-prose > :first-child {
+  margin-top: 0;
+}
+
+.doc-prose h1,
+.doc-prose h2,
+.doc-prose h3,
+.doc-prose h4,
+.doc-prose h5,
+.doc-prose h6 {
+  margin: 1.5em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--dp-text);
+}
+
+.doc-prose h1 { font-size: 1.9em; margin-top: 0.8em; }
+.doc-prose h2 { font-size: 1.5em; }
+.doc-prose h3 { font-size: 1.25em; }
+.doc-prose h4 { font-size: 1.08em; }
+.doc-prose h5,
+.doc-prose h6 { font-size: 1em; color: var(--dp-sub); }
+
+.doc-prose p {
+  margin: 0 0 0.7em;
+}
+
+.doc-prose a {
+  color: var(--dp-link);
+  text-decoration: none;
+}
+
+.doc-prose a:hover {
+  text-decoration: underline;
+}
+
+.doc-prose strong {
+  font-weight: 600;
+}
+
+.doc-prose ul,
+.doc-prose ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.6em;
+}
+
+.doc-prose li {
+  margin: 0.2em 0;
+}
+
+.doc-prose li::marker {
+  color: var(--dp-sub);
+}
+
+.doc-prose blockquote {
+  margin: 0.8em 0;
+  padding: 2px 0 2px 14px;
+  border-left: 3px solid #c9cdd4;
+  color: var(--dp-sub);
+}
+
+.doc-prose blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.doc-prose hr {
+  margin: 1.4em 0;
+  border: 0;
+  border-top: 1px solid var(--dp-line);
+}
+
+.doc-prose code {
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+  font-size: 0.88em;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  background: rgba(143, 149, 158, 0.15);
+  color: var(--dp-text);
+}
+
+.doc-prose pre {
+  margin: 0.8em 0;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--dp-line);
+  background: var(--dp-fill);
+  overflow: auto;
+  font-size: 0.88em;
+  line-height: 1.6;
+}
+
+.doc-prose pre code {
+  padding: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.doc-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.8em 0;
+  border-collapse: collapse;
+  font-size: 0.93em;
+}
+
+.doc-prose th,
+.doc-prose td {
+  padding: 6px 12px;
+  border: 1px solid var(--dp-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-prose th {
+  background: var(--dp-fill);
+  font-weight: 600;
+}
+
+.doc-prose img {
+  max-width: 100%;
+  border-radius: 4px;
+}

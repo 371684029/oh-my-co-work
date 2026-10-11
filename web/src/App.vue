@@ -8,6 +8,13 @@
           <h1 class="docs-brand-title">文档中心</h1>
         </div>
         <div class="top-right docs-top-right">
+          <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
+            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+              {{ Math.round(zoom * 100) }}%
+            </button>
+            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+          </div>
           <button type="button" class="dh-back-btn" @click="goWorkbench">
             返回工作台
           </button>
@@ -60,6 +67,13 @@
           </nav>
         </div>
         <div class="top-right">
+          <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
+            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+              {{ Math.round(zoom * 100) }}%
+            </button>
+            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+          </div>
           <button
             type="button"
             class="fullscreen-button"
@@ -77,7 +91,7 @@
       <router-view />
     </main>
     <FurnaceSprite
-      v-show="!furnaceWorkspaceOpen && !isDocsRoute && nav !== 'settings'"
+      v-show="!furnaceWorkspaceOpen && !isDocsRoute"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
       @click="onFurnaceClick"
@@ -147,6 +161,39 @@ const furnaceTitle = computed(() => {
   if (st === 'waiting') return `${FURNACE_DISPLAY_NAME} · 等人`
   return `${FURNACE_DISPLAY_NAME} · 闲置`
 })
+
+const ZOOM_MIN = 0.6
+const ZOOM_MAX = 1.6
+const ZOOM_KEY = 'acw.uiZoom'
+const zoom = ref(1)
+
+function applyZoom(f) {
+  const api = window.__ACW_DESKTOP_API__
+  if (api?.setZoom) api.setZoom(f)
+  else document.documentElement.style.zoom = f === 1 ? '' : String(f)
+}
+
+function setZoom(f) {
+  const v = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, f)) * 100) / 100
+  zoom.value = v
+  applyZoom(v)
+  try {
+    localStorage.setItem(ZOOM_KEY, String(v))
+  } catch {
+    /* ignore */
+  }
+}
+
+function stepZoom(dir) {
+  setZoom(zoom.value + dir * 0.1)
+}
+
+try {
+  const saved = Number(localStorage.getItem(ZOOM_KEY))
+  if (saved >= ZOOM_MIN && saved <= ZOOM_MAX && saved !== 1) setZoom(saved)
+} catch {
+  /* ignore */
+}
 
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
 
@@ -414,5 +461,37 @@ function goGrokSettings() {
   color: var(--ecw-text-1, #1d1d1f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0.5px 0 rgba(0, 0, 0, 0.04);
   font-weight: 600;
+}
+
+.zoom-ctrl {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.zoom-ctrl button {
+  border: 0;
+  background: transparent;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 6px;
+  font-size: 14px;
+  line-height: 1;
+  color: #444;
+  cursor: pointer;
+}
+.zoom-ctrl button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+.zoom-ctrl button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.zoom-ctrl .zoom-val {
+  font-size: 11px;
+  min-width: 44px;
 }
 </style>
