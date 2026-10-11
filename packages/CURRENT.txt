@@ -1,13 +1,13 @@
-version=4.9.0
+version=4.9.1
 major=4
 kind=runtime-bundle
 needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.darwin-arm64=oh-my-co-work-v4-darwin-arm64.zip
-size.darwin-arm64=24277390
-commit.darwin-arm64=b19afa97ced9cdee92479f64e0399e4da21e5d2a
-built.darwin-arm64=2026-10-08T06:14:20.100Z
+size.darwin-arm64=24278952
+commit.darwin-arm64=07f3fa534b62c16445bfdfebbc1ef2909f18eba5
+built.darwin-arm64=2026-10-11T06:23:48.779Z
 file.linux-x64=oh-my-co-work-v4-linux-x64.zip
 size.linux-x64=24435530
 commit.linux-x64=b19afa97ced9cdee92479f64e0399e4da21e5d2a
