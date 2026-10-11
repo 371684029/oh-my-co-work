@@ -276,45 +276,35 @@
       </el-button>
     </section>
 
-    <!-- 一键备份与一键导出 -->
+    <!-- 一键导入与一键导出 -->
     <section class="prefs-card">
-      <div class="prefs-title">一键备份与一键导出</div>
+      <div class="prefs-title">一键导入与一键导出</div>
       <p class="prefs-hint">
-        数据完全保存在本机。提供一键打包本地 SQLite 数据库、节点台账与附件，支持随时下载归档或按需导出全部会话协同文档。
+        数据完全保存在本机。支持一键导入备份包恢复数据，或按需导出全部会话协同文档。
       </p>
 
       <div class="backup-export-grid">
-        <!-- 一键备份区块 -->
         <div class="be-card">
           <div class="be-card-head">
-            <span class="be-card-badge">快照</span>
-            <div class="be-card-title">一键备份</div>
+            <span class="be-card-badge">恢复</span>
+            <div class="be-card-title">一键导入</div>
           </div>
           <p class="be-card-desc">
-            执行 SQLite 完整性检查与 checkpoint，将数据库、全部台账与上传文件打包至本地 <code>data/backups</code>，并可一键下载到电脑。
+            选择备份包（<code>.tar.gz</code>）一键恢复数据库、台账与上传文件。导入前会自动保留当前数据的快照，可回退。
           </p>
           <div class="be-card-actions">
-            <el-button
-              type="primary"
-              size="default"
-              :loading="backingUp"
-              @click="onOneClickBackup"
-            >
-              一键备份
+            <el-button type="primary" size="default" :loading="importing" @click="pickImportFile">
+              一键导入备份包
             </el-button>
-            <el-button
-              v-if="lastBackupFile"
-              size="default"
-              plain
-              :loading="downloadingBackup"
-              @click="onDownloadBackup(lastBackupFile)"
-            >
-              下载备份包
-            </el-button>
+            <input
+              ref="importInput"
+              type="file"
+              accept=".gz,.tar.gz,application/gzip"
+              style="display: none"
+              @change="onImportFile"
+            />
           </div>
-          <div v-if="lastBackupSummary" class="be-last-info">
-            最近备份：{{ lastBackupSummary }}
-          </div>
+          <div v-if="lastImportTime" class="be-last-info">最近导入：{{ lastImportTime }}</div>
         </div>
 
         <!-- 一键导出区块 -->
@@ -395,11 +385,10 @@ const quota = ref({
 const redact = ref({ enabled: true, patternsText: '' })
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
-const backingUp = ref(false)
-const downloadingBackup = ref(false)
+const importing = ref(false)
+const importInput = ref(null)
+const lastImportTime = ref('')
 const exportingDocs = ref(false)
-const lastBackupFile = ref('')
-const lastBackupSummary = ref('')
 const lastExportTime = ref('')
 const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'tui' })
 const adaptBackup = ref(true)
@@ -460,17 +449,6 @@ async function load() {
         enabled: s.redact.enabled !== false,
         patternsText: s.redact.patternsText || '',
       }
-    }
-    try {
-      const bRes = await api.update.backups()
-      if (bRes?.backups?.length) {
-        const top = bRes.backups[0]
-        lastBackupFile.value = top.filename
-        const sizeStr = top.bytes ? ` (${(top.bytes / 1024 / 1024).toFixed(2)} MB)` : ''
-        lastBackupSummary.value = `${top.filename}${sizeStr}`
-      }
-    } catch {
-      /* ignore */
     }
     await loadResources()
   } catch (e) {
@@ -597,31 +575,33 @@ async function saveQuota() {
   }
 }
 
-async function onOneClickBackup() {
-  backingUp.value = true
-  try {
-    const r = await api.backup()
-    const filename = r.path ? r.path.split(/[/\\]/).pop() : (r.filename || 'acw-backup.tar.gz')
-    lastBackupFile.value = filename
-    const sizeStr = r.bytes ? ` (${(r.bytes / 1024 / 1024).toFixed(2)} MB)` : ''
-    lastBackupSummary.value = `${filename}${sizeStr} · ${new Date().toLocaleTimeString()}`
-    ElMessage.success('一键备份成功，文件已写入本地 backups 目录')
-  } catch (e) {
-    ElMessage.error(e?.message || '一键备份失败')
-  } finally {
-    backingUp.value = false
-  }
+function pickImportFile() {
+  importInput.value?.click()
 }
 
-async function onDownloadBackup(filename) {
-  downloadingBackup.value = true
+async function onImportFile(ev) {
+  const file = ev.target.files?.[0]
+  ev.target.value = ''
+  if (!file) return
   try {
-    await api.backup.download(filename)
-    ElMessage.success('备份包开始下载')
+    await ElMessageBox.confirm(
+      `将用「${file.name}」覆盖当前全部数据（会先自动保留快照）。继续？`,
+      '一键导入',
+      { type: 'warning', confirmButtonText: '导入', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  importing.value = true
+  try {
+    await api.backup.import(file)
+    lastImportTime.value = new Date().toLocaleTimeString()
+    ElMessage.success('导入成功，即将刷新页面')
+    setTimeout(() => window.location.reload(), 800)
   } catch (e) {
-    ElMessage.error(e?.message || '下载备份失败')
+    ElMessage.error(e?.message || '一键导入失败')
   } finally {
-    downloadingBackup.value = false
+    importing.value = false
   }
 }
 

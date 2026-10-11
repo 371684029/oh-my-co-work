@@ -95,8 +95,8 @@ const POKE_LINES = ['嗯？', '要开就点「开熔炉」。', '我在听。']
 
 // 裁切参数（PET_CROP）在 furnacePetAtlas.js 里统一定义并有回归测试守着，
 // 这里只决定「裁完之后展开态/收起态各显示多宽」。
-const DISPLAY_W = 128
-const PEEK_W = 56
+const DISPLAY_W = 85
+const PEEK_W = 40
 
 const hovered = ref(false)
 const poking = ref(false)
@@ -381,7 +381,7 @@ onUnmounted(() => {
 }
 
 .furnace-bubble {
-  width: 148px;
+  width: 128px;
   padding: 7px 8px 8px;
   border-radius: 12px 12px 12px 6px;
   background: rgba(255, 255, 255, 0.92);
@@ -506,8 +506,8 @@ onUnmounted(() => {
 }
 
 .furnace-pet-peek {
-  width: 56px;
-  height: 91px;
+  width: 40px;
+  height: 65px;
   border: 0;
   border-radius: 16px;
   overflow: hidden;

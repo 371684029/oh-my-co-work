@@ -365,7 +365,7 @@
             <span v-if="selectedDocName.includes('step')" class="file-header-badge">审计留痕只读</span>
           </div>
           <div
-            class="docs-rail-content"
+            class="docs-rail-content doc-prose"
             v-html="renderedDocHtml"
             @click="onRailContentClick"
           />
@@ -453,6 +453,7 @@ import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
 import { api } from '../../../api'
+import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { openPath } from '../composables/useDocsHub'
 
@@ -1054,40 +1055,38 @@ watch(
 .docs-rail-file-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.75);
-  font-size: 11.5px;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 0;
+  background: rgba(143, 149, 158, 0.12);
+  color: #646a73;
+  font-size: 11px;
+  line-height: 18px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .docs-rail-file-pill:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 122, 255, 0.3);
+  background: rgba(143, 149, 158, 0.22);
 }
 
 .docs-rail-file-pill.active {
-  background: rgba(0, 122, 255, 0.1);
-  border-color: rgba(0, 122, 255, 0.35);
-  color: var(--ecw-accent, #007aff);
-  font-weight: 600;
+  background: rgba(51, 112, 255, 0.12);
+  color: #3370ff;
+  font-weight: 500;
 }
 
 .pill-name {
-  max-width: 140px;
+  max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pill-badge {
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.04);
+  font-size: 9px;
+  opacity: 0.7;
 }
 
 .docs-rail-content-wrap {
@@ -1096,49 +1095,37 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
+  padding: 10px 14px 4px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eceef0;
 }
 
 .docs-rail-file-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
   flex-shrink: 0;
 }
 
 .file-header-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ecw-text-1, #1d1d1f);
+  font-size: 11px;
+  color: #8f959e;
 }
 
 .file-header-badge {
-  font-size: 10.5px;
-  color: var(--ecw-text-3, #86868b);
+  font-size: 10px;
+  color: #8f959e;
 }
 
 .docs-rail-content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--ecw-text-1, #1d1d1f);
-  word-break: break-word;
-}
-
-.docs-rail-content :deep(pre) {
-  padding: 8px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.04);
-  overflow: auto;
-  font-size: 11px;
+  padding-bottom: 20px;
+  font-size: 14.5px;
 }
 
 .docs-rail-empty {

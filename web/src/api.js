@@ -253,6 +253,17 @@ export const api = {
     () => req('/backup', { method: 'POST', body: '{}' }),
     {
       create: () => req('/backup', { method: 'POST', body: '{}' }),
+      import: async (file) => {
+        const token = await accessToken()
+        const res = await fetch(`${BASE}/backup/import`, {
+          method: 'POST',
+          headers: { 'X-ACW-Token': token, 'Content-Type': 'application/octet-stream' },
+          body: file,
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || res.statusText)
+        return data
+      },
       download: async (filename) => {
         const token = await accessToken()
         const query = filename ? `?filename=${encodeURIComponent(filename)}` : ''

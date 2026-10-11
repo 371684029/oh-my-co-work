@@ -175,9 +175,7 @@
                       @click="selectFile(s.sessionId, f.name)"
                     >
                       <span class="dh-file-row-name">{{ fileLabel(f) }}</span>
-                      <el-tag size="small" round effect="plain" :type="kindTag(f.kind)">
-                        {{ f.title }}
-                      </el-tag>
+                      <span class="dh-kind-chip">{{ f.title }}</span>
                       <span v-if="f.meta?.adapt" class="dh-badge dh-badge--adapt">适配</span>
                       <span v-if="f.meta?.cloned" class="dh-badge dh-badge--cloned">克隆</span>
                     </button>
@@ -240,9 +238,7 @@
           <div class="dh-content-head">
             <div class="dh-content-title-row">
               <h2 class="dh-file-title">{{ fileLabel(file) }}</h2>
-              <el-tag size="small" round effect="plain" :type="kindTag(file.kind)">
-                {{ file.title }}
-              </el-tag>
+              <span class="dh-kind-chip">{{ file.title }}</span>
             </div>
             <div class="dh-content-meta">
               <span v-if="currentSession?.sessionTitle">{{ currentSession.sessionTitle }}</span>
@@ -268,7 +264,7 @@
           </div>
 
           <!-- 渲染（只读） -->
-          <div v-if="!editing" class="dh-content" @click="onContentClick" v-html="renderedHtml" />
+          <div v-if="!editing" class="dh-content doc-prose" @click="onContentClick" v-html="renderedHtml" />
           <!-- 编辑（仅公告） -->
           <el-input
             v-else
@@ -289,6 +285,7 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
+import './docProse.css'
 import {
   sort,
   sortOptions,
@@ -314,7 +311,6 @@ import {
   formatSize,
   formatTime,
   fileLabel,
-  kindTag,
   statusLabel,
   statusClass,
   ensureWorkFolders,
@@ -942,9 +938,10 @@ onUnmounted(() => {
 }
 
 .dh-content-head {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto 12px;
+  padding: 0 8px 12px;
 }
 
 .dh-content-title-row {
@@ -955,9 +952,20 @@ onUnmounted(() => {
 
 .dh-file-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ecw-text-1, #1d1d1f);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1f2329;
+}
+
+.dh-kind-chip {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: rgba(143, 149, 158, 0.15);
+  color: #646a73;
+  font-size: 10px;
+  line-height: 16px;
 }
 
 .dh-content-meta {
@@ -991,43 +999,11 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--ecw-text-1, #1d1d1f);
-  word-break: break-word;
-}
-
-.dh-content :deep(h1),
-.dh-content :deep(h2),
-.dh-content :deep(h3) {
-  margin: 1.2em 0 0.5em;
-  font-weight: 650;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.dh-content :deep(p) {
-  margin: 0 0 10px;
-}
-
-.dh-content :deep(code) {
-  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-  font-size: 0.9em;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.dh-content :deep(pre) {
-  margin: 0 0 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
-  overflow: auto;
-}
-
-.dh-content :deep(pre code) {
-  background: transparent;
-  padding: 0;
+  font-size: 16px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 4px 8px 32px;
 }
 
 .dh-editor :deep(.el-textarea__inner) {
