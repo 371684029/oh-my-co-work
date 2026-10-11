@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-10-11 | M | web/src/App.vue web/src/api.js server/src/routes.js electron/preload.js web/src/views/settings/Prefs.vue web/src/views/docs/* web/src/views/workbench/components/FlowRail.vue web/src/components/FurnaceSprite.vue web/src/components/terminal/TerminalView.vue README.md docs/5.0.0-plan.md | 4.9.1：缩放控件、一键导入、飞书风文档中心、精灵缩小且设置页可见、修复终端粘贴焦点；新增 5.0.0 规划
 2026-10-08 | M | packages/oh-my-co-work-v4-*.zip packages/*.build.json packages/CURRENT.txt packages/README.md | 对齐最新 main（9afa13a / 4.9.0）重打三平台轻量运行包；Windows 桌面包仍在 release/ 与 GitHub latest Release（不进 git）
 
 2026-09-15 | A | server/src/refineSource.js server/test/refineSource.test.js | 勾选炼化并保存时立刻改源脚本（ACW 输入 + stdout 标题）并 zip 备份

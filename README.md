@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.9.0-409eff?style=flat-square" alt="version 4.9.0" />
+  <img src="https://img.shields.io/badge/version-4.9.1-409eff?style=flat-square" alt="version 4.9.1" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -147,14 +147,15 @@
 | 群聊式工作流 | 群模板、成员、会话、线性节点与实时状态 |
 | 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
 | 熔炉 | 右侧桌宠；干活面默认 **TUI**；顶栏 **Grok CLI / Cursor CLI** 独立 PTY；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清当前 Agent 对话；短 AGENTS + rules 文件 |
-| 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认、满屏与全屏；滚动缓冲跟随设置，不强制 10000 行 |
+| 界面缩放 | 顶栏 `− 100% +` 控件缩放整个界面（60%～160%，记住设置） |
+| 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认（非阻塞，粘贴后可继续输入）、满屏与全屏；滚动缓冲跟随设置，不强制 10000 行 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程；折叠态直接标出实际用了哪个成员 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown；工作台并入文档中心 |
-| 文档中心 | 独立顶栏解耦只留 Logo；工作台第三栏内嵌文档中心（群报告 + 台账）；独立页面升级三栏分类布局；公告可编辑、全文搜索与按群导出 zip |
+| 文档中心 | 阅读样式参考飞书文档（正文大、标签小）；独立顶栏解耦只留 Logo；工作台第三栏内嵌文档中心（群报告 + 台账）；独立页面升级三栏分类布局；公告可编辑、全文搜索与按群导出 zip |
 | 炼化 | 成员/步骤勾选后**保存当下**改源脚本（`ACW-REFINE`：ACW 输入环境变量 + stdout 标题），规格写入 `config.refine.format`；群聊跑完再整理进文档中心 |
-| 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页新增**一键备份与一键导出**（SQLite 完整性检查与本地快照、备份包安全校验下载、全量协同文档打包 ZIP）；关于页状态无缝联动 |
+| 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页提供**一键导入与一键导出**（导入备份包恢复数据，恢复前自动留快照可回退；导出为全量协同文档 ZIP）；关于页状态无缝联动 |
 | 会话治理 | 置顶、改名、删除（顶栏删除会从列表拿掉并清终端行）、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
 | JSONL Adapter | 可信侧通道提问转闸门、工具卡与结果写回；失败降级为真实终端 |
 | 本地数据 | SQLite + Markdown + 本地附件和日志 |
@@ -170,7 +171,7 @@
 请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 
 <img src="./docs/assets/screenshots/windows-desktop.png" alt="Windows 桌面窗口：oh-my-co-work 工作台" width="100%" />
-<p align="center"><sub>4.9.0 桌面包：Logo 图标 exe、默认全屏打开工作台并拉起本机服务</sub></p>
+<p align="center"><sub>4.9.1 桌面包：Logo 图标 exe、默认全屏打开工作台并拉起本机服务</sub></p>
 
 源码开发也可以：`npm install` 后执行 `npm run dev:desktop`（需本机已能访问工作台 API，或让 Electron 自行拉起 `server`）。
 
@@ -184,7 +185,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.9.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.9.1**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -271,6 +272,7 @@ packages/  可直接运行的三平台压缩包
 | [自测体系](./docs/selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
 | [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0）；检索导出（4.1.0）；更新检查与备份恢复（4.2.0） |
 | [4.8.0 双引擎 TUI](./docs/4.8.0-plan.md) | Cursor CLI + 熔炉、默认 TUI、桌面全屏；文内落地跟踪 |
+| [5.0.0 性能与交互优化（规划）](./docs/5.0.0-plan.md) | 内置 CLI / 熔炉精灵优化、性能基线、交互统一 |
 | [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -308,6 +310,8 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.7.0：Windows 桌面窗口包——`*-win32-x64-desktop.zip` 双击 start.bat 打开 Electron 工作台并拉起服务（包内 Node+Electron，关窗藏托盘）；轻量 zip 仍进 `packages/`
 - [x] 4.8.0：群聊第三栏 Cursor CLI / 熔炉双 Tab、独立 PTY；熔炉默认 TUI；桌面启动全屏；熔炉默认通用 Agent（审核/闸门更专业）
 - [x] 4.9.0：托盘与 `oh-my-co-work.exe` 用首页 Logo；第三栏只留文档中心；炼化 Skill 可复制；设置抽屉不被桌宠挡住
+- [x] 4.9.1：顶栏缩放；一键备份改为一键导入；文档中心飞书风阅读样式；熔炉精灵缩小约 1/3 且设置页可见；修复终端粘贴后无法输入
+- [ ] 5.0.0（规划）：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/5.0.0-plan.md](./docs/5.0.0-plan.md)
 - [ ] 后续：macOS/Linux 桌面壳、无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目

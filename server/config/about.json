@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "4.9.0",
+  "version": "4.9.1",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,18 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "4.9.1",
+      "date": "2026-10-11",
+      "title": "4.9.1：缩放、一键导入、飞书风文档中心",
+      "items": [
+        "顶栏新增界面缩放（− / + / 重置）。",
+        "设置页「一键备份」改为「一键导入」，与「一键导出」对应；导入前自动保留当前数据快照。",
+        "文档中心阅读样式参考飞书文档：正文更大、标签更小。",
+        "熔炉精灵缩小约三分之一，设置页也显示。",
+        "修复终端粘贴后无法继续输入。下一版本规划见 docs/5.0.0-plan.md。"
+      ]
+    },
     {
       "version": "4.9.0",
       "date": "2026-09-15",
