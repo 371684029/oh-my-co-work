@@ -301,3 +301,31 @@ test('keepAlive terminals resolve immediately and stay running', async () => {
   assert.equal(terminalService.killTerminal(terminal.id), true)
 })
 
+test('an oversized terminal.input is rejected with an actionable error (CLI-07)', async () => {
+  const sessionId = 'input-too-large'
+  const events = []
+  const ws = { readyState: 1, send: (raw) => events.push(JSON.parse(raw)) }
+  bus.subscribe(sessionId, ws)
+  const result = await terminalService.runTerminal({
+    ...terminalOptions(sessionId, 'exec sleep 10'),
+    keepAlive: true,
+  })
+  assert.equal(result.ok, true)
+  const terminal = terminalService.listSessionTerminals(sessionId)[0]
+  terminalService.handleTerminalClientMessage(
+    ws,
+    sessionId,
+    JSON.stringify({ type: 'terminal.input', terminalId: terminal.id, data: 'x'.repeat(70_000) }),
+  )
+  bus.unsubscribe(ws)
+  const err = events.find((e) => e.type === 'terminal.error')
+  assert.ok(err, 'expected a terminal.error event')
+  assert.equal(err.payload.code, 'INPUT_TOO_LARGE')
+  assert.match(err.payload.message, /64KB/)
+  assert.equal(terminalService.killTerminal(terminal.id), true)
+})
+
+test('markInterruptedTerminalsOnBoot is safe to call (CLI-17)', () => {
+  assert.doesNotThrow(() => terminalService.markInterruptedTerminalsOnBoot())
+})
+

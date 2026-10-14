@@ -9,12 +9,15 @@ import { desktopUpdateResult, normalizeAppOrigin, workbenchUrl } from '../lib/ur
 import {
   resolveNodeBin,
   resolveServerEntry,
+  readAppVersion,
+  fetchHealth,
   spawnAppServer,
   stdioForChildLog,
   openAppendFd,
   waitHealth,
   stopChild,
 } from '../lib/server.mjs'
+import http from 'node:http'
 
 test('workbenchUrl 使用 history 路径而不是 hash 或 query', () => {
   assert.equal(workbenchUrl('http://127.0.0.1:3780', 's1'), 'http://127.0.0.1:3780/workbench/s1')
@@ -30,6 +33,48 @@ test('normalizeAppOrigin 拒绝非 http(s)', () => {
 test('desktopUpdateResult 从不报告成功', () => {
   assert.deepEqual(desktopUpdateResult(null), { ok: false, reason: 'invalid-manifest' })
   assert.deepEqual(desktopUpdateResult({ version: '5.0.0' }), { ok: false, reason: 'not-implemented' })
+})
+
+test('readAppVersion 优先 about.json，回落到 package.json', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-ver-'))
+  fs.mkdirSync(path.join(dir, 'server', 'config'), { recursive: true })
+  fs.writeFileSync(
+    path.join(dir, 'server', 'config', 'about.json'),
+    JSON.stringify({ version: '9.9.9' }),
+  )
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ version: '1.0.0' }))
+  assert.equal(readAppVersion(dir), '9.9.9')
+
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-ver2-'))
+  fs.writeFileSync(path.join(dir2, 'package.json'), JSON.stringify({ version: '2.3.4' }))
+  assert.equal(readAppVersion(dir2), '2.3.4')
+
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-ver3-'))
+  assert.equal(readAppVersion(empty), '')
+})
+
+test('fetchHealth 解析 /api/health JSON 并在非 200 时拒绝', async () => {
+  const ok = http.createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ ok: true, version: '5.1.0', instanceId: 'abc' }))
+  })
+  const bad = http.createServer((_req, res) => {
+    res.writeHead(500)
+    res.end('boom')
+  })
+  await new Promise((resolve) => ok.listen(0, '127.0.0.1', resolve))
+  await new Promise((resolve) => bad.listen(0, '127.0.0.1', resolve))
+  const okPort = ok.address().port
+  const badPort = bad.address().port
+  try {
+    const health = await fetchHealth(okPort)
+    assert.equal(health.version, '5.1.0')
+    assert.equal(health.instanceId, 'abc')
+    await assert.rejects(() => fetchHealth(badPort), /health status 500/)
+  } finally {
+    await new Promise((resolve) => ok.close(resolve))
+    await new Promise((resolve) => bad.close(resolve))
+  }
 })
 
 test('resolveNodeBin 优先 runtime 内的 node', () => {

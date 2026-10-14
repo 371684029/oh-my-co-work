@@ -22,6 +22,12 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-10-14 | A | server/src/commandResolver.js server/test/commandResolver.test.js web/src/composables/terminalInput.js web/test/terminalInput.test.mjs electron/preload.cjs electron/test/preload.test.mjs | 5.1.0：统一命令解析器（异步+TTL 缓存，CLI-03）；终端输入纯逻辑（分块+保序，CLI-07/08）；沙箱预载改 CommonJS（DESK-01）
+2026-10-14 | M | server/src/grokStatus.js server/src/terminal/terminalService.js server/src/index.js server/src/routes.js server/src/backup.js server/test/grokStatus.test.js server/test/terminalService.test.js server/test/backupRestore.test.js | 5.1.0：Cursor 登录探测（CLI-04）、输入上限与结构化报错（CLI-07）、启动清理孤儿终端（CLI-17）、备份流式导入（SRV-02）、/health 实例标识（DESK-02）
+2026-10-14 | M | web/src/views/workbench/composables/useTerminalSessions.js web/src/components/terminal/TerminalView.vue web/src/components/terminal/TerminalSessionCard.vue web/src/components/FurnaceSprite.vue | 5.1.0：粘贴分块与保序、失败横幅+诊断（CLI-05/07/08/13）；桌宠动画按可见性暂停（PET-01）
+2026-10-14 | D | electron/preload.js | 5.1.0：删除 ESM 预载（sandbox 不支持），由 preload.cjs 取代
+2026-10-14 | M | electron/main.js electron/lib/server.mjs electron/test/urls-server.test.mjs docs/5.1.0-plan.md | 5.1.0：端口版本握手+备用端口（DESK-02）、关闭到托盘首次提示与开关（DESK-03）；勾选 5.1.0 落地项
+
 2026-10-11 | M | web/src/App.vue web/src/api.js server/src/routes.js electron/preload.js web/src/views/settings/Prefs.vue web/src/views/docs/* web/src/views/workbench/components/FlowRail.vue web/src/components/FurnaceSprite.vue web/src/components/terminal/TerminalView.vue README.md docs/5.0.0-plan.md | 4.9.1：缩放控件、一键导入、飞书风文档中心、精灵缩小且设置页可见、修复终端粘贴焦点；新增 5.0.0 规划
 2026-10-08 | M | packages/oh-my-co-work-v4-*.zip packages/*.build.json packages/CURRENT.txt packages/README.md | 对齐最新 main（9afa13a / 4.9.0）重打三平台轻量运行包；Windows 桌面包仍在 release/ 与 GitHub latest Release（不进 git）
 

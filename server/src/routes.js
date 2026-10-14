@@ -1,6 +1,7 @@
-import express, { Router } from 'express'
+import { Router } from 'express'
 import fs from 'node:fs'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import {
   listMembers,
   getMember,
@@ -53,11 +54,17 @@ import { getAppSettings,
   purgeDemoData,
   resolveGlobalAdminMember,
 } from './appSettings.js'
-import { probeGrokStatus, probeCursorStatus, loadGrokExampleConfig } from './grokStatus.js'
+import { probeGrokStatusAsync, probeCursorStatusAsync, loadGrokExampleConfig } from './grokStatus.js'
 import { prepareFurnaceGrokLaunch } from './furnaceSituation.js'
 import * as docsHub from './docsHub.js'
 import * as updateCheck from './updateCheck.js'
-import { createBackup, restoreBackup, listBackups, BACKUP_DOWNLOAD_RE } from './backup.js'
+import {
+  createBackup,
+  restoreBackup,
+  listBackups,
+  isGzipFile,
+  BACKUP_DOWNLOAD_RE,
+} from './backup.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
 import {
   uploadMiddleware,
@@ -83,6 +90,10 @@ import { appendAgentRefine, buildRefineSkillPrompt } from './agentRefine.js'
 
 const router = Router()
 
+// DESK-02: stable per-process identity so the desktop shell can tell "our"
+// server apart from a foreign process that happens to occupy the port.
+const INSTANCE_ID = process.env.ACW_INSTANCE_ID || randomUUID()
+
 router.get('/health', (_req, res) => {
   let version = '0.4.0'
   try {
@@ -106,6 +117,8 @@ router.get('/health', (_req, res) => {
   res.json({
     ok: true,
     version,
+    instanceId: INSTANCE_ID,
+    pid: process.pid,
     dataRoot: DATA_ROOT,
     integrity,
     autoExit: isAutoExitEnabled(),
@@ -734,14 +747,18 @@ router.get('/settings/app', (_req, res) => {
     resolvedAdmin: resolveGlobalAdminMember(),
   })
 })
-router.get('/grok/status', (_req, res) => {
+router.get('/grok/status', async (_req, res) => {
   const command = getAppSettings().grok?.command || 'grok'
   const cursorCommand = getAppSettings().grok?.cursorCommand || 'cursor-agent'
-  res.json({
-    ...probeGrokStatus({ command }),
-    cursor: probeCursorStatus({ command: cursorCommand }),
-    exampleToml: loadGrokExampleConfig(),
-  })
+  try {
+    res.json({
+      ...(await probeGrokStatusAsync({ command })),
+      cursor: await probeCursorStatusAsync({ command: cursorCommand }),
+      exampleToml: loadGrokExampleConfig(),
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 router.post('/furnace/prepare', (req, res) => {
   try {
@@ -963,30 +980,77 @@ router.post('/update/backup', (req, res) => {
   }
 })
 
-router.post(
-  '/backup/import',
-  express.raw({ type: '*/*', limit: '2gb' }),
-  (req, res) => {
-    let target = ''
+/**
+ * 4.2.0 / 5.1.0 SRV-02：流式接收备份包（不再把整包读进内存）。
+ * 请求体直接 pipe 到临时文件，校验 gzip 魔数后交给 restoreBackup；所有失败路径都清理临时文件。
+ */
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024 * 1024
+let importInFlight = false
+
+router.post('/backup/import', (req, res) => {
+  if (importInFlight) {
+    return res.status(409).json({ error: '已有备份导入进行中', code: 'RESTORE_BUSY' })
+  }
+  const dir = path.resolve(DATA_ROOT, 'backups')
+  fs.mkdirSync(dir, { recursive: true })
+  const name = `acw-backup-imported-${Date.now()}.tar.gz`
+  const target = path.join(dir, name)
+  let received = 0
+  let settled = false
+
+  const cleanup = () => {
     try {
-      const buf = req.body
-      if (!Buffer.isBuffer(buf) || buf.length < 2 || buf[0] !== 0x1f || buf[1] !== 0x8b) {
-        return res.status(400).json({ error: '请选择 .tar.gz 备份包' })
-      }
-      const dir = path.resolve(DATA_ROOT, 'backups')
-      fs.mkdirSync(dir, { recursive: true })
-      const name = `acw-backup-imported-${Date.now()}.tar.gz`
-      target = path.join(dir, name)
-      fs.writeFileSync(target, buf)
-      res.json(restoreBackup(name))
-    } catch (e) {
-      if (target && e.code && fs.existsSync(target) && e.code !== 'RESTORE_BUSY') {
-        try { fs.rmSync(target, { force: true }) } catch { /* ignore */ }
-      }
-      res.status(e.code === 'RESTORE_BUSY' ? 409 : 400).json({ error: e.message, code: e.code })
+      if (fs.existsSync(target)) fs.rmSync(target, { force: true })
+    } catch {
+      /* ignore */
     }
-  },
-)
+  }
+  const fail = (status, body) => {
+    if (settled) return
+    settled = true
+    importInFlight = false
+    cleanup()
+    if (!res.headersSent) res.status(status).json(body)
+  }
+
+  importInFlight = true
+  const out = fs.createWriteStream(target)
+  out.on('error', () => fail(500, { error: '写入备份文件失败' }))
+  req.on('aborted', () => {
+    out.destroy()
+    fail(400, { error: '上传中断' })
+  })
+  req.on('error', () => fail(400, { error: '上传失败' }))
+  req.on('data', (chunk) => {
+    received += chunk.length
+    if (received > MAX_IMPORT_BYTES) {
+      req.unpipe(out)
+      out.destroy()
+      fail(413, { error: '备份包过大（上限 2GB）' })
+    }
+  })
+  out.on('finish', () => {
+    if (settled) return
+    if (!isGzipFile(target)) {
+      fail(400, { error: '请选择 .tar.gz 备份包' })
+      return
+    }
+    try {
+      const result = restoreBackup(name)
+      settled = true
+      importInFlight = false
+      if (!res.headersSent) res.json(result)
+    } catch (e) {
+      settled = true
+      importInFlight = false
+      if (e.code !== 'RESTORE_BUSY') cleanup()
+      if (!res.headersSent) {
+        res.status(e.code === 'RESTORE_BUSY' ? 409 : 400).json({ error: e.message, code: e.code })
+      }
+    }
+  })
+  req.pipe(out)
+})
 
 router.post('/update/restore', (req, res) => {
   try {

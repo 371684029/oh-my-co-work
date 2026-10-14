@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="rootEl"
     class="furnace-pet"
     :class="{
       'is-min': minimized,
@@ -128,6 +129,15 @@ function isAutoPlacedPos(saved) {
 const pos = ref(defaultPos())
 const dragging = ref(false)
 const reduceMotion = ref(false)
+const rootEl = ref(null)
+
+// PET-01: only animate when the sprite is actually on screen. `docVisible`
+// (tab/window visibility) and `intersecting` (IntersectionObserver) gate both the
+// frame timer and the chatter timer, so a hidden tab or a fullscreen terminal
+// covering the sprite stops the perpetual setTimeout chain.
+const docVisible = ref(true)
+const intersecting = ref(true)
+const active = computed(() => docVisible.value && intersecting.value)
 
 const clipId = computed(() =>
   clipForFurnace({
@@ -179,10 +189,12 @@ let lineIndex = 0
 let dragMoved = false
 let dragOff = { x: 0, y: 0 }
 let lastDragX = 0
+let visibilityHandler = null
+let intersectionObserver = null
 
 function scheduleFrame() {
   window.clearTimeout(animTimer)
-  if (reduceMotion.value || clipId.value === 'look') return
+  if (reduceMotion.value || clipId.value === 'look' || !active.value) return
   const clip = PET_CLIPS[clipId.value] || PET_CLIPS.idle
   animTimer = window.setTimeout(() => {
     frame.value = (frame.value + 1) % clip.frames
@@ -315,6 +327,10 @@ watch(clipId, () => {
   frame.value = 0
   scheduleFrame()
 })
+watch(active, (on) => {
+  if (on) scheduleFrame()
+  else window.clearTimeout(animTimer)
+})
 watch(
   () => props.state,
   () => {
@@ -342,8 +358,29 @@ onMounted(() => {
     pos.value = defaultPos()
   }
   scheduleFrame()
+
+  // PET-01: pause when the tab is hidden or the sprite leaves the viewport.
+  try {
+    docVisible.value = !document.hidden
+  } catch {
+    docVisible.value = true
+  }
+  visibilityHandler = () => {
+    docVisible.value = typeof document === 'undefined' ? true : !document.hidden
+  }
+  document.addEventListener('visibilitychange', visibilityHandler)
+  if (rootEl.value && typeof IntersectionObserver !== 'undefined') {
+    intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) intersecting.value = entry.isIntersecting
+      },
+      { threshold: 0 },
+    )
+    intersectionObserver.observe(rootEl.value)
+  }
+
   chatterTimer = window.setInterval(() => {
-    if (minimized.value || hovered.value || document.hidden) return
+    if (minimized.value || hovered.value || !active.value) return
     nextChatter()
   }, 90000)
 })
@@ -353,6 +390,10 @@ onUnmounted(() => {
   window.clearTimeout(hideTimer)
   window.clearTimeout(pokeTimer)
   window.clearTimeout(animTimer)
+  if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+  visibilityHandler = null
+  intersectionObserver?.disconnect()
+  intersectionObserver = null
 })
 </script>
 

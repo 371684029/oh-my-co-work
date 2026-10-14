@@ -6,6 +6,7 @@ import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
 import { emitSession } from '../bus.js'
 import { getAppSettings } from '../appSettings.js'
+import { pickWindowsMatch } from '../commandResolver.js'
 import { redactText } from './redact.js'
 import {
   appendAdapterReply,
@@ -20,7 +21,10 @@ import {
 } from '../processRegistry.js'
 
 const terminals = new Map()
-const MAX_INPUT_CHARS = 16_384
+// 64KiB per message: the client chunks large pastes (≤4KiB pieces), so a single
+// legitimate message is far smaller; this headroom avoids rejecting a paste that
+// slipped through as one message. (5.1.0 CLI-07)
+const MAX_INPUT_CHARS = 65_536
 const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
 const RETAIN_FINISHED_GLOBAL = 200
@@ -221,11 +225,10 @@ export function resolveWindowsExecutable(cmd, { platform = process.platform, run
   try {
     const r = run('where', [raw], { encoding: 'utf8', timeout: WINDOWS_WHERE_TIMEOUT_MS })
     if (r?.status === 0) {
-      const first = String(r.stdout || '')
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean)[0]
-      if (first) return first
+      // PATHEXT-aware pick (CLI-01): prefer .exe/.cmd over the extensionless shim
+      // `where` may list first, so node-pty receives something it can spawn.
+      const picked = pickWindowsMatch(r.stdout, process.env.PATHEXT)
+      if (picked.path) return picked.path
     }
   } catch {
     /* 找不到就保留原样，交给 pty 报错，不掩盖问题 */
@@ -655,6 +658,27 @@ export function forgetSessionTerminals(sessionId) {
   }
 }
 
+/**
+ * On server boot, any terminal the DB still considers live was orphaned by a
+ * crash/restart (its in-memory PTY is gone). Mark it interrupted so the UI can
+ * show "已中断，可重启同配置会话" instead of a phantom "running". (5.1.0 CLI-17)
+ * @returns {number} rows updated (0 when the table is unavailable, e.g. in tests)
+ */
+export function markInterruptedTerminalsOnBoot() {
+  try {
+    const info = getDb()
+      .prepare(
+        `UPDATE terminal_sessions
+            SET status = 'interrupted', finished_at = ?
+          WHERE status IN ('running', 'starting')`,
+      )
+      .run(nowIso())
+    return Number(info?.changes || 0)
+  } catch {
+    return 0
+  }
+}
+
 export function killTerminal(id, reason = 'user') {
   const entry = terminals.get(id)
   if (!entry) return false
@@ -711,7 +735,11 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
     if (data.length > MAX_INPUT_CHARS) {
       send(ws, {
         type: 'terminal.error',
-        payload: { terminalId, code: 'INPUT_TOO_LARGE', message: '单次终端输入过大' },
+        payload: {
+          terminalId,
+          code: 'INPUT_TOO_LARGE',
+          message: '单次终端输入过大（超过 64KB）。请改用分块粘贴，或保存为文件后用命令读取。',
+        },
       })
       return true
     }

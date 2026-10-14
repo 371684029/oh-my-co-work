@@ -16,6 +16,18 @@ const { createMember, createGroup, createSessionFromGroup, getSessionDetail, han
 const backup = await import('../src/backup.js')
 const { MEMBER_KIND, SESSION_STATUS } = await import('@acw/shared')
 
+test('isGzipFile detects the gzip magic header (SRV-02 import validation)', () => {
+  const gz = path.join(dataRoot, 'sample.tar.gz')
+  fs.writeFileSync(gz, Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0x00]))
+  assert.equal(backup.isGzipFile(gz), true)
+
+  const plain = path.join(dataRoot, 'sample.txt')
+  fs.writeFileSync(plain, 'not a gzip file')
+  assert.equal(backup.isGzipFile(plain), false)
+
+  assert.equal(backup.isGzipFile(path.join(dataRoot, 'missing.tar.gz')), false)
+})
+
 function seedSession(title) {
   const member = createMember({
     name: `echo-${Date.now()}-${Math.random()}`,

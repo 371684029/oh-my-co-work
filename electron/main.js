@@ -11,6 +11,7 @@ import {
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { desktopUpdateResult, workbenchUrl } from './lib/urls.mjs'
 import { splashDataUrl } from './lib/splash.mjs'
@@ -19,6 +20,8 @@ import {
   isServerUp,
   resolveNodeBin,
   resolveServerEntry,
+  readAppVersion,
+  fetchHealth,
   spawnAppServer,
   openAppendFd,
   stopChild,
@@ -34,6 +37,50 @@ let isQuitting = false
 let serverChild = null
 let appRoot = ''
 let port = 3780
+
+// DESK-03: persisted desktop preferences (close-to-tray behavior + one-time hint).
+const DEFAULT_DESKTOP_PREFS = { closeToTray: true, trayHintShown: false }
+let desktopPrefs = { ...DEFAULT_DESKTOP_PREFS }
+
+function prefsPath() {
+  const root = appRoot || resolveAppRoot()
+  return path.join(root, 'data', 'desktop-prefs.json')
+}
+
+function loadDesktopPrefs() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(prefsPath(), 'utf8'))
+    desktopPrefs = { ...DEFAULT_DESKTOP_PREFS, ...parsed }
+  } catch {
+    desktopPrefs = { ...DEFAULT_DESKTOP_PREFS }
+  }
+  return desktopPrefs
+}
+
+function saveDesktopPrefs() {
+  try {
+    fs.mkdirSync(path.dirname(prefsPath()), { recursive: true })
+    fs.writeFileSync(prefsPath(), JSON.stringify(desktopPrefs, null, 2))
+  } catch {
+    /* ignore */
+  }
+}
+
+function showTrayHintOnce() {
+  if (desktopPrefs.trayHintShown) return
+  desktopPrefs.trayHintShown = true
+  saveDesktopPrefs()
+  try {
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'oh-my-co-work',
+        body: '已最小化到托盘，退出请用托盘菜单 → 退出。',
+      }).show()
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 function appOrigin() {
   return `http://127.0.0.1:${port}`
@@ -94,6 +141,15 @@ function createTray() {
             if (mainWindow) mainWindow.hide()
           },
         },
+        {
+          label: '关闭窗口时退出',
+          type: 'checkbox',
+          checked: !desktopPrefs.closeToTray,
+          click: (menuItem) => {
+            desktopPrefs.closeToTray = !menuItem.checked
+            saveDesktopPrefs()
+          },
+        },
         { type: 'separator' },
         {
           label: '退出',
@@ -121,7 +177,7 @@ async function createMainWindow() {
     icon: appIconPath(),
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -133,9 +189,14 @@ async function createMainWindow() {
   mainWindow.show()
 
   mainWindow.on('close', (evt) => {
-    if (!isQuitting && trayOk) {
+    if (isQuitting) return
+    // DESK-03: when close-to-tray is on, hide instead of quitting and explain it
+    // once so users don't mistake it for a real exit. Otherwise let the close
+    // proceed; window-all-closed then quits (see below).
+    if (desktopPrefs.closeToTray && trayOk) {
       evt.preventDefault()
       mainWindow.hide()
+      showTrayHintOnce()
     }
   })
 
@@ -178,20 +239,51 @@ function registerIpc() {
   })
 }
 
+async function pickFreePort(startPort, span = 10) {
+  for (let p = startPort; p < startPort + span; p++) {
+    if (!(await isServerUp(p))) return p
+  }
+  return null
+}
+
 async function ensureServer() {
   port = Number(process.env.ACW_PORT || 3780)
-  if (await isServerUp(port)) return
+  const desiredVersion = readAppVersion(appRoot)
+  if (await isServerUp(port)) {
+    // DESK-02: don't blindly reuse whatever answers on the port. A differently
+    // versioned process there is a foreign/stale server — load our own on the
+    // next free port instead of showing the wrong backend.
+    const health = await fetchHealth(port).catch(() => null)
+    if (desiredVersion && health?.version && health.version !== desiredVersion) {
+      appendLog(
+        `port ${port} held by foreign server v${health.version} (want v${desiredVersion}); picking alternate port`,
+      )
+      const alt = await pickFreePort(port + 1)
+      if (!alt) {
+        throw new Error(
+          `端口 ${port} 被其它版本的后台服务占用（v${health.version}），备用端口也不可用。请先关闭该服务再重试。`,
+        )
+      }
+      port = alt
+    } else {
+      appendLog(`reusing server on ${port} (v${health?.version || '?'}, id=${health?.instanceId || 'unknown'})`)
+      return
+    }
+  }
+
   const nodeBin = resolveNodeBin(appRoot)
   const entry = resolveServerEntry(appRoot)
   fs.mkdirSync(path.join(appRoot, 'data'), { recursive: true })
   const logPath = path.join(appRoot, 'data', 'desktop-server.log')
   const logFd = openAppendFd(logPath)
+  const instanceId = randomUUID()
   serverChild = spawnAppServer({
     appRoot,
     port,
     nodeBin,
     entry,
     logFd,
+    instanceId,
   })
   try {
     fs.closeSync(logFd)
@@ -209,11 +301,17 @@ async function ensureServer() {
     }
   })
   await waitHealth(port)
+  // Best-effort identity check: confirm the server we just waited on is ours.
+  const health = await fetchHealth(port).catch(() => null)
+  if (health?.instanceId && health.instanceId !== instanceId) {
+    appendLog(`warning: /api/health instanceId ${health.instanceId} != expected ${instanceId}`)
+  }
 }
 
 registerIpc()
 
 appRoot = resolveAppRoot()
+loadDesktopPrefs()
 try {
   const userData = path.join(appRoot, 'data', 'electron-profile')
   fs.mkdirSync(userData, { recursive: true })
@@ -271,6 +369,6 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
-  if (trayOk && !isQuitting) return
+  if (trayOk && !isQuitting && desktopPrefs.closeToTray) return
   app.quit()
 })

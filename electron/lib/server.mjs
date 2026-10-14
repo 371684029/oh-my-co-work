@@ -17,6 +17,51 @@ export function resolveServerEntry(appRoot) {
   throw new Error('找不到服务入口（server/dist/index.cjs 或 server/src/index.js）')
 }
 
+/** App version from server/config/about.json, falling back to root package.json. */
+export function readAppVersion(appRoot) {
+  try {
+    const about = JSON.parse(fs.readFileSync(path.join(appRoot, 'server', 'config', 'about.json'), 'utf8'))
+    if (about && about.version) return String(about.version)
+  } catch {
+    /* ignore */
+  }
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8'))
+    if (pkg && pkg.version) return String(pkg.version)
+  } catch {
+    /* ignore */
+  }
+  return ''
+}
+
+/** GET /api/health and parse JSON. Rejects on non-200 / parse error / timeout. */
+export function fetchHealth(port, timeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const req = http.get(`http://127.0.0.1:${port}/api/health`, (res) => {
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', (d) => {
+        body += d
+      })
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`health status ${res.statusCode}`))
+          return
+        }
+        try {
+          resolve(JSON.parse(body))
+        } catch (e) {
+          reject(e)
+        }
+      })
+    })
+    req.on('error', reject)
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error('health timeout'))
+    })
+  })
+}
+
 export function waitHealth(port, timeoutMs = 60_000) {
   const started = Date.now()
   return new Promise((resolve, reject) => {
@@ -73,12 +118,13 @@ export function stdioForChildLog(logFd) {
   return ['ignore', logFd, logFd]
 }
 
-export function spawnAppServer({ appRoot, port, nodeBin, entry, logFd }) {
+export function spawnAppServer({ appRoot, port, nodeBin, entry, logFd, instanceId }) {
   const env = {
     ...process.env,
     ACW_PORT: String(port),
     ACW_AUTO_EXIT: '0',
   }
+  if (instanceId) env.ACW_INSTANCE_ID = String(instanceId)
   return spawn(nodeBin, [entry], {
     cwd: appRoot,
     env,

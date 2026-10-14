@@ -17,6 +17,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 import { isTerminalRunning } from '../../composables/terminalStatus'
+import { createInputSequencer } from '../../composables/terminalInput'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -33,6 +34,8 @@ let xterm = null
 let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
+// CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
+const sequencer = createInputSequencer()
 
 function fit() {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
@@ -82,6 +85,7 @@ onMounted(async () => {
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
     const confirmPaste = (props.prefs?.pastePolicy || 'confirm') !== 'allow'
     if (confirmPaste && lineBreaks > 1) {
+      sequencer.begin()
       ElMessageBox.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`, '粘贴确认', {
         confirmButtonText: '粘贴',
         cancelButtonText: '取消',
@@ -89,13 +93,22 @@ onMounted(async () => {
         closeOnPressEscape: true,
       })
         .then(() => {
-          if (isRunning.value) emit('input', data)
+          // Paste first, then any keys typed while the dialog was open, in order.
+          for (const chunk of sequencer.flushConfirmed(data)) {
+            if (isRunning.value) emit('input', chunk)
+          }
         })
-        .catch(() => {})
+        .catch(() => {
+          // Cancelled: still release the buffered keys so nothing is lost.
+          for (const chunk of sequencer.flushCancelled()) {
+            if (isRunning.value) emit('input', chunk)
+          }
+        })
         .finally(() => nextTick(() => setTimeout(() => xterm?.focus(), 50)))
       return
     }
-    emit('input', data)
+    // While a confirmation is pending, hold keys and release them in order.
+    for (const chunk of sequencer.enqueue(data)) emit('input', chunk)
   })
   xterm.textarea?.addEventListener('focus', () => emit('focus-change', true))
   xterm.textarea?.addEventListener('blur', () => emit('focus-change', false))

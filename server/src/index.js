@@ -8,7 +8,11 @@ import { initDb, getDb, DATA_ROOT, ROOT } from './db.js'
 import { setRegistryContext } from './processRegistry.js'
 import routes from './routes.js'
 import { subscribe, unsubscribe } from './bus.js'
-import { handleTerminalClientMessage, setAdapterEventHandler } from './terminal/terminalService.js'
+import {
+  handleTerminalClientMessage,
+  setAdapterEventHandler,
+  markInterruptedTerminalsOnBoot,
+} from './terminal/terminalService.js'
 import { listMembers, listGroups, createMember, createGroup } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 import { ensureAdminMember } from './slashCommands.js'
@@ -40,6 +44,15 @@ try {
   markInterruptedOnBoot()
 } catch (e) {
   console.warn('[acw] markInterruptedOnBoot failed', e?.message || e)
+}
+
+// CLI-17：崩溃/重启后，数据库里仍标记为 running/starting 的终端其实已随进程消失，
+// 统一改为 interrupted，避免 UI 显示幽灵「运行中」条目。
+try {
+  const n = markInterruptedTerminalsOnBoot()
+  if (n) console.log(`[acw] marked ${n} orphaned terminal(s) as interrupted`)
+} catch (e) {
+  console.warn('[acw] markInterruptedTerminalsOnBoot failed', e?.message || e)
 }
 
 // 始终确保熔炉 Agent 存在（快捷指令首位默认；内部 key 仍 unified_admin）

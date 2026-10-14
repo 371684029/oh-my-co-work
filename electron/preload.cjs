@@ -1,4 +1,9 @@
-import { contextBridge, ipcRenderer, webFrame } from 'electron'
+// CommonJS on purpose (5.1.0 DESK-01): the window runs with `sandbox: true`, and
+// sandboxed preload scripts do not support ESM. A `.js` preload would be treated
+// as ESM (root package.json declares "type": "module") and fail to load, silently
+// dropping `window.__ACW_DESKTOP_API__` (notifications / tray / zoom / updates).
+// API surface is identical to the previous preload.js.
+const { contextBridge, ipcRenderer, webFrame } = require('electron')
 
 contextBridge.exposeInMainWorld('__ACW_DESKTOP_ENV__', 'electron')
 

@@ -3,6 +3,11 @@ import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { inferFurnaceAgent, isFurnaceMember } from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
+import {
+  chunkTerminalInput,
+  shouldChunkTerminalInput,
+  DEFAULT_CHUNK_INTERVAL_MS,
+} from '../../../composables/terminalInput'
 import { api, connectSessionWs } from '../../../api'
 import {
   terminalBridge,
@@ -25,6 +30,12 @@ const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
+// CLI-13: collapse duplicate seq-gap re-attaches into one silent retry, only
+// notifying the user when gaps keep happening.
+let lastGapAt = 0
+let gapStreak = 0
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const activeTerminal = computed(
   () => terminalSessions.value.find((terminal) => terminal.id === activeTerminalId.value) || null,
@@ -89,13 +100,30 @@ function revealFurnaceTui(terminalId) {
   openTerminal(target.id)
 }
 
-function sendTerminalInput(data) {
-  if (!activeTerminalId.value) return
-  sendTerminalMessage({
-    type: 'terminal.input',
-    terminalId: activeTerminalId.value,
-    data,
-  })
+async function sendTerminalInput(data) {
+  const terminalId = activeTerminalId.value
+  if (!terminalId) return
+  const text = String(data ?? '')
+  if (!text) return
+  // CLI-07: small input (typing) goes straight through; a large paste is split
+  // into ≤4KiB pieces with a small gap so neither the server limit nor ConPTY's
+  // one-shot write handling is hit.
+  if (!shouldChunkTerminalInput(text)) {
+    sendTerminalMessage({ type: 'terminal.input', terminalId, data: text })
+    return
+  }
+  let warned = false
+  for (const chunk of chunkTerminalInput(text)) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      if (!warned) {
+        ElMessage.warning('终端连接已断开，粘贴中断')
+        warned = true
+      }
+      return
+    }
+    ws.send(JSON.stringify({ type: 'terminal.input', terminalId, data: chunk }))
+    await sleep(DEFAULT_CHUNK_INTERVAL_MS)
+  }
 }
 
 function resizeTerminal({ cols, rows }) {
@@ -212,10 +240,18 @@ async function ensureFurnaceAgent(agent) {
   return reopenFurnaceProcess({ skipConfirm: true, quiet: furnaceAgent === 'grok', agent: furnaceAgent })
 }
 
+function reattachForGap(terminalId) {
+  const id = terminalId || activeTerminalId.value
+  if (!id) return
+  const now = Date.now()
+  gapStreak = now - lastGapAt < 4000 ? gapStreak + 1 : 1
+  lastGapAt = now
+  sendTerminalMessage({ type: 'terminal.attach', terminalId: id })
+  if (gapStreak >= 2) ElMessage.info('部分输出未回放，正在重新附着')
+}
+
 function onTerminalSeqGap() {
-  if (!activeTerminalId.value) return
-  ElMessage.info('部分输出未回放，正在重新附着')
-  sendTerminalMessage({ type: 'terminal.attach', terminalId: activeTerminalId.value })
+  reattachForGap(activeTerminalId.value)
 }
 
 async function downloadTerminalLog(terminalId) {
@@ -271,8 +307,7 @@ function bindWs(sessionId) {
         const prevSeq = Number(current?.seq || 0)
         if (current && nextSeq > prevSeq) {
           if (nextSeq > prevSeq + 1) {
-            ElMessage.info('部分输出未回放，正在重新附着')
-            sendTerminalMessage({ type: 'terminal.attach', terminalId })
+            reattachForGap(terminalId)
           }
           const data = ev.payload.data || ''
           const replay = `${current.replay || ''}${data}`.slice(-256_000)
@@ -290,6 +325,7 @@ function bindWs(sessionId) {
         if (ev.payload?.truncated) {
           ElMessage.info('回放已截断，仅显示最近输出')
         }
+        gapStreak = 0
         upsertTerminal({
           ...(ev.payload?.terminal || {}),
           id: ev.payload?.terminalId,

@@ -9,6 +9,27 @@
       <span class="terminal-status">{{ statusText }}</span>
     </header>
 
+    <section v-if="showFailure" class="terminal-failure" role="alert">
+      <div class="terminal-failure-head">
+        <span class="terminal-failure-icon" aria-hidden="true">⚠</span>
+        <span class="terminal-failure-title">启动失败</span>
+        <button type="button" class="terminal-failure-copy" @click="copyDiagnostics">
+          复制诊断
+        </button>
+      </div>
+      <p class="terminal-failure-msg">{{ failureReason || '终端未能启动。' }}</p>
+      <dl class="terminal-failure-meta">
+        <div v-if="terminal.command" class="terminal-failure-row">
+          <dt>命令</dt>
+          <dd>{{ terminal.command }}</dd>
+        </div>
+        <div v-if="terminal.cwd" class="terminal-failure-row">
+          <dt>目录</dt>
+          <dd>{{ terminal.cwd }}</dd>
+        </div>
+      </dl>
+    </section>
+
     <pre class="terminal-preview" :class="{ 'is-empty': !hasOutput }"><span
       class="terminal-preview-body"
     >{{ preview }}</span></pre>
@@ -43,6 +64,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { stripAnsi } from '@acw/shared'
 import { isTerminalRunning, terminalStatusText } from '../../composables/terminalStatus'
 
@@ -58,6 +80,55 @@ const PREVIEW_LINES = 40
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 
 const statusText = computed(() => terminalStatusText(props.terminal.status, 'card') || '未知')
+
+// CLI-05: surface the real failure reason + command/cwd instead of leaving it
+// buried in the replay, plus a copyable diagnostic blob.
+const failureReason = computed(() =>
+  String(props.terminal.lastError || props.terminal.error?.message || ''),
+)
+const showFailure = computed(
+  () => props.terminal.status === 'failed' || !!props.terminal.lastError,
+)
+
+function diagnosticText() {
+  const t = props.terminal
+  return [
+    `label: ${t.label || ''}`,
+    `runtime: ${t.runtime || ''}`,
+    `command: ${t.command || ''}`,
+    `cwd: ${t.cwd || ''}`,
+    `status: ${t.status || ''}`,
+    `exitCode: ${t.exitCode ?? ''}`,
+    `error: ${t.lastError || ''}`,
+    `at: ${new Date().toISOString()}`,
+  ].join('\n')
+}
+
+async function copyDiagnostics() {
+  const text = diagnosticText()
+  try {
+    if (typeof navigator !== 'undefined' && navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      ElMessage.success('诊断信息已复制')
+      return
+    }
+  } catch {
+    /* fall through to the execCommand path */
+  }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    ElMessage.success('诊断信息已复制')
+  } catch {
+    ElMessage.error('复制失败')
+  }
+}
 
 const previewLines = computed(() =>
   stripAnsi(props.terminal.previewReplay || props.terminal.replay)
@@ -158,6 +229,83 @@ const elapsedText = computed(() => {
   padding: 2px 6px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.07);
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+
+.terminal-failure {
+  margin: 8px 12px 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.terminal-failure-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.terminal-failure-icon {
+  color: #ff6b6b;
+  font-size: 13px;
+}
+
+.terminal-failure-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff9a9a;
+}
+
+.terminal-failure-copy {
+  margin-left: auto;
+  border: 0;
+  border-radius: 7px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffd0d0;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+
+.terminal-failure-copy:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.terminal-failure-msg {
+  margin: 0 0 6px;
+  color: #f2c0c0;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.terminal-failure-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.terminal-failure-row {
+  display: flex;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #b9a2a5;
+}
+
+.terminal-failure-row dt {
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+
+.terminal-failure-row dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
 }
 

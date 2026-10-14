@@ -10,6 +10,8 @@ process.env.GROK_HOME = home
 const {
   probeGrokStatus,
   probeCursorStatus,
+  probeCursorStatusAsync,
+  probeGrokStatusAsync,
   loadGrokExampleConfig,
 } = await import('../src/grokStatus.js')
 const { grokCanRun, grokSetupNeeded } = await import('@acw/shared')
@@ -69,7 +71,27 @@ test('probeCursorStatus reports status structure', () => {
   assert.equal(s.installed, false)
   assert.equal(s.canRun, false)
   assert.equal(s.loggedIn, false)
+  assert.equal(s.loginChecked, false)
   assert.ok(s.gaps.includes('install'))
   assert.equal(s.command, 'cursor-nonexistent-command-xyz')
   assert.match(s.install, /cursor\.com/)
+})
+
+test('probeCursorStatusAsync reports a missing CLI as not installed', async () => {
+  const s = await probeCursorStatusAsync({ command: 'cursor-nonexistent-command-xyz' })
+  assert.equal(s.installed, false)
+  assert.equal(s.canRun, false)
+  assert.equal(s.loggedIn, false)
+  assert.equal(s.loginChecked, false)
+  assert.equal(s.command, 'cursor-nonexistent-command-xyz')
+  assert.ok(s.gaps.includes('install'))
+})
+
+test('probeGrokStatusAsync mirrors the sync probe shape', async () => {
+  const s = await probeGrokStatusAsync({ command: 'grok-acw-missing-binary' })
+  const sync = probeGrokStatus({ command: 'grok-acw-missing-binary' })
+  assert.deepEqual(Object.keys(s).sort(), Object.keys(sync).sort())
+  assert.equal(s.installed, sync.installed)
+  assert.equal(s.canRun, sync.canRun)
+  assert.equal(s.ready, sync.ready)
 })

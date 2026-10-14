@@ -20,6 +20,22 @@ export function runIntegrityCheck() {
   return { ok, detail }
 }
 
+/** True when the file starts with the gzip magic bytes (0x1f 0x8b). */
+export function isGzipFile(absPath) {
+  try {
+    const fd = fs.openSync(absPath, 'r')
+    try {
+      const buf = Buffer.alloc(2)
+      const n = fs.readSync(fd, buf, 0, 2, 0)
+      return n >= 2 && buf[0] === 0x1f && buf[1] === 0x8b
+    } finally {
+      fs.closeSync(fd)
+    }
+  } catch {
+    return false
+  }
+}
+
 function stamp() {
   const d = new Date()
   const p = (n) => String(n).padStart(2, '0')
