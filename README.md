@@ -315,6 +315,7 @@ packages/  可直接运行的三平台压缩包
 - [ ] 5.1.0（规划）：全量优化清单，内置 CLI / 桌面壳 / 安全 / 仓库瘦身 / 发布门禁，见 [docs/5.1.0-plan.md](./docs/5.1.0-plan.md)
 - [ ] 5.2.0（规划）：熔炉 Cursor CLI 复制粘贴、炼化还原、文档中心与页面样式，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
 - [ ] 5.3.0（规划）：步骤快照与还原中心、模板导入导出、自定义 Agent、命令面板，见 [docs/5.3.0-plan.md](./docs/5.3.0-plan.md)
+- [ ] 5.4.0（规划）：完整系统通知（桌面端优先），见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
 - [ ] 后续：macOS/Linux 桌面壳、无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
