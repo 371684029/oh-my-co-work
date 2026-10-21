@@ -223,6 +223,37 @@ export const strings = {
       elapsedSeconds: '{seconds} 秒',
       elapsedMinutes: '{minutes} 分 {seconds} 秒',
     },
+    status: {
+      workspace: {
+        starting: '启动中',
+        running: '交互中',
+        exited: '已结束',
+        failed: '启动失败',
+        killed: '已停止',
+        timed_out: '已超时',
+        interrupted: '已中断',
+      },
+      card: {
+        starting: '启动中',
+        running: '运行中',
+        exited: '已完成',
+        failed: '启动失败',
+        killed: '已停止',
+        timed_out: '已超时',
+        interrupted: '已中断',
+      },
+      furnace: {
+        starting: '启动中',
+        running: '交互中',
+        exited: '已结束',
+        failed: '启动失败',
+        killed: '已停止',
+      },
+    },
+    connection: {
+      connecting: '连接中',
+      reconnecting: '重连中',
+    },
     view: {
       ariaLabel: '交互式终端',
       ctxCopy: '复制',
