@@ -1,17 +1,20 @@
 /** DocsHub session/file status labels (FE-01 pure logic). */
 
-const STATUS_LABELS = {
-  active: '进行中',
-  running: '执行中',
-  waiting_human: '待确认',
-  interrupted: '待恢复',
-  archived: '已归档',
-  failed: '失败',
-  paused: '暂停',
-}
+import { t } from '../../i18n/index.js'
 
 export function docsSessionStatusLabel(s) {
-  return STATUS_LABELS[s] || s || '未知'
+  const key = String(s || '')
+  const map = {
+    active: 'docs.status.active',
+    running: 'docs.status.running',
+    waiting_human: 'docs.status.waitingHuman',
+    interrupted: 'docs.status.interrupted',
+    archived: 'docs.status.archived',
+    failed: 'docs.status.failed',
+    paused: 'docs.status.paused',
+  }
+  if (map[key]) return t(map[key])
+  return key || t('docs.status.unknown')
 }
 
 export function docsSessionStatusClass(s) {
@@ -24,7 +27,10 @@ export function docsSessionStatusClass(s) {
 export function docsFileLabel(f) {
   if (f?.kind === 'step') {
     const m = /step-(\d{2})/.exec(f.name || '')
-    return m ? `节点台账 · step-${m[1]}` : '节点台账'
+    if (m) {
+      return t('docs.file.stepLedger').replace('{step}', m[1])
+    }
+    return t('docs.file.stepLedgerGeneric')
   }
   return f?.title || f?.name || ''
 }

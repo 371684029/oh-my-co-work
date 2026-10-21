@@ -195,6 +195,10 @@ export const strings = {
       toolbarIdle: '@ 成员/节点 · # 参数 · / 指令 · Enter 发送',
       footerGate: '待确认与消息共用下方输入框 · 附言会记入群报告',
       footerIdle: '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告',
+      removePending: '移除',
+      slashTrigger: '斜杠指令 /',
+      uploadFile: '上传文件',
+      copyInput: '复制输入框内容',
       footerHint: {
         default: '输入消息 · 展开',
         sessionStart: '确认开始 · 展开',
@@ -319,6 +323,20 @@ export const strings = {
       outline: '文档目录',
       exportGroup: '导出群模板 {title} 的全部文档',
       viewGroup: '查看群模板 {title} 的文档',
+    },
+    status: {
+      active: '进行中',
+      running: '执行中',
+      waitingHuman: '待确认',
+      interrupted: '待恢复',
+      archived: '已归档',
+      failed: '失败',
+      paused: '暂停',
+      unknown: '未知',
+    },
+    file: {
+      stepLedger: '节点台账 · step-{step}',
+      stepLedgerGeneric: '节点台账',
     },
     welcome: {
       selectTitle: '选择左侧文档查看',

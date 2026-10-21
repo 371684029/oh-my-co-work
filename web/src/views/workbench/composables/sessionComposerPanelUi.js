@@ -53,3 +53,19 @@ export function composerHashPanelTip() {
 export function composerHashEmptyHint() {
   return t('workbench.composer.hashEmpty')
 }
+
+export function composerRemovePendingTitle() {
+  return t('workbench.composer.removePending')
+}
+
+export function composerSlashTriggerTitle() {
+  return t('workbench.composer.slashTrigger')
+}
+
+export function composerUploadFileTitle() {
+  return t('workbench.composer.uploadFile')
+}
+
+export function composerCopyInputTitle() {
+  return t('workbench.composer.copyInput')
+}
