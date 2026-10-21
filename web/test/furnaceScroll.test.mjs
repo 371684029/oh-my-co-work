@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const layoutCss = fs.readFileSync(path.join(root, 'src/components/terminal/furnaceLayout.css'), 'utf8')
 const vueSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceWorkspace.vue'), 'utf8')
+const headSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceWorkspaceHead.vue'), 'utf8')
 const viewSrc = fs.readFileSync(path.join(root, 'src/components/terminal/TerminalView.vue'), 'utf8')
 const hookSrc = fs.readFileSync(path.join(root, 'src/composables/useFurnaceWorkspace.js'), 'utf8')
 const presentationSrc = fs.readFileSync(
@@ -16,7 +17,7 @@ const presentationSrc = fs.readFileSync(
 
 test('熔炉默认隐藏 GUI 入口', () => {
   assert.match(vueSrc, /const guiEnabled = false/)
-  assert.match(vueSrc, /v-if="guiEnabled"/)
+  assert.match(headSrc, /v-if="guiEnabled"/)
 })
 
 test('GUI 对话区是独立滚动容器，不靠撑高整页', () => {
@@ -51,7 +52,8 @@ test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => 
   assert.match(vueSrc, /furnaceAgentFromHotkey/)
   assert.match(vueSrc, /setActiveAgent/)
   assert.match(vueSrc, /ensure-agent/)
-  assert.match(vueSrc, /furnaceAgentGrokTitle/)
+  assert.match(headSrc, /furnaceAgentGrokTitle/)
+  assert.match(headSrc, /role="tablist"/)
 })
 
 test('xterm 尊重 prefs.scrollback 与 fontSize，不再强行抬到 10000', () => {

@@ -58,6 +58,18 @@ export function furnaceAgentGrokTitle() {
   return t('furnace.chrome.agentGrokTitle')
 }
 
+export function furnaceAgentGrokTabLabel() {
+  return t('furnace.agentGrokTab')
+}
+
+export function furnaceAgentCursorTabLabel() {
+  return t('furnace.agentCursorTab')
+}
+
+export function furnaceAgentTabsAria() {
+  return t('furnace.agentTabsAria')
+}
+
 export function furnaceAgentCursorTitle() {
   return t('furnace.chrome.agentCursorTitle')
 }

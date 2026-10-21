@@ -149,6 +149,11 @@ import {
 } from './sessionDocsNavUi.js'
 import { buildSessionGateBody } from './sessionGateRequestUi.js'
 import {
+  pickDefaultStartTarget,
+  shouldSaveComposerDraftOnSessionSwitch,
+  workbenchSessionRoute,
+} from './sessionLoadListsUi.js'
+import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
 } from './sessionFlowNavUi.js'
@@ -577,8 +582,8 @@ async function loadLists() {
   groups.value = await api.groups.list()
   members.value = await api.members.list()
   if (!startTarget.value) {
-    if (groups.value[0]) startTarget.value = `g:${groups.value[0].id}`
-    else if (startableMembers.value[0]) startTarget.value = `m:${startableMembers.value[0].id}`
+    const picked = pickDefaultStartTarget(groups.value, members.value)
+    if (picked) startTarget.value = picked
   }
   try {
     const sc = await api.slashCommands.list()
@@ -604,13 +609,13 @@ async function loadDetail(id) {
 async function selectSession(id) {
   if (!id) return
   const prev = activeId.value
-  if (prev && prev !== id) {
+  if (shouldSaveComposerDraftOnSessionSwitch(prev, id)) {
     saveInputDraft(composerScopeKey(prev), readSenderTextRaw())
   }
   composerHistIndex = -1
   activeId.value = id
   terminalBridge.resetTerminals?.()
-  _router.replace(`/workbench/${id}`)
+  _router.replace(workbenchSessionRoute(id))
   useFlowStore().rightTab = 'flow' // 默认展示流程 Tab
   useFlowStore().expandedSkippedFlowGroups = {}
   terminalBridge.bindWs?.(id)

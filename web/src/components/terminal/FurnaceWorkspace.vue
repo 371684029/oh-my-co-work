@@ -5,106 +5,24 @@
       class="furnace-workspace"
       :class="{ 'is-pagefill': isPagefill, 'is-chat': surface === 'chat' }"
     >
-      <header class="furnace-head">
-        <div class="furnace-leading">
-          <button
-            type="button"
-            class="furnace-btn"
-            :title="furnaceBackToChatTitle()"
-            @click="$emit('close')"
-          >
-            {{ furnaceBackToChatLabel() }}
-          </button>
-          <span class="furnace-divider" />
-          <div class="furnace-agent-tabs">
-            <button
-              type="button"
-              class="furnace-agent-tab"
-              :class="{ active: activeAgent === 'grok' }"
-              :title="furnaceAgentGrokTitle()"
-              @click="setActiveAgent('grok')"
-            >
-              <span class="agent-dot grok" />
-              Grok CLI
-            </button>
-            <button
-              type="button"
-              class="furnace-agent-tab"
-              :class="{ active: activeAgent === 'cursor' }"
-              :title="furnaceAgentCursorTitle()"
-              @click="setActiveAgent('cursor')"
-            >
-              <span class="agent-dot cursor" />
-              Cursor CLI
-            </button>
-          </div>
-          <div class="furnace-identity">
-            <span class="furnace-state">{{ statusText }}</span>
-          </div>
-        </div>
-        <div class="furnace-actions">
-          <button
-            v-if="guiEnabled"
-            type="button"
-            class="furnace-btn"
-            :class="{ on: surface === 'chat' }"
-            :title="furnaceGuiModeTitle()"
-            @click="surface = 'chat'"
-          >
-            {{ furnaceGuiLabel() }}
-          </button>
-          <button
-            v-if="guiEnabled"
-            type="button"
-            class="furnace-btn"
-            :class="{ on: surface === 'tui' }"
-            :title="furnaceTuiModeTitle()"
-            @click="surface = 'tui'"
-          >
-            {{ furnaceTuiLabel() }}
-          </button>
-          <button
-            type="button"
-            class="furnace-btn"
-            :title="furnacePagefillTitle(isPagefill)"
-            @click="togglePagefill"
-          >
-            {{ furnacePagefillLabel(isPagefill) }}
-          </button>
-          <button
-            type="button"
-            class="furnace-btn"
-            data-fullscreen-control
-            :title="furnaceBrowserFullscreenTitle(isFullscreen)"
-            @click="toggleTerminalFullscreen"
-          >
-            {{ furnaceFullscreenLabel(isFullscreen) }}
-          </button>
-          <details class="furnace-more">
-            <summary class="furnace-btn" :title="furnaceProcessMenuTitle()">{{ furnaceProcessMenuSummary() }}</summary>
-            <div class="furnace-more-menu">
-              <button type="button" class="furnace-more-item" @click="emit('reopen', { agent: activeAgent })">{{ furnaceReopenLabel() }}</button>
-              <button
-                v-if="isRunning"
-                type="button"
-                class="furnace-more-item danger"
-                @click="$emit('close-furnace')"
-              >
-                {{ furnaceCloseFurnaceLabel() }}
-              </button>
-            </div>
-          </details>
-        </div>
-      </header>
-      <div
-        v-if="cliBanner"
-        class="furnace-cli-banner"
-        :class="`is-${cliBanner.kind}`"
-        role="status"
-      >
-        <strong>{{ cliBanner.title }}</strong>
-        <span>{{ cliBanner.hint }}</span>
-      </div>
+      <FurnaceWorkspaceHead
+        :surface="surface"
+        :active-agent="activeAgent"
+        :gui-enabled="guiEnabled"
+        :status-text="statusText"
+        :cli-banner="cliBanner"
+        :is-pagefill="isPagefill"
+        :is-fullscreen="isFullscreen"
+        :is-running="isRunning"
+        :is-chat-surface="surface === 'chat'"
+        @close="$emit('close')"
+        @close-furnace="$emit('close-furnace')"
+        @reopen="emit('reopen', $event)"
+        @select-agent="setActiveAgent"
+        @update:surface="surface = $event"
+        @toggle-pagefill="togglePagefill"
+        @toggle-fullscreen="toggleTerminalFullscreen"
+      />
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
@@ -355,6 +273,7 @@ import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import FurnaceChatWelcome from './FurnaceChatWelcome.vue'
+import FurnaceWorkspaceHead from './FurnaceWorkspaceHead.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
@@ -368,27 +287,13 @@ import {
   shouldIgnoreFurnaceHotkeyTarget,
 } from './furnaceWorkspaceUi.js'
 import {
-  furnaceAgentCursorTitle,
-  furnaceAgentGrokTitle,
   furnaceAttachmentButtonLabel,
   furnaceAttachmentTitle,
-  furnaceBackToChatLabel,
-  furnaceBackToChatTitle,
-  furnaceBrowserFullscreenTitle,
   furnaceChatPlaceholder,
-  furnaceCloseFurnaceLabel,
   furnaceComposeBarHint,
-  furnaceFullscreenLabel,
-  furnaceGuiLabel,
-  furnaceGuiModeTitle,
   furnaceInputTipsDescription,
   furnaceInputTipsTitle,
-  furnacePagefillLabel,
-  furnacePagefillTitle,
-  furnaceProcessMenuSummary,
-  furnaceProcessMenuTitle,
   furnaceRemovePendingTitle,
-  furnaceReopenLabel,
   furnaceRoleYouLabel,
   furnaceSendLabel,
   furnaceChatPendingLabel,
@@ -619,7 +524,6 @@ onUnmounted(() => {
   background: #17191f;
 }
 
-.furnace-head,
 .furnace-foot {
   display: flex;
   align-items: center;
@@ -627,125 +531,10 @@ onUnmounted(() => {
   padding: 8px 12px;
 }
 
-.furnace-cli-banner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  align-items: baseline;
-  margin: 0 12px 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 12px;
-  line-height: 1.45;
-  background: rgba(64, 158, 255, 0.1);
-  border: 1px solid rgba(64, 158, 255, 0.25);
-}
-.furnace-cli-banner.is-error {
-  background: rgba(245, 108, 108, 0.12);
-  border-color: rgba(245, 108, 108, 0.35);
-}
-.furnace-cli-banner.is-auth,
-.furnace-cli-banner.is-approval {
-  background: rgba(230, 162, 60, 0.12);
-  border-color: rgba(230, 162, 60, 0.35);
-}
-.furnace-cli-banner strong {
-  font-size: 12px;
-}
-
-.furnace-head {
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.furnace-workspace:not(.is-chat) .furnace-head,
 .furnace-workspace:not(.is-chat) .furnace-foot {
   background: linear-gradient(180deg, #23262e, #1e2128);
   color: #cfd4de;
   border-color: rgba(255, 255, 255, 0.07);
-}
-
-.furnace-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-}
-
-.furnace-leading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.furnace-agent-tabs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.08);
-  padding: 3px;
-  border-radius: 10px;
-}
-
-.furnace-workspace:not(.is-chat) .furnace-agent-tabs {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.furnace-agent-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 7px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 550;
-  background: transparent;
-  color: #8b90a0;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.furnace-agent-tab.active {
-  background: #fff;
-  color: #1d1d1f;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-
-.furnace-workspace:not(.is-chat) .furnace-agent-tab.active {
-  background: #2d313c;
-  color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-}
-
-.agent-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.agent-dot.grok {
-  background: #34c759;
-}
-
-.agent-dot.cursor {
-  background: #5e5ce6;
-}
-
-.furnace-identity {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.furnace-state {
-  font-size: 11px;
-  color: #6e6e73;
 }
 
 .furnace-btn {
@@ -771,66 +560,6 @@ onUnmounted(() => {
 
 .furnace-btn.danger {
   color: #ff3b30;
-}
-
-.furnace-more {
-  position: relative;
-}
-
-.furnace-more summary {
-  list-style: none;
-}
-
-.furnace-more summary::-webkit-details-marker {
-  display: none;
-}
-
-.furnace-more-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 5;
-  min-width: 132px;
-  padding: 4px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(20, 16, 28, 0.16);
-}
-
-.furnace-workspace:not(.is-chat) .furnace-more-menu {
-  background: #2a2d36;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-.furnace-more-item {
-  display: block;
-  width: 100%;
-  border: 0;
-  border-radius: 8px;
-  padding: 7px 10px;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.furnace-more-item:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.furnace-workspace:not(.is-chat) .furnace-more-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.furnace-more-item.danger {
-  color: #ff3b30;
-}
-
-.furnace-divider {
-  width: 1px;
-  height: 16px;
-  background: rgba(0, 0, 0, 0.12);
 }
 
 .furnace-tui-toggle {
