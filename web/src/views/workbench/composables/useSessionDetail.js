@@ -153,6 +153,7 @@ import {
   shouldSaveComposerDraftOnSessionSwitch,
   workbenchSessionRoute,
 } from './sessionLoadListsUi.js'
+import { shouldClearActiveSessionAfterDelete } from './sessionDeleteNavUi.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -1418,11 +1419,11 @@ async function doDelete(targetId) {
     type: 'warning',
   })
   if (!ok) return
-  const wasActive = activeId.value === id
+  const clearActive = shouldClearActiveSessionAfterDelete(id, activeId.value)
   try {
     await api.sessions.remove(id)
     await loadLists()
-    if (wasActive || activeId.value === id) {
+    if (clearActive) {
       detail.value = null
       terminalBridge.resetTerminals?.()
       terminalBridge.closeWs?.()

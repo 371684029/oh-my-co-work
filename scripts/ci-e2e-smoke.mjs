@@ -184,6 +184,11 @@ async function main() {
       await firstRunBtn.click()
       await page.waitForTimeout(400)
     }
+    const chatSearchBtn = page.getByRole('button', {
+      name: /搜索本会话聊天|Search this session/i,
+    })
+    await chatSearchBtn.waitFor({ state: 'visible', timeout: 15000 })
+
     const composer = page.getByRole('region', { name: /消息输入区|Message composer/i })
     await composer.waitFor({ state: 'visible', timeout: 30000 })
     const footerToggle = page.locator('.footer-toggle').first()

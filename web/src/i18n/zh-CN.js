@@ -163,6 +163,38 @@ export const strings = {
     },
   },
   workbench: {
+    chrome: {
+      titlePlaceholder: '未命名任务',
+      humanAttention: '需人工处理',
+      searchChat: '搜索聊天',
+      searchChatAria: '搜索本会话聊天',
+      searchPlaceholder: '搜索本会话聊天（支持拼音/首字母）',
+      searchLoading: '搜索中…',
+      searchEmpty: '没有匹配的消息',
+      detachAria: '在新窗口打开本会话',
+      pin: '置顶',
+      unpin: '取消置顶',
+      pinAria: '置顶本会话',
+      unpinAria: '取消置顶本会话',
+      delete: '删除',
+      deleteAria: '删除本会话',
+      detachFailed: '无法打开新窗口（仅桌面版支持）',
+    },
+    chatSearch: {
+      system: '系统',
+    },
+    welcome: {
+      living: '节点是死的，人是活的 · 可绕行、插队，临时协助再回来',
+      demoCta: '一键开聊：演示流',
+      pickGroup: '或左侧自选群模板后点「开聊」',
+      slogan: {
+        humanAi: '人机协同',
+        allReturn: '万物归元',
+        allWorkflow: '皆可 Workflow',
+        terminalGuard: '终端守护者',
+        furnaceConnect: '熔炉连接一切',
+      },
+    },
     start: {
       needTarget: '请选择群模板或成员',
       group: '已开聊',
