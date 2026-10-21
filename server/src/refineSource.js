@@ -8,7 +8,6 @@ import {
   assessAdaptFiles,
   collectAdaptSourcePaths,
   createAdaptBackup,
-  isProbablyBinary,
   readScriptSource,
   restoreAdaptManifest,
   stampManifestAfterPatch,
