@@ -173,6 +173,8 @@ export {
 
 export { estimateFurnaceContext, formatFurnaceContextHint } from './furnaceContextEstimate.js'
 export { inferFurnaceCliBanner } from './furnaceCliState.js'
+export { formatStepChangeSummary } from './stepChangeSummary.js'
+
 export {
   shouldDedupeNotification,
   isWithinQuietHours,

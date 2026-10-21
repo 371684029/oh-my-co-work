@@ -29,6 +29,7 @@ import { syncFurnaceSessionContext, touchFurnaceWorkflow } from '../furnaceSitua
 import { formatFurnaceRoleNotice } from '../furnaceGrokInject.js'
 import { getMember, getGroup, getSession, resolveStepForNode, templateStepIndexOf, memberNeedsProjectParams, hasProjectParam1, resolveParamsMap, parseMemberConfig,  } from './store.js'
 import { skipArchiveNode, dismissPendingArchiveIfAny, archiveSession, refreshSessionAnnouncement } from './archive.js'
+import { captureStepSnapshot, summarizeStepChange } from '../stepSnapshot.js'
 
 export async function advance(sessionId) {
   const session = getSession(sessionId)
@@ -358,6 +359,9 @@ export async function advance(sessionId) {
           }
         : {}),
     }
+    const stepWorkFolder = memberInput.workFolder
+    const stepSnapBefore = captureStepSnapshot(stepWorkFolder)
+
     engineEmit('persist_node_io', sessionId, node.id, {
       input: memberInput,
       output: { running: true },
@@ -419,9 +423,10 @@ export async function advance(sessionId) {
             refineFormatted: refineOut.formatted,
           }
         : memberInput
+    const changeSnapshot = summarizeStepChange(stepSnapBefore, stepWorkFolder)
     engineEmit('persist_node_io', sessionId, node.id, {
       input: refineInput,
-      output: result,
+      output: { ...result, changeSnapshot },
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
       finished: true,
     })

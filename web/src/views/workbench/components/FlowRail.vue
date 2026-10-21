@@ -229,6 +229,9 @@
                       · {{ reviewLabel(n) }}
                     </span>
                     <span v-if="n.gate" class="meta-gate"> · 待确认</span>
+                    <span v-if="nodeChangeSummary(n)" class="meta-change">
+                      · {{ nodeChangeSummary(n) }}
+                    </span>
                     <span class="flow-expand-caret">{{
                       flowStore.expandedNodeId === n.id ? '收起' : '展开'
                     }}</span>
@@ -252,6 +255,10 @@
                   <div class="flow-io-block">
                     <div class="flow-io-label">输入（用户说了啥）</div>
                     <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
+                  </div>
+                  <div v-if="nodeChangePatch(n)" class="flow-io-block">
+                    <div class="flow-io-label">本步改动（git diff）</div>
+                    <pre class="flow-io-pre flow-io-pre--diff">{{ nodeChangePatch(n) }}</pre>
                   </div>
                   <div class="flow-io-block">
                     <div class="flow-io-label">输出（做了啥）</div>
@@ -492,6 +499,17 @@ import {
 } from '../../docs/docsReadingPrefs.js'
 import { openPath } from '../composables/useDocsHub'
 import { recordDocsOpen } from '../../docs/docsReadingHistory.js'
+import { formatStepChangeSummary } from '@acw/shared'
+
+function nodeChangeSummary(n) {
+  return formatStepChangeSummary(n?.output?.changeSnapshot)
+}
+
+function nodeChangePatch(n) {
+  const cs = n?.output?.changeSnapshot
+  if (!cs?.patch) return ''
+  return `${cs.patch}${cs.patchTruncated ? '\n\n…（diff 已截断）' : ''}`
+}
 
 function nodeJournalDocFile(n) {
   return journalPathToDocFile(n?.journalPath)
