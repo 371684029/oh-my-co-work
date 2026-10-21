@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/composables/{sessionComposerFilterComputeds,sessionWorkbenchListComputeds,sessionDetailResetState,sessionDetailInitWatchers,useSessionDetail} web/test/{sessionComposerFilterComputeds,sessionDetailResetState}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 filter/reset/init 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds,useSessionDetail} web/test/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 gate/bubble + flow anchor 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionContextComputeds,sessionNodePresentation,useSessionDetail} web/test/{sessionContextComputeds,sessionNodePresentation}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 context/hash + node presentation 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionSenderInputBridge,sessionFlowRailHandlers,useSessionDetail} web/test/{sessionSenderInputBridge,sessionFlowRailHandlers}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 sender 桥接 + flow rail handlers

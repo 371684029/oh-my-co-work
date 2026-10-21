@@ -1,6 +1,5 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { api } from '../../../api'
-import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
@@ -21,11 +20,14 @@ import {
   adapterChoices,
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
-import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
+import { createSessionComposerFilterComputeds } from './sessionComposerFilterComputeds.js'
+import { createSessionWorkbenchListComputeds } from './sessionWorkbenchListComputeds.js'
+import { resetSessionDetailState } from './sessionDetailResetState.js'
+import { registerSessionDetailWatchers } from './sessionDetailInitWatchers.js'
 import { createSessionMessageSendActions } from './sessionMessageSendActions.js'
 import { formatSessionTime } from './sessionFormatUtils.js'
 import { isClonedNode, nodeHasAdapt, nodeHasRefine } from './sessionFlowUi.js'
-import { buildConversationItems, CONVERSATION_MENU } from './sessionListUi.js'
+import { CONVERSATION_MENU } from './sessionListUi.js'
 import {
   computeOffsiteActive,
   findActiveOffsiteNode,
@@ -133,42 +135,13 @@ const furnaceSurface = ref('tui')
 // ===== 会话列表筛选 =====
 const listFilter = ref('all')
 
-const filteredSlashCmds = computed(() => {
-  const q = (useComposerStore().slashQuery || '').toLowerCase()
-  const list = slashCommands.value.filter((c) => c.enabled !== false)
-  if (!q) return list
-  return list.filter(
-    (c) =>
-      c.slash.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      (c.description || '').toLowerCase().includes(q),
-  )
+const { filteredSlashCmds, filteredAtMembers } = createSessionComposerFilterComputeds({
+  slashCommands,
+  members,
 })
 
-const filteredAtMembers = computed(() => {
-  const q = (useComposerStore().atQuery || '').toLowerCase().trim()
-  const list = members.value || []
-  if (!q) return list
-  return list.filter(
-    (m) =>
-      String(m.display_name || '')
-        .toLowerCase()
-        .includes(q) ||
-      String(m.name || '')
-        .toLowerCase()
-        .includes(q) ||
-      String(m.config?.description || '')
-        .toLowerCase()
-        .includes(q),
-  )
-})
-
-const filterOptions = computed(() => buildSessionListFilterOptions())
-
-/** 开聊可选成员（启用中） */
-const startableMembers = computed(() =>
-  (members.value || []).filter((m) => m.enabled !== false),
-)
+const { filterOptions, startableMembers, conversationItems } =
+  createSessionWorkbenchListComputeds({ sessions, members, listFilter })
 
 const {
   sessionParamsList,
@@ -257,11 +230,6 @@ const {
 })
 
 const convMenu = CONVERSATION_MENU
-
-/** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
-const conversationItems = computed(() =>
-  buildConversationItems(sessions.value, listFilter.value),
-)
 
 const { loadLists, loadDetail, selectSession } = createSessionLoadActions({
   sessions,
@@ -476,76 +444,48 @@ export function setWorkbenchContext({ route, router }) {
 }
 
 export function resetSessionState() {
-  sessions.value = []
-  groups.value = []
-  members.value = []
-  slashCommands.value = []
-  detail.value = null
-  activeId.value = null
-  editTitle.value = ''
-  sessionNotesDraft.value = ''
-  startTarget.value = ''
-  startingChat.value = false
-  sending.value = false
-  gating.value = false
-  senderRef.value = null
-  hashInsertLockUntil = 0
-  useComposerStore().slashOpen = false
-  useComposerStore().slashQuery = ''
-  useComposerStore().slashIndex = 0
-  useComposerStore().atOpen = false
-  useComposerStore().atQuery = ''
-  useComposerStore().atIndex = 0
-  useComposerStore().hashOpen = false
-  useComposerStore().hashQuery = ''
-  useComposerStore().hashIndex = 0
-  pendingFiles.value = []
-  uploading.value = false
-  useComposerStore().footerCollapsed = false
-  useFlowStore().expandedNodeId = null
-  useFlowStore().expandedSkippedFlowGroups = {}
-  useFlowStore().rightTab = 'flow'
-  announceLoading.value = false
-  announceOpenLoading.value = false
-  notesSaving.value = false
-  listFilter.value = 'all'
-  terminalPrefs.value = {
-    theme: 'project-dark',
-    fontSize: 13,
-    cursorBlink: true,
-    pastePolicy: 'confirm',
-    autoCollapseOnExit: false,
-    scrollback: 5000,
-  }
-  furnaceSurface.value = 'tui'
+  resetSessionDetailState(
+    {
+      sessions,
+      groups,
+      members,
+      slashCommands,
+      detail,
+      activeId,
+      editTitle,
+      sessionNotesDraft,
+      startTarget,
+      startingChat,
+      sending,
+      gating,
+      senderRef,
+      pendingFiles,
+      uploading,
+      announceLoading,
+      announceOpenLoading,
+      notesSaving,
+      listFilter,
+      terminalPrefs,
+      furnaceSurface,
+    },
+    { clearHashInsertLock: () => {
+      hashInsertLockUntil = 0
+    } },
+  )
 }
 
 export function initSessionDetail({ route, router }) {
   setWorkbenchContext({ route, router })
   resetSessionState()
-  // 出现待处理闸门时自动展开底栏，避免漏操作
-  _stopWatchers.push(
-    watch(pendingGate, (g) => {
-      if (g) useComposerStore().footerCollapsed = false
-    }),
-  )
-  // 路由 / 侧栏驱动：activeId 变化即加载
-  _stopWatchers.push(
-    watch(activeId, (id, prev) => {
-      if (id && id !== prev && (!detail.value || detail.value.session.id !== id)) {
-        selectSession(id)
-      }
-    }),
-  )
-  // 流程轨锚定滚动
-  _stopWatchers.push(
-    watch(
-      [flowAnchorNodeId, () => useFlowStore().rightTab, () => detail.value?.nodes?.length],
-      () => {
-        scrollFlowToAnchor()
-      },
-    ),
-  )
+  registerSessionDetailWatchers({
+    stopWatchers: _stopWatchers,
+    pendingGate,
+    activeId,
+    detail,
+    selectSession,
+    flowAnchorNodeId,
+    scrollFlowToAnchor,
+  })
 }
 
 export function disposeSessionDetail() {
