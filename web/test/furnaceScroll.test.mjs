@@ -10,6 +10,7 @@ const vueSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceW
 const headSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceWorkspaceHead.vue'), 'utf8')
 const tuiDrawerSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceTuiDrawer.vue'), 'utf8')
 const chatTurnsSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceChatTurns.vue'), 'utf8')
+const chatComposerSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceChatComposer.vue'), 'utf8')
 const viewSrc = fs.readFileSync(path.join(root, 'src/components/terminal/TerminalView.vue'), 'utf8')
 const hookSrc = fs.readFileSync(path.join(root, 'src/composables/useFurnaceWorkspace.js'), 'utf8')
 const presentationSrc = fs.readFileSync(
@@ -39,6 +40,8 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
   assert.match(layoutCss, /\.furnace-tui-drawer[\s\S]*overflow-y:\s*scroll/)
   assert.match(layoutCss, /\.furnace-tui-toggle[\s\S]*width:\s*22px/)
   assert.match(vueSrc, /FurnaceChatTurns/)
+  assert.match(vueSrc, /FurnaceChatComposer/)
+  assert.match(chatComposerSrc, /class="furnace-composer"/)
   assert.match(chatTurnsSrc, /class="furnace-chat-turns"/)
   assert.match(vueSrc, /FurnaceTuiDrawer/)
   assert.match(tuiDrawerSrc, /class="furnace-tui-toggle"/)
