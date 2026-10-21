@@ -282,6 +282,30 @@
     </section>
 
     <section class="prefs-card">
+      <div class="prefs-title">界面语言</div>
+      <p class="prefs-hint">
+        切换后刷新页面生效。英文包仍在补齐，未翻译处可能仍显示中文。
+      </p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="语言 / Language">
+          <el-select
+            v-model="uiLocale"
+            style="max-width: 280px"
+            aria-label="界面语言"
+            @change="onLocaleChange"
+          >
+            <el-option
+              v-for="o in localeOptions"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section class="prefs-card">
       <div class="prefs-title">界面性能</div>
       <p class="prefs-hint">远程桌面或集显卡顿时可关闭毛玻璃模糊（5.2.0 UI-04）。</p>
       <el-form label-position="top" class="admin-form">
@@ -455,6 +479,7 @@ import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
 import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
+import { getLocale, setLocale, LOCALE_OPTIONS } from '../../i18n/index.js'
 
 const { isDesktop, desktopEnv, initDesktopBridge, notify: desktopNotify } = useDesktopBridge()
 initDesktopBridge()
@@ -497,6 +522,13 @@ const colorSchemeOptions = [
   { label: '深色', value: 'dark' },
 ]
 const ui = ref({ reduceEffects: false, colorScheme: 'system' })
+const uiLocale = ref(getLocale())
+const localeOptions = LOCALE_OPTIONS
+
+function onLocaleChange(value) {
+  setLocale(value)
+  window.location.reload()
+}
 const savingUi = ref(false)
 const savingTerminal = ref(false)
 const savingQuota = ref(false)

@@ -84,7 +84,7 @@ import {
   lookCell,
   lookIndexFromPointer,
 } from '../composables/furnacePetAtlas.js'
-import { t } from '../i18n/zh-CN.js'
+import { t } from '../i18n/index.js'
 
 const POS_KEY = 'acw.furnacePet.pos'
 const MIN_KEY = 'acw.furnacePet.min'

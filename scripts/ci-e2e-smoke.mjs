@@ -133,6 +133,40 @@ async function main() {
     const sessionsBody = await sessionsRes.json()
     assert.ok(Array.isArray(sessionsBody))
 
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'X-ACW-Token': token,
+      Origin: origin,
+    }
+    const memberRes = await fetch(`${base}/api/members`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        name: `e2e-${Date.now()}`,
+        display_name: 'E2E Echo',
+        kind: 'echo',
+        workFolder: root,
+        config: { defaultText: 'ok' },
+      }),
+    })
+    assert.equal(memberRes.status, 201)
+    const member = await memberRes.json()
+    const sessRes = await fetch(`${base}/api/members/${member.id}/sessions`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({}),
+    })
+    assert.equal(sessRes.status, 201)
+    const session = await sessRes.json()
+    assert.ok(session.id)
+
+    const termsRes = await fetch(`${base}/api/sessions/${session.id}/terminals`, {
+      headers: { 'X-ACW-Token': token, Origin: origin },
+    })
+    assert.equal(termsRes.status, 200)
+    const termsBody = await termsRes.json()
+    assert.ok(Array.isArray(termsBody.terminals))
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})
