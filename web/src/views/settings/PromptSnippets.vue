@@ -45,7 +45,7 @@ function preview(body) {
 async function load() {
   loading.value = true
   try {
-    const s = await api.settings.get()
+    const s = await api.appSettings.get()
     rows.value = Array.isArray(s.promptSnippets) ? [...s.promptSnippets] : []
   } catch (e) {
     ElMessage.error(e.message)
@@ -57,7 +57,7 @@ async function load() {
 async function saveAll(next) {
   loading.value = true
   try {
-    await api.settings.patch({ promptSnippets: next })
+    await api.appSettings.update({ promptSnippets: next })
     rows.value = next
     ElMessage.success('已保存')
   } catch (e) {
