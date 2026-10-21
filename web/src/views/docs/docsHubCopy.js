@@ -154,6 +154,12 @@ export function docsHubInDocCloseLabel() {
   return t('docs.inDoc.close')
 }
 
+export function docsHubInDocSearchBanner(query, pager) {
+  const q = String(query || '')
+  const p = String(pager || '')
+  return t('docs.inDoc.banner').replace('{query}', q).replace('{pager}', p)
+}
+
 export function docsHubSearchingLabel() {
   return t('docs.list.searching')
 }

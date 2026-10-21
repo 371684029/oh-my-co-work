@@ -89,6 +89,14 @@ export const strings = {
       unpinned: 'Unpinned',
       failed: 'Action failed',
     },
+    flow: {
+      restartOffsiteBlocked: 'Offsite assist has no restart; use a normal node on the right',
+      restartArchiveBlocked: 'Archived nodes cannot restart; pick a normal node',
+      restartJump: 'Jumped to “{title}”{suffix}',
+      restartContinue: 'Continuing from “{title}”{suffix}',
+      restartSuffixRecovered: ' · recovered',
+      restartSuffixOffsiteArchived: ' · offsite segment archived',
+    },
     gate: {
       approveStart: 'Approved; starting run',
       cancelStart: 'Cancelled; task closed',
@@ -166,6 +174,7 @@ export const strings = {
       prev: 'Previous',
       next: 'Next',
       close: 'Close',
+      banner: 'Body “{query}” · {pager}',
     },
     list: {
       searching: 'Searching…',

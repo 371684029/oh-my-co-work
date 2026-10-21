@@ -38,6 +38,10 @@ import {
   writeDocsHubSortMode,
 } from '../../docs/docsHubSortUi.js'
 import { t } from '../../../i18n/index.js'
+import {
+  formatInDocSearchPager,
+  stepInDocSearchIndex,
+} from '../../docs/docsHubInDocSearchUi.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -152,14 +156,13 @@ function setInDocMarkTotal(n) {
 
 function stepInDocSearchMark(delta) {
   if (!inDocSearch.value || !inDocMarkTotal.value) return
-  const n = inDocMarkTotal.value
-  const next = (inDocSearch.value.markIndex + delta + n) % n
+  const next = stepInDocSearchIndex(inDocSearch.value.markIndex, delta, inDocMarkTotal.value)
   inDocSearch.value = { ...inDocSearch.value, markIndex: next }
 }
 
 const inDocSearchLabel = computed(() => {
   if (!inDocSearch.value || !inDocMarkTotal.value) return ''
-  return `${inDocSearch.value.markIndex + 1} / ${inDocMarkTotal.value}`
+  return formatInDocSearchPager(inDocSearch.value.markIndex, inDocMarkTotal.value)
 })
 
 async function doSearch(q) {

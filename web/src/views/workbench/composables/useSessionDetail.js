@@ -62,6 +62,11 @@ import {
   sessionPinFailedMessage,
   sessionPinSuccessMessage,
 } from './sessionPinFeedbackUi.js'
+import {
+  restartArchiveBlockedMessage,
+  restartFromNodeSuccessMessage,
+  restartOffsiteBlockedMessage,
+} from './sessionFlowRestartUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -1107,11 +1112,11 @@ function scrollFlowToAnchor() {
 async function restartFromNode(n) {
   if (!n || !activeId.value) return
   if (n.step_type === 'offsite') {
-    ElMessage.warning('临时协助没有「重新开始」；请点右侧正常节点「从这里继续」')
+    ElMessage.warning(restartOffsiteBlockedMessage())
     return
   }
   if (n.step_type === 'archive') {
-    ElMessage.warning('归档节点没有「重新开始」；请点右侧正常节点')
+    ElMessage.warning(restartArchiveBlockedMessage())
     return
   }
   if (gating.value) return
@@ -1131,15 +1136,14 @@ async function restartFromNode(n) {
     useFlowStore().expandedNodeId = focusId
     scrollFlowToAnchor()
     const title = r.title || n.title || `步骤 ${n.step_index + 1}`
-    const suffix = wasArchived
-      ? ' · 已恢复'
-      : wasOffsite || r.offsiteArchived
-        ? ' · 临时协助本段已归档'
-        : ''
     ElMessage.success(
-      r.forwardJump
-        ? `已跳到「${title}」继续${suffix}`
-        : `已从「${title}」继续${suffix}`,
+      restartFromNodeSuccessMessage({
+        title,
+        forwardJump: r.forwardJump,
+        wasArchived,
+        wasOffsite,
+        offsiteArchived: r.offsiteArchived,
+      }),
     )
   } catch (e) {
     // 业务异常由接口呈现，不再 toast Error
