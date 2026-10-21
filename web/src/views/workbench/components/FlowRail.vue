@@ -270,7 +270,7 @@
                     type="primary"
                     @click.stop="restartFromNode(n)"
                   >
-                    从这里继续
+                    {{ flowRailRestartFromHereLabel() }}
                   </el-button>
                 </div>
                 <div v-if="flowStore.expandedNodeId === n.id" class="flow-io">
@@ -526,6 +526,7 @@ import {
   flowRailTabFlow,
   flowRailTabTimeline,
 } from '../composables/flowRailCopy.js'
+import { flowRailRestartFromHereLabel } from '../composables/sessionFlowRestartUi.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   detail,

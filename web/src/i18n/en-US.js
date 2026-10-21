@@ -399,6 +399,7 @@ export const strings = {
       failed: 'Action failed',
     },
     flow: {
+      restartFromHere: 'Continue from here',
       restartOffsiteBlocked: 'Offsite assist has no restart; use a normal node on the right',
       restartArchiveBlocked: 'Archived nodes cannot restart; pick a normal node',
       restartJump: 'Jumped to “{title}”{suffix}',
