@@ -107,6 +107,25 @@ async function main() {
     const list2 = await backups2.json()
     assert.ok(list2.backups.length >= beforeCount + 1)
 
+    const backupName = path.basename(String(backup.path || ''))
+    assert.ok(/^acw-backup-/.test(backupName))
+
+    const restored = await fetch(`${base}/api/update/restore`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-ACW-Token': token,
+        Origin: origin,
+      },
+      body: JSON.stringify({ filename: backupName }),
+    })
+    assert.equal(restored.status, 200)
+    const restoreBody = await restored.json()
+    assert.equal(restoreBody.ok, true)
+
+    const healthAfter = await fetch(`${base}/api/health`)
+    assert.equal(healthAfter.status, 200)
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})
