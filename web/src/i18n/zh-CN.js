@@ -1,6 +1,8 @@
 /**
  * I18N-01: user-visible strings (Chinese primary; extend with en-US later).
  */
+import { settingsPrefsZh } from './settingsPrefs.zh.js'
+
 export const strings = {
   common: {
     confirm: '确定',
@@ -613,6 +615,7 @@ export const strings = {
     about: '关于与更新',
     projectSection: '项目',
     metaSection: '其它',
+    prefsPage: settingsPrefsZh,
   },
   docs: {
     colTitleGroup: '群模板',
