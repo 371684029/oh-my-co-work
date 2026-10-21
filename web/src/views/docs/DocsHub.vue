@@ -511,6 +511,11 @@ import {
   totalDocsSessionCount,
 } from './docsHubFilterUi.js'
 import { highlightSearchSnippet } from './docsHubSearchUi.js'
+import {
+  docsExpandSessionInTree,
+  isDocsSessionExpanded,
+  toggleDocsSessionExpansion,
+} from './docsHubSessionUi.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -578,21 +583,18 @@ const totalSessionsCount = computed(() => totalDocsSessionCount(groups.value))
 const displayedGroups = computed(() => filterDocsGroupsById(groups.value, selectedGroupId.value))
 
 function isSessionExpanded(id) {
-  return expandedSessions.value[id] !== false
+  return isDocsSessionExpanded(expandedSessions.value, id)
 }
 
 function toggleSession(id) {
-  expandedSessions.value[id] = !isSessionExpanded(id)
+  expandedSessions.value = toggleDocsSessionExpansion(expandedSessions.value, id)
 }
 
 function expandFor(sessionId) {
-  for (const g of groups.value) {
-    if ((g.sessions || []).some((s) => s.sessionId === sessionId)) {
-      selectedGroupId.value = groupKey(g)
-      expandedSessions.value[sessionId] = true
-      return
-    }
-  }
+  const patch = docsExpandSessionInTree(groups.value, sessionId, expandedSessions.value)
+  if (!patch) return
+  selectedGroupId.value = patch.selectedGroupId
+  expandedSessions.value = patch.expandedSessions
 }
 
 function isActiveFile(sessionId, name) {

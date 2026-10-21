@@ -30,6 +30,20 @@ export const strings = {
     peek: 'Expand',
     minimize: 'Collapse',
   },
+  settings: {
+    members: 'Members',
+    groups: 'Group templates',
+    shortcuts: 'Slash / hotkeys',
+    snippets: 'Prompt snippets',
+    wizard: 'Setup wizard',
+    prefs: 'Preferences',
+    restore: 'Restore center',
+    grok: 'Grok Build guide',
+    support: 'Support',
+    about: 'About & updates',
+    projectSection: 'Project',
+    metaSection: 'Other',
+  },
 }
 
 export function t(key) {

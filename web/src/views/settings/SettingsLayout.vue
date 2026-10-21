@@ -1,23 +1,23 @@
 <template>
   <div class="settings-layout">
     <aside class="settings-side" role="navigation" :aria-label="t('a11y.settingsSideNav')">
-      <div class="settings-side-label">项目</div>
+      <div class="settings-side-label">{{ t('settings.projectSection') }}</div>
       <el-menu
         :default-active="route.path"
         router
         class="settings-menu"
         :aria-label="t('a11y.settingsProjectMenu')"
       >
-        <el-menu-item index="/settings/members">成员管理</el-menu-item>
-        <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
-        <el-menu-item index="/settings/shortcuts">斜杠 / 快捷键</el-menu-item>
-        <el-menu-item index="/settings/snippets">提示词片段</el-menu-item>
-        <el-menu-item index="/settings/wizard">首次向导</el-menu-item>
+        <el-menu-item index="/settings/members">{{ t('settings.members') }}</el-menu-item>
+        <el-menu-item index="/settings/groups">{{ t('settings.groups') }}</el-menu-item>
+        <el-menu-item index="/settings/shortcuts">{{ t('settings.shortcuts') }}</el-menu-item>
+        <el-menu-item index="/settings/snippets">{{ t('settings.snippets') }}</el-menu-item>
+        <el-menu-item index="/settings/wizard">{{ t('settings.wizard') }}</el-menu-item>
       </el-menu>
 
       <div class="settings-side-divider" aria-hidden="true" />
 
-      <div class="settings-side-label settings-side-label--meta">其它</div>
+      <div class="settings-side-label settings-side-label--meta">{{ t('settings.metaSection') }}</div>
       <el-menu
         :default-active="route.path"
         router
@@ -25,19 +25,19 @@
         :aria-label="t('a11y.settingsMetaMenu')"
       >
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
-          设置
+          {{ t('settings.prefs') }}
         </el-menu-item>
         <el-menu-item index="/settings/restore" class="menu-item-meta">
-          还原中心
+          {{ t('settings.restore') }}
         </el-menu-item>
         <el-menu-item index="/settings/grok" class="menu-item-meta">
-          Grok Build 教程
+          {{ t('settings.grok') }}
         </el-menu-item>
         <el-menu-item index="/settings/support" class="menu-item-meta">
-          支持与交流
+          {{ t('settings.support') }}
         </el-menu-item>
         <el-menu-item index="/settings/about" class="menu-item-meta">
-          关于与更新
+          {{ t('settings.about') }}
         </el-menu-item>
       </el-menu>
     </aside>

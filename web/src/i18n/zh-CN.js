@@ -35,6 +35,20 @@ export const strings = {
   desktop: {
     openDetachedWindow: '在新窗口打开会话',
   },
+  settings: {
+    members: '成员管理',
+    groups: '群聊模板',
+    shortcuts: '斜杠 / 快捷键',
+    snippets: '提示词片段',
+    wizard: '首次向导',
+    prefs: '设置',
+    restore: '还原中心',
+    grok: 'Grok Build 教程',
+    support: '支持与交流',
+    about: '关于与更新',
+    projectSection: '项目',
+    metaSection: '其它',
+  },
 }
 
 export function t(key) {
