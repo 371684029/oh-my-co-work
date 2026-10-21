@@ -1,3 +1,5 @@
+import { t } from '../../../i18n/index.js'
+
 /** Parse session.context whether stored as object or JSON string. */
 export function parseSessionContext(session) {
   const ctx = session?.context || session?.context_json
@@ -55,12 +57,12 @@ export function previewHashValue(v) {
 
 /** Collapsed composer footer hint when a gate is active. */
 export function footerCollapsedHintForPendingGate(gate) {
-  if (!gate) return '输入消息 · 展开'
+  if (!gate) return t('workbench.composer.footerHint.default')
   const mode = gate.content?.mode
-  if (mode === 'session_start') return '确认开始 · 展开'
-  if (mode === 'human_input' || mode === 'need_params') return '请输入 · 展开'
-  if (mode === 'adapter_question') return '工具提问 · 展开'
-  if (mode === 'interrupted') return '崩溃恢复 · 展开'
-  if (gate.content?.requireHuman) return '须人工同意 · 展开'
-  return '待你处理 · 展开'
+  if (mode === 'session_start') return t('workbench.composer.footerHint.sessionStart')
+  if (mode === 'human_input' || mode === 'need_params') return t('workbench.composer.footerHint.humanInput')
+  if (mode === 'adapter_question') return t('workbench.composer.footerHint.adapterQuestion')
+  if (mode === 'interrupted') return t('workbench.composer.footerHint.interrupted')
+  if (gate.content?.requireHuman) return t('workbench.composer.footerHint.requireHuman')
+  return t('workbench.composer.footerHint.pending')
 }

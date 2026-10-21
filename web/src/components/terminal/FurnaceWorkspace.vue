@@ -175,7 +175,7 @@
               class="furnace-turn"
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
-              <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <span class="furnace-turn-label">{{ turn.role === 'user' ? furnaceRoleYouLabel() : agentLabel }}</span>
               <button
                 type="button"
                 class="furnace-turn-copy"
@@ -370,7 +370,7 @@
               class="furnace-tui-line"
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
-              <span>{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <span>{{ turn.role === 'user' ? furnaceRoleYouLabel() : agentLabel }}</span>
               <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">复制</button>
               <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
             </div>
@@ -413,6 +413,10 @@ import {
   furnacePagefillLabel,
   furnaceProcessMenuSummary,
   furnaceReopenLabel,
+  furnaceRoleYouLabel,
+  furnaceTurnCopyEmptyMessage,
+  furnaceTurnCopyFailedMessage,
+  furnaceTurnCopySuccessMessage,
   furnaceTuiLabel,
 } from '../../composables/furnaceWorkspaceCopy.js'
 
@@ -421,14 +425,14 @@ const getTurnMeta = getFurnaceTurnMeta
 async function copyTurn(turn) {
   const text = furnaceTurnCopyPlain(turn?.role, turn?.text)
   if (!text) {
-    ElMessage.warning('没有可复制的内容')
+    ElMessage.warning(furnaceTurnCopyEmptyMessage())
     return
   }
   try {
     await writeClipboardText(text)
-    ElMessage.success('已复制本条（纯文本）')
+    ElMessage.success(furnaceTurnCopySuccessMessage())
   } catch {
-    ElMessage.warning('复制失败')
+    ElMessage.warning(furnaceTurnCopyFailedMessage())
   }
 }
 const props = defineProps({

@@ -22,7 +22,7 @@
             <i class="footer-chevron" />
           </span>
           <span class="footer-toggle-label">{{
-            composerStore.footerCollapsed ? footerCollapsedHint : '收起'
+            composerStore.footerCollapsed ? footerCollapsedHint : composerCollapseLabel()
           }}</span>
         </button>
       </div>
@@ -41,13 +41,13 @@
             type="info"
             :closable="false"
             show-icon
-            title="已归档。再发即可恢复；续跑点「从这里继续」。"
+            :title="composerArchivedAlertTitle()"
             class="composer-alert composer-alert--archived"
           />
           <div class="composer-shell" @keydown.capture="onComposerKeydown">
             <div v-if="composerStore.slashOpen" class="slash-panel">
               <div class="slash-panel-head">
-                <span class="slash-panel-head-title">斜杠指令</span>
+                <span class="slash-panel-head-title">{{ composerSlashPanelTitle() }}</span>
                 <div class="slash-panel-head-end">
                   <el-button link type="primary" size="small" @click="goShortcuts">
                     设置
@@ -330,6 +330,16 @@ import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
 import { useComposerStore } from '../../../stores/composer.js'
 import { t } from '../../../i18n/index.js'
+import {
+  composerArchivedAlertTitle,
+  composerCollapseLabel,
+  composerSlashPanelTitle,
+} from '../composables/sessionComposerPanelUi.js'
+import {
+  composerUploadNeedSessionMessage,
+  composerUploadNoTargetAddMessage,
+  composerUploadSuccessMessage,
+} from '../composables/sessionComposerUploadUi.js'
 
 const composerStore = useComposerStore()
 
@@ -376,13 +386,13 @@ const { addLocalFiles, onFileInputChange, removePending } = useLocalUploads({
   uploading,
   getTargetId: () => activeId.value,
   upload: (id, files) => api.sessions.uploadFiles(id, files),
-  noTargetAddMessage: '请先选择会话再添加文件',
-  successMessage: (n) => `已添加 ${n} 个文件`,
+  noTargetAddMessage: composerUploadNoTargetAddMessage(),
+  successMessage: composerUploadSuccessMessage,
 })
 
 function triggerFilePick() {
   if (!activeId.value) {
-    ElMessage.warning('请先选择会话')
+    ElMessage.warning(composerUploadNeedSessionMessage())
     return
   }
   fileInputRef.value?.click()
