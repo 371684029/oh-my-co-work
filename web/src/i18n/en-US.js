@@ -223,6 +223,37 @@ export const strings = {
       elapsedSeconds: '{seconds}s',
       elapsedMinutes: '{minutes}m {seconds}s',
     },
+    status: {
+      workspace: {
+        starting: 'Starting',
+        running: 'Interactive',
+        exited: 'Ended',
+        failed: 'Start failed',
+        killed: 'Stopped',
+        timed_out: 'Timed out',
+        interrupted: 'Interrupted',
+      },
+      card: {
+        starting: 'Starting',
+        running: 'Running',
+        exited: 'Done',
+        failed: 'Start failed',
+        killed: 'Stopped',
+        timed_out: 'Timed out',
+        interrupted: 'Interrupted',
+      },
+      furnace: {
+        starting: 'Starting',
+        running: 'Interactive',
+        exited: 'Ended',
+        failed: 'Start failed',
+        killed: 'Stopped',
+      },
+    },
+    connection: {
+      connecting: 'Connecting',
+      reconnecting: 'Reconnecting',
+    },
     view: {
       ariaLabel: 'Interactive terminal',
       ctxCopy: 'Copy',

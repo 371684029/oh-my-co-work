@@ -23,6 +23,8 @@ import { createSessionNotesActions } from './sessionNotesActions.js'
 import { createSessionAnnounceActions } from './sessionAnnounceActions.js'
 import { createSessionDeleteActions } from './sessionDeleteActions.js'
 import { createSessionRenameActions } from './sessionRenameActions.js'
+import { createSessionDocsHubActions } from './sessionDocsHubActions.js'
+import { createSessionComposerCopyActions } from './sessionComposerCopyActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   restartArchiveBlockedMessage,
@@ -31,9 +33,6 @@ import {
 } from './sessionFlowRestartUi.js'
 import {
   announceMdHintLabel,
-  composerCopyFailedMessage,
-  composerCopySuccessMessage,
-  composerEmptyMessage,
   hashItemEmptyInsertMessage,
 } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
@@ -90,12 +89,7 @@ import {
   footerCollapsedHintForPendingGate,
 } from './sessionContextUi.js'
 import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
-import {
-  buildDocsHubQuery,
-  docsHubOpenUsesNewTab,
-  formatDocsHubSearchParams,
-  resolveAnnounceMdRelativePath,
-} from './sessionDocsNavUi.js'
+import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
 import { createSessionGateActions } from './sessionGateActions.js'
 import {
   pickDefaultStartTarget,
@@ -302,33 +296,6 @@ function clearSender() {
     if (typeof inst.clear === 'function') inst.clear()
   } catch {
     /* ignore */
-  }
-}
-
-/** 一键复制输入框正文 */
-async function copyComposerText() {
-  const text = readSenderText()
-  if (!text) {
-    ElMessage.warning(composerEmptyMessage())
-    return
-  }
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-    } else {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.setAttribute('readonly', '')
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-    }
-    ElMessage.success(composerCopySuccessMessage())
-  } catch (e) {
-    ElMessage.warning(composerCopyFailedMessage(e))
   }
 }
 
@@ -575,28 +542,18 @@ const announceMdHint = computed(() =>
   announceMdHintLabel(resolveAnnounceMdRelativePath(detail.value, activeId.value)),
 )
 
-/** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
-function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
-  const query = buildDocsHubQuery(activeId.value, file)
-  if (!query) return
-  const useNewTab = docsHubOpenUsesNewTab({
-    newTab,
-    hasDesktopApi: !!window.__ACW_DESKTOP_API__,
-    hasDesktopEnv: !!window.__ACW_DESKTOP_ENV__,
-  })
-  if (useNewTab) {
-    const qs = formatDocsHubSearchParams(query)
-    window.open(`/docs?${qs}`, '_blank', 'noopener')
-    return
-  }
-  useFlowStore().clearDocsUnread()
-  if (_router) {
-    _router.push({ path: '/docs', query })
-  } else {
+const { openDocsHub } = createSessionDocsHubActions({
+  activeId,
+  clearDocsUnread: () => useFlowStore().clearDocsUnread(),
+  navigateDocsInApp: (query) => {
+    if (_router) {
+      _router.push({ path: '/docs', query })
+      return
+    }
     const qs = formatDocsHubSearchParams(query)
     window.location.assign(`/docs?${qs}`)
-  }
-}
+  },
+})
 
 function onConvChange(item) {
   const id = item?.uniqueKey || item?.id
@@ -658,6 +615,8 @@ const { openAnnouncementMd, rebuildAnnouncement } = createSessionAnnounceActions
   loadDetail,
   api,
 })
+
+const { copyComposerText } = createSessionComposerCopyActions({ readSenderText })
 
 function syncSlashFromInput() {
   const text = readSenderText()
