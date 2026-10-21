@@ -294,6 +294,7 @@ export const strings = {
     a11y: {
       exportAll: 'Export all documents',
       allGroups: 'View documents for all group templates',
+      welcomeRegion: 'Docs hub welcome area',
       outline: 'Document outline',
       exportGroup: 'Export all documents for group {title}',
       viewGroup: 'View documents for group {title}',

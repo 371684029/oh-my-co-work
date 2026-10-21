@@ -297,6 +297,7 @@ export const strings = {
     a11y: {
       exportAll: '导出全部文档',
       allGroups: '查看全部群模板文档',
+      welcomeRegion: '文档中心欢迎区',
       outline: '文档目录',
       exportGroup: '导出群模板 {title} 的全部文档',
       viewGroup: '查看群模板 {title} 的文档',

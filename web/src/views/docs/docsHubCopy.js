@@ -98,6 +98,10 @@ export function docsHubWelcomeEmptyTip() {
   return t('docs.welcome.emptyTip')
 }
 
+export function docsHubWelcomeRegionAria() {
+  return t('docs.a11y.welcomeRegion')
+}
+
 export function docsHubUnpinTitle() {
   return t('docs.unpinTitle')
 }
