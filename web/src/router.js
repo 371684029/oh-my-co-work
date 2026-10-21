@@ -9,6 +9,7 @@ import About from './views/settings/About.vue'
 import Shortcuts from './views/settings/Shortcuts.vue'
 import Prefs from './views/settings/Prefs.vue'
 import GrokSetup from './views/settings/GrokSetup.vue'
+import RestoreCenter from './views/settings/RestoreCenter.vue'
 
 const routes = [
   { path: '/', redirect: '/workbench' },
@@ -24,6 +25,7 @@ const routes = [
       { path: 'groups', component: Groups },
       { path: 'shortcuts', component: Shortcuts },
       { path: 'prefs', component: Prefs },
+      { path: 'restore', component: RestoreCenter },
       { path: 'grok', component: GrokSetup },
       { path: 'support', component: Support },
       { path: 'about', component: About },

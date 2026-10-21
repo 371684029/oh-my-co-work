@@ -115,6 +115,9 @@ export const api = {
         sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''
       }`),
   },
+  restoreCenter: {
+    list: () => req('/restore-center'),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),
@@ -195,6 +198,13 @@ export const api = {
       req(`/sessions/${id}/restart-from-node`, {
         method: 'POST',
         body: JSON.stringify(body || {}),
+      }),
+    previewStepRevert: (sessionId, nodeId) =>
+      req(`/sessions/${sessionId}/nodes/${nodeId}/step-revert/preview`),
+    applyStepRevert: (sessionId, nodeId, { force = false } = {}) =>
+      req(`/sessions/${sessionId}/nodes/${nodeId}/step-revert`, {
+        method: 'POST',
+        body: JSON.stringify({ force }),
       }),
     message: (id, text, attachments = []) =>
       req(`/sessions/${id}/messages`, {

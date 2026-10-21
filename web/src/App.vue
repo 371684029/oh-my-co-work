@@ -156,6 +156,8 @@
         <el-button :type="grokCanContinue ? 'default' : 'primary'" @click="goGrokSettings">去设置</el-button>
       </template>
     </el-dialog>
+
+    <CommandPalette v-model="paletteOpen" />
   </div>
 </template>
 
@@ -167,6 +169,8 @@ import AppLogo from './components/AppLogo.vue'
 import AcwIcon from './components/icons/AcwIcon.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
+import CommandPalette from './components/CommandPalette.vue'
+import { useCommandPalette } from './composables/useCommandPalette.js'
 import {
   furnaceSpriteState,
   furnaceWorkspaceOpen,
@@ -194,6 +198,7 @@ import {
 } from './composables/uiZoom.js'
 
 const route = useRoute()
+const { paletteOpen, showPalette, hidePalette } = useCommandPalette()
 const flowStore = useFlowStore()
 const navDocsPreview = ref(recentDocsPreview(readDocsReadingHistory().recent, 3))
 const router = useRouter()
@@ -293,6 +298,12 @@ watch(
 
 function onGlobalKeydown(ev) {
   const mod = ev.metaKey || ev.ctrlKey
+  if (mod && String(ev.key || '').toLowerCase() === 'k') {
+    ev.preventDefault()
+    if (paletteOpen.value) hidePalette()
+    else showPalette()
+    return
+  }
   if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'd') {
     ev.preventDefault()
     goDocs()

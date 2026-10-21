@@ -36,6 +36,11 @@ import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
 import { restoreMemberRefine } from './refineRestore.js'
 import {
+  previewStepRevert,
+  applyStepRevert,
+  resolveWorkDirFromNode,
+} from './stepRevert.js'
+import {
   exportMemberTemplate,
   exportGroupTemplate,
   importTemplatePack,
@@ -442,6 +447,73 @@ router.get('/sessions/:id/nodes/:nodeId/journal', (req, res) => {
     input: node.input,
     output: node.output,
   })
+})
+
+router.get('/sessions/:id/nodes/:nodeId/step-revert/preview', (req, res) => {
+  const d = getSessionDetail(req.params.id)
+  if (!d) return res.status(404).json({ error: 'not found' })
+  const node = d.nodes.find((n) => n.id === req.params.nodeId)
+  if (!node) return res.status(404).json({ error: 'node not found' })
+  const cs = node.output?.changeSnapshot
+  const workDir = resolveWorkDirFromNode(node, d.group)
+  res.json(previewStepRevert(cs, workDir))
+})
+
+router.post('/sessions/:id/nodes/:nodeId/step-revert', (req, res) => {
+  try {
+    const d = getSessionDetail(req.params.id)
+    if (!d) return res.status(404).json({ error: 'not found' })
+    const node = d.nodes.find((n) => n.id === req.params.nodeId)
+    if (!node) return res.status(404).json({ error: 'node not found' })
+    const cs = node.output?.changeSnapshot
+    const workDir = resolveWorkDirFromNode(node, d.group)
+    const force = !!req.body?.force
+    const result = applyStepRevert(cs, workDir, { force })
+    res.json(result)
+  } catch (e) {
+    if (e.code === 'CONFLICT') {
+      return res.status(409).json({
+        error: e.message,
+        code: e.code,
+        preview: e.preview,
+      })
+    }
+    if (e.code) return res.status(400).json({ error: e.message, code: e.code })
+    res.status(400).json({ error: e.message || String(e) })
+  }
+})
+
+router.get('/restore-center', (req, res) => {
+  const members = listMembers().map((m) => {
+    const cfg = m.config || {}
+    const refine = cfg.refine || {}
+    return {
+      id: m.id,
+      name: m.display_name,
+      refineBackup: refine.refineBackup || null,
+      refineBackupManifest: refine.refineBackupManifest || null,
+      refineEnabled: !!refine.enabled,
+    }
+  })
+  const sessions = listSessions({ status: 'active' })
+    .slice(0, 30)
+    .map((s) => {
+      const d = getSessionDetail(s.id)
+      const nodes = (d?.nodes || [])
+        .filter((n) => n.output?.changeSnapshot?.filesChanged)
+        .map((n) => ({
+          id: n.id,
+          title: n.title,
+          stepIndex: n.step_index,
+          summary: n.output.changeSnapshot.stat || '',
+          filesChanged: n.output.changeSnapshot.filesChanged,
+        }))
+      return nodes.length
+        ? { sessionId: s.id, title: s.title, nodes }
+        : null
+    })
+    .filter(Boolean)
+  res.json({ members, sessions })
 })
 /** 群报告台账（后台 MD；界面：# 参数 + 节点入出 + 备注） */
 router.get('/sessions/:id/announcement', (req, res) => {

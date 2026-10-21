@@ -26,6 +26,7 @@
       title="内置快捷键（5.2.0）"
     >
       <ul class="builtin-hotkeys">
+        <li><kbd>Ctrl/Cmd+K</kbd> — 命令面板（会话 / 导航 / 缩放 / 主题）</li>
         <li><kbd>Ctrl/Cmd+Shift+D</kbd> — 打开文档中心</li>
         <li><kbd>Ctrl/Cmd+1</kbd> / <kbd>2</kbd> — 熔炉内切换 Grok / Cursor（焦点在熔炉且不在 xterm 选区时）</li>
         <li>终端 <kbd>Ctrl/Cmd+F</kbd> — 终端内搜索；有选区时 <kbd>Ctrl/Cmd+C</kbd> 复制不中断</li>

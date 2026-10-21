@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | server/src/{stepRevert,routes}.js web/{src/components/CommandPalette.vue,src/views/settings/{RestoreCenter,Prefs,Shortcuts},src/views/workbench/components/FlowRail.vue,src/router.js,src/api.js} electron/{main,preload.cjs} docs/{5.3.0,5.4.0}-plan.md package.json */package.json server/config/about.json | TRC-02、DSK-01、NTF-11/12、版本 5.3.0
 2026-10-21 | A/M | server/src/{stepSnapshot,engine/advance}.js shared/{stepChangeSummary,index}.js web/src/views/workbench/components/FlowRail.vue server/test/stepSnapshot.test.js docs/5.3.0-plan.md | TRC-01 git 步骤快照与流程轨 diff
 2026-10-21 | A/M | shared/notificationPolicy.js electron/{main,lib/notifier}.mjs electron/test/notifier.test.mjs web/{src/composables/{notificationInbox,useAppInit},views/workbench/composables/useTerminalSessions} web/test/notificationInbox.test.mjs docs/{NOTIFICATION-MANUAL-QA,5.1.0,5.2.0,5.4.0}-plan.md server/test/notificationPolicy.test.js | NTF-09/13/14、NTF-T3 清单、5.1 文档对齐
 2026-10-21 | A/M | shared/notificationPolicy.js web/src/components/icons/AcwIcon.vue server/src/{externalNotify,routes,appSettings}.js electron/{main,lib/notifier}.mjs web/src/{App,api,components/{NotificationInbox,terminal/*},views/docs/DocsHub} web/src/views/workbench/composables/useTerminalSessions.js web/src/composables/useNotificationPrefs.js server/test/{notificationPolicy,externalNotify}.test.js electron/test/notifier.test.mjs docs/{5.2.0,5.4.0}-plan.md | UI-08、NTF-08/17、NTF-T1/T2

@@ -15,6 +15,9 @@
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
           设置
         </el-menu-item>
+        <el-menu-item index="/settings/restore" class="menu-item-meta">
+          还原中心
+        </el-menu-item>
         <el-menu-item index="/settings/grok" class="menu-item-meta">
           Grok Build 教程
         </el-menu-item>

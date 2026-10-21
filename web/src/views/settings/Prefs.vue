@@ -86,6 +86,14 @@
           </el-checkbox>
         </el-form-item>
       </el-form>
+      <el-alert
+        v-if="notifyPlatform.hint"
+        class="notify-platform-hint"
+        type="info"
+        :closable="false"
+        show-icon
+        :title="notifyPlatform.hint"
+      />
       <div class="prefs-actions">
         <el-button type="primary" plain size="small" :loading="savingNotify" @click="saveNotify">
           保存通知设置
@@ -481,6 +489,7 @@ const notifyPrefs = ref({
   levels: { action: true, error: true, done: false },
 })
 const savingNotify = ref(false)
+const notifyPlatform = ref({ supported: true, platform: 'web', hint: '' })
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -869,6 +878,9 @@ function onResourcePageVisible() {
 
 onMounted(() => {
   load()
+  window.__ACW_DESKTOP_API__?.getNotificationPlatform?.().then((p) => {
+    if (p && typeof p === 'object') notifyPlatform.value = p
+  }).catch(() => {})
   resourcePoll = window.setInterval(() => loadResources({ quiet: true }), 3000)
   document.addEventListener('visibilitychange', onResourcePageVisible)
   window.addEventListener('focus', onResourcePageVisible)

@@ -259,6 +259,14 @@
                   <div v-if="nodeChangePatch(n)" class="flow-io-block">
                     <div class="flow-io-label">本步改动（git diff）</div>
                     <pre class="flow-io-pre flow-io-pre--diff">{{ nodeChangePatch(n) }}</pre>
+                    <el-button
+                      size="small"
+                      type="warning"
+                      :loading="revertLoadingId === n.id"
+                      @click.stop="revertStepChanges(n)"
+                    >
+                      回退本步改动
+                    </el-button>
                   </div>
                   <div class="flow-io-block">
                     <div class="flow-io-label">输出（做了啥）</div>
@@ -483,7 +491,7 @@ import {
   saveSessionNotes,
 } from '../composables/useSessionDetail'
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
 import EmptyState from '../../../components/ui/EmptyState.vue'
 import { api } from '../../../api'
@@ -522,6 +530,50 @@ function openNodeJournal(n) {
 }
 
 const flowStore = useFlowStore()
+const revertLoadingId = ref('')
+
+async function revertStepChanges(n) {
+  const sid = activeId.value
+  if (!sid || !n?.id) return
+  try {
+    const preview = await api.sessions.previewStepRevert(sid, n.id)
+    if (!preview.ok) {
+      ElMessage.warning(preview.message || '无法回退')
+      return
+    }
+    const msg = preview.needsForce
+      ? `${preview.message}\n\n仍要继续吗？`
+      : preview.message || '将把工作区还原到本步执行前，继续？'
+    await ElMessageBox.confirm(msg, '回退本步改动', {
+      type: 'warning',
+      confirmButtonText: preview.needsForce ? '强制回退' : '确认回退',
+    })
+    revertLoadingId.value = n.id
+    await api.sessions.applyStepRevert(sid, n.id, { force: preview.needsForce })
+    ElMessage.success('已回退本步 git 改动')
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return
+    if (e.status === 409) {
+      try {
+        await ElMessageBox.confirm(e.message || '存在冲突，强制回退？', '冲突', {
+          type: 'warning',
+          confirmButtonText: '强制回退',
+        })
+        revertLoadingId.value = n.id
+        await api.sessions.applyStepRevert(sid, n.id, { force: true })
+        ElMessage.success('已强制回退')
+      } catch (e2) {
+        if (e2 !== 'cancel' && e2 !== 'close') ElMessage.error(e2.message || '回退失败')
+      } finally {
+        revertLoadingId.value = ''
+      }
+      return
+    }
+    ElMessage.error(e.message || '回退失败')
+  } finally {
+    revertLoadingId.value = ''
+  }
+}
 const isDocsHubTab = computed(
   () => flowStore.rightTab === 'docs' || flowStore.rightTab === 'announce',
 )
