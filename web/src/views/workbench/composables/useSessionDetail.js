@@ -73,6 +73,12 @@ import {
 } from './sessionAttentionUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
+  applyComposerPanelPatch,
+  atPanelStateFromText,
+  hashPanelStateFromText,
+  slashPanelStateFromText,
+} from './sessionComposerSync.js'
+import {
   composerFooterHintForGate,
   composerPlaceholderForGate,
   composerToolbarHintForGate,
@@ -874,62 +880,31 @@ async function startDemoChat() {
 
 function syncSlashFromInput() {
   const text = readSenderText()
-  // 仅当输入以 / 开头时当作指令模式（整段像 /editor）
-  if (text.startsWith('/')) {
-    useComposerStore().slashOpen = true
-    useComposerStore().atOpen = false
-    useComposerStore().hashOpen = false
-    const body = text.slice(1)
-    useComposerStore().slashQuery = body.split(/\s/)[0] || ''
-    useComposerStore().slashIndex = 0
-  } else {
-    // 删掉 /、清空输入、或改成普通消息：同步收起快捷指令气泡
-    useComposerStore().slashOpen = false
-    useComposerStore().slashQuery = ''
-  }
+  const store = useComposerStore()
+  const patch = slashPanelStateFromText(text)
+  applyComposerPanelPatch(store, patch)
+  if (patch.slashOpen) store.slashIndex = 0
 }
 
 /** 光标在末尾的 @query 时弹出成员面板 */
 function syncAtFromInput() {
   const text = readSenderText()
-  if (text.startsWith('/')) {
-    useComposerStore().atOpen = false
-    return
-  }
-  // 最后一个未完成的 @片段（@ 后不含空格）
-  const m = text.match(/(^|[\s])@([^\s@]*)$/)
-  if (m) {
-    useComposerStore().atOpen = true
-    useComposerStore().slashOpen = false
-    useComposerStore().hashOpen = false
-    useComposerStore().atQuery = m[2] || ''
-    useComposerStore().atIndex = 0
-  } else if (!text.endsWith('@')) {
-    // 已选完 @名字 或无 @：关面板
-    useComposerStore().atOpen = false
-    useComposerStore().atQuery = ''
+  const store = useComposerStore()
+  const patch = atPanelStateFromText(text)
+  if (patch) {
+    applyComposerPanelPatch(store, patch)
+    if (patch.atOpen) store.atIndex = 0
   }
 }
 
 /** 光标在末尾的 #query 时弹出文本快捷面板 */
 function syncHashFromInput() {
-  if (Date.now() < hashInsertLockUntil) return
   const text = readSenderTextRaw().replace(/\s+$/u, '')
-  if (text.startsWith('/')) {
-    useComposerStore().hashOpen = false
-    return
-  }
-  // 末尾 #片段：允许无前导空格（如 build#）
-  const m = text.match(/(?:^|[\s])#([^\s#]*)$/u)
-  if (m) {
-    useComposerStore().hashOpen = true
-    useComposerStore().slashOpen = false
-    useComposerStore().atOpen = false
-    useComposerStore().hashQuery = m[1] || ''
-    useComposerStore().hashIndex = 0
-  } else if (!/#([^\s#]*)$/u.test(text)) {
-    useComposerStore().hashOpen = false
-    useComposerStore().hashQuery = ''
+  const store = useComposerStore()
+  const patch = hashPanelStateFromText(text, { locked: Date.now() < hashInsertLockUntil })
+  if (patch) {
+    applyComposerPanelPatch(store, patch)
+    if (patch.hashOpen) store.hashIndex = 0
   }
 }
 
