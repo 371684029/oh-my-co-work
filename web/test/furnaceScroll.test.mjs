@@ -43,7 +43,8 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
 })
 
 test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => {
-  assert.match(vueSrc, /furnaceHotkeyTargeted/)
+  assert.match(vueSrc, /isEventWithinFurnaceRoot/)
+  assert.match(vueSrc, /furnaceAgentFromHotkey/)
   assert.match(vueSrc, /setActiveAgent/)
   assert.match(vueSrc, /ensure-agent/)
   assert.match(vueSrc, /Ctrl\/Cmd\+1/)

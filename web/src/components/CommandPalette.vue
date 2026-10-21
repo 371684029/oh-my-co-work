@@ -12,13 +12,13 @@
       ref="inputRef"
       v-model="query"
       placeholder="搜索会话、文档或输入命令…"
-      aria-label="命令面板搜索"
+      :aria-label="t('a11y.commandPaletteSearch')"
       clearable
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.enter.prevent="runSelected"
     />
-    <ul class="cp-list" role="listbox" aria-label="命令列表">
+    <ul class="cp-list" role="listbox" :aria-label="t('a11y.commandPaletteList')">
       <li
         v-for="(item, i) in filtered"
         :key="item.id"
@@ -50,6 +50,7 @@ import {
   readStoredZoom,
 } from '../composables/uiZoom.js'
 import { applyColorScheme, normalizeColorScheme } from '../composables/uiColorScheme.js'
+import { t } from '../i18n/zh-CN.js'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

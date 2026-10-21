@@ -29,7 +29,12 @@
       <div v-show="!composerStore.footerCollapsed" class="footer-body">
         <!-- 待确认说明统一走下方输入框 placeholder + 按钮，不再单独显示顶部大卡片 -->
 
-        <div class="composer" :class="{ 'composer--gate': !!pendingGate }">
+        <div
+          class="composer"
+          :class="{ 'composer--gate': !!pendingGate }"
+          role="region"
+          :aria-label="t('a11y.composer')"
+        >
           <el-alert
             v-if="detail.session.status === 'archived'"
             type="info"
@@ -323,6 +328,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
 import { useComposerStore } from '../../../stores/composer.js'
+import { t } from '../../../i18n/zh-CN.js'
 
 const composerStore = useComposerStore()
 
