@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/{composables/furnaceWorkspaceCopy,components/terminal/FurnaceWorkspace.vue,views/workbench/composables/{sessionGateFeedbackUi,useSessionDetail},views/docs/DocsHub.vue,i18n/{zh-CN,en-US}.js} web/test/{sessionGateFeedbackUi,furnaceWorkspaceCopy}.test.mjs | DSK-08 熔炉顶栏+闸门 toast、UX-03 DocsHub 搜索 aria
 2026-10-21 | A/M | web/src/views/{docs/{docsHubCopy,DocsHub.vue},workbench/composables/{sessionActionUi,useSessionDetail}} web/src/i18n/{zh-CN,en-US}.js web/test/sessionActionUi.test.mjs | DSK-08 DocsHub 列表/搜索 i18n、FE-01 resolveSessionId
 2026-10-21 | A/M | web/src/views/{docs/{docsHubCopy,DocsHub.vue},workbench/composables/{sessionConvMenuUi,useSessionDetail}} web/src/i18n/{zh-CN,en-US}.js web/test/sessionConvMenuUi.test.mjs docs/5.1.0-plan.md | FE-01 conv 菜单解析、DSK-08 DocsHub 正文区按钮 i18n
 2026-10-21 | A/M | web/src/views/docs/{docsHubCopy,DocsHub.vue} web/src/i18n/{zh-CN,en-US}.js web/test/docsHubCopy.test.mjs docs/5.3.0-plan.md | DSK-08 DocsHub 侧栏/欢迎/空态 i18n + a11y 标签
