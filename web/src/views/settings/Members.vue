@@ -30,7 +30,7 @@
       aria-label="搜索成员"
     />
 
-    <el-table :data="filteredList" stripe>
+    <el-table :data="filteredList" stripe aria-label="成员列表">
       <el-table-column prop="display_name" label="显示名" min-width="120" />
       <el-table-column label="简介" min-width="140" show-overflow-tooltip>
         <template #default="{ row }">

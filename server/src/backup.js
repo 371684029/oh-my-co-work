@@ -5,7 +5,6 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
-import { cp } from 'node:fs/promises'
 import {
   moveLiveAsideAsync,
   moveLiveAsideSync,
@@ -18,6 +17,13 @@ import {
   stageJournalsAndUploadsAsync,
   stageJournalsAndUploadsSync,
 } from './backup/stagingWork.js'
+import {
+  applyStagedToLiveAsync as applyStagedToLiveAsyncImpl,
+  applyStagedToLiveSync as applyStagedToLiveSyncImpl,
+} from './backup/stagedApply.js'
+import { assertRegularFile, assertTreeNoSymlinks } from './backup/pathSafety.js'
+
+export { assertTreeNoSymlinks } from './backup/pathSafety.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -82,11 +88,6 @@ function tarCreateArchive(archivePath, workDir, entries, { async = false } = {})
       else reject(new Error(err.trim() || `tar exited ${code}`))
     })
   })
-}
-
-async function copyTreeAsync(src, dst) {
-  if (!fs.existsSync(src)) return
-  await cp(src, dst, { recursive: true })
 }
 
 /**
@@ -284,98 +285,12 @@ function resolveBackupEntry(name) {
   return null
 }
 
-function confinedUnder(root, candidate) {
-  const r = path.resolve(root)
-  const c = path.resolve(candidate)
-  return c === r || c.startsWith(r + path.sep)
-}
-
-function assertRegularFile(abs, label = '文件') {
-  const st = fs.lstatSync(abs)
-  if (st.isSymbolicLink()) {
-    throw Object.assign(new Error(`${label}不能是符号链接`), { code: 'SYMLINK' })
-  }
-  if (!st.isFile()) {
-    throw Object.assign(new Error(`${label}不是普通文件`), { code: 'BAD_FILE' })
-  }
-}
-
-/**
- * 拒绝符号链接及逃出 root 的路径，防止备份/恢复把 journals 种到 DATA_ROOT 外。
- */
-export function assertTreeNoSymlinks(root) {
-  if (!fs.existsSync(root)) return
-  const rootReal = fs.realpathSync(root)
-  const walk = (dir) => {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      const abs = path.join(dir, e.name)
-      if (e.isSymbolicLink()) {
-        throw Object.assign(new Error(`备份含符号链接：${path.relative(root, abs) || e.name}`), {
-          code: 'SYMLINK',
-        })
-      }
-      if (e.isDirectory()) {
-        const real = fs.realpathSync(abs)
-        if (!confinedUnder(rootReal, real)) {
-          throw Object.assign(new Error(`备份路径越界：${path.relative(root, abs) || e.name}`), {
-            code: 'ESCAPE',
-          })
-        }
-        walk(abs)
-      } else if (e.isFile()) {
-        const real = fs.realpathSync(abs)
-        if (!confinedUnder(rootReal, real)) {
-          throw Object.assign(new Error(`备份路径越界：${path.relative(root, abs) || e.name}`), {
-            code: 'ESCAPE',
-          })
-        }
-      }
-    }
-  }
-  walk(root)
-}
-
-function copyRegularFile(src, dest) {
-  assertRegularFile(src, src)
-  fs.copyFileSync(src, dest)
-}
-
 function applyStagedToLive(work) {
-  assertTreeNoSymlinks(work)
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  copyRegularFile(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
-  for (const suf of ['-wal', '-shm']) {
-    if (fs.existsSync(stagedDb + suf)) {
-      copyRegularFile(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
-    }
-  }
-  const stagedJournals = path.join(work, 'journals')
-  if (fs.existsSync(stagedJournals)) {
-    fs.cpSync(stagedJournals, path.join(DATA_ROOT, 'journals'), { recursive: true })
-  }
-  const stagedUploads = path.join(work, 'uploads')
-  if (fs.existsSync(stagedUploads)) {
-    fs.cpSync(stagedUploads, path.join(DATA_ROOT, 'uploads'), { recursive: true })
-  }
+  applyStagedToLiveSyncImpl(work, DATA_ROOT)
 }
 
 async function applyStagedToLiveAsync(work) {
-  assertTreeNoSymlinks(work)
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  await cp(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
-  for (const suf of ['-wal', '-shm']) {
-    if (fs.existsSync(stagedDb + suf)) {
-      await cp(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
-    }
-  }
-  const stagedJournals = path.join(work, 'journals')
-  if (fs.existsSync(stagedJournals)) {
-    await copyTreeAsync(stagedJournals, path.join(DATA_ROOT, 'journals'))
-  }
-  const stagedUploads = path.join(work, 'uploads')
-  if (fs.existsSync(stagedUploads)) {
-    await copyTreeAsync(stagedUploads, path.join(DATA_ROOT, 'uploads'))
-  }
+  await applyStagedToLiveAsyncImpl(work, DATA_ROOT)
 }
 
 /**

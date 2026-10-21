@@ -56,6 +56,8 @@ import {
 } from './sessionOffsiteUi.js'
 import { reviewAction, reviewLabel } from './sessionReviewUi.js'
 import { isPendingGateMessage } from './sessionGateUi.js'
+import { findPendingGateMessage } from './sessionPendingGate.js'
+import { isArchiveStatusMessage } from './sessionBubbleUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -335,10 +337,7 @@ const conversationItems = computed(() =>
 )
 
 function isArchiveMessage(m) {
-  if (!m) return false
-  if (m.type === 'status' && /归档/.test(messageText(m) || '')) return true
-  const t = messageText(m) || ''
-  return m.role === 'system' && /任务已.*归档|自动归档|已归档/.test(t)
+  return isArchiveStatusMessage(m, messageText(m))
 }
 
 /** Element-Plus-X BubbleList — 大气气泡 + 发送人简称 */
@@ -405,53 +404,11 @@ const bubbleList = computed(() => {
 
 const pendingGate = computed(() => {
   if (!detail.value) return null
-  if (detail.value.session.status === 'archived') return null
-  const msgs = [...detail.value.messages].reverse()
-  const nodes = detail.value.nodes || []
-  const curIdx = Number(detail.value.session.current_step_index)
-  const curNode = Number.isFinite(curIdx)
-    ? nodes.find((n) => Number(n.step_index) === curIdx)
-    : null
-  const adapterGate = msgs.find(
-    (m) =>
-      m.type === 'gate' &&
-      m.content?.mode === 'adapter_question' &&
-      m.content?.humanAction === 'pending' &&
-      !m.content?.answered,
-  )
-  if (adapterGate) return adapterGate
-  // 开聊启动闸门（无节点，等人点通过后再跑流程）
-  const pendingStart = detail.value.session.context?.pendingStart
-  if (pendingStart && detail.value.session.status !== 'interrupted') {
-    const startGate = msgs.find(
-      (m) => m.type === 'gate' && m.content?.mode === 'session_start',
-    )
-    if (startGate) return startGate
-  }
-  // R02：中断恢复闸门
-  if (detail.value.session.status === 'interrupted') {
-    const ig = msgs.find((m) => m.type === 'gate' && m.content?.mode === 'interrupted')
-    if (ig) return ig
-  }
-  // 优先当前游标节点上的待确认闸门，避免旧「待确认」抢交互
-  if (curNode?.status === 'waiting_human') {
-    const curGate = msgs.find(
-      (m) =>
-        m.type === 'gate' &&
-        m.node_instance_id === curNode.id &&
-        isPendingGate(m),
-    )
-    if (curGate) return curGate
-  }
-  // 回退：只认仍 waiting_human、且不早于游标的闸门（已绕过节点的 gate 会被 isPendingGate 滤掉）
-  return (
-    msgs.find((m) => {
-      if (m.type !== 'gate' || !isPendingGate(m)) return false
-      const n = nodes.find((x) => x.id === m.node_instance_id)
-      if (!n) return !m.node_instance_id
-      if (!Number.isFinite(curIdx)) return true
-      return Number(n.step_index) >= curIdx
-    }) || null
+  return findPendingGateMessage(
+    detail.value.session,
+    detail.value.messages,
+    detail.value.nodes,
+    isPendingGate,
   )
 })
 
