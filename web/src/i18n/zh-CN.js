@@ -2,6 +2,10 @@
  * I18N-01: user-visible strings (Chinese primary; extend with en-US later).
  */
 export const strings = {
+  a11y: {
+    skipToMain: '跳到主内容',
+    settingsNav: '设置导航',
+  },
   furnace: {
     idle: '闲置',
     working: '工作中',
