@@ -41,7 +41,7 @@
         </el-menu-item>
       </el-menu>
     </aside>
-    <div class="settings-body">
+    <div id="settings-main" class="settings-body" tabindex="-1">
       <router-view />
     </div>
   </div>

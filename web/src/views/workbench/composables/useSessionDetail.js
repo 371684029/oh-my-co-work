@@ -55,6 +55,7 @@ import {
   offsiteInvokedLabel as offsiteInvokedLabelForNode,
 } from './sessionOffsiteUi.js'
 import { reviewAction, reviewLabel } from './sessionReviewUi.js'
+import { isPendingGateMessage } from './sessionGateUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -702,13 +703,8 @@ function shortSender(m, fullName) {
 }
 
 function isPendingGate(m) {
-  if (m.type !== 'gate' || !detail.value) return false
-  if (m.content?.mode === 'archive_confirm') return false
-  if (m.content?.mode === 'adapter_question') {
-    return m.content?.humanAction === 'pending' && !m.content?.answered
-  }
-  const node = detail.value.nodes.find((n) => n.id === m.node_instance_id)
-  return node?.status === 'waiting_human'
+  if (!detail.value) return false
+  return isPendingGateMessage(m, detail.value.nodes)
 }
 
 function isCurrent(n) {

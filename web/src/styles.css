@@ -1140,3 +1140,16 @@ html.acw-terminal-pagefill body {
   color: var(--ecw-text-2);
   line-height: 1.5;
 }
+
+/* UX-03: visible keyboard focus (skip link already has its own ring in App.vue) */
+a:focus-visible,
+button:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+.el-button:focus-visible,
+.el-menu-item:focus-visible {
+  outline: 2px solid var(--ecw-accent, #007aff);
+  outline-offset: 2px;
+}

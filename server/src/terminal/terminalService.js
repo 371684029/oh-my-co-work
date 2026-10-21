@@ -21,6 +21,11 @@ import {
 } from '../processRegistry.js'
 import { clampTerminalSize } from './inputLimits.js'
 import { handleTerminalClientMessage as handleTerminalClientMessageImpl } from './clientMessage.js'
+import {
+  deleteTerminalLogForEntry,
+  readTerminalLogPath as readTerminalLogPathImpl,
+  readTerminalLogPreview as readTerminalLogPreviewImpl,
+} from './terminalLog.js'
 
 export { normalizePtyLaunch, resolveWindowsExecutable }
 
@@ -510,53 +515,16 @@ export function writeAdapterReply(terminalId, payload) {
 }
 
 export function deleteTerminalLog(sessionId, terminalId) {
-  const entry = terminals.get(terminalId)
-  if (!entry || entry.sessionId !== sessionId) return false
-  try {
-    if (entry.logPath && fs.existsSync(entry.logPath)) fs.unlinkSync(entry.logPath)
-  } catch {
-    return false
-  }
-  entry.logBytes = 0
-  entry.logTruncated = false
-  return true
+  return deleteTerminalLogForEntry(terminals.get(terminalId), sessionId, terminalId)
 }
 
 export function readTerminalLogPath(sessionId, terminalId) {
-  const entry = terminals.get(terminalId)
-  if (!entry || entry.sessionId !== sessionId) return null
-  if (entry.logPath && fs.existsSync(entry.logPath)) return entry.logPath
-  const row = getDb()
-    .prepare('SELECT log_path FROM terminal_sessions WHERE id = ? AND session_id = ?')
-    .get(terminalId, sessionId)
-  if (row?.log_path && fs.existsSync(row.log_path)) return row.log_path
-  return null
+  return readTerminalLogPathImpl(sessionId, terminalId, (id) => terminals.get(id))
 }
 
 /** Tail log for in-app replay preview (5.3.0 TRC-04). */
-export function readTerminalLogPreview(sessionId, terminalId, { maxBytes = 48_000 } = {}) {
-  const file = readTerminalLogPath(sessionId, terminalId)
-  if (!file) return null
-  try {
-    const stat = fs.statSync(file)
-    const start = Math.max(0, stat.size - maxBytes)
-    const fd = fs.openSync(file, 'r')
-    try {
-      const buf = Buffer.alloc(stat.size - start)
-      fs.readSync(fd, buf, 0, buf.length, start)
-      const text = buf.toString('utf8')
-      return {
-        text,
-        truncated: start > 0,
-        bytes: stat.size,
-        path: file,
-      }
-    } finally {
-      fs.closeSync(fd)
-    }
-  } catch {
-    return null
-  }
+export function readTerminalLogPreview(sessionId, terminalId, opts = {}) {
+  return readTerminalLogPreviewImpl(sessionId, terminalId, (id) => terminals.get(id), opts)
 }
 
 export function forgetSessionTerminals(sessionId) {

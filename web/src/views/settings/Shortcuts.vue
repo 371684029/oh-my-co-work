@@ -33,7 +33,7 @@
       </ul>
     </el-alert>
 
-    <el-table :data="commands" stripe v-loading="loading">
+    <el-table :data="commands" stripe v-loading="loading" aria-label="斜杠指令与快捷键列表">
       <el-table-column label="启用" width="72">
         <template #default="{ row }">
           <el-switch v-model="row.enabled" @change="persist" />
