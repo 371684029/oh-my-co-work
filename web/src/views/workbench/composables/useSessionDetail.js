@@ -3,7 +3,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   formatBusinessIo,
   wholeOutputText,
-  isMentionAssistOnly,
   stepTypeLabel as sharedStepTypeLabel,
   MAX_PROJECT_PARAMS,
 } from '@acw/shared'
@@ -13,16 +12,11 @@ import { useFlowStore } from '../../../stores/flow.js'
 import {
   composerScopeKey,
   loadInputDraft,
-  pushInputHistory,
   saveInputDraft,
   stepInputHistory,
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
-import {
-  composerSubmitRoute,
-  pickSlashCommandOnSubmit,
-} from './sessionSenderSubmitUi.js'
 import {
   convMenuActionFromCommand,
   normalizeMenuCommand,
@@ -42,14 +36,7 @@ import {
   findGroupByTitle,
 } from './sessionDemoFlowUi.js'
 import { t } from '../../../i18n/index.js'
-import { slashCommandNotFoundMessage } from './sessionSlashRunUi.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
-import {
-  mainGateWaitingInfoMessage,
-  mentionPendingSuccessMessage,
-  needSelectSessionMessage,
-  newTaskCreatedMessage,
-} from './sessionMessageFeedbackUi.js'
 import {
   sessionPinFailedMessage,
   sessionPinSuccessMessage,
@@ -88,11 +75,7 @@ import {
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
-import {
-  messageSendMentionFeedback,
-  messageSendNewSessionId,
-  shouldRefreshCurrentSessionAfterSend,
-} from './sessionMessageSendUi.js'
+import { createSessionMessageSendActions } from './sessionMessageSendActions.js'
 import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
@@ -1165,84 +1148,36 @@ const { runSlash } = createSessionSlashActions({
   api,
 })
 
-async function onSenderSubmit() {
-  if (sending.value || uploading.value) return
-  const text = readSenderText()
-  const atts = [...pendingFiles.value]
-  const g = pendingGate.value
-  const mentionAssist =
-    !!text &&
-    isMentionAssistOnly(
-      text,
-      (members.value || []).map((m) => ({
-        display_name: m.display_name,
-        name: m.name,
-      })),
-    )
-  const route = composerSubmitRoute({
-    text,
-    gate: g,
-    mentionAssistOnly: mentionAssist,
-    attachmentsCount: atts.length,
-  })
-
-  if (route === 'slash') {
-    const slashCmd = pickSlashCommandOnSubmit(
-      text,
-      slashCommands.value,
-      filteredSlashCmds.value[useComposerStore().slashIndex],
-    )
-    if (slashCmd) {
-      await runSlash(slashCmd)
-      return
-    }
-    const token = text.slice(1).trim().split(/\s+/)[0] || ''
-    ElMessage.warning(slashCommandNotFoundMessage(token))
-    return
-  }
-
-  if (route === 'human_gate') {
-    await submitHuman(g)
-    return
-  }
-
-  if (route === 'noop') return
-
-  pushInputHistory(composerScopeKey(activeId.value), text)
-  composerHistIndex = -1
-  saveInputDraft(composerScopeKey(activeId.value), '')
-
-  if (!activeId.value) {
-    ElMessage.warning(needSelectSessionMessage())
-    return
-  }
-  sending.value = true
-  try {
-    const r = await api.sessions.message(activeId.value, text, atts)
-    clearSender()
-    pendingFiles.value = []
-    const mention = messageSendMentionFeedback(r)
-    if (mention) {
-      ElMessage.success(mentionPendingSuccessMessage(mention.offsiteMode))
-      if (mention.mainGateWaiting) {
-        ElMessage.info(mainGateWaitingInfoMessage())
-      }
-    }
-    const newSid = messageSendNewSessionId(r)
-    if (newSid) {
-      await loadLists()
-      await selectSession(newSid)
-      ElMessage.success(newTaskCreatedMessage())
-    } else if (shouldRefreshCurrentSessionAfterSend(r)) {
-      await loadDetail(activeId.value)
-      sessions.value = await api.sessions.list()
-    }
-  } catch (e) {
-    ElMessage.error(e.message)
-  } finally {
-    sending.value = false
-  }
+const gateActionsRef = {}
+const composerHistIndexRef = {
+  get index() {
+    return composerHistIndex
+  },
+  set index(v) {
+    composerHistIndex = v
+  },
 }
+
+const { onSenderSubmit } = createSessionMessageSendActions({
+  sending,
+  uploading,
+  readSenderText,
+  pendingGate,
+  members,
+  slashCommands,
+  filteredSlashCmds,
+  activeId,
+  pendingFiles,
+  clearSender,
+  loadLists,
+  selectSession,
+  loadDetail,
+  sessions,
+  runSlash,
+  submitHuman: (m) => gateActionsRef.submitHuman(m),
+  api,
+  composerHistIndexRef,
+})
 
 const nextIdempotencyKey = nextGateIdempotencyKey
 
@@ -1258,6 +1193,7 @@ const { submitHuman, approveSessionStart, gate, answerAdapterQuestion } = create
   onSenderSubmit,
   api,
 })
+Object.assign(gateActionsRef, { submitHuman, approveSessionStart, gate, answerAdapterQuestion })
 
 async function rename() {
   if (!activeId.value || !editTitle.value.trim()) return

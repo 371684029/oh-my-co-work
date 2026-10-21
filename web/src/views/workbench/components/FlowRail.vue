@@ -122,7 +122,7 @@
                       class="flow-node-doc-btn"
                       @click.stop="openNodeJournal(n)"
                     >
-                      台账
+                      {{ flowRailJournalButton() }}
                     </el-button>
                     <el-tag
                       v-if="nodeHasAdapt(n)"
@@ -131,7 +131,7 @@
                       effect="plain"
                       round
                     >
-                      适配
+                      {{ flowRailTagAdapt() }}
                     </el-tag>
                     <el-tag
                       v-if="nodeHasRefine(n)"
@@ -140,7 +140,7 @@
                       effect="plain"
                       round
                     >
-                      炼化
+                      {{ flowRailTagRefine() }}
                     </el-tag>
                     <el-tag
                       v-if="n.step_type === 'offsite'"
@@ -149,7 +149,7 @@
                       effect="plain"
                       round
                     >
-                      临时
+                      {{ flowRailTagOffsite() }}
                     </el-tag>
                     <el-tag
                       v-else-if="n.step_type === 'archive'"
@@ -158,7 +158,7 @@
                       effect="plain"
                       round
                     >
-                      归档
+                      {{ flowRailTagArchive() }}
                     </el-tag>
                     <el-tag
                       v-else-if="isClonedNode(n)"
@@ -167,7 +167,7 @@
                       effect="plain"
                       round
                     >
-                      克隆
+                      {{ flowRailTagClone() }}
                     </el-tag>
                     <el-tag
                       v-if="isCurrentOffsiteSegment(n)"
@@ -176,7 +176,7 @@
                       effect="dark"
                       round
                     >
-                      当前段
+                      {{ flowRailTagCurrentSegment() }}
                     </el-tag>
                     <el-tag
                       v-if="n.step_type === 'offsite' && n.output?.archived"
@@ -185,7 +185,7 @@
                       effect="plain"
                       round
                     >
-                      已归档
+                      {{ flowRailTagOffsiteArchived() }}
                     </el-tag>
                     <el-tag
                       v-else-if="offsiteEntryLabel(n)"
@@ -203,7 +203,7 @@
                       effect="plain"
                       round
                     >
-                      {{ nodeBypassed(n) ? '已绕过' : '跳过' }}
+                      {{ nodeBypassed(n) ? flowRailSkippedBypassed() : flowRailSkipped() }}
                     </el-tag>
                     <el-tag
                       v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human' && isCurrent(n)"
@@ -212,7 +212,7 @@
                       effect="dark"
                       round
                     >
-                      待确认
+                      {{ flowRailWaitingHuman() }}
                     </el-tag>
                     <el-tag
                       v-else-if="n.step_type !== 'offsite' && n.status === 'waiting_human'"
@@ -221,7 +221,7 @@
                       effect="plain"
                       round
                     >
-                      已挂起
+                      {{ flowRailSuspended() }}
                     </el-tag>
                     <el-tag
                       v-else-if="n.step_type !== 'offsite' && isCurrent(n) && n.status === 'pending'"
@@ -230,7 +230,7 @@
                       effect="plain"
                       round
                     >
-                      待跑
+                      {{ flowRailPending() }}
                     </el-tag>
                     <el-tag
                       v-else-if="n.step_type !== 'offsite' && isCurrent(n)"
@@ -239,7 +239,7 @@
                       effect="light"
                       round
                     >
-                      当前
+                      {{ flowRailCurrent() }}
                     </el-tag>
                   </div>
                   <div class="flow-step-meta">
@@ -523,8 +523,22 @@ import {
   flowRailArchivedHint,
   flowRailOffsiteHint,
   flowRailTabDocs,
+  flowRailTagAdapt,
+  flowRailTagArchive,
+  flowRailTagClone,
+  flowRailTagCurrentSegment,
+  flowRailTagOffsite,
+  flowRailTagOffsiteArchived,
+  flowRailTagRefine,
+  flowRailCurrent,
+  flowRailJournalButton,
+  flowRailPending,
+  flowRailSkipped,
+  flowRailSkippedBypassed,
+  flowRailSuspended,
   flowRailTabFlow,
   flowRailTabTimeline,
+  flowRailWaitingHuman,
 } from '../composables/flowRailCopy.js'
 import { flowRailRestartFromHereLabel } from '../composables/sessionFlowRestartUi.js'
 import { useFlowStore } from '../../../stores/flow.js'
