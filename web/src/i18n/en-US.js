@@ -52,6 +52,18 @@ export const strings = {
       missingGroup: 'Demo flow group not found. Enable demo examples in Settings.',
       loadFailed: 'Could not load group templates',
     },
+    slash: {
+      executed: 'Ran /{slash}',
+      notFound: 'Unknown command /{token}. Configure it under Settings → Slash / hotkeys.',
+      agentInsert: 'Please assist, {name}: ',
+    },
+    message: {
+      needSession: 'Select a session first',
+      mentionPlanned: 'Offsite assist · logged on pending step',
+      mentionOffsite: 'Offsite assist started',
+      mainGateWaiting: 'Main flow still waiting; offsite assist does not submit the gate',
+      newTask: 'New task created',
+    },
     gate: {
       approveStart: 'Approved; starting run',
       cancelStart: 'Cancelled; task closed',

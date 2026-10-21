@@ -46,6 +46,18 @@ import {
   findGroupByTitle,
 } from './sessionDemoFlowUi.js'
 import { t } from '../../../i18n/index.js'
+import {
+  agentInsertTextFromSlashRun,
+  slashCommandNotFoundMessage,
+  slashNeedsUrlPrompt,
+  slashRunSuccessMessage,
+} from './sessionSlashRunUi.js'
+import {
+  mainGateWaitingInfoMessage,
+  mentionPendingSuccessMessage,
+  needSelectSessionMessage,
+  newTaskCreatedMessage,
+} from './sessionMessageFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -1140,7 +1152,7 @@ async function runSlash(cmd) {
   if (!cmd) return
   try {
     let url
-    if (cmd.kind === 'url' && cmd.promptForUrl) {
+    if (slashNeedsUrlPrompt(cmd)) {
       const { value } = await ElMessageBox.prompt(cmd.description || '打开网址', cmd.name, {
         inputValue: cmd.url || 'https://',
       })
@@ -1159,13 +1171,11 @@ async function runSlash(cmd) {
       clearSender()
     } else if (r.kind === 'agent') {
       // 熔炉 / 成员 Agent：写入提示语到输入框，用户可补全后发送
-      await replaceSenderText(
-        r.insertText || `请【${r.memberName || FURNACE_DISPLAY_NAME}】协助处理：`,
-      )
+      await replaceSenderText(agentInsertTextFromSlashRun(r, FURNACE_DISPLAY_NAME))
     } else {
       clearSender()
     }
-    ElMessage.success(r.message || `已执行 /${cmd.slash}`)
+    ElMessage.success(slashRunSuccessMessage(r, cmd))
   } catch (e) {
     ElMessage.error(e.message)
   }
@@ -1188,7 +1198,7 @@ async function onSenderSubmit() {
       return
     }
     const token = text.slice(1).trim().split(/\s+/)[0] || ''
-    ElMessage.warning(`未找到指令 /${token}，可在 设置 → 斜杠 / 快捷键 中配置`)
+    ElMessage.warning(slashCommandNotFoundMessage(token))
     return
   }
 
@@ -1217,7 +1227,7 @@ async function onSenderSubmit() {
   saveInputDraft(composerScopeKey(activeId.value), '')
 
   if (!activeId.value) {
-    ElMessage.warning('请先选择会话')
+    ElMessage.warning(needSelectSessionMessage())
     return
   }
   sending.value = true
@@ -1226,17 +1236,15 @@ async function onSenderSubmit() {
     clearSender()
     pendingFiles.value = []
     if (r.mentionPending) {
-      ElMessage.success(
-        r.offsiteMode === 'planned' ? '临时协助 · 已记入挂起节点' : '已进入临时协助',
-      )
+      ElMessage.success(mentionPendingSuccessMessage(r.offsiteMode))
       if (r.mainGateWaiting) {
-        ElMessage.info('主流程仍停在当前确认，临时协助不替代提交')
+        ElMessage.info(mainGateWaitingInfoMessage())
       }
     }
     if (r.newSession && r.session) {
       await loadLists()
       await selectSession(r.session.id)
-      ElMessage.success('已创建新任务')
+      ElMessage.success(newTaskCreatedMessage())
     } else {
       await loadDetail(activeId.value)
       sessions.value = await api.sessions.list()
