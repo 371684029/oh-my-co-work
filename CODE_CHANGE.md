@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/composables/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds,useSessionDetail} web/test/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 gate/bubble + flow anchor 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionContextComputeds,sessionNodePresentation,useSessionDetail} web/test/{sessionContextComputeds,sessionNodePresentation}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 context/hash + node presentation 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionSenderInputBridge,sessionFlowRailHandlers,useSessionDetail} web/test/{sessionSenderInputBridge,sessionFlowRailHandlers}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 sender 桥接 + flow rail handlers
 2026-10-21 | A/M | web/src/{composables/settingsPrefsCopy,i18n/settingsPrefs.{zh,en}.js,views/settings/Prefs.vue,i18n/{zh-CN,en-US}.js} web/test/settingsPrefsCopy.test.mjs docs/5.5.0-plan.md docs/5.3.0-plan.md | DSK-08 设置 Preferences 全页 i18n；5.5.0 未完成项台账

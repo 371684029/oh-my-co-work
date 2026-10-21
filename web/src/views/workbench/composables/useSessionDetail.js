@@ -32,7 +32,6 @@ import {
   computeOffsiteMode,
 } from './sessionOffsiteUi.js'
 import { reviewAction, reviewLabel } from './sessionReviewUi.js'
-import { parseSessionContext } from './sessionContextUi.js'
 import { createSessionContextComputeds } from './sessionContextComputeds.js'
 import { createSessionNodePresentation } from './sessionNodePresentation.js'
 import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
