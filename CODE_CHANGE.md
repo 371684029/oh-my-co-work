@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | scripts/restore-backup.mjs package.json web/src/{i18n/{zh-CN,en-US},views/{Workbench,workbench/components/{SessionRail,FlowRail}}} web/src/views/workbench/composables/{sessionFlowNavUi,useSessionDetail} web/test/{sessionFlowNavUi,i18n}.test.mjs docs/5.1.0-plan.md | SRV-01 异步 restore CLI、UX-03/DSK-08 工作台 aria+i18n
 2026-10-21 | A/M | server/src/terminal/{terminalRun,terminalService} web/src/views/workbench/composables/{sessionComposerSync,useSessionDetail} server/test/terminalRunModule.test.js web/test/sessionComposerSync.test.mjs docs/{5.1.0,5.3.0}-plan.md | SRV-04 terminalRun、FE-01 sessionComposerSync
 2026-10-21 | A/M | server/src/terminal/{terminalQuota,terminalService} web/src/views/{Workbench,workbench/composables/{sessionHashUi,sessionAttentionUi,useSessionDetail}} scripts/ci-e2e-smoke.mjs server/test/terminalQuota.test.js web/test/{sessionHashUi,sessionAttentionUi}.test.mjs docs/5.1.0-plan.md | SRV-04 terminalQuota、FE-01 hash/attention、QA-01 备份计数、UX-03 工作台 aria
 2026-10-21 | A/M | server/src/{backup.js,terminal/{terminalLifecycle,terminalService}} web/src/views/{workbench/composables/{sessionContextUi,useSessionDetail},settings/RestoreCenter} scripts/ci-e2e-smoke.mjs server/test/terminalLifecycleModule.test.js web/test/sessionContextUi.test.mjs docs/5.1.0-plan.md | SRV-01 tarExtractSync、SRV-04 terminalLifecycle、FE-01 sessionContextUi、QA-01 backup POST smoke

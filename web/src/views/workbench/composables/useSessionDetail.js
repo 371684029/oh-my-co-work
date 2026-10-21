@@ -67,6 +67,10 @@ import {
 } from './sessionContextUi.js'
 import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
 import {
+  isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
+  nextSkippedFlowGroupExpansion,
+} from './sessionFlowNavUi.js'
+import {
   computeNeedsHuman,
   announceKickoffFromContext,
   announceUserNotesFromContext,
@@ -1156,14 +1160,11 @@ const flowEntries = computed(() =>
 )
 
 function isSkippedFlowGroupExpanded(entry) {
-  return !!useFlowStore().expandedSkippedFlowGroups[entry.key]
+  return isSkippedFlowGroupExpandedUi(useFlowStore(), entry)
 }
 
 function toggleSkippedFlowGroup(entry) {
-  useFlowStore().expandedSkippedFlowGroups = {
-    ...useFlowStore().expandedSkippedFlowGroups,
-    [entry.key]: !isSkippedFlowGroupExpanded(entry),
-  }
+  useFlowStore().expandedSkippedFlowGroups = nextSkippedFlowGroupExpansion(useFlowStore(), entry)
 }
 
 /** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
