@@ -2,20 +2,22 @@
   <div class="prefs-page">
     <div class="page-head">
       <div>
-        <h2 class="page-title">设置</h2>
-        <p class="page-desc">演示数据、全局熔炉与本地偏好（仅本机生效）</p>
+        <h2 class="page-title">{{ prefsTitle() }}</h2>
+        <p class="page-desc">{{ prefsDesc() }}</p>
       </div>
     </div>
 
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
-          <div class="prefs-title">运行环境</div>
+          <div class="prefs-title">{{ prefsT('runtime.title') }}</div>
           <p class="prefs-hint">
-            当前是
-            <strong>{{ isDesktop ? `桌面窗口（${desktopEnv}）` : '浏览器网页' }}</strong>。
-            <span v-if="isDesktop">关窗会藏到托盘，托盘菜单可退出并停掉后台服务。</span>
-            <span v-else>Windows 运行包双击 start.bat 会打开桌面窗口，不必先开浏览器。</span>
+            {{ prefsRuntimeHintDesktopPrefix() }}
+            <strong>{{
+              isDesktop ? prefsRuntimeHintDesktopStrong(desktopEnv) : prefsRuntimeHintWebStrong()
+            }}</strong>。
+            <span v-if="isDesktop">{{ prefsRuntimeHintDesktopSuffix() }}</span>
+            <span v-else>{{ prefsRuntimeHintWebSuffix() }}</span>
           </p>
         </div>
         <el-tag :type="isDesktop ? 'success' : 'info'" size="small">
@@ -25,10 +27,8 @@
     </section>
 
     <section v-if="isDesktop" class="prefs-card">
-      <div class="prefs-title">数据目录</div>
-      <p class="prefs-hint">
-        桌面版默认把数据库与日志放在系统用户目录（DSK-05），避免覆盖安装包时丢数据。
-      </p>
+      <div class="prefs-title">{{ prefsT('dataDir.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('dataDir.hint') }}</p>
       <pre v-if="dataDirInfo" class="usage-pre">{{ dataDirSummary }}</pre>
       <el-button
         v-if="dataDirInfo?.hasLegacy && !dataDirInfo?.migrated"
@@ -37,24 +37,22 @@
         :loading="migratingData"
         @click="migrateData"
       >
-        从安装目录迁移数据
+        {{ prefsT('dataDir.migrate') }}
       </el-button>
     </section>
 
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
-          <div class="prefs-title">显示演示示例</div>
-          <p class="prefs-hint">
-            关闭后，成员 / 群模板 / 会话列表中隐藏「示例回声」「示例命令」「演示流」等演示数据（不删除）。
-          </p>
+          <div class="prefs-title">{{ prefsT('demo.title') }}</div>
+          <p class="prefs-hint">{{ prefsT('demo.hint') }}</p>
         </div>
         <el-switch
           v-model="showDemo"
           :loading="saving"
           inline-prompt
-          active-text="显示"
-          inactive-text="隐藏"
+          :active-text="prefsT('demo.switchOn')"
+          :inactive-text="prefsT('demo.switchOff')"
           @change="onToggleDemo"
         />
       </div>
@@ -63,43 +61,43 @@
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
-          <div class="prefs-title">启动时检查更新</div>
+          <div class="prefs-title">{{ prefsT('startupUpdate.title') }}</div>
           <p class="prefs-hint">
-            开启后每次启动应用会自动检查是否有新版本，发现新版本时通知提示。不会自动下载或安装。
+            {{ prefsT('startupUpdate.hint') }}
           </p>
         </div>
         <el-switch
           v-model="startupUpdateCheck"
           :loading="savingStartupUpdate"
           inline-prompt
-          active-text="开"
-          inactive-text="关"
+          :active-text="prefsT('startupUpdate.switchOn')"
+          :inactive-text="prefsT('startupUpdate.switchOff')"
           @change="onToggleStartupUpdate"
         />
       </div>
     </section>
 
     <section v-if="isDesktop" class="prefs-card">
-      <div class="prefs-title">系统通知</div>
+      <div class="prefs-title">{{ prefsT('notify.title') }}</div>
       <p class="prefs-hint">
-        窗口在后台或失焦时，用系统通知提醒你处理闸门等事件。不会上传任何内容到云端。
+        {{ prefsT('notify.hint') }}
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="启用系统通知">
+        <el-form-item :label="prefsT('notify.enable')">
           <el-switch v-model="notifyPrefs.enabled" />
         </el-form-item>
-        <el-form-item label="仅窗口不在前台时通知">
+        <el-form-item :label="prefsT('notify.onlyUnfocused')">
           <el-switch v-model="notifyPrefs.onlyWhenUnfocused" :disabled="!notifyPrefs.enabled" />
         </el-form-item>
-        <el-form-item label="通知类型">
+        <el-form-item :label="prefsT('notify.types')">
           <el-checkbox v-model="notifyPrefs.levels.action" :disabled="!notifyPrefs.enabled">
-            需要你（闸门待确认等）
+            {{ prefsT('notify.levelAction') }}
           </el-checkbox>
           <el-checkbox v-model="notifyPrefs.levels.error" :disabled="!notifyPrefs.enabled">
-            出错了
+            {{ prefsT('notify.levelError') }}
           </el-checkbox>
           <el-checkbox v-model="notifyPrefs.levels.done" :disabled="!notifyPrefs.enabled">
-            完成了（默认仅应用内）
+            {{ prefsT('notify.levelDone') }}
           </el-checkbox>
         </el-form-item>
       </el-form>
@@ -113,53 +111,50 @@
       />
       <div class="prefs-actions">
         <el-button type="primary" plain size="small" :loading="savingNotify" @click="saveNotify">
-          保存通知设置
+          {{ prefsT('notify.save') }}
         </el-button>
         <el-button size="small" :disabled="!notifyPrefs.enabled" @click="sendTestNotify">
-          发送测试通知
+          {{ prefsT('notify.test') }}
         </el-button>
       </div>
       <p class="prefs-hint" style="margin-top: 8px">
-        系统通知上的快捷按钮与内联回复（NTF-18）默认关闭，避免误触；当前版本仅支持点击通知进入应用。
+        {{ prefsT('notify.footnote') }}
       </p>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">本机用量统计</div>
-      <p class="prefs-hint">不上传数据，仅汇总本库内节点耗时、失败率与日志占用（TRC-05）。</p>
-      <el-button size="small" :loading="usageLoading" @click="loadUsageStats">刷新统计</el-button>
+      <div class="prefs-title">{{ prefsT('usage.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('usage.hint') }}</p>
+      <el-button size="small" :loading="usageLoading" @click="loadUsageStats">{{ prefsT('usage.refresh') }}</el-button>
       <pre v-if="usageStats" class="usage-pre">{{ usageSummaryText }}</pre>
     </section>
 
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
-          <div class="prefs-title">是否展示脚本弹窗</div>
+          <div class="prefs-title">{{ prefsT('scriptPopup.title') }}</div>
           <p class="prefs-hint">
-            全局默认。开启后脚本执行可弹出<strong>脚本自身控制台</strong>（bat 黑窗）。
-            不再弹出角落「释放资源」小窗。进程占用请到下方「释放资源」选择会话后结束。
-            <strong>优先级</strong>：成员 / 快捷指令 &gt; 全局。
+            {{ prefsT('scriptPopup.hint') }}
           </p>
         </div>
         <el-switch
           v-model="showScriptPopup"
           :loading="savingPopup"
           inline-prompt
-          active-text="是"
-          inactive-text="否"
+          :active-text="prefsT('scriptPopup.switchYes')"
+          :inactive-text="prefsT('scriptPopup.switchNo')"
           @change="onToggleScriptPopup"
         />
       </div>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">释放资源</div>
+      <div class="prefs-title">{{ prefsT('resources.title') }}</div>
       <p class="prefs-hint">
-        流程走完默认<strong>归档并释放本会话资源</strong>（同意最后一步即完成群聊）。
-        成员单聊不自动归档。也可在此选择会话结束进程 / 内嵌终端，或一次性全部释放。
+        {{ prefsT('resources.hint') }}
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="占用中的会话">
+        <el-form-item :label="prefsT('resources.occupiedLabel')">
           <el-select
             v-model="selectedSessionIds"
             multiple
@@ -167,7 +162,7 @@
             clearable
             collapse-tags
             collapse-tags-tooltip
-            placeholder="选择要释放的会话"
+            :placeholder="prefsT('resources.placeholder')"
             style="width: 100%"
           >
             <el-option
@@ -177,7 +172,7 @@
               :value="item.sessionId"
             />
           </el-select>
-          <p v-if="!occupied.length" class="prefs-resolved">当前没有占用中的会话</p>
+          <p v-if="!occupied.length" class="prefs-resolved">{{ prefsT('resources.empty') }}</p>
         </el-form-item>
       </el-form>
       <div class="prefs-actions">
@@ -189,7 +184,7 @@
           :loading="releasing"
           @click="releaseSelected"
         >
-          释放选中
+          {{ prefsT('resources.releaseSelected') }}
         </el-button>
         <el-button
           type="danger"
@@ -199,26 +194,26 @@
           :loading="releasing"
           @click="releaseAll"
         >
-          全部释放资源
+          {{ prefsT('resources.releaseAll') }}
         </el-button>
         <el-button size="small" text :loading="loadingResources" @click="loadResources">
-          刷新列表
+          {{ prefsT('resources.refresh') }}
         </el-button>
       </div>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">熔炉（默认）</div>
+      <div class="prefs-title">{{ prefsT('furnace.title') }}</div>
       <p class="prefs-hint">
-        新建群模板默认<strong>继承</strong>此处配置；群内可改为指定成员或留空。可不选。闸门通道内部字段仍为 admin。
+        {{ prefsT('furnace.hint') }}
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="默认熔炉成员">
+        <el-form-item :label="prefsT('furnace.defaultMember')">
           <el-select
             v-model="adminMemberId"
             clearable
             filterable
-            placeholder="可不选 · 默认匹配「熔炉」"
+            :placeholder="prefsT('furnace.memberPlaceholder')"
             style="width: 100%"
             @change="onAdminChange"
           >
@@ -229,69 +224,64 @@
               :value="m.id"
             />
           </el-select>
-          <p v-if="resolvedHint" class="prefs-resolved">当前解析：{{ resolvedHint }}</p>
+          <p v-if="resolvedHintText" class="prefs-resolved">{{ resolvedHintText }}</p>
         </el-form-item>
-        <el-form-item label="新建步骤默认流转">
+        <el-form-item :label="prefsT('furnace.defaultFlow')">
           <el-checkbox-group v-model="defaultFlowKeys" @change="onAdminChange">
-            <el-checkbox value="admin">熔炉总结与流转</el-checkbox>
-            <el-checkbox value="auto">自动流转</el-checkbox>
-            <el-checkbox value="human">人工流转</el-checkbox>
+            <el-checkbox value="admin">{{ prefsT('furnace.flowAdmin') }}</el-checkbox>
+            <el-checkbox value="auto">{{ prefsT('furnace.flowAuto') }}</el-checkbox>
+            <el-checkbox value="human">{{ prefsT('furnace.flowHuman') }}</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingAdmin" @click="saveAdmin">
-        保存熔炉配置
+        {{ prefsT('furnace.save') }}
       </el-button>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">Grok Build</div>
+      <div class="prefs-title">{{ prefsT('grok.title') }}</div>
       <p class="prefs-hint">
-        熔炉默认铺满 TUI。Grok 与 Cursor CLI 分属独立 PTY，顶栏 Tab 切换，互不杀进程。
-        GUI 入口已隐藏（4.8 专心双 Agent 终端）。仅缺安装或登录时打开教程。完整步骤见
-        <router-link to="/settings/grok">Grok Build 教程</router-link>。
+        {{ prefsT('grok.hintPrefix') }}
+        <router-link to="/settings/grok">{{ prefsT('grok.hintLink') }}</router-link>。
       </p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="已配置 Grok">
+        <el-form-item :label="prefsT('grok.configured')">
           <el-switch v-model="grok.configured" />
-          <p class="prefs-resolved">默认开。熔炉成员接到本机 grok 命令；关掉则只留聊天回声。</p>
+          <p class="prefs-resolved">{{ prefsT('grok.configuredHint') }}</p>
         </el-form-item>
-        <el-form-item label="启动命令">
+        <el-form-item :label="prefsT('grok.command')">
           <el-input v-model="grok.command" placeholder="grok" />
         </el-form-item>
-        <el-form-item label="Cursor CLI 命令">
+        <el-form-item :label="prefsT('grok.cursorCommand')">
           <el-input v-model="grok.cursorCommand" placeholder="cursor-agent" />
-          <p class="prefs-resolved">熔炉顶栏「Cursor CLI」会 spawn 此命令（默认 cursor-agent，探测时也会试 agent）。</p>
+          <p class="prefs-resolved">{{ prefsT('grok.cursorHint') }}</p>
         </el-form-item>
-        <el-form-item label="开熔炉默认">
+        <el-form-item :label="prefsT('grok.defaultSurface')">
           <el-radio-group v-model="grok.surface">
-            <el-radio value="tui">铺满 TUI</el-radio>
+            <el-radio value="tui">{{ prefsT('grok.surfaceTui') }}</el-radio>
           </el-radio-group>
-          <p class="prefs-resolved">GUI 入口已隐藏。工具栏可「满屏 / 退出满屏」或缩小回三栏。</p>
+          <p class="prefs-resolved">{{ prefsT('grok.surfaceHint') }}</p>
         </el-form-item>
-        <el-form-item label="改源文件前打压缩包备份">
+        <el-form-item :label="prefsT('grok.adaptBackup')">
           <el-switch v-model="adaptBackup" />
-          <p class="prefs-resolved">
-            默认开。只备份即将改动的脚本，写到 data/backups/adapt。改失败则不改文件，只打步骤标记。
-          </p>
+          <p class="prefs-resolved">{{ prefsT('grok.adaptBackupHint') }}</p>
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingGrok" @click="saveGrok">
-        保存 Grok 配置
+        {{ prefsT('grok.save') }}
       </el-button>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">界面语言</div>
-      <p class="prefs-hint">
-        切换后刷新页面生效。英文包仍在补齐，未翻译处可能仍显示中文。
-      </p>
+      <div class="prefs-title">{{ prefsT('locale.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('locale.hint') }}</p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="语言 / Language">
+        <el-form-item :label="prefsT('locale.label')">
           <el-select
             v-model="uiLocale"
             style="max-width: 280px"
-            aria-label="界面语言"
+            :aria-label="prefsT('locale.selectAria')"
             @change="onLocaleChange"
           >
             <el-option
@@ -306,13 +296,13 @@
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">界面性能</div>
-      <p class="prefs-hint">远程桌面或集显卡顿时可关闭毛玻璃模糊（5.2.0 UI-04）。</p>
+      <div class="prefs-title">{{ prefsT('perf.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('perf.hint') }}</p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="降低特效（关闭 backdrop-filter）">
+        <el-form-item :label="prefsT('perf.reduceEffects')">
           <el-switch v-model="ui.reduceEffects" @change="saveUi" />
         </el-form-item>
-        <el-form-item label="外观（浅色 / 深色 / 跟随系统）">
+        <el-form-item :label="prefsT('perf.colorScheme')">
           <el-segmented
             v-model="ui.colorScheme"
             :options="colorSchemeOptions"
@@ -323,103 +313,97 @@
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">终端偏好</div>
-      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、字体、行距、渲染器与粘贴策略。</p>
+      <div class="prefs-title">{{ prefsT('terminal.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('terminal.hint') }}</p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="主题">
+        <el-form-item :label="prefsT('terminal.theme')">
           <el-select v-model="terminal.theme" style="width: 100%">
-            <el-option label="项目深色" value="project-dark" />
-            <el-option label="终端原色" value="native" />
-            <el-option label="高对比度" value="high-contrast" />
+            <el-option :label="prefsT('terminal.themeProjectDark')" value="project-dark" />
+            <el-option :label="prefsT('terminal.themeNative')" value="native" />
+            <el-option :label="prefsT('terminal.themeHighContrast')" value="high-contrast" />
           </el-select>
         </el-form-item>
-        <el-form-item label="字号">
+        <el-form-item :label="prefsT('terminal.fontSize')">
           <el-input-number v-model="terminal.fontSize" :min="10" :max="22" />
         </el-form-item>
-        <el-form-item label="字体栈">
+        <el-form-item :label="prefsT('terminal.fontFamily')">
           <el-input v-model="terminal.fontFamily" type="textarea" :rows="2" />
         </el-form-item>
-        <el-form-item label="行高">
+        <el-form-item :label="prefsT('terminal.lineHeight')">
           <el-input-number v-model="terminal.lineHeight" :min="1" :max="2" :step="0.05" />
         </el-form-item>
-        <el-form-item label="字距">
+        <el-form-item :label="prefsT('terminal.letterSpacing')">
           <el-input-number v-model="terminal.letterSpacing" :min="-1" :max="4" :step="0.1" />
         </el-form-item>
-        <el-form-item label="渲染器">
+        <el-form-item :label="prefsT('terminal.renderer')">
           <el-select v-model="terminal.renderer" style="width: 100%">
-            <el-option label="WebGL（默认）" value="webgl" />
-            <el-option label="DOM（兼容）" value="dom" />
+            <el-option :label="prefsT('terminal.rendererWebgl')" value="webgl" />
+            <el-option :label="prefsT('terminal.rendererDom')" value="dom" />
           </el-select>
         </el-form-item>
-        <el-form-item label="光标闪烁">
+        <el-form-item :label="prefsT('terminal.cursorBlink')">
           <el-switch v-model="terminal.cursorBlink" />
         </el-form-item>
-        <el-form-item label="多行粘贴">
+        <el-form-item :label="prefsT('terminal.pastePolicy')">
           <el-select v-model="terminal.pastePolicy" style="width: 100%">
-            <el-option label="超过一行需确认" value="confirm" />
-            <el-option label="直接粘贴" value="allow" />
+            <el-option :label="prefsT('terminal.pasteConfirm')" value="confirm" />
+            <el-option :label="prefsT('terminal.pasteAllow')" value="allow" />
           </el-select>
         </el-form-item>
-        <el-form-item label="进程结束后收起工作区">
+        <el-form-item :label="prefsT('terminal.autoCollapse')">
           <el-switch v-model="terminal.autoCollapseOnExit" />
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingTerminal" @click="saveTerminal">
-        保存终端偏好
+        {{ prefsT('terminal.save') }}
       </el-button>
     </section>
 
     <section class="prefs-card">
-      <div class="prefs-title">配额与脱敏</div>
-      <p class="prefs-hint">
-        限制单会话并发终端、日志大小与回放缓冲。日志会把常见 Token 打成 [REDACTED]，也可自写正则（每行一条）。
-      </p>
+      <div class="prefs-title">{{ prefsT('quota.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('quota.hint') }}</p>
       <el-form label-position="top" class="admin-form">
-        <el-form-item label="单会话并发终端">
+        <el-form-item :label="prefsT('quota.maxTerminals')">
           <el-input-number v-model="quota.maxConcurrentTerminals" :min="1" :max="32" />
         </el-form-item>
-        <el-form-item label="单终端日志上限（MiB）">
+        <el-form-item :label="prefsT('quota.maxLogMiB')">
           <el-input-number v-model="quota.maxLogMiB" :min="1" :max="200" />
         </el-form-item>
-        <el-form-item label="回放缓冲（KiB）">
+        <el-form-item :label="prefsT('quota.maxReplayKiB')">
           <el-input-number v-model="quota.maxReplayKiB" :min="32" :max="2048" />
         </el-form-item>
-        <el-form-item label="日志脱敏">
+        <el-form-item :label="prefsT('quota.redact')">
           <el-switch v-model="redact.enabled" />
         </el-form-item>
-        <el-form-item label="额外脱敏正则">
+        <el-form-item :label="prefsT('quota.patterns')">
           <el-input
             v-model="redact.patternsText"
             type="textarea"
             :rows="3"
-            placeholder="每行一条正则，例如 AKIA[0-9A-Z]{16}"
+            :placeholder="prefsT('quota.patternsPlaceholder')"
           />
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingQuota" @click="saveQuota">
-        保存配额与脱敏
+        {{ prefsT('quota.save') }}
       </el-button>
     </section>
 
     <!-- 一键导入与一键导出 -->
     <section class="prefs-card">
-      <div class="prefs-title">一键导入与一键导出</div>
-      <p class="prefs-hint">
-        数据完全保存在本机。支持一键导入备份包恢复数据，或按需导出全部会话协同文档。
-      </p>
+      <div class="prefs-title">{{ prefsT('backup.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('backup.hint') }}</p>
 
       <div class="backup-export-grid">
         <div class="be-card">
           <div class="be-card-head">
-            <span class="be-card-badge">恢复</span>
-            <div class="be-card-title">一键导入</div>
+            <span class="be-card-badge">{{ prefsT('backup.importBadge') }}</span>
+            <div class="be-card-title">{{ prefsT('backup.importTitle') }}</div>
           </div>
-          <p class="be-card-desc">
-            选择备份包（<code>.tar.gz</code>）一键恢复数据库、台账与上传文件。导入前会自动保留当前数据的快照，可回退。
-          </p>
+          <p class="be-card-desc">{{ prefsT('backup.importDesc') }}</p>
           <div class="be-card-actions">
             <el-button type="primary" size="default" :loading="importing" @click="pickImportFile">
-              一键导入备份包
+              {{ prefsT('backup.importBtn') }}
             </el-button>
             <input
               ref="importInput"
@@ -429,18 +413,18 @@
               @change="onImportFile"
             />
           </div>
-          <div v-if="lastImportTime" class="be-last-info">最近导入：{{ lastImportTime }}</div>
+          <div v-if="lastImportTime" class="be-last-info">
+            {{ prefsBackupImportLast(lastImportTime) }}
+          </div>
         </div>
 
         <!-- 一键导出区块 -->
         <div class="be-card">
           <div class="be-card-head">
-            <span class="be-card-badge be-card-badge--export">文档</span>
-            <div class="be-card-title">一键导出</div>
+            <span class="be-card-badge be-card-badge--export">{{ prefsT('backup.exportBadge') }}</span>
+            <div class="be-card-title">{{ prefsT('backup.exportTitle') }}</div>
           </div>
-          <p class="be-card-desc">
-            聚合所有群模板与会话下的群报告（ANNOUNCEMENT.md）、会话索引与节点台账，一键打包为 ZIP 文件直接下载到本地。
-          </p>
+          <p class="be-card-desc">{{ prefsT('backup.exportDesc') }}</p>
           <div class="be-card-actions">
             <el-button
               type="success"
@@ -449,24 +433,21 @@
               :loading="exportingDocs"
               @click="onOneClickExportDocs"
             >
-              一键导出全部文档 (ZIP)
+              {{ prefsT('backup.exportBtn') }}
             </el-button>
           </div>
           <div v-if="lastExportTime" class="be-last-info">
-            最近导出：{{ lastExportTime }}
+            {{ prefsBackupExportLast(lastExportTime) }}
           </div>
         </div>
       </div>
     </section>
 
     <section class="prefs-card prefs-card--danger">
-      <div class="prefs-title">删除演示数据</div>
-      <p class="prefs-hint">
-        一键清除演示成员、演示群模板及其全部会话与消息，并结束相关进程。
-        <strong>不可还原</strong>。不会删除「熔炉」与你自建的数据。
-      </p>
+      <div class="prefs-title">{{ prefsT('purge.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('purge.hint') }}</p>
       <el-button type="danger" plain :loading="purging" @click="onPurge">
-        一键删除演示数据
+        {{ prefsT('purge.btn') }}
       </el-button>
     </section>
   </div>
@@ -480,6 +461,30 @@ import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
 import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
 import { getLocale, setLocale, LOCALE_OPTIONS } from '../../i18n/index.js'
+import {
+  prefsTitle,
+  prefsDesc,
+  prefsT,
+  prefsRuntimeHintDesktopPrefix,
+  prefsRuntimeHintDesktopStrong,
+  prefsRuntimeHintDesktopSuffix,
+  prefsRuntimeHintWebStrong,
+  prefsRuntimeHintWebSuffix,
+  prefsDataDirSummary,
+  prefsColorSchemeOptions,
+  prefsResourceLabel,
+  prefsUsageSummaryText,
+  prefsResolvedHint,
+  prefsToast,
+  prefsConfirm,
+  prefsConfirmCancel,
+  prefsImportConfirmBody,
+  prefsReleaseOk,
+  prefsBackupImportLast,
+  prefsBackupExportLast,
+  prefsTestNotifyTitle,
+  prefsTestNotifyBody,
+} from '../../composables/settingsPrefsCopy.js'
 
 const { isDesktop, desktopEnv, initDesktopBridge, notify: desktopNotify } = useDesktopBridge()
 initDesktopBridge()
@@ -516,11 +521,7 @@ const quota = ref({
   maxReplayKiB: 256,
 })
 const redact = ref({ enabled: true, patternsText: '' })
-const colorSchemeOptions = [
-  { label: '跟随系统', value: 'system' },
-  { label: '浅色', value: 'light' },
-  { label: '深色', value: 'dark' },
-]
+const colorSchemeOptions = computed(() => prefsColorSchemeOptions())
 const ui = ref({ reduceEffects: false, colorScheme: 'system' })
 const uiLocale = ref(getLocale())
 const localeOptions = LOCALE_OPTIONS
@@ -551,42 +552,15 @@ const savingNotify = ref(false)
 const notifyPlatform = ref({ supported: true, platform: 'web', hint: '' })
 const dataDirInfo = ref(null)
 const migratingData = ref(false)
-const dataDirSummary = computed(() => {
-  const d = dataDirInfo.value
-  if (!d) return ''
-  return [
-    `当前：${d.current}`,
-    `推荐：${d.recommended}`,
-    d.hasLegacy ? `检测到旧目录：${d.legacy}` : '无安装目录旧库',
-    d.migrated ? '已迁移' : '',
-  ]
-    .filter(Boolean)
-    .join('\n')
-})
+const dataDirSummary = computed(() => prefsDataDirSummary(dataDirInfo.value))
 
 const usageLoading = ref(false)
 const usageStats = ref(null)
-const usageSummaryText = computed(() => {
-  const u = usageStats.value
-  if (!u) return ''
-  const lines = [
-    `会话：共 ${u.sessions?.total ?? 0}（活跃 ${u.sessions?.active ?? 0}）`,
-    `节点累计：${u.nodes?.totalHours ?? 0} 小时，失败 ${u.nodes?.failed ?? 0}`,
-    `终端累计：${u.terminals?.totalHours ?? 0} 小时`,
-    `日志磁盘：约 ${u.storage?.logMiB ?? 0} MiB`,
-  ]
-  for (const m of (u.byMember || []).slice(0, 5)) {
-    lines.push(`· ${m.name}：${m.runs} 次，均 ${Math.round(m.avgMs / 1000)}s，失败率 ${m.failRate}%`)
-  }
-  return lines.join('\n')
-})
+const usageSummaryText = computed(() => prefsUsageSummaryText(usageStats.value))
 
-const resolvedHint = computed(() => {
-  const r = resolvedAdmin.value
-  if (r?.display_name) return r.display_name
-  if (!adminMemberId.value) return '自动匹配「熔炉」（若存在）'
-  return ''
-})
+const resolvedHintText = computed(() =>
+  prefsResolvedHint(resolvedAdmin.value, adminMemberId.value),
+)
 
 async function load() {
   try {
@@ -666,10 +640,7 @@ async function load() {
 }
 
 function resourceLabel(item) {
-  const bits = []
-  if (item.processCount) bits.push(`${item.processCount} 进程`)
-  if (item.terminalCount) bits.push(`${item.terminalCount} 终端`)
-  return `${item.title}（${bits.join(' · ') || '占用'}）`
+  return prefsResourceLabel(item)
 }
 
 async function loadResources({ quiet = false } = {}) {
@@ -688,13 +659,13 @@ async function loadResources({ quiet = false } = {}) {
 
 async function releaseSelected() {
   if (!selectedSessionIds.value.length) {
-    ElMessage.warning('请先选中要释放的会话')
+    ElMessage.warning(prefsToast('releasePick'))
     return
   }
   releasing.value = true
   try {
     const r = await api.resources.release(selectedSessionIds.value)
-    ElMessage.success(`已请求释放 ${r.released || selectedSessionIds.value.length} 个会话`)
+    ElMessage.success(prefsReleaseOk(r.released || selectedSessionIds.value.length))
     selectedSessionIds.value = []
     await loadResources()
   } catch (e) {
@@ -706,18 +677,18 @@ async function releaseSelected() {
 
 async function releaseAll() {
   try {
-    await ElMessageBox.confirm(
-      '将结束当前所有占用会话的进程和内嵌终端。外部窗口若还在请手关。是否继续？',
-      '全部释放资源',
-      { type: 'warning', confirmButtonText: '全部释放', cancelButtonText: '取消' },
-    )
+    await ElMessageBox.confirm(prefsConfirm('releaseAllBody'), prefsConfirm('releaseAllTitle'), {
+      type: 'warning',
+      confirmButtonText: prefsConfirm('releaseAllConfirm'),
+      cancelButtonText: prefsConfirmCancel(),
+    })
   } catch {
     return
   }
   releasing.value = true
   try {
     const r = await api.resources.release([])
-    ElMessage.success(`已请求释放 ${r.released || 0} 个会话`)
+    ElMessage.success(prefsReleaseOk(r.released || 0))
     selectedSessionIds.value = []
     await loadResources()
   } catch (e) {
@@ -732,7 +703,7 @@ async function onToggleDemo(val) {
   try {
     const s = await api.appSettings.update({ showDemo: !!val })
     showDemo.value = s.showDemo !== false
-    ElMessage.success(showDemo.value ? '已显示演示示例' : '已隐藏演示示例')
+    ElMessage.success(prefsToast(showDemo.value ? 'demoShown' : 'demoHidden'))
   } catch (e) {
     showDemo.value = !val
     ElMessage.error(e.message)
@@ -746,9 +717,7 @@ async function onToggleScriptPopup(val) {
   try {
     const s = await api.appSettings.update({ showScriptPopup: !!val })
     showScriptPopup.value = s.showScriptPopup !== false
-    ElMessage.success(
-      showScriptPopup.value ? '已开启：展示脚本弹窗' : '已关闭：不展示脚本弹窗',
-    )
+    ElMessage.success(prefsToast(showScriptPopup.value ? 'scriptPopupOn' : 'scriptPopupOff'))
   } catch (e) {
     showScriptPopup.value = !val
     ElMessage.error(e.message)
@@ -763,7 +732,7 @@ async function saveUi() {
     ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
     await api.appSettings.update({ ui: { ...ui.value } })
     applyColorScheme(ui.value.colorScheme)
-    ElMessage.success('已保存界面设置')
+    ElMessage.success(prefsToast('uiSaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -775,7 +744,7 @@ async function saveTerminal() {
   savingTerminal.value = true
   try {
     await api.appSettings.update({ terminal: { ...terminal.value } })
-    ElMessage.success('已保存终端偏好')
+    ElMessage.success(prefsToast('terminalSaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -790,7 +759,7 @@ async function saveQuota() {
       quota: { ...quota.value },
       redact: { ...redact.value },
     })
-    ElMessage.success('已保存配额与脱敏')
+    ElMessage.success(prefsToast('quotaSaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -807,11 +776,11 @@ async function onImportFile(ev) {
   ev.target.value = ''
   if (!file) return
   try {
-    await ElMessageBox.confirm(
-      `将用「${file.name}」覆盖当前全部数据（会先自动保留快照）。继续？`,
-      '一键导入',
-      { type: 'warning', confirmButtonText: '导入', cancelButtonText: '取消' },
-    )
+    await ElMessageBox.confirm(prefsImportConfirmBody(file.name), prefsConfirm('importTitle'), {
+      type: 'warning',
+      confirmButtonText: prefsConfirm('importConfirm'),
+      cancelButtonText: prefsConfirmCancel(),
+    })
   } catch {
     return
   }
@@ -819,10 +788,10 @@ async function onImportFile(ev) {
   try {
     await api.backup.import(file)
     lastImportTime.value = new Date().toLocaleTimeString()
-    ElMessage.success('导入成功，即将刷新页面')
+    ElMessage.success(prefsToast('importOk'))
     setTimeout(() => window.location.reload(), 800)
   } catch (e) {
-    ElMessage.error(e?.message || '一键导入失败')
+    ElMessage.error(e?.message || prefsToast('importFail'))
   } finally {
     importing.value = false
   }
@@ -833,9 +802,9 @@ async function onOneClickExportDocs() {
   try {
     await api.docs.downloadAllDocsExport()
     lastExportTime.value = new Date().toLocaleTimeString()
-    ElMessage.success('一键导出成功，ZIP 压缩包已开始下载')
+    ElMessage.success(prefsToast('exportOk'))
   } catch (e) {
-    ElMessage.error(e?.message || '一键导出失败')
+    ElMessage.error(e?.message || prefsToast('exportFail'))
   } finally {
     exportingDocs.value = false
   }
@@ -862,7 +831,7 @@ async function saveAdmin() {
       },
     })
     resolvedAdmin.value = s.resolvedAdmin || null
-    ElMessage.success('已保存熔炉配置')
+    ElMessage.success(prefsToast('furnaceSaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -891,7 +860,7 @@ async function saveGrok() {
       }
     }
     if (s.adapt) adaptBackup.value = s.adapt.backup !== false
-    ElMessage.success('已保存 Grok 配置')
+    ElMessage.success(prefsToast('grokSaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -904,7 +873,7 @@ async function saveNotify() {
   try {
     await api.appSettings.update({ notifications: notifyPrefs.value })
     await loadNotificationPrefs(true)
-    ElMessage.success('已保存通知设置')
+    ElMessage.success(prefsToast('notifySaved'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -926,9 +895,9 @@ async function migrateData() {
   try {
     const r = await api.system.migrateDataDir()
     if (r.ok) {
-      ElMessage.success('迁移完成，请重启应用以使用新目录')
+      ElMessage.success(prefsToast('migrateOk'))
       await loadDataDir()
-    } else ElMessage.warning(r.error || '无法迁移')
+    } else ElMessage.warning(r.error || prefsToast('migrateFail'))
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -941,26 +910,26 @@ async function loadUsageStats() {
   try {
     usageStats.value = await api.usageStats()
   } catch (e) {
-    ElMessage.error(e.message || '加载失败')
+    ElMessage.error(e.message || prefsToast('usageLoadFail'))
   } finally {
     usageLoading.value = false
   }
 }
 
 async function sendTestNotify() {
-  const ok = await desktopNotify('oh-my-co-work 测试通知', {
-    body: '若能看到这条消息，说明系统通知通道可用。',
+  const ok = await desktopNotify(prefsTestNotifyTitle(), {
+    body: prefsTestNotifyBody(),
     id: 'test:notify',
   })
-  if (ok) ElMessage.success('已发送测试通知')
-  else ElMessage.warning('通知未发出（可能被系统禁用或不支持）')
+  if (ok) ElMessage.success(prefsToast('testNotifyOk'))
+  else ElMessage.warning(prefsToast('testNotifyFail'))
 }
 
 async function onToggleStartupUpdate(val) {
   savingStartupUpdate.value = true
   try {
     await api.appSettings.update({ updateCheck: { startup: !!val } })
-    ElMessage.success(val ? '已开启启动时检查更新' : '已关闭启动时检查更新')
+    ElMessage.success(prefsToast(val ? 'startupUpdateOn' : 'startupUpdateOff'))
   } catch (e) {
     startupUpdateCheck.value = !val
     ElMessage.error(e.message)
@@ -971,23 +940,19 @@ async function onToggleStartupUpdate(val) {
 
 async function onPurge() {
   try {
-    await ElMessageBox.confirm(
-      '将永久删除演示成员、演示群模板及其全部会话。此操作不可还原。是否继续？',
-      '删除演示数据',
-      {
-        type: 'warning',
-        confirmButtonText: '确认删除（不可还原）',
-        cancelButtonText: '取消',
-        confirmButtonClass: 'el-button--danger',
-      },
-    )
+    await ElMessageBox.confirm(prefsConfirm('purgeBody'), prefsConfirm('purgeTitle'), {
+      type: 'warning',
+      confirmButtonText: prefsConfirm('purgeConfirm'),
+      cancelButtonText: prefsConfirmCancel(),
+      confirmButtonClass: 'el-button--danger',
+    })
   } catch {
     return
   }
   purging.value = true
   try {
     const r = await api.appSettings.purgeDemo()
-    ElMessage.success(r.message || '已删除演示数据')
+    ElMessage.success(r.message || prefsToast('purgeOk'))
     await load()
   } catch (e) {
     ElMessage.error(e.message)

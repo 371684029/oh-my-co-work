@@ -1,4 +1,6 @@
 /** English strings (DSK-08 partial; extend as pages migrate off hard-coded copy). */
+import { settingsPrefsEn } from './settingsPrefs.en.js'
+
 export const strings = {
   common: {
     confirm: 'OK',
@@ -610,6 +612,7 @@ export const strings = {
     about: 'About & updates',
     projectSection: 'Project',
     metaSection: 'Other',
+    prefsPage: settingsPrefsEn,
   },
   docs: {
     colTitleGroup: 'Group templates',
