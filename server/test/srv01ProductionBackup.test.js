@@ -29,6 +29,12 @@ test('SRV-01: sync restore rollback still uses sync createBackup (test/legacy bo
   assert.doesNotMatch(syncBlock, /createBackupAsync/)
 })
 
+test('SRV-01: backup CLI uses createBackupAsync', () => {
+  const cli = fs.readFileSync(path.join(root, '..', 'scripts', 'backup.mjs'), 'utf8')
+  assert.match(cli, /createBackupAsync/)
+  assert.doesNotMatch(cli, /\bcreateBackup\s*\(/)
+})
+
 test('SRV-01: async restore path pre-backup uses createBackupAsync', () => {
   const backup = fs.readFileSync(path.join(root, 'src/backup.js'), 'utf8')
   const start = backup.indexOf('async function restoreBackupUnlockedAsync')
