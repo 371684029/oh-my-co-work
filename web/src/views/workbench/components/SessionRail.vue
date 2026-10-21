@@ -1,17 +1,17 @@
 <template>
   <aside class="wb-left" :aria-label="t('a11y.sessionRail')">
     <div class="wb-left-head">
-      <div class="head-title">会话</div>
+      <div class="head-title">{{ sessionRailTitle() }}</div>
       <div class="wb-left-tools">
         <el-select
           v-model="startTarget"
-          placeholder="群模板或成员"
+          :placeholder="sessionRailStartPlaceholder()"
           size="default"
           filterable
           class="start-target-select"
-          aria-label="选择群模板或成员以开聊"
+          :aria-label="sessionRailStartSelectAria()"
         >
-          <el-option-group v-if="groups.length" label="群模板">
+          <el-option-group v-if="groups.length" :label="sessionRailGroupOptionLabel()">
             <el-option
               v-for="g in groups"
               :key="'g:' + g.id"
@@ -34,7 +34,7 @@
               </span>
             </el-option>
           </el-option-group>
-          <el-option-group v-if="startableMembers.length" label="成员">
+          <el-option-group v-if="startableMembers.length" :label="sessionRailMembersOptionLabel()">
             <el-option
               v-for="m in startableMembers"
               :key="'m:' + m.id"
@@ -65,7 +65,7 @@
           :aria-label="t('a11y.startChat')"
           @click="startChat"
         >
-          开聊
+          {{ sessionRailStartChatLabel() }}
         </el-button>
       </div>
       <div class="wb-left-filter">
@@ -121,22 +121,22 @@
                 <span
                   v-if="item.archiveOutcome === 'success'"
                   class="conv-badge conv-badge--ok"
-                  title="归档成功"
-                  >成</span
+                  :title="sessionRailArchiveSuccessTitle()"
+                  >{{ sessionRailArchiveSuccessBadge() }}</span
                 >
                 <span
                   v-else-if="item.archiveOutcome === 'failed'"
                   class="conv-badge conv-badge--fail"
-                  title="归档失败"
-                  >败</span
+                  :title="sessionRailArchiveFailedTitle()"
+                  >{{ sessionRailArchiveFailedBadge() }}</span
                 >
               </span>
             </el-tooltip>
             <button
               type="button"
               class="conv-docs-btn"
-              title="文档中心"
-              aria-label="打开本会话文档"
+              :title="sessionRailDocsHubTitle()"
+              :aria-label="sessionRailOpenSessionDocsAria()"
               @click.stop="openSessionDocs(item.id)"
             >
               📄
@@ -146,8 +146,8 @@
         </template>
       </Conversations>
       <div v-else class="conv-empty">
-        <p class="conv-empty-title">还没有会话</p>
-        <p class="conv-empty-desc">群模板点「开聊」新建；成员会打开已有单聊</p>
+        <p class="conv-empty-title">{{ sessionRailEmptyTitle() }}</p>
+        <p class="conv-empty-desc">{{ sessionRailEmptyDesc() }}</p>
       </div>
     </div>
   </aside>
@@ -156,6 +156,22 @@
 <script setup>
 import { abbrGroupTag } from '@acw/shared'
 import { t } from '../../../i18n/index.js'
+import {
+  sessionRailArchiveFailedBadge,
+  sessionRailArchiveFailedTitle,
+  sessionRailArchiveSuccessBadge,
+  sessionRailArchiveSuccessTitle,
+  sessionRailDocsHubTitle,
+  sessionRailEmptyDesc,
+  sessionRailEmptyTitle,
+  sessionRailGroupOptionLabel,
+  sessionRailMembersOptionLabel,
+  sessionRailOpenSessionDocsAria,
+  sessionRailStartChatLabel,
+  sessionRailStartPlaceholder,
+  sessionRailStartSelectAria,
+  sessionRailTitle,
+} from '../composables/sessionRailCopy.js'
 import {
   startTarget,
   groups,

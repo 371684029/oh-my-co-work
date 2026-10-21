@@ -193,6 +193,11 @@ async function main() {
     })
     await chatSearchBtn.waitFor({ state: 'visible', timeout: 15000 })
 
+    const startTargetSelect = page.getByRole('combobox', {
+      name: /选择群模板或成员|Choose a group template or member/i,
+    })
+    await startTargetSelect.waitFor({ state: 'visible', timeout: 15000 })
+
     const composer = page.getByRole('region', { name: /消息输入区|Message composer/i })
     await composer.waitFor({ state: 'visible', timeout: 30000 })
     const footerToggle = page.locator('.footer-toggle').first()
