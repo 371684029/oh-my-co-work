@@ -1,9 +1,16 @@
 <template>
-  <aside class="wb-right">
-    <div class="wb-right-tabs wb-right-tabs--segmented">
+  <aside class="wb-right" :aria-label="t('a11y.flowRail')">
+    <div
+      class="wb-right-tabs wb-right-tabs--segmented"
+      role="tablist"
+      :aria-label="t('a11y.flowRailTabs')"
+    >
       <button
         type="button"
         class="wb-right-tab"
+        role="tab"
+        :aria-selected="flowStore.rightTab === 'flow'"
+        :aria-label="t('a11y.flowTab')"
         :class="{ active: flowStore.rightTab === 'flow' }"
         @click="flowStore.rightTab = 'flow'"
       >
@@ -13,6 +20,9 @@
       <button
         type="button"
         class="wb-right-tab"
+        role="tab"
+        :aria-selected="flowStore.rightTab === 'timeline'"
+        :aria-label="t('a11y.timelineTab')"
         :class="{ active: flowStore.rightTab === 'timeline' }"
         @click="flowStore.rightTab = 'timeline'"
       >
@@ -22,6 +32,9 @@
       <button
         type="button"
         class="wb-right-tab"
+        role="tab"
+        :aria-selected="isDocsHubTab"
+        :aria-label="t('a11y.docsTab')"
         :class="{ active: isDocsHubTab }"
         @click="flowStore.rightTab = 'docs'"
       >
@@ -505,6 +518,7 @@
 </template>
 
 <script setup>
+import { t } from '../../../i18n/zh-CN.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   detail,

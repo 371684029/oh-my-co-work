@@ -90,6 +90,7 @@ async function main() {
     assert.equal(backups.status, 200)
     const list = await backups.json()
     assert.ok(Array.isArray(list.backups))
+    const beforeCount = list.backups.length
 
     const created = await fetch(`${base}/api/update/backup`, {
       method: 'POST',
@@ -99,6 +100,12 @@ async function main() {
     const backup = await created.json()
     assert.equal(backup.ok, true)
     assert.ok(backup.path || backup.format)
+
+    const backups2 = await fetch(`${base}/api/update/backups`, {
+      headers: { 'X-ACW-Token': token, Origin: origin },
+    })
+    const list2 = await backups2.json()
+    assert.ok(list2.backups.length >= beforeCount + 1)
 
     console.log('[ci-e2e-smoke] ok', base)
   } finally {

@@ -3,6 +3,15 @@ export const strings = {
   a11y: {
     skipToMain: 'Skip to main content',
     settingsNav: 'Settings navigation',
+    sessionRail: 'Session list',
+    sessionList: 'Sessions',
+    startChat: 'Start chat',
+    flowRail: 'Flow and docs sidebar',
+    flowRailTabs: 'Right panel views',
+    flowTab: 'Flow steps',
+    timelineTab: 'Timeline',
+    docsTab: 'Docs hub',
+    workbenchMain: 'Session main area',
   },
   furnace: {
     idle: 'Idle',

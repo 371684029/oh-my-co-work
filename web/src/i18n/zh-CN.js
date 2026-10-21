@@ -5,6 +5,15 @@ export const strings = {
   a11y: {
     skipToMain: '跳到主内容',
     settingsNav: '设置导航',
+    sessionRail: '会话列表',
+    sessionList: '会话条目',
+    startChat: '开聊',
+    flowRail: '流程与文档侧栏',
+    flowRailTabs: '右栏视图',
+    flowTab: '流程步骤',
+    timelineTab: '时间线',
+    docsTab: '文档中心',
+    workbenchMain: '会话主区域',
   },
   furnace: {
     idle: '闲置',

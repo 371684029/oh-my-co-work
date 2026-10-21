@@ -1,5 +1,5 @@
 <template>
-  <aside class="wb-left">
+  <aside class="wb-left" :aria-label="t('a11y.sessionRail')">
     <div class="wb-left-head">
       <div class="head-title">会话</div>
       <div class="wb-left-tools">
@@ -62,6 +62,7 @@
           type="primary"
           :disabled="!startTarget || startingChat"
           :loading="startingChat"
+          :aria-label="t('a11y.startChat')"
           @click="startChat"
         >
           开聊
@@ -76,7 +77,7 @@
         />
       </div>
     </div>
-    <div class="wb-conv-wrap">
+    <div class="wb-conv-wrap" role="region" :aria-label="t('a11y.sessionList')">
       <Conversations
         v-if="conversationItems.length"
         v-model:active="activeId"
@@ -154,6 +155,7 @@
 
 <script setup>
 import { abbrGroupTag } from '@acw/shared'
+import { t } from '../../../i18n/zh-CN.js'
 import {
   startTarget,
   groups,
