@@ -1,40 +1,46 @@
 /** Composer placeholder when a gate message is pending. */
+
+import { t } from '../../../i18n/index.js'
+
 export function composerPlaceholderForGate(g) {
-  if (!g) return '发消息… @成员 · #参数 · @节点重跑'
+  if (!g) return t('workbench.composer.placeholderIdle')
   const mode = g.content?.mode
   if (mode === 'session_start') {
     if (g.content?.callArgs || g.content?.captureParams === false) {
-      return '可选参数全文作 #a；点「通过」启动…'
+      return t('workbench.composer.placeholderSessionStartOptional')
     }
     return g.content?.captureParams
-      ? '可先输入说明/参数，再点「通过」启动…'
-      : '可先输入说明，再点「通过」启动…'
+      ? t('workbench.composer.placeholderSessionStartWithParams')
+      : t('workbench.composer.placeholderSessionStartNote')
   }
   if (mode === 'human_input' || mode === 'need_params') {
     return g.content?.captureParams || mode === 'need_params'
-      ? '在此输入参数（空格/换行分段 → #1 #2…），Enter 或点「提交」'
-      : '在此输入内容，Enter 或点「提交」'
+      ? t('workbench.composer.placeholderHumanParams')
+      : t('workbench.composer.placeholderHumanText')
   }
   if (mode === 'adapter_question') {
-    return '工具在问你：可点选项，或先输入再提交'
+    return t('workbench.composer.placeholderAdapter')
   }
   if (mode === 'interrupted') {
-    return '服务曾中断：继续=从中断处恢复 · 放弃=跳过未完成步骤（进程到设置里释放）'
+    return t('workbench.composer.placeholderInterrupted')
   }
   const gateTitle = g.content?.text || g.content?.title
-  return gateTitle ? `${gateTitle} · 可先写意见，再点「同意」或「拒绝」` : '可先写意见，再点「同意」或「拒绝」…'
+  if (gateTitle) {
+    return t('workbench.composer.placeholderGateWithTitle').replace('{title}', gateTitle)
+  }
+  return t('workbench.composer.placeholderGateDefault')
 }
 
 export function composerToolbarHintForGate(gate) {
   if (gate) {
     const mode = gate.content?.mode
-    if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
-    if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
-    if (mode === 'interrupted') return '点「继续」或「放弃」'
-    if (mode === 'adapter_question') return '点选项或提交回答工具'
-    return 'Enter=附言 · 点同意/拒绝定局'
+    if (mode === 'human_input' || mode === 'need_params') return t('workbench.composer.toolbarHuman')
+    if (mode === 'session_start') return t('workbench.composer.toolbarSessionStart')
+    if (mode === 'interrupted') return t('workbench.composer.toolbarInterrupted')
+    if (mode === 'adapter_question') return t('workbench.composer.toolbarAdapter')
+    return t('workbench.composer.toolbarGate')
   }
-  return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
+  return t('workbench.composer.toolbarIdle')
 }
 
 export function showComposerHintIForGate(gate) {
@@ -47,7 +53,7 @@ export function showComposerHintIForGate(gate) {
 
 export function composerFooterHintForGate(gate) {
   if (gate) {
-    return '待确认与消息共用下方输入框 · 附言会记入群报告'
+    return t('workbench.composer.footerGate')
   }
-  return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告'
+  return t('workbench.composer.footerIdle')
 }

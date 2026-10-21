@@ -2,87 +2,20 @@
   <div class="docs-hub">
     <!-- 主体：三栏工作流（群模板分类轨 -> 会话与文件轨 -> 文档正文区） -->
     <div class="dh-body">
-      <!-- 栏 1：群模板/时间跨度分类导航 -->
-      <aside class="dh-col dh-col-groups">
-        <div class="dh-col-head">
-          <span class="dh-col-title">{{ docsHubColTitle(sort) }}</span>
-          <el-button
-            size="small"
-            type="primary"
-            link
-            :aria-label="docsHubExportAllAria()"
-            :loading="exportingAll"
-            @click="onExportAll"
-          >
-            {{ docsHubExportAllLabel() }}
-          </el-button>
-        </div>
-
-        <!-- 按群模式 -->
-        <div v-if="sort === 'group'" class="dh-group-list">
-          <!-- 全部选项 -->
-          <button
-            type="button"
-            class="dh-group-item"
-            :class="{ active: selectedGroupId === 'all' }"
-            :aria-label="docsHubAllGroupsAria()"
-            @click="selectedGroupId = 'all'"
-          >
-            <AcwIcon class="dh-group-item-icon" name="folder" :size="16" />
-            <span class="dh-group-item-name">{{ docsHubAllGroupsLabel() }}</span>
-            <span class="dh-group-item-count">{{ totalSessionsCount }}</span>
-          </button>
-
-          <!-- 具体群 -->
-          <div
-            v-for="g in groups"
-            :key="groupKey(g)"
-            class="dh-group-item-wrap"
-          >
-            <button
-              type="button"
-              class="dh-group-item"
-              :class="{ active: selectedGroupId === groupKey(g) }"
-              :aria-label="docsHubViewGroupAria(g.groupTitle)"
-              @click="selectedGroupId = groupKey(g)"
-            >
-              <AcwIcon class="dh-group-item-icon" name="users" :size="16" />
-              <span class="dh-group-item-name">{{ g.groupTitle }}</span>
-              <span class="dh-group-item-count">{{ sessionCount(g) }}</span>
-            </button>
-            <button
-              v-if="g.groupId"
-              type="button"
-              class="dh-group-export-btn"
-              :title="docsHubExportGroupShort()"
-              :aria-label="docsHubExportGroupAria(g.groupTitle)"
-              @click.stop="onExportGroup(g.groupId)"
-            >
-              {{ docsHubExportGroupShort() }}
-            </button>
-          </div>
-
-          <div v-if="!listLoading && !groups.length" class="dh-empty-tip">
-            {{ docsHubNoGroups() }}
-          </div>
-        </div>
-
-        <!-- 按时间模式：时间范围筛选 -->
-        <div v-else class="dh-group-list">
-          <button
-            v-for="range in timeRanges"
-            :key="range.key"
-            type="button"
-            class="dh-group-item"
-            :class="{ active: selectedTimeRange === range.key }"
-            @click="selectedTimeRange = range.key"
-          >
-            <span class="dh-group-item-icon">{{ range.icon }}</span>
-            <span class="dh-group-item-name">{{ range.label }}</span>
-            <span class="dh-group-item-count">{{ range.count }}</span>
-          </button>
-        </div>
-      </aside>
+      <DocsHubGroupsColumn
+        :sort="sort"
+        :selected-group-id="selectedGroupId"
+        :selected-time-range="selectedTimeRange"
+        :groups="groups"
+        :time-ranges="timeRanges"
+        :list-loading="listLoading"
+        :exporting-all="exportingAll"
+        :total-sessions-count="totalSessionsCount"
+        @update:selected-group-id="selectedGroupId = $event"
+        @update:selected-time-range="selectedTimeRange = $event"
+        @export-all="onExportAll"
+        @export-group="onExportGroup"
+      />
 
       <!-- 栏 2：会话与文档列表（带搜索与排序） -->
       <aside class="dh-col dh-col-sessions">
@@ -487,7 +420,7 @@ import {
 } from './docsExport.js'
 import proseCss from './docProse.css?raw'
 import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
-import AcwIcon from '../../components/icons/AcwIcon.vue'
+import DocsHubGroupsColumn from './DocsHubGroupsColumn.vue'
 import DocsHubWelcomePane from './DocsHubWelcomePane.vue'
 import {
   docsTimeRangeBuckets,
@@ -521,15 +454,7 @@ import {
   docsPrintPopupBlockedMessage,
 } from './docsHubMessages.js'
 import {
-  docsHubAllGroupsAria,
-  docsHubAllGroupsLabel,
-  docsHubColTitle,
-  docsHubExportAllAria,
-  docsHubExportAllLabel,
-  docsHubExportGroupAria,
-  docsHubExportGroupShort,
   docsHubNoDocsInRange,
-  docsHubNoGroups,
   docsHubNoSessionDocs,
   docsHubOutlineAria,
   docsHubOutlineTitle,
@@ -537,7 +462,6 @@ import {
   docsHubRecentSectionTitle,
   docsHubRefreshLabel,
   docsHubSearchPlaceholder,
-  docsHubViewGroupAria,
   docsHubUnpinTitle,
   docsHubReadingThemeLabel,
   docsHubReadingFocusLabel,
@@ -619,10 +543,6 @@ const displayedTimeItems = computed(() =>
 
 function groupKey(g) {
   return docsGroupKey(g)
-}
-
-function sessionCount(g) {
-  return (g.sessions || []).length
 }
 
 const totalSessionsCount = computed(() => totalDocsSessionCount(groups.value))
@@ -849,112 +769,6 @@ onUnmounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-/* —— 栏 1：群模板分类 —— */
-.dh-col-groups {
-  width: 220px;
-  min-width: 200px;
-  max-width: 240px;
-  padding: 12px 10px;
-}
-
-.dh-col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 6px 10px;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
-  margin-bottom: 8px;
-}
-
-.dh-col-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.dh-group-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.dh-group-item-wrap {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.dh-group-item {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  border-radius: 9px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-
-.dh-group-item:hover {
-  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.04));
-}
-
-.dh-group-item.active {
-  background: var(--ecw-accent-soft, rgba(0, 122, 255, 0.1));
-  box-shadow: inset 0 0 0 0.5px rgba(0, 122, 255, 0.18);
-}
-
-.dh-group-item-icon {
-  font-size: 13px;
-}
-
-.dh-group-item-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.dh-group-item.active .dh-group-item-name {
-  color: var(--ecw-accent, #007aff);
-}
-
-.dh-group-item-count {
-  font-size: 11px;
-  color: var(--ecw-text-3, #86868b);
-  padding: 1px 6px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.dh-group-export-btn {
-  flex-shrink: 0;
-  border: none;
-  background: rgba(0, 122, 255, 0.08);
-  color: var(--ecw-accent, #007aff);
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.dh-group-export-btn:hover {
-  background: rgba(0, 122, 255, 0.16);
 }
 
 /* —— 栏 2：会话与文件 —— */
