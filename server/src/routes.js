@@ -32,7 +32,7 @@ import {
   restartFromNode,
   searchMessages,
 } from './services.js'
-import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
+import { ROOT, DATA_ROOT, getDb, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
 import { restoreMemberRefine } from './refineRestore.js'
 import {
@@ -40,6 +40,8 @@ import {
   applyStepRevert,
   resolveWorkDirFromNode,
 } from './stepRevert.js'
+import { buildSessionTimeline, filterTimelineEvents } from './sessionTimeline.js'
+import { collectDiagnostics } from './diagnostics.js'
 import {
   exportMemberTemplate,
   exportGroupTemplate,
@@ -481,6 +483,25 @@ router.post('/sessions/:id/nodes/:nodeId/step-revert', (req, res) => {
     if (e.code) return res.status(400).json({ error: e.message, code: e.code })
     res.status(400).json({ error: e.message || String(e) })
   }
+})
+
+router.get('/diagnostics', (_req, res) => {
+  res.json(collectDiagnostics())
+})
+
+router.get('/sessions/:id/timeline', (req, res) => {
+  const d = getSessionDetail(req.params.id)
+  if (!d) return res.status(404).json({ error: 'not found' })
+  const terminals = getDb()
+    .prepare('SELECT * FROM terminal_sessions WHERE session_id = ? ORDER BY started_at ASC')
+    .all(req.params.id)
+  const events = buildSessionTimeline({
+    nodes: d.nodes,
+    messages: d.messages,
+    terminals,
+  })
+  const category = String(req.query.category || 'all')
+  res.json({ events: filterTimelineEvents(events, category), total: events.length })
 })
 
 router.get('/restore-center', (req, res) => {

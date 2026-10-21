@@ -118,6 +118,7 @@ export const api = {
   restoreCenter: {
     list: () => req('/restore-center'),
   },
+  diagnostics: () => req('/diagnostics'),
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),
@@ -157,6 +158,10 @@ export const api = {
   sessions: {
     list: (status) => req(status ? `/sessions?status=${status}` : '/sessions'),
     get: (id) => req(`/sessions/${id}`),
+    timeline: (id, category = 'all') =>
+      req(
+        `/sessions/${id}/timeline?category=${encodeURIComponent(category)}`,
+      ),
     rename: (id, title) => req(`/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
     pin: (id, pinned = true) =>
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),

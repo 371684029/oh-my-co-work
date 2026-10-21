@@ -280,6 +280,19 @@ async function createMainWindow() {
     mainWindow = null
   })
 
+  mainWindow.webContents.on('will-navigate', (evt, url) => {
+    try {
+      const target = new URL(url)
+      const local = new URL(appOrigin())
+      if (target.origin !== local.origin) {
+        evt.preventDefault()
+        shell.openExternal(url).catch(() => {})
+      }
+    } catch {
+      evt.preventDefault()
+    }
+  })
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const target = new URL(url)

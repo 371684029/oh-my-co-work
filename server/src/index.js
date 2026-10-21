@@ -151,6 +151,15 @@ app.use(
   }),
 )
 app.use(express.json({ limit: '2mb' }))
+
+const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
+    res.setHeader('Content-Security-Policy', CSP)
+  }
+  next()
+})
 app.get('/api/bootstrap', bootstrapLocalAccess)
 app.post('/api/bootstrap', bootstrapLocalAccess)
 app.use('/api', requireLocalAccess)

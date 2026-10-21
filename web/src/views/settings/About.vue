@@ -36,6 +36,12 @@
             {{ isDesktop ? `桌面端 (${desktopEnv})` : 'Web 端' }}
           </el-tag>
         </div>
+        <div class="update-row" style="margin-top: 12px">
+          <el-button size="small" :loading="diagLoading" @click="exportDiagnostics">
+            导出诊断信息
+          </el-button>
+          <span class="muted tiny">本地 JSON（日志尾部、版本、设置摘要；密钥已脱敏）</span>
+        </div>
       </section>
 
       <!-- 更新 (4.2.0) -->
@@ -195,6 +201,26 @@ const availableBackups = ref([])
 const showRestoreSelect = ref(false)
 const selectedRestoreFile = ref('')
 const restoreRunning = ref(false)
+const diagLoading = ref(false)
+
+async function exportDiagnostics() {
+  diagLoading.value = true
+  try {
+    const payload = await api.diagnostics()
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `acw-diagnostics-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('诊断信息已下载')
+  } catch (e) {
+    ElMessage.error(e?.message || '导出失败')
+  } finally {
+    diagLoading.value = false
+  }
+}
 
 function copy(t) {
   navigator.clipboard.writeText(t || '')

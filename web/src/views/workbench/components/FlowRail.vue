@@ -13,6 +13,15 @@
       <button
         type="button"
         class="wb-right-tab"
+        :class="{ active: flowStore.rightTab === 'timeline' }"
+        @click="flowStore.rightTab = 'timeline'"
+      >
+        <span class="wb-right-tab-icon" aria-hidden="true">🕐</span>
+        时间线
+      </button>
+      <button
+        type="button"
+        class="wb-right-tab"
         :class="{ active: isDocsHubTab }"
         @click="flowStore.rightTab = 'docs'"
       >
@@ -313,6 +322,42 @@
       <EmptyState v-else title="暂无流程" description="开聊后显示流程步骤" />
     </div>
 
+    <div v-show="flowStore.rightTab === 'timeline'" class="wb-right-pane timeline-pane">
+      <div class="timeline-toolbar">
+        <el-select
+          v-model="timelineFilter"
+          size="small"
+          style="width: 120px"
+          @change="loadSessionTimeline"
+        >
+          <el-option label="全部" value="all" />
+          <el-option label="步骤" value="node" />
+          <el-option label="闸门" value="gate" />
+          <el-option label="终端" value="terminal" />
+          <el-option label="文档" value="docs" />
+          <el-option label="场外" value="offsite" />
+        </el-select>
+        <el-button size="small" text :loading="timelineLoading" @click="loadSessionTimeline">
+          刷新
+        </el-button>
+      </div>
+      <p v-if="!activeId" class="timeline-hint">请先选择会话</p>
+      <ul v-else-if="timelineEvents.length" class="timeline-list">
+        <li v-for="ev in timelineEvents" :key="ev.id">
+          <button type="button" class="timeline-item" @click="onTimelineEvent(ev)">
+            <span class="timeline-time">{{ formatTimelineAt(ev.at) }}</span>
+            <span class="timeline-cat">{{ timelineCatLabel(ev.category) }}</span>
+            <span class="timeline-title">{{ ev.title }}</span>
+          </button>
+        </li>
+      </ul>
+      <EmptyState
+        v-else-if="!timelineLoading"
+        title="暂无事件"
+        description="节点、闸门、终端与文档动态会出现在这里"
+      />
+    </div>
+
     <!-- Tab：文档中心（含原群报告 MD，不再单独占一栏） -->
     <div v-show="isDocsHubTab" class="wb-right-pane docs-pane">
       <div class="docs-rail-toolbar">
@@ -530,7 +575,69 @@ function openNodeJournal(n) {
 }
 
 const flowStore = useFlowStore()
+const timelineEvents = ref([])
+const timelineFilter = ref('all')
+const timelineLoading = ref(false)
 const revertLoadingId = ref('')
+
+function formatTimelineAt(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString(undefined, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return String(iso)
+  }
+}
+
+function timelineCatLabel(cat) {
+  const m = { node: '步骤', gate: '闸门', terminal: '终端', docs: '文档', offsite: '场外' }
+  return m[cat] || cat || ''
+}
+
+async function loadSessionTimeline() {
+  if (!activeId.value) {
+    timelineEvents.value = []
+    return
+  }
+  timelineLoading.value = true
+  try {
+    const data = await api.sessions.timeline(activeId.value, timelineFilter.value)
+    timelineEvents.value = data.events || []
+  } catch (e) {
+    ElMessage.error(e.message || '加载时间线失败')
+  } finally {
+    timelineLoading.value = false
+  }
+}
+
+function onTimelineEvent(ev) {
+  if (!ev) return
+  if (ev.nodeId && detail.value?.nodes) {
+    const node = detail.value.nodes.find((n) => n.id === ev.nodeId)
+    if (node) {
+      flowStore.rightTab = 'flow'
+      toggleNodeExpand(node)
+      return
+    }
+  }
+  if (ev.kind === 'docs.journal' && ev.nodeId) {
+    const node = detail.value?.nodes?.find((n) => n.id === ev.nodeId)
+    if (node) openNodeJournal(node)
+  }
+}
+
+watch(
+  () => [flowStore.rightTab, activeId.value],
+  ([tab]) => {
+    if (tab === 'timeline') loadSessionTimeline()
+  },
+)
 
 async function revertStepChanges(n) {
   const sid = activeId.value
@@ -1156,6 +1263,52 @@ watch(
 }
 
 /* —— 第三栏：文档中心样式 —— */
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.timeline-hint {
+  font-size: 12px;
+  color: var(--ecw-text-3, #8e8ea0);
+}
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+.timeline-item {
+  display: grid;
+  grid-template-columns: 72px 44px 1fr;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: inherit;
+}
+.timeline-item:hover {
+  background: var(--ecw-surface-2, rgba(0, 0, 0, 0.05));
+}
+.timeline-time {
+  color: var(--ecw-text-3, #8e8ea0);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-cat {
+  color: var(--ecw-text-2, #555);
+  font-size: 11px;
+}
+.timeline-title {
+  word-break: break-word;
+}
+
 .docs-pane {
   display: flex;
   flex-direction: column;

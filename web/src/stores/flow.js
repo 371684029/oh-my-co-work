@@ -6,7 +6,8 @@ const RIGHT_TAB_KEY = 'acw.rightTab'
 function readSavedRightTab() {
   try {
     const v = localStorage.getItem(RIGHT_TAB_KEY)
-    return v === 'docs' ? 'docs' : 'flow'
+    if (v === 'docs' || v === 'timeline') return v
+    return 'flow'
   } catch {
     return 'flow'
   }
@@ -24,7 +25,7 @@ export const useFlowStore = defineStore('flow', () => {
 
   watch(rightTab, (v) => {
     try {
-      localStorage.setItem(RIGHT_TAB_KEY, v === 'docs' ? 'docs' : 'flow')
+      localStorage.setItem(RIGHT_TAB_KEY, v === 'docs' || v === 'timeline' ? v : 'flow')
     } catch {
       /* ignore */
     }
