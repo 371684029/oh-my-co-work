@@ -337,6 +337,11 @@ export const strings = {
       slashTrigger: 'Slash commands /',
       uploadFile: 'Upload files',
       copyInput: 'Copy composer text',
+      atTrigger: '@ Member assist',
+      hashTrigger: '# Text snippets · insert selection (without #)',
+      attachmentButton: 'Attach',
+      copyButton: 'Copy',
+      adapterRejectChoice: 'Cancel',
       footerHint: {
         default: 'Type a message · expand',
         sessionStart: 'Confirm start · expand',

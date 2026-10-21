@@ -181,7 +181,7 @@
                 size="small"
                 round
                 class="at-btn"
-                title="@ 成员协助"
+                :title="composerAtTriggerTitle()"
                 :disabled="!activeId"
                 @click="toggleAtPanel"
               >
@@ -191,7 +191,7 @@
                 size="small"
                 round
                 class="hash-btn"
-                title="# 文本快捷 · 选中插入正文（不含 #）"
+                :title="composerHashTriggerTitle()"
                 :disabled="!activeId"
                 @click="toggleHashPanel"
               >
@@ -206,7 +206,7 @@
                 :disabled="!activeId"
                 @click="triggerFilePick"
               >
-                附件
+                {{ composerAttachmentButtonLabel() }}
               </el-button>
               <el-button
                 size="small"
@@ -215,7 +215,7 @@
                 :title="composerCopyInputTitle()"
                 @click="copyComposerText"
               >
-                复制
+                {{ composerCopyButtonLabel() }}
               </el-button>
               <input
                 ref="fileInputRef"
@@ -275,7 +275,10 @@
                     >
                       {{ gateSubmitButtonLabel() }}
                     </el-button>
-                    <el-button plain @click="answerAdapterQuestion(pendingGate, '取消', 'reject')">
+                    <el-button
+                      plain
+                      @click="answerAdapterQuestion(pendingGate, composerAdapterRejectChoice(), 'reject')"
+                    >
                       {{ gateRejectButtonLabel() }}
                     </el-button>
                   </template>
@@ -348,6 +351,11 @@ import {
   composerSlashEmptyHint,
   composerSlashPanelTitle,
   composerSlashSettingsLabel,
+  composerAtTriggerTitle,
+  composerHashTriggerTitle,
+  composerAttachmentButtonLabel,
+  composerCopyButtonLabel,
+  composerAdapterRejectChoice,
 } from '../composables/sessionComposerPanelUi.js'
 import {
   composerUploadNeedSessionMessage,

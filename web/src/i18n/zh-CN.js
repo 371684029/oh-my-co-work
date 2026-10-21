@@ -337,6 +337,11 @@ export const strings = {
       slashTrigger: '斜杠指令 /',
       uploadFile: '上传文件',
       copyInput: '复制输入框内容',
+      atTrigger: '@ 成员协助',
+      hashTrigger: '# 文本快捷 · 选中插入正文（不含 #）',
+      attachmentButton: '附件',
+      copyButton: '复制',
+      adapterRejectChoice: '取消',
       footerHint: {
         default: '输入消息 · 展开',
         sessionStart: '确认开始 · 展开',

@@ -69,3 +69,23 @@ export function composerUploadFileTitle() {
 export function composerCopyInputTitle() {
   return t('workbench.composer.copyInput')
 }
+
+export function composerAtTriggerTitle() {
+  return t('workbench.composer.atTrigger')
+}
+
+export function composerHashTriggerTitle() {
+  return t('workbench.composer.hashTrigger')
+}
+
+export function composerAttachmentButtonLabel() {
+  return t('workbench.composer.attachmentButton')
+}
+
+export function composerCopyButtonLabel() {
+  return t('workbench.composer.copyButton')
+}
+
+export function composerAdapterRejectChoice() {
+  return t('workbench.composer.adapterRejectChoice')
+}
