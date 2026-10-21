@@ -114,57 +114,22 @@
             <p class="furnace-buddy-line">{{ buddyLine }}</p>
           </aside>
           <div class="furnace-thread">
-            <div v-if="showFail" class="furnace-welcome is-fail">
-              <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
-              <h3>{{ agentLabel }} 没在跑，所以这里是空的</h3>
-              <p>{{ failHint }}</p>
-              <ul>
-                <li>
-                  先确认本机终端能直接运行
-                  <code>{{ activeAgent === 'cursor' ? 'cursor-agent' : 'grok' }}</code>
-                  （已安装并在 PATH 里）
-                </li>
-                <li>Windows 运行包请关掉窗口后重开，让新 PATH 生效</li>
-                <li>聊太长、模型发懵时点「新开熔炉」：杀掉当前 Agent，再开一条空对话</li>
-              </ul>
-              <div class="furnace-chips">
-                <button type="button" class="furnace-chip" @click="surface = 'tui'">看 TUI 报错</button>
-                <button type="button" class="furnace-chip" @click="emit('reopen', { agent: activeAgent })">新开熔炉</button>
-                <button type="button" class="furnace-chip" @click="$emit('close')">返回群聊</button>
-              </div>
-            </div>
-            <div v-else-if="showWelcome" class="furnace-welcome">
-              <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
-              <h3>{{ welcomeTitle }}</h3>
-              <p>
-                同一条 {{ agentBrand }} 进程：这里是对话框，完整交互在 TUI。
-                <template v-if="activeAgent === 'cursor'">
-                  多行粘贴请用 TUI；登录问题在终端里按提示完成。
-                </template>
-                <template v-else>
-                  细节在工作目录 <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。
-                </template>
-                聊太长就「新开熔炉」。
-              </p>
-              <ul>
-                <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
-                <li>让她<strong>适配</strong>：把当前成员或步骤接到工作台</li>
-                <li>过闸时只说<strong>通过或拒绝</strong>，不要改编排</li>
-                <li>附件落到 <code>inbox/</code>，发送时写成一行相对路径再回车</li>
-              </ul>
-              <div class="furnace-chips">
-                <button
-                  v-for="chip in quickChips"
-                  :key="chip"
-                  type="button"
-                  class="furnace-chip"
-                  :disabled="!isRunning"
-                  @click="sendChip(chip)"
-                >
-                  {{ chip }}
-                </button>
-              </div>
-            </div>
+            <FurnaceChatWelcome
+              :show-fail="showFail"
+              :show-welcome="showWelcome"
+              :welcome-kicker="welcomeKicker"
+              :welcome-title="welcomeTitle"
+              :agent-label="agentLabel"
+              :active-agent="activeAgent"
+              :agent-brand="agentBrand"
+              :fail-hint="failHint"
+              :quick-chips="quickChips"
+              :is-running="isRunning"
+              @view-tui="surface = 'tui'"
+              @reopen="emit('reopen', { agent: activeAgent })"
+              @close="$emit('close')"
+              @send-chip="sendChip"
+            />
             <div
               v-for="turn in chatTurns"
               :key="turn.id"
@@ -178,7 +143,7 @@
                 :title="furnaceTurnCopyTitle()"
                 @click="copyTurn(turn)"
               >
-                复制
+                {{ furnaceTuiCopyTurnLabel() }}
               </button>
               <div class="furnace-bubble">
                 <template v-if="turn.role === 'assistant'">
@@ -389,6 +354,7 @@ import { ElMessage } from 'element-plus'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
+import FurnaceChatWelcome from './FurnaceChatWelcome.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
@@ -1008,79 +974,6 @@ onUnmounted(() => {
   line-height: 1.6;
   max-width: 52rem;
   margin: 8vh 0 0;
-}
-
-.furnace-welcome {
-  max-width: min(52rem, 100%);
-  margin: 0;
-  padding: 18px 20px 16px;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
-  color: #1d1d1f;
-}
-
-.furnace-welcome.is-fail {
-  background: #fff6f6;
-  box-shadow: 0 1px 10px rgba(255, 59, 48, 0.08);
-}
-
-.furnace-welcome-kicker {
-  margin: 0 0 6px;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: #6e6e73;
-}
-
-.furnace-welcome h3 {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-}
-
-.furnace-welcome p,
-.furnace-welcome li {
-  font-size: 14px;
-  line-height: 1.65;
-  color: #3a3a40;
-}
-
-.furnace-welcome p {
-  margin: 0 0 10px;
-}
-
-.furnace-welcome ul {
-  margin: 0 0 14px;
-  padding-left: 1.15rem;
-}
-
-.furnace-welcome code {
-  font-size: 12px;
-  padding: 1px 5px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.furnace-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.furnace-chip {
-  border: 0;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-}
-
-.furnace-chip:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .furnace-turn {

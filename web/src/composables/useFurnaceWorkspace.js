@@ -27,6 +27,11 @@ import {
   shouldSubmitOnEnter,
 } from './inputIntent.js'
 import {
+  furnaceBuddyLine,
+  furnaceWelcomeKicker,
+  furnaceWelcomeTitle,
+} from './furnaceWelcomeUi.js'
+import {
   furnaceQuickChips,
   furnaceBuddyMood,
   furnaceFailHint,
@@ -131,32 +136,26 @@ export function useFurnaceWorkspace(props, emit, refs) {
     furnaceAgentKind.value === 'cursor' ? 'Cursor CLI' : 'Grok',
   )
 
-  const welcomeTitle = computed(() =>
-    furnaceAgentKind.value === 'cursor'
-      ? '本机 Cursor CLI 已接进协同台'
-      : '本机 Grok 已接进协同台',
+  const welcomeTitle = computed(() => furnaceWelcomeTitle(furnaceAgentKind.value))
+
+  const buddyLine = computed(() =>
+    furnaceBuddyLine({
+      isRunning: isRunning.value,
+      showBody: showBody.value,
+      agentKind: furnaceAgentKind.value,
+      agentBrand: agentBrand.value,
+    }),
   )
 
-  const buddyLine = computed(() => {
-    if (!isRunning.value) return '这轮停了。记录还在，可上翻。'
-    if (!showBody.value) {
-      return furnaceAgentKind.value === 'cursor'
-        ? 'CLI 就绪后会先显示界面，再等你输入。'
-        : '她准备好后会先介绍，再等你。'
-    }
-    return `同一条 ${agentBrand.value}。问当前格即可。可上翻看更早的话。`
-  })
-
-  const welcomeKicker = computed(() => {
-    if (props.connectionStatus === 'connecting') return '正在连工作台…'
-    if (props.terminal.status === 'starting') return `正在启动本机 ${agentBrand.value}…`
-    if (isRunning.value) {
-      return furnaceAgentKind.value === 'cursor'
-        ? '已就绪 · 建议用 TUI 复制粘贴'
-        : '已就绪 · 短规则在 AGENTS.md'
-    }
-    return '进程未在跑'
-  })
+  const welcomeKicker = computed(() =>
+    furnaceWelcomeKicker({
+      connectionStatus: props.connectionStatus,
+      terminalStatus: props.terminal.status,
+      isRunning: isRunning.value,
+      agentBrand: agentBrand.value,
+      agentKind: furnaceAgentKind.value,
+    }),
+  )
 
   const statusText = computed(() => {
     if (props.connectionStatus !== 'open') {
