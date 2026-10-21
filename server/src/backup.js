@@ -94,6 +94,7 @@ function tarCreateArchive(archivePath, workDir, entries, { async = false } = {})
  * 导出 tar.gz：sqlite（checkpoint 后拷贝）+ journals + uploads
  * @param {{ outDir?: string, includeUploads?: boolean }} [opts]
  */
+/** @deprecated Production and CLI use {@link createBackupAsync}; sync API for unit tests only (SRV-01). */
 export function createBackup(opts = {}) {
   let integrity = { ok: true, detail: 'skipped' }
   if (!opts.skipIntegrity) {
@@ -303,6 +304,7 @@ async function applyStagedToLiveAsync(work) {
  * @param {{ initDb?: Function, checkSqliteFile?: Function, applyLive?: Function }} [deps]
  * @returns {{ ok: true, restoredFrom: string, preRestore: { path: string }, aside: string }}
  */
+/** @deprecated Production HTTP and scripts use {@link restoreBackupAsync}; sync API for unit tests only (SRV-01). */
 export function restoreBackup(filename, deps = {}) {
   if (restoreInFlight) {
     throw Object.assign(new Error('已有恢复进行中'), { code: 'RESTORE_BUSY' })

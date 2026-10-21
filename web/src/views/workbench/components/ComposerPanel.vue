@@ -50,13 +50,13 @@
                 <span class="slash-panel-head-title">{{ composerSlashPanelTitle() }}</span>
                 <div class="slash-panel-head-end">
                   <el-button link type="primary" size="small" @click="goShortcuts">
-                    设置
+                    {{ composerSlashSettingsLabel() }}
                   </el-button>
                   <button
                     type="button"
                     class="slash-panel-close"
-                    title="关闭"
-                    aria-label="关闭"
+                    :title="composerPanelCloseLabel()"
+                    :aria-label="composerPanelCloseLabel()"
                     @mousedown.prevent
                     @click="closeComposerPanel('slash')"
                   >
@@ -65,7 +65,7 @@
                 </div>
               </div>
               <div v-if="!filteredSlashCmds.length" class="slash-empty">
-                无匹配指令 · 可在设置中添加
+                {{ composerSlashEmptyHint() }}
               </div>
               <button
                 v-for="(c, i) in filteredSlashCmds"
@@ -82,14 +82,14 @@
             </div>
             <div v-if="composerStore.atOpen" class="slash-panel at-panel">
               <div class="slash-panel-head">
-                <span class="slash-panel-head-title">@ 提及</span>
+                <span class="slash-panel-head-title">{{ composerAtPanelTitle() }}</span>
                 <div class="slash-panel-head-end">
-                  <span class="at-panel-tip">将记入临时协助</span>
+                  <span class="at-panel-tip">{{ composerAtPanelTip() }}</span>
                   <button
                     type="button"
                     class="slash-panel-close"
-                    title="关闭"
-                    aria-label="关闭"
+                    :title="composerPanelCloseLabel()"
+                    :aria-label="composerPanelCloseLabel()"
                     @mousedown.prevent
                     @click="closeComposerPanel('at')"
                   >
@@ -97,8 +97,8 @@
                   </button>
                 </div>
               </div>
-              <div class="at-section-label">成员 · 流程外协助</div>
-              <div v-if="!filteredAtMembers.length" class="slash-empty">无匹配成员</div>
+              <div class="at-section-label">{{ composerAtSectionMembers() }}</div>
+              <div v-if="!filteredAtMembers.length" class="slash-empty">{{ composerAtEmptyHint() }}</div>
               <button
                 v-for="(m, i) in filteredAtMembers"
                 :key="m.id"
@@ -117,14 +117,14 @@
             </div>
             <div v-if="composerStore.hashOpen" class="slash-panel hash-panel">
               <div class="slash-panel-head">
-                <span class="slash-panel-head-title"># 文本快捷</span>
+                <span class="slash-panel-head-title">{{ composerHashPanelTitle() }}</span>
                 <div class="slash-panel-head-end">
-                  <span class="at-panel-tip"># 选中后插入正文（不含 #）</span>
+                  <span class="at-panel-tip">{{ composerHashPanelTip() }}</span>
                   <button
                     type="button"
                     class="slash-panel-close"
-                    title="关闭"
-                    aria-label="关闭"
+                    :title="composerPanelCloseLabel()"
+                    :aria-label="composerPanelCloseLabel()"
                     @mousedown.prevent
                     @click="closeComposerPanel('hash')"
                   >
@@ -133,7 +133,7 @@
                 </div>
               </div>
               <div v-if="!filteredHashItems.length" class="slash-empty">
-                无匹配 · 开聊后可见群聊/文件夹；人工提交参数后有第 1 段…
+                {{ composerHashEmptyHint() }}
               </div>
               <button
                 v-for="(h, i) in filteredHashItems"
@@ -332,8 +332,18 @@ import { useComposerStore } from '../../../stores/composer.js'
 import { t } from '../../../i18n/index.js'
 import {
   composerArchivedAlertTitle,
+  composerAtEmptyHint,
+  composerAtPanelTip,
+  composerAtPanelTitle,
+  composerAtSectionMembers,
   composerCollapseLabel,
+  composerHashEmptyHint,
+  composerHashPanelTip,
+  composerHashPanelTitle,
+  composerPanelCloseLabel,
+  composerSlashEmptyHint,
   composerSlashPanelTitle,
+  composerSlashSettingsLabel,
 } from '../composables/sessionComposerPanelUi.js'
 import {
   composerUploadNeedSessionMessage,
