@@ -6,8 +6,8 @@
   "version": "5.3.0",
   "major": 5,
   "platform": "linux-x64",
-  "sourceCommit": "e8fd2e67e154b5e94b709582961eecb50f94c74c",
-  "builtAt": "2026-10-21T06:45:40.492Z",
+  "sourceCommit": "ad963f0fea75bcbf242443d953c2cf62b42e611e",
+  "builtAt": "2026-10-21T06:51:00.146Z",
   "needsNpmInstall": false,
   "requiredAssets": [
     "web/dist/assets/spritesheet-*.webp"
