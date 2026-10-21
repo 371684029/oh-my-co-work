@@ -261,6 +261,15 @@
               </template>
             </template>
             <span v-else class="dh-readonly-hint">台账为只读（审计留痕）</span>
+            <el-button
+              v-if="!editing && file"
+              size="small"
+              :type="codeLineNumbers ? 'primary' : 'default'"
+              plain
+              @click="toggleCodeLineNumbers"
+            >
+              代码行号
+            </el-button>
           </div>
 
           <!-- 渲染（只读） -->
@@ -310,6 +319,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import './docProse.css'
+import { handleDocsProseClick } from './docsCodeFence.js'
 import {
   sort,
   sortOptions,
@@ -328,6 +338,8 @@ import {
   canEdit,
   renderedHtml,
   docOutline,
+  codeLineNumbers,
+  toggleCodeLineNumbers,
   searchQuery,
   searchResults,
   searchLoading,
@@ -545,7 +557,13 @@ watch([file, editing, renderedHtml], () => {
   nextTick(() => setupOutlineObserver())
 })
 
-function onContentClick(e) {
+async function onContentClick(e) {
+  const handled = await handleDocsProseClick(e, {
+    onCopied: () => ElMessage.success('已复制代码'),
+    onCopyFailed: () => ElMessage.warning('复制失败'),
+  })
+  if (handled) return
+
   const headingEl = e.target.closest('.docs-heading-anchor')
   if (headingEl?.id) {
     copyHeadingAnchor(headingEl.id)

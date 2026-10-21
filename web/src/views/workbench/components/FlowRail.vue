@@ -468,6 +468,7 @@ import AppLogo from '../../../components/AppLogo.vue'
 import { api } from '../../../api'
 import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { handleDocsProseClick, readDocsCodeLineNumbers } from '../../docs/docsCodeFence.js'
 import { openPath } from '../composables/useDocsHub'
 
 const flowStore = useFlowStore()
@@ -518,10 +519,18 @@ let currentListReqId = 0
 
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
-  return md.value.render(selectedDocContent.value)
+  return md.value.render(selectedDocContent.value, {
+    docCodeLineNumbers: readDocsCodeLineNumbers(),
+  })
 })
 
-function onRailContentClick(e) {
+async function onRailContentClick(e) {
+  const handled = await handleDocsProseClick(e, {
+    onCopied: () => ElMessage.success('已复制代码'),
+    onCopyFailed: () => ElMessage.warning('复制失败'),
+  })
+  if (handled) return
+
   const pathEl = e.target.closest?.('.docs-path-link')
   if (pathEl) {
     e.preventDefault()

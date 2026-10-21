@@ -3,6 +3,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { outlineWithUniqueSlugs } from '../../docs/docOutline.js'
+import {
+  readDocsCodeLineNumbers,
+  writeDocsCodeLineNumbers,
+} from '../../docs/docsCodeFence.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -49,6 +53,13 @@ const searchLoading = ref(false)
 let searchDebounceTimer = null
 let searchReqId = 0
 let fileReqId = 0
+
+const codeLineNumbers = ref(readDocsCodeLineNumbers())
+
+function toggleCodeLineNumbers() {
+  codeLineNumbers.value = !codeLineNumbers.value
+  writeDocsCodeLineNumbers(codeLineNumbers.value)
+}
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
@@ -130,7 +141,7 @@ const renderedHtml = computed(() => {
   const md = createDocsMarkdown({
     workFolders: [currentSession.value?.workFolder].filter(Boolean),
   })
-  return md.render(file.value.content, {})
+  return md.render(file.value.content, { docCodeLineNumbers: codeLineNumbers.value })
 })
 
 // ===== 工具函数 =====
@@ -428,6 +439,8 @@ export {
   dirty,
   renderedHtml,
   docOutline,
+  codeLineNumbers,
+  toggleCodeLineNumbers,
   // 4.1.0 搜索
   searchQuery,
   searchResults,

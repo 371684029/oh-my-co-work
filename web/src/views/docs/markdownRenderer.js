@@ -4,6 +4,10 @@
 // 所以必须用 markdown-it 自定义规则在原始 text token 上做，不能渲染后补链接。
 import MarkdownIt from 'markdown-it'
 import { slugifyHeading } from './docOutline.js'
+import { renderDocsFence } from './docsCodeFence.js'
+
+/** 路径扫描上限，避免超长无换行文本触发 ReDoS（5.2.0 DOC-03）。 */
+export const DOCS_PATH_SCAN_MAX = 16_384
 
 // Windows 盘符路径：到行尾/全角标点为止，允许空格与中文；尾随标点/引号/反斜杠后续修剪
 const WIN_PATH = /[A-Za-z]:\\[^，。！？；、（）《》""''\r\n"]*/g
@@ -37,6 +41,8 @@ function normalizeMatch(raw) {
  * @returns {Array<{ start: number, end: number, path: string }>}
  */
 export function findPathsInText(text, workFolders = []) {
+  const raw = String(text || '')
+  const capped = raw.length > DOCS_PATH_SCAN_MAX ? raw.slice(0, DOCS_PATH_SCAN_MAX) : raw
   const hits = []
   const taken = []
   const overlaps = (s, e) => taken.some(([ts, te]) => s < te && e > ts)
@@ -52,18 +58,18 @@ export function findPathsInText(text, workFolders = []) {
     .sort((a, b) => b.length - a.length)
   for (const folder of folders) {
     const re = new RegExp(escapeRegExp(folder), 'g')
-    for (const m of String(text).matchAll(re)) push(m.index, m.index + m[0].length, m[0])
+    for (const m of capped.matchAll(re)) push(m.index, m.index + m[0].length, m[0])
   }
   for (const re of [WIN_PATH, UNC_PATH]) {
     re.lastIndex = 0
-    for (const m of String(text).matchAll(re)) {
+    for (const m of capped.matchAll(re)) {
       const p = normalizeMatch(m[0])
       // 盘符根 "C:" 太短没意义；UNC 已强制两级
       if (p.length >= 3) push(m.index, m.index + p.length, p)
     }
   }
   POSIX_LINE.lastIndex = 0
-  for (const m of String(text).matchAll(POSIX_LINE)) {
+  for (const m of capped.matchAll(POSIX_LINE)) {
     push(m.index, m.index + m[0].length, m[0])
   }
   return hits.sort((a, b) => a.start - b.start)
@@ -210,6 +216,12 @@ export function createDocsMarkdown({ workFolders = [] } = {}) {
       token.attrSet('href', '#')
     }
     return defaultLinkOpen(tokens, idx, options, env, self)
+  }
+
+  md.renderer.rules.fence = (tokens, idx, options, env) => {
+    const token = tokens[idx]
+    const lineNumbers = env?.docCodeLineNumbers === true
+    return renderDocsFence(token.content, token.info, { lineNumbers })
   }
 
   return md
