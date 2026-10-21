@@ -11,13 +11,27 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 import { isTerminalRunning } from '../../composables/terminalStatus'
 import { createInputSequencer } from '../../composables/terminalInput'
+import {
+  shouldCopyInsteadOfInterrupt,
+  shouldHandlePasteShortcut,
+} from '../../composables/terminalClipboard.js'
+import {
+  terminalOutputSubscribe,
+  terminalOutputDrainPending,
+} from '../../composables/terminalOutputBridge.js'
+import {
+  clearTerminalFocusRegistration,
+  registerTerminalFocus,
+  restoreTerminalFocus,
+} from '../../composables/terminalFocusGuard.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -34,8 +48,15 @@ let xterm = null
 let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
+let fitTimer = 0
+let unsubOutput = null
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
 const sequencer = createInputSequencer()
+
+function scheduleFit() {
+  window.clearTimeout(fitTimer)
+  fitTimer = window.setTimeout(() => fit(), 120)
+}
 
 function fit() {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
@@ -65,7 +86,7 @@ onMounted(async () => {
   const prefs = { ...defaultTerminalPrefs(), ...(props.prefs || {}) }
   const theme = TERMINAL_THEMES[prefs.theme] || TERMINAL_THEMES['project-dark']
   xterm = new Terminal({
-    allowProposedApi: false,
+    allowProposedApi: true,
     convertEol: false,
     cursorBlink: prefs.cursorBlink !== false,
     cursorStyle: prefs.cursorStyle === 'block' ? 'block' : 'bar',
@@ -75,11 +96,48 @@ onMounted(async () => {
     letterSpacing: 0.2,
     scrollback: Number(prefs.scrollback) > 0 ? Number(prefs.scrollback) : 5000,
     smoothScrollDuration: 120,
+    macOptionClickForcesSelection: true,
     theme,
   })
   fitAddon = new FitAddon()
   xterm.loadAddon(fitAddon)
+  try {
+    const unicode11 = new Unicode11Addon()
+    xterm.loadAddon(unicode11)
+    xterm.unicode.activeVersion = '11'
+  } catch {
+    /* addon optional */
+  }
   xterm.open(host.value)
+  xterm.attachCustomKeyEventHandler((ev) => {
+    if (ev.type !== 'keydown') return true
+    if (shouldCopyInsteadOfInterrupt(xterm, ev)) {
+      ev.preventDefault()
+      const sel = xterm.getSelection()
+      if (sel) {
+        void navigator.clipboard?.writeText(sel).then(() => {
+          ElMessage.success(`已复制 ${sel.length} 字符`)
+        })
+      }
+      xterm.clearSelection()
+      return false
+    }
+    if (shouldHandlePasteShortcut(ev)) {
+      void navigator.clipboard?.readText().then((text) => {
+        if (text && isRunning.value) emit('input', text)
+      })
+      ev.preventDefault()
+      return false
+    }
+    return true
+  })
+  host.value?.addEventListener('contextmenu', (ev) => {
+    ev.preventDefault()
+    const sel = xterm.getSelection()
+    if (sel) {
+      void navigator.clipboard?.writeText(sel).then(() => ElMessage.success('已复制选区'))
+    }
+  })
   xterm.onData((data) => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
@@ -104,33 +162,45 @@ onMounted(async () => {
             if (isRunning.value) emit('input', chunk)
           }
         })
-        .finally(() => nextTick(() => setTimeout(() => xterm?.focus(), 50)))
+        .finally(() => {
+          restoreTerminalFocus()
+          nextTick(() => setTimeout(() => xterm?.focus(), 50))
+        })
       return
     }
     // While a confirmation is pending, hold keys and release them in order.
     for (const chunk of sequencer.enqueue(data)) emit('input', chunk)
   })
-  xterm.textarea?.addEventListener('focus', () => emit('focus-change', true))
+  xterm.textarea?.addEventListener('focus', () => {
+    registerTerminalFocus(xterm.textarea)
+    emit('focus-change', true)
+  })
   xterm.textarea?.addEventListener('blur', () => emit('focus-change', false))
   resetToReplay(props.terminal.replay)
-  resizeObserver = new ResizeObserver(() => fit())
+  for (const chunk of terminalOutputDrainPending(props.terminal.id, lastSeq)) {
+    if (chunk.data) xterm.write(chunk.data)
+    lastSeq = Math.max(lastSeq, chunk.seq)
+  }
+  unsubOutput = terminalOutputSubscribe(props.terminal.id, ({ seq, data, reset, replay }) => {
+    if (!xterm) return
+    if (reset) {
+      resetToReplay(replay)
+      return
+    }
+    if (!data) return
+    const nextSeq = Number(seq || 0)
+    if (nextSeq > lastSeq + 1) emit('gap', { from: lastSeq, to: nextSeq })
+    xterm.write(data)
+    lastSeq = Math.max(lastSeq, nextSeq)
+  })
+  resizeObserver = new ResizeObserver(() => scheduleFit())
   resizeObserver.observe(host.value)
   await nextTick()
   fit()
   xterm.focus()
+  registerTerminalFocus(xterm.textarea)
   emit('focus-change', true)
 })
-
-watch(
-  () => props.terminal.seq,
-  (seq) => {
-    const nextSeq = Number(seq || 0)
-    if (!xterm || nextSeq <= lastSeq) return
-    if (nextSeq > lastSeq + 1) emit('gap', { from: lastSeq, to: nextSeq })
-    if (props.terminal.lastChunk) xterm.write(props.terminal.lastChunk)
-    lastSeq = nextSeq
-  },
-)
 
 watch(
   () => props.terminal.snapshotKey,
@@ -150,6 +220,10 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  window.clearTimeout(fitTimer)
+  unsubOutput?.()
+  unsubOutput = null
+  clearTerminalFocusRegistration(xterm?.textarea)
   resizeObserver?.disconnect()
   resizeObserver = null
   xterm?.dispose()

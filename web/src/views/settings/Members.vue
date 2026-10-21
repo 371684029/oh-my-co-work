@@ -78,6 +78,17 @@
             <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
           <div class="field-hint">勾上并保存后会马上改源文件（如 newBranch.bat），不是等群聊跑完才改。跑完仍会把产出整理进文档中心。</div>
+          <el-button
+            v-if="form._editId"
+            size="small"
+            type="warning"
+            plain
+            class="refine-restore-btn"
+            :loading="restoringRefine"
+            @click="onRestoreRefine"
+          >
+            还原到炼化前
+          </el-button>
         </el-form-item>
         <el-form-item v-if="form.refine" label="炼化 skills（第三方 Agent 调起指令）">
           <div class="refine-skill-box">
@@ -310,6 +321,7 @@ const form = ref(emptyForm())
 const refineSkillPrompt = ref(
   '请在完成本次代码修改后，调用 agent-refine-skill：POST /api/docs/refine，JSON 含 sessionId、input、output、conclusion。',
 )
+const restoringRefine = ref(false)
 
 async function refreshRefineSkillPrompt() {
   try {
@@ -327,6 +339,35 @@ function refineSavedHint(saved, refineOn) {
   if (names.length) return `已保存，并按炼化契约改写 ${names.join('、')}`
   if (prep?.fallback) return '已保存炼化规格；没有可改的源文件时，跑完仍会整理进文档中心'
   return '已保存；源文件已按炼化契约处理'
+}
+
+async function onRestoreRefine() {
+  const id = form.value._editId
+  if (!id) return
+  try {
+    await ElMessageBox.confirm(
+      '将把炼化改动的源文件还原到保存炼化前的备份（若无备份则尝试移除契约块）。继续？',
+      '还原炼化',
+      { type: 'warning', confirmButtonText: '还原', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  restoringRefine.value = true
+  try {
+    const r = await api.members.restoreRefine(id)
+    ElMessage.success(`已还原 ${(r.restored || []).length} 个文件`)
+    form.value.refine = false
+    await load()
+    if (viewRow.value?.id === id) {
+      const row = list.value.find((m) => m.id === id)
+      if (row) viewRow.value = row
+    }
+  } catch (e) {
+    ElMessage.error(e?.message || '还原失败')
+  } finally {
+    restoringRefine.value = false
+  }
 }
 
 async function copyRefineSkillPrompt() {

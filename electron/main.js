@@ -7,6 +7,7 @@ import {
   ipcMain,
   dialog,
   nativeImage,
+  shell,
 } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -27,10 +28,12 @@ import {
   stopChild,
   waitHealth,
 } from './lib/server.mjs'
+import { createNotifier, parseSessionDeepLink } from './lib/notifier.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow = null
+let notifier = null
 let tray = null
 let trayOk = false
 let isQuitting = false
@@ -114,6 +117,21 @@ function showMainWindow() {
   if (!mainWindow) return
   mainWindow.show()
   mainWindow.focus()
+}
+
+function ensureNotifier() {
+  if (!notifier) {
+    notifier = createNotifier({
+      getMainWindow: () => mainWindow,
+      Notification,
+      onDeepLink(deepLink) {
+        const sessionId = parseSessionDeepLink(deepLink)
+        if (!sessionId || !mainWindow) return
+        mainWindow.loadURL(workbenchUrl(appOrigin(), sessionId)).catch(() => {})
+      },
+    })
+  }
+  return notifier
 }
 
 function appIconPath() {
@@ -203,6 +221,23 @@ async function createMainWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const target = new URL(url)
+      const local = new URL(appOrigin())
+      if (target.origin === local.origin) {
+        return { action: 'allow' }
+      }
+      if (target.protocol === 'http:' || target.protocol === 'https:') {
+        shell.openExternal(url).catch(() => {})
+        return { action: 'deny' }
+      }
+    } catch {
+      /* ignore malformed url */
+    }
+    return { action: 'deny' }
+  })
 }
 
 async function loadWorkbench() {
@@ -214,11 +249,9 @@ function registerIpc() {
   ipcMain.handle('acw:notify', (_evt, payload) => {
     const title = String(payload?.title || '')
     const body = String(payload?.options?.body || '')
-    if (!title) return false
-    if (!Notification.isSupported()) return false
-    const notification = new Notification({ title, body })
-    notification.show()
-    return true
+    const id = payload?.options?.id
+    const deepLink = payload?.options?.deepLink
+    return ensureNotifier().notify({ id, title, body, deepLink })
   })
 
   ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) => desktopUpdateResult(manifest))
@@ -336,6 +369,9 @@ if (!gotLock) {
   app.whenReady().then(async () => {
     appRoot = resolveAppRoot()
     process.chdir(appRoot)
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('com.oh-my-co-work.desktop')
+    }
     appendLog(`whenReady appRoot=${appRoot} port=${process.env.ACW_PORT || 3780}`)
     try {
       createTray()

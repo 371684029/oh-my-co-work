@@ -1232,13 +1232,23 @@ async function openAnnouncementMd() {
 }
 
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
-function openDocsHub() {
+function openDocsHub({ newTab = false } = {}) {
   if (!activeId.value) return
-  window.open(
-    `/docs?session=${encodeURIComponent(activeId.value)}&file=${encodeURIComponent('ANNOUNCEMENT.md')}`,
-    '_blank',
-    'noopener',
-  )
+  const query = {
+    session: activeId.value,
+    file: 'ANNOUNCEMENT.md',
+  }
+  if (newTab || (!window.__ACW_DESKTOP_API__ && !window.__ACW_DESKTOP_ENV__)) {
+    const qs = new URLSearchParams(query).toString()
+    window.open(`/docs?${qs}`, '_blank', 'noopener')
+    return
+  }
+  if (_router) {
+    _router.push({ path: '/docs', query })
+  } else {
+    const qs = new URLSearchParams(query).toString()
+    window.location.assign(`/docs?${qs}`)
+  }
 }
 
 /** 刷新群报告台账文件（后台 MD）；界面始终跟节点 / # 参数走 */

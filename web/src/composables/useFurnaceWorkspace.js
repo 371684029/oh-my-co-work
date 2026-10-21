@@ -6,6 +6,7 @@ import { PET_CREDIT_SHORT } from './furnacePetAtlas.js'
 import { furnaceWorkspaceOpen } from './furnaceUi.js'
 import { isTerminalRunning, terminalStatusText, connectionStatusText } from './terminalStatus'
 import { useLocalUploads } from './localUploads'
+import { buildFurnaceSubmitSequence } from './bracketedPaste.js'
 
 /**
  * 熔炉干活面（GUI/TUI 同一条 grok 进程）的状态与逻辑。
@@ -207,7 +208,13 @@ export function useFurnaceWorkspace(props, emit, refs) {
     if (!payload || !isRunning.value || uploading.value) return
     sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
     chatTurns.value.push({ id: nextTurnId(), role: 'user', text: payload })
-    emit('input', `${payload}\r`)
+    const { payload: ptyPayload, submit } = buildFurnaceSubmitSequence(payload)
+    emit('input', ptyPayload)
+    if (submit) {
+      window.setTimeout(() => {
+        if (isRunning.value) emit('input', submit)
+      }, 50)
+    }
     draft.value = ''
     pendingFiles.value = []
     stickBottom.value = true

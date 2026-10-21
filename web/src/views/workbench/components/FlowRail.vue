@@ -289,10 +289,18 @@
         </div>
         <div class="docs-rail-actions">
           <el-button
+            type="primary"
+            size="small"
+            :disabled="!activeId"
+            @click="openDocsHub()"
+          >
+            展开完整文档中心
+          </el-button>
+          <el-button
             size="small"
             plain
             :disabled="!activeId"
-            @click="openDocsHub"
+            @click="openDocsHub({ newTab: true })"
           >
             新标签打开
           </el-button>

@@ -34,6 +34,7 @@ import {
 } from './services.js'
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
+import { restoreMemberRefine } from './refineRestore.js'
 import {
   touchHeartbeat,
   notifyClientGone,
@@ -259,6 +260,13 @@ router.patch('/members/:id', (req, res) => {
     res.json(updateMember(req.params.id, req.body || {}))
   } catch (e) {
     res.status(400).json({ error: e.message })
+  }
+})
+router.post('/members/:id/refine/restore', (req, res) => {
+  try {
+    res.json(restoreMemberRefine(req.params.id))
+  } catch (e) {
+    res.status(e.code === 'NOT_FOUND' ? 404 : 400).json({ error: e.message, code: e.code })
   }
 })
 router.delete('/members/:id', (req, res) => {

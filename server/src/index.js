@@ -33,6 +33,10 @@ import {
   requireLocalAccess,
 } from './localAccess.js'
 
+import { applyAugmentedPath } from './pathEnv.js'
+
+applyAugmentedPath()
+
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
 initDb()

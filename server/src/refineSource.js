@@ -9,6 +9,7 @@ import {
   collectAdaptSourcePaths,
   createAdaptBackup,
   isProbablyBinary,
+  restoreAdaptManifest,
 } from './adaptBackup.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
 
@@ -81,18 +82,24 @@ function insertAfterPreamble(text, block, nl) {
   return `${head}${block}${tail}`
 }
 
-export function applyRefineContract(filePath, { title } = {}) {
+export function computeRefineContractContent(filePath, { title } = {}) {
   const ext = path.extname(filePath).toLowerCase()
   const commentable = /\.(mjs|cjs|js|ts|tsx|jsx|py|ps1|bat|cmd|sh)$/i.test(ext)
-  if (!commentable) return { patched: false, reason: 'not_commentable' }
+  if (!commentable) return { ok: false, reason: 'not_commentable' }
   const raw = fs.readFileSync(filePath)
-  if (isProbablyBinary(raw)) return { patched: false, reason: 'binary' }
+  if (isProbablyBinary(raw)) return { ok: false, reason: 'binary' }
   const text = raw.toString('utf8')
-  if (text.includes(REFINE_MARK)) return { patched: false, reason: 'already' }
+  if (text.includes(REFINE_MARK)) return { ok: false, reason: 'already' }
   const nl = nlOf(text)
   const heading = String(title || '产出台账').trim() || '产出台账'
   const next = insertAfterPreamble(text, refineBlock(filePath, heading, nl), nl)
-  fs.writeFileSync(filePath, next, 'utf8')
+  return { ok: true, next, encoding: 'utf8' }
+}
+
+export function applyRefineContract(filePath, opts = {}) {
+  const r = computeRefineContractContent(filePath, opts)
+  if (!r.ok) return { patched: false, reason: r.reason }
+  fs.writeFileSync(filePath, r.next, r.encoding)
   return { patched: true, reason: 'ok' }
 }
 
@@ -136,14 +143,32 @@ export function applyRefineOnMemberSave(member) {
       backup = null
     }
     if (reason === 'ok') {
-      for (const f of needPatch) {
-        try {
-          const r = applyRefineContract(f.path, { title })
-          if (r.patched) patched.push(f.path)
-        } catch {
-          reason = 'patch_failed'
-          break
+      const staged = []
+      try {
+        for (const f of needPatch) {
+          const r = computeRefineContractContent(f.path, { title })
+          if (!r.ok) {
+            reason = r.reason === 'already' ? 'already' : 'patch_failed'
+            break
+          }
+          staged.push({ path: f.path, next: r.next })
         }
+        if (reason === 'ok') {
+          for (const s of staged) {
+            fs.writeFileSync(s.path, s.next, 'utf8')
+            patched.push(s.path)
+          }
+        }
+      } catch {
+        reason = 'patch_failed'
+      }
+      if (reason === 'patch_failed' && backup?.manifestPath) {
+        try {
+          restoreAdaptManifest(backup.manifestPath)
+        } catch {
+          /* best effort rollback */
+        }
+        patched.length = 0
       }
     }
   }

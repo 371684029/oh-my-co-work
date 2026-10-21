@@ -367,6 +367,55 @@ export function prepareAdaptForMember(member, { sessionId, nodeId, backup = true
   }
 }
 
+const ZIP_LOCAL_SIG = 0x04034b50
+
+/** Read entries from adapt/refine zip produced by writeZipArchive. */
+export function readAdaptZipEntries(zipPath) {
+  const buf = fs.readFileSync(zipPath)
+  const out = new Map()
+  let off = 0
+  while (off + 30 <= buf.length) {
+    if (buf.readUInt32LE(off) !== ZIP_LOCAL_SIG) break
+    const method = buf.readUInt16LE(off + 8)
+    const compSize = buf.readUInt32LE(off + 18)
+    const nameLen = buf.readUInt16LE(off + 26)
+    const extraLen = buf.readUInt16LE(off + 28)
+    const nameStart = off + 30
+    const name = buf.slice(nameStart, nameStart + nameLen).toString('utf8')
+    const dataStart = nameStart + nameLen + extraLen
+    const comp = buf.slice(dataStart, dataStart + compSize)
+    let raw = comp
+    if (method === 8) {
+      raw = zlib.inflateRawSync(comp)
+    } else if (method !== 0) {
+      throw Object.assign(new Error(`不支持的压缩方式 ${method}`), { code: 'BAD_ZIP' })
+    }
+    out.set(name, raw)
+    off = dataStart + compSize
+  }
+  return out
+}
+
+export function restoreAdaptManifest(manifestPath) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  const zipPath = manifest.zip
+  if (!zipPath || !fs.existsSync(zipPath)) {
+    throw Object.assign(new Error('备份 zip 不存在'), { code: 'NO_ZIP' })
+  }
+  const entries = readAdaptZipEntries(zipPath)
+  const restored = []
+  for (const f of manifest.files || []) {
+    const data = entries.get(f.inZip)
+    if (!data) {
+      throw Object.assign(new Error(`备份内缺少 ${f.inZip}`), { code: 'MISSING_ENTRY' })
+    }
+    fs.mkdirSync(path.dirname(f.original), { recursive: true })
+    fs.writeFileSync(f.original, data)
+    restored.push(f.original)
+  }
+  return { ok: true, restored, manifest }
+}
+
 export function adaptStatusText(prep) {
   if (!prep) return ''
   if (prep.fallback) {

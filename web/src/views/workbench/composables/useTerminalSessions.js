@@ -8,6 +8,12 @@ import {
   shouldChunkTerminalInput,
   DEFAULT_CHUNK_INTERVAL_MS,
 } from '../../../composables/terminalInput'
+import { chunkBracketedPaste, BRACKET_START } from '../../../composables/bracketedPaste.js'
+import {
+  terminalOutputAppend,
+  terminalOutputReset,
+  terminalOutputGetReplay,
+} from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
 import {
   terminalBridge,
@@ -30,6 +36,24 @@ const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
+
+function pushDesktopNotification(title, body, { id, deepLink } = {}) {
+  const t = String(title || '').trim()
+  const b = String(body || '').trim()
+  if (!t) return
+  const desktop = window.__ACW_DESKTOP_API__
+  if (desktop?.notify) {
+    desktop.notify(t, { body: b, id, deepLink })
+    return
+  }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    try {
+      new Notification(t, { body: b })
+    } catch {
+      /* ignore */
+    }
+  }
+}
 // CLI-13: collapse duplicate seq-gap re-attaches into one silent retry, only
 // notifying the user when gaps keep happening.
 let lastGapAt = 0
@@ -108,12 +132,14 @@ async function sendTerminalInput(data) {
   // CLI-07: small input (typing) goes straight through; a large paste is split
   // into ≤4KiB pieces with a small gap so neither the server limit nor ConPTY's
   // one-shot write handling is hit.
-  if (!shouldChunkTerminalInput(text)) {
+  const multiline = text.includes('\n') || text.includes(BRACKET_START)
+  if (!multiline && !shouldChunkTerminalInput(text)) {
     sendTerminalMessage({ type: 'terminal.input', terminalId, data: text })
     return
   }
+  const chunks = multiline ? chunkBracketedPaste(text) : chunkTerminalInput(text)
   let warned = false
-  for (const chunk of chunkTerminalInput(text)) {
+  for (const chunk of chunks) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (!warned) {
         ElMessage.warning('终端连接已断开，粘贴中断')
@@ -310,12 +336,13 @@ function bindWs(sessionId) {
             reattachForGap(terminalId)
           }
           const data = ev.payload.data || ''
-          const replay = `${current.replay || ''}${data}`.slice(-256_000)
+          terminalOutputAppend(terminalId, { seq: nextSeq, data })
+          const replay = terminalOutputGetReplay(terminalId)
           upsertTerminal({
             ...current,
             seq: ev.payload.seq,
             replay,
-            previewReplay: `${current.previewReplay || ''}${data}`.slice(-12_000),
+            previewReplay: replay.slice(-12_000),
             lastChunk: data,
           })
         }
@@ -326,6 +353,11 @@ function bindWs(sessionId) {
           ElMessage.info('回放已截断，仅显示最近输出')
         }
         gapStreak = 0
+        terminalOutputReset(
+          ev.payload?.terminalId,
+          ev.payload?.data || '',
+          ev.payload?.seq || 0,
+        )
         upsertTerminal({
           ...(ev.payload?.terminal || {}),
           id: ev.payload?.terminalId,
@@ -348,6 +380,13 @@ function bindWs(sessionId) {
       if (ev.type === 'terminal.error' || ev.type === 'terminal.adapter_error') {
         ElMessage.warning(ev.payload?.message || '终端连接异常')
         return
+      }
+      if (ev.type === 'gate.request' && (document.hidden || !document.hasFocus())) {
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 等你确认`, '流程需要你处理，点击返回应用', {
+          id: `gate:${sessionId}:${ev.payload?.gateId || ev.payload?.id || 'x'}`,
+          deepLink: `session:${sessionId}`,
+        })
       }
       if (
         [

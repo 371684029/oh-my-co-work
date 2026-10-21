@@ -113,6 +113,8 @@ export const api = {
       req(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(body || {}) }),
     clone: (id, body) => req(`/members/${id}/clone`, { method: 'POST', body: JSON.stringify(body || {}) }),
     remove: (id) => req(`/members/${id}`, { method: 'DELETE' }),
+    restoreRefine: (id) =>
+      req(`/members/${id}/refine/restore`, { method: 'POST', body: '{}' }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
   },

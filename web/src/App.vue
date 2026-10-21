@@ -58,6 +58,15 @@
             </button>
             <button
               type="button"
+              class="nav-item nav-item--docs"
+              :class="{ active: nav === 'docs' }"
+              title="文档中心 (Ctrl+Shift+D)"
+              @click="goDocs()"
+            >
+              文档中心
+            </button>
+            <button
+              type="button"
               class="nav-item"
               :class="{ active: nav === 'settings' }"
               @click="go('settings')"
@@ -207,13 +216,33 @@ async function toggleWorkbenchFullscreen() {
 watch(
   () => route.path,
   (p) => {
-    nav.value = p.startsWith('/settings') ? 'settings' : 'workbench'
+    if (p.startsWith('/settings')) nav.value = 'settings'
+    else if (p.startsWith('/docs')) nav.value = 'docs'
+    else nav.value = 'workbench'
   },
+  { immediate: true },
 )
 
 function go(v) {
   nav.value = v
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
+}
+
+function goDocs() {
+  nav.value = 'docs'
+  router.push('/docs')
+}
+
+function onGlobalKeydown(ev) {
+  const mod = ev.metaKey || ev.ctrlKey
+  if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'd') {
+    ev.preventDefault()
+    goDocs()
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', onGlobalKeydown)
 }
 
 function goWorkbench() {
@@ -454,6 +483,16 @@ function goGrokSettings() {
 
 .nav-item:active {
   transform: scale(0.98);
+}
+
+.nav-item--docs {
+  border: 1px solid rgba(0, 122, 255, 0.35);
+  background: rgba(0, 122, 255, 0.06);
+}
+
+.nav-item--docs.active {
+  background: rgba(0, 122, 255, 0.14);
+  color: var(--ecw-accent, #007aff);
 }
 
 .nav-item.active {
