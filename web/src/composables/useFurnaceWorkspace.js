@@ -26,6 +26,12 @@ import {
   isHistoryNavigationKey,
   shouldSubmitOnEnter,
 } from './inputIntent.js'
+import {
+  FURNACE_QUICK_CHIPS,
+  furnaceBuddyMood,
+  furnaceFailHint,
+  furnaceFooterHint,
+} from './furnaceWorkspacePresentation.js'
 
 /**
  * 熔炉干活面（GUI/TUI 同一条 grok 进程）的状态与逻辑。
@@ -65,11 +71,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
     },
   })
 
-  const quickChips = [
-    '现在做到哪了？只看当前格。',
-    '当前格缺什么？',
-    '过闸的话只说通过或拒绝，先告诉我卡在哪。',
-  ]
+  const quickChips = FURNACE_QUICK_CHIPS
 
   const isRunning = computed(() => isTerminalRunning(props.terminal.status))
   const isStopped = computed(() =>
@@ -92,19 +94,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
     if (!isRunning.value || !chatTurns.value.length) return false
     return chatTurns.value[chatTurns.value.length - 1].role === 'user'
   })
-  const failHint = computed(() => {
-    const err = String(props.terminal.lastError || props.terminal.error?.message || '').trim()
-    if (err) return err
-    if (props.terminal.status === 'failed') {
-      const agent = inferFurnaceAgent(props.terminal)
-      const cmd = agent === 'cursor' ? 'cursor-agent' : 'grok'
-      return `本机没有把 ${cmd} 跑起来。常见原因：没装、没进 PATH、或还没登录。`
-    }
-    if (props.terminal.exitCode != null && Number(props.terminal.exitCode) !== 0) {
-      return `进程已退出（exit ${props.terminal.exitCode}）。`
-    }
-    return '这轮已经停了，所以没有新画面，也不能往进程里打字。'
-  })
+  const failHint = computed(() =>
+    furnaceFailHint(props.terminal, furnaceAgentKind.value),
+  )
   const canSend = computed(
     () =>
       isRunning.value &&
@@ -121,15 +113,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
   )
 
   /** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
-  const buddyMood = computed(() => {
-    const st = String(props.terminal.status || '')
-    if (st === 'running') return 'working'
-    if (st === 'starting' || props.connectionStatus === 'connecting') return 'idle'
-    if (['exited', 'failed', 'killed'].includes(st) || props.connectionStatus !== 'open') {
-      return 'waiting'
-    }
-    return 'idle'
-  })
+  const buddyMood = computed(() =>
+    furnaceBuddyMood(props.terminal.status, props.connectionStatus),
+  )
 
   const buddyTitle = computed(() => {
     const base =
@@ -179,17 +165,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
     return terminalStatusText(props.terminal.status, 'furnace')
   })
 
-  const footerHint = computed(() => {
-    if (!isRunning.value) return '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮'
-    if (surface.value === 'chat') {
-      return isPagefill.value
-        ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
-        : '已在三栏中栏 · 可再满屏或全屏'
-    }
-    if (focused.value) return 'TUI 输入中 · Esc 退出焦点 · 右侧箭头展开记录 · 菜单用键盘'
-    if (isPagefill.value) return '再按 Esc 缩小回工作台'
-    return '点 TUI 继续输入'
-  })
+  const footerHint = computed(() =>
+    furnaceFooterHint({
+      isRunning: isRunning.value,
+      surface: surface.value,
+      isPagefill: isPagefill.value,
+      focused: focused.value,
+    }),
+  )
 
   function nextTurnId() {
     return `${Date.now()}-${chatTurns.value.length}-${Math.random().toString(36).slice(2, 7)}`

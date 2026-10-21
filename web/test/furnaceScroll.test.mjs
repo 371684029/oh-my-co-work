@@ -9,6 +9,10 @@ const layoutCss = fs.readFileSync(path.join(root, 'src/components/terminal/furna
 const vueSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceWorkspace.vue'), 'utf8')
 const viewSrc = fs.readFileSync(path.join(root, 'src/components/terminal/TerminalView.vue'), 'utf8')
 const hookSrc = fs.readFileSync(path.join(root, 'src/composables/useFurnaceWorkspace.js'), 'utf8')
+const presentationSrc = fs.readFileSync(
+  path.join(root, 'src/composables/furnaceWorkspacePresentation.js'),
+  'utf8',
+)
 
 test('熔炉默认隐藏 GUI 入口', () => {
   assert.match(vueSrc, /const guiEnabled = false/)
@@ -34,7 +38,7 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
   assert.match(vueSrc, /class="furnace-tui-drawer"/)
   assert.match(vueSrc, /tuiHistoryOpen/)
   assert.match(vueSrc, /chatTurns/)
-  assert.match(hookSrc, /右侧箭头展开记录/)
+  assert.match(presentationSrc, /右侧箭头展开记录/)
   assert.doesNotMatch(vueSrc, /preserve-history/)
   assert.doesNotMatch(vueSrc, /furnace-tui-history/)
   assert.doesNotMatch(viewSrc, /preserveHistory/)
