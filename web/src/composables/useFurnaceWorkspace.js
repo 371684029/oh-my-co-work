@@ -37,6 +37,7 @@ import {
   furnaceFailHint,
   furnaceFooterHint,
 } from './furnaceWorkspacePresentation.js'
+import { resolveFurnaceComposerEl } from './furnaceComposerRefs.js'
 
 /**
  * 熔炉干活面（GUI/TUI 同一条 grok 进程）的状态与逻辑。
@@ -266,7 +267,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
   function sendChip(text) {
     draft.value = text
     if (showBody.value) sendChat()
-    else nextTick(() => composerEl.value?.focus?.())
+    else nextTick(() => resolveFurnaceComposerEl(composerEl)?.focus?.())
   }
 
   function onLogScroll() {
@@ -280,7 +281,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
       ElMessage.warning('没有会话，没法落到熔炉目录')
       return
     }
-    fileInput.value?.click()
+    resolveFurnaceComposerEl(fileInput)?.click?.()
   }
 
   function onPaste(ev) {
@@ -350,7 +351,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
   watch(surface, (mode) => {
     if (mode === 'tui') tuiEverShown.value = true
     if (mode === 'chat') {
-      nextTick(() => composerEl.value?.focus?.())
+      nextTick(() => resolveFurnaceComposerEl(composerEl)?.focus?.())
     }
     // FUR-02: switching GUI/TUI must not resize the live PTY; fit on next frame only.
     nextTick(() => window.dispatchEvent(new Event('resize')))
@@ -358,7 +359,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
 
   watch(isRunning, (on) => {
     if (on && surface.value === 'chat') {
-      nextTick(() => composerEl.value?.focus?.())
+      nextTick(() => resolveFurnaceComposerEl(composerEl)?.focus?.())
     }
   })
 

@@ -64,65 +64,25 @@
         >
           {{ furnaceJumpLatestLabel() }}
         </button>
-        <form
-          class="furnace-composer"
-          @submit.prevent="sendChat"
-          @dragover.prevent
-          @drop.prevent="onDrop"
-        >
-          <input
-            ref="fileInput"
-            type="file"
-            multiple
-            class="furnace-file-input"
-            @change="onFileInputChange"
-          />
-          <el-alert
-            v-if="showInputTips"
-            type="info"
-            :closable="true"
-            show-icon
-            class="furnace-input-tips"
-            :title="furnaceInputTipsTitle()"
-            :description="furnaceInputTipsDescription()"
-            @close="dismissFurnaceTips"
-          />
-          <div class="furnace-compose-main">
-            <textarea
-              ref="composerEl"
-              v-model="draft"
-              rows="3"
-              :disabled="!isRunning"
-              :placeholder="furnaceChatPlaceholder()"
-              @keydown="onComposerKey"
-              @paste="onPaste"
-            />
-            <div v-if="pendingFiles.length" class="furnace-pending">
-              <span
-                v-for="(f, i) in pendingFiles"
-                :key="f.id || f.relPath"
-                class="furnace-pending-chip"
-              >
-                {{ f.name }}
-                <button type="button" :title="furnaceRemovePendingTitle()" @click="removePending(i)">×</button>
-              </span>
-            </div>
-            <div class="furnace-compose-bar">
-              <button
-                type="button"
-                class="furnace-btn"
-                :disabled="!isRunning || uploading || !sessionId"
-                :title="furnaceAttachmentTitle()"
-                @click="pickFiles"
-              >
-                {{ furnaceAttachmentButtonLabel(uploading) }}
-              </button>
-              <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
-              <span class="furnace-compose-hint">{{ furnaceComposeBarHint() }}</span>
-            </div>
-          </div>
-          <button type="submit" class="furnace-send" :disabled="!canSend">{{ furnaceSendLabel() }}</button>
-        </form>
+        <FurnaceChatComposer
+          ref="chatComposerRef"
+          v-model="draft"
+          :pending-files="pendingFiles"
+          :uploading="uploading"
+          :upload-error="uploadError"
+          :is-running="isRunning"
+          :session-id="sessionId"
+          :show-input-tips="showInputTips"
+          :can-send="canSend"
+          @submit="sendChat"
+          @file-input-change="onFileInputChange"
+          @drop="onDrop"
+          @paste="onPaste"
+          @composer-keydown="onComposerKey"
+          @remove-pending="removePending"
+          @pick-files="pickFiles"
+          @dismiss-tips="dismissFurnaceTips"
+        />
       </div>
 
       <div
@@ -171,6 +131,7 @@ import FurnaceChatWelcome from './FurnaceChatWelcome.vue'
 import FurnaceWorkspaceHead from './FurnaceWorkspaceHead.vue'
 import FurnaceTuiDrawer from './FurnaceTuiDrawer.vue'
 import FurnaceChatTurns from './FurnaceChatTurns.vue'
+import FurnaceChatComposer from './FurnaceChatComposer.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
@@ -183,14 +144,6 @@ import {
   shouldIgnoreFurnaceHotkeyTarget,
 } from './furnaceWorkspaceUi.js'
 import {
-  furnaceAttachmentButtonLabel,
-  furnaceAttachmentTitle,
-  furnaceChatPlaceholder,
-  furnaceComposeBarHint,
-  furnaceInputTipsDescription,
-  furnaceInputTipsTitle,
-  furnaceRemovePendingTitle,
-  furnaceSendLabel,
   furnaceJumpLatestLabel,
   furnaceStatusBarLine,
   furnaceTurnCopyEmptyMessage,
@@ -223,8 +176,9 @@ const props = defineProps({
 const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'ensure-agent', 'input', 'resize', 'select', 'download-log', 'gap'])
 const workspaceRoot = ref(null)
 const logEl = ref(null)
-const fileInput = ref(null)
-const composerEl = ref(null)
+const chatComposerRef = ref(null)
+const fileInput = computed(() => chatComposerRef.value?.fileInput)
+const composerEl = computed(() => chatComposerRef.value?.composerEl)
 /** 4.8：默认隐藏 GUI 入口，熔炉只走双 Agent TUI */
 const guiEnabled = false
 const surface = ref(guiEnabled && props.defaultSurface === 'chat' ? 'chat' : 'tui')
@@ -718,98 +672,6 @@ onUnmounted(() => {
   background: rgba(29, 29, 31, 0.82);
   color: #fff;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-}
-
-.furnace-composer {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  padding: 12px 3% 16px;
-  background: rgba(255, 255, 255, 0.92);
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.furnace-file-input {
-  display: none;
-}
-
-.furnace-compose-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.furnace-composer textarea {
-  flex: 1;
-  width: 100%;
-  resize: none;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 14px;
-  padding: 12px 14px;
-  font: inherit;
-  font-size: 15px;
-  min-height: 72px;
-  box-sizing: border-box;
-}
-
-.furnace-pending {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.furnace-pending-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 16rem;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.furnace-pending-chip button {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: #6e6e73;
-  font-size: 14px;
-  line-height: 1;
-  padding: 0;
-}
-
-.furnace-compose-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.furnace-compose-hint,
-.furnace-upload-err {
-  font-size: 11px;
-  color: #6e6e73;
-}
-
-.furnace-upload-err {
-  color: #ff3b30;
-}
-
-.furnace-send {
-  border: 0;
-  border-radius: 12px;
-  padding: 12px 18px;
-  background: #007aff;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.furnace-send:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .furnace-foot {
