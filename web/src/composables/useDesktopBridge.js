@@ -57,6 +57,13 @@ export function useDesktopBridge() {
     return false
   }
 
+  async function openDetachedWindow(pathOrPayload) {
+    if (typeof window !== 'undefined' && window.__ACW_DESKTOP_API__?.openDetachedWindow) {
+      return await window.__ACW_DESKTOP_API__.openDetachedWindow(pathOrPayload)
+    }
+    return null
+  }
+
   return {
     detectedEnv,
     bridgeVersion,
@@ -67,5 +74,6 @@ export function useDesktopBridge() {
     minimizeToTray,
     launchWorkflow,
     applyDesktopUpdate,
+    openDetachedWindow,
   }
 }

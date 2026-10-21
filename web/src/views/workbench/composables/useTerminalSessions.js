@@ -32,6 +32,7 @@ import {
   pickLiveFurnaceTerminal,
 } from '../../../composables/furnaceReopen.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
+import { createCoalescedAsync } from '../../../composables/coalescedReload.js'
 import {
   recordNotificationInbox,
   getInboxEntry,
@@ -61,6 +62,10 @@ const furnaceCliNotifyKind = new Map()
 const furnaceContextWarned = new Set()
 const notifyLastSentAt = new Map()
 const notifyRemindCount = new Map()
+
+const scheduleDetailReload = createCoalescedAsync(async (sessionId) => {
+  await loadDetail(sessionId)
+}, 48)
 
 function pushDesktopNotification(title, body, { id, deepLink, level = 'action', sessionId } = {}) {
   const t = String(title || '').trim()
@@ -589,7 +594,7 @@ function bindWs(sessionId) {
           'announcement.updated',
         ].includes(ev.type)
       ) {
-        await loadDetail(sessionId)
+        await scheduleDetailReload(sessionId)
         // 默认保持「流程」Tab，不自动跳群报告
         // 群报告由节点 detail / # 参数驱动；备注在 context.notes
         if (ev.type === 'session.archived') {

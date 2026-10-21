@@ -9,6 +9,7 @@ import {
   nativeImage,
   shell,
   clipboard,
+  screen,
 } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -19,7 +20,11 @@ import { desktopUpdateResult, docsHubUrl, workbenchUrl } from './lib/urls.mjs'
 import { splashDataUrl, setSplashStatus } from './lib/splash.mjs'
 import { resolveDefaultAcwDataRoot } from './lib/dataDir.mjs'
 import { consumeApplyOnQuit } from './lib/desktopUpdate.mjs'
-import { applyDesktopOpenState } from './lib/windowState.mjs'
+import {
+  applyDesktopOpenState,
+  applyStoredWindowBounds,
+  captureWindowBounds,
+} from './lib/windowState.mjs'
 import {
   isServerUp,
   resolveNodeBin,
@@ -37,6 +42,8 @@ import { createNotifier, parseNotificationDeepLink } from './lib/notifier.mjs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow = null
+/** @type {Map<string, import('electron').BrowserWindow>} */
+const detachedWindows = new Map()
 let notifier = null
 let trayPendingCount = 0
 let tray = null
@@ -47,7 +54,11 @@ let appRoot = ''
 let port = 3780
 
 // DESK-03: persisted desktop preferences (close-to-tray behavior + one-time hint).
-const DEFAULT_DESKTOP_PREFS = { closeToTray: true, trayHintShown: false }
+const DEFAULT_DESKTOP_PREFS = {
+  closeToTray: true,
+  trayHintShown: false,
+  mainWindowBounds: null,
+}
 let desktopPrefs = { ...DEFAULT_DESKTOP_PREFS }
 
 function prefsPath() {
@@ -246,10 +257,8 @@ function createTray() {
   }
 }
 
-async function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+function browserWindowOptions() {
+  return {
     minWidth: 1024,
     minHeight: 600,
     title: 'oh-my-co-work',
@@ -261,29 +270,26 @@ async function createMainWindow() {
       nodeIntegration: false,
       sandbox: true,
     },
-  })
+  }
+}
 
-  await mainWindow.loadURL(splashDataUrl())
-  applyDesktopOpenState(mainWindow)
-  mainWindow.show()
+function workAreaForWindow(win) {
+  try {
+    const display = screen.getDisplayMatching(win.getBounds())
+    return display?.workArea || { x: 0, y: 0, width: 1280, height: 800 }
+  } catch {
+    return { x: 0, y: 0, width: 1280, height: 800 }
+  }
+}
 
-  mainWindow.on('close', (evt) => {
-    if (isQuitting) return
-    // DESK-03: when close-to-tray is on, hide instead of quitting and explain it
-    // once so users don't mistake it for a real exit. Otherwise let the close
-    // proceed; window-all-closed then quits (see below).
-    if (desktopPrefs.closeToTray && trayOk) {
-      evt.preventDefault()
-      mainWindow.hide()
-      showTrayHintOnce()
-    }
-  })
+function persistMainWindowBounds() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  desktopPrefs.mainWindowBounds = captureWindowBounds(mainWindow)
+  saveDesktopPrefs()
+}
 
-  mainWindow.on('closed', () => {
-    mainWindow = null
-  })
-
-  mainWindow.webContents.on('will-navigate', (evt, url) => {
+function wireWindowNavigation(win) {
+  win.webContents.on('will-navigate', (evt, url) => {
     try {
       const target = new URL(url)
       const local = new URL(appOrigin())
@@ -295,8 +301,7 @@ async function createMainWindow() {
       evt.preventDefault()
     }
   })
-
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const target = new URL(url)
       const local = new URL(appOrigin())
@@ -312,6 +317,73 @@ async function createMainWindow() {
     }
     return { action: 'deny' }
   })
+}
+
+async function createDetachedWindow(relativePath) {
+  const rel = String(relativePath || '/workbench').startsWith('/')
+    ? String(relativePath || '/workbench')
+    : `/${relativePath}`
+  const id = randomUUID()
+  const win = new BrowserWindow({
+    ...browserWindowOptions(),
+    width: 1100,
+    height: 720,
+  })
+  wireWindowNavigation(win)
+  detachedWindows.set(id, win)
+  win.on('closed', () => detachedWindows.delete(id))
+  await win.loadURL(`${appOrigin()}${rel}`)
+  win.show()
+  return id
+}
+
+async function createMainWindow() {
+  const stored = desktopPrefs.mainWindowBounds
+  mainWindow = new BrowserWindow({
+    width: stored?.width || 1280,
+    height: stored?.height || 800,
+    x: stored?.x,
+    y: stored?.y,
+    ...browserWindowOptions(),
+  })
+
+  await mainWindow.loadURL(splashDataUrl())
+  const workArea = workAreaForWindow(mainWindow)
+  const restored = applyStoredWindowBounds(mainWindow, stored, workArea)
+  if (!restored) applyDesktopOpenState(mainWindow)
+  mainWindow.show()
+
+  let boundsTimer = 0
+  const scheduleBoundsSave = () => {
+    clearTimeout(boundsTimer)
+    boundsTimer = setTimeout(persistMainWindowBounds, 400)
+  }
+  mainWindow.on('resize', scheduleBoundsSave)
+  mainWindow.on('move', scheduleBoundsSave)
+  mainWindow.on('maximize', scheduleBoundsSave)
+  mainWindow.on('unmaximize', scheduleBoundsSave)
+  mainWindow.on('enter-full-screen', scheduleBoundsSave)
+  mainWindow.on('leave-full-screen', scheduleBoundsSave)
+
+  wireWindowNavigation(mainWindow)
+
+  mainWindow.on('close', (evt) => {
+    persistMainWindowBounds()
+    if (isQuitting) return
+    // DESK-03: when close-to-tray is on, hide instead of quitting and explain it
+    // once so users don't mistake it for a real exit. Otherwise let the close
+    // proceed; window-all-closed then quits (see below).
+    if (desktopPrefs.closeToTray && trayOk) {
+      evt.preventDefault()
+      mainWindow.hide()
+      showTrayHintOnce()
+    }
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
+
 }
 
 async function loadWorkbench() {
@@ -400,6 +472,16 @@ function registerIpc() {
     const target = workbenchUrl(appOrigin(), sessionIdOrGroupId)
     mainWindow.loadURL(target).catch(() => {})
     return true
+  })
+
+  ipcMain.handle('acw:open-detached-window', async (_evt, payload) => {
+    const rel = String(payload?.path || payload?.url || '/workbench')
+    try {
+      return await createDetachedWindow(rel)
+    } catch (e) {
+      appendLog(`open-detached-window failed ${e?.message || e}`)
+      return null
+    }
   })
 }
 

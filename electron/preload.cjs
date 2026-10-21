@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
   getNotificationPlatform: () => ipcRenderer.invoke('acw:notification-platform'),
   minimizeToTray: () => ipcRenderer.invoke('acw:minimize-to-tray'),
   launchWorkflow: (sessionId) => ipcRenderer.invoke('acw:launch-workflow', sessionId),
+  openDetachedWindow: (pathOrPayload) =>
+    ipcRenderer.invoke('acw:open-detached-window', pathOrPayload),
   getZoom: () => webFrame.getZoomFactor(),
   setZoom: (factor) => {
     const f = Math.min(2, Math.max(0.5, Number(factor) || 1))

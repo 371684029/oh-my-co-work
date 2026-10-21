@@ -17,6 +17,7 @@ function run(cmd, args, opts = {}) {
   return r.stdout
 }
 
+run('node', ['scripts/check-no-new-vendor-zips.mjs'])
 run('node', ['scripts/validate-release-packages.mjs'])
 run('npm', ['test'], { stdio: 'inherit' })
 console.log('release-gate: OK')

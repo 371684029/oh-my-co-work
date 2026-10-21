@@ -85,6 +85,7 @@ import {
   lookCell,
   lookIndexFromPointer,
 } from '../composables/furnacePetAtlas.js'
+import { t } from '../i18n/zh-CN.js'
 
 const POS_KEY = 'acw.furnacePet.pos'
 const MIN_KEY = 'acw.furnacePet.min'
@@ -124,13 +125,30 @@ const minimized = ref(false)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
 const docsNotifyActive = ref(false)
+/** PET-02: default贴右下缘半收起，避开右侧流程/待确认栏（约 360px） */
 function defaultPos() {
-  const h = typeof window !== 'undefined' ? window.innerHeight : 720
   return {
-    right: 18,
-    bottom: Math.round(h / 3),
+    right: 6,
+    bottom: 72,
     left: null,
     top: null,
+  }
+}
+
+const RIGHT_RAIL_RESERVE_PX = 360
+
+function nudgeAwayFromRightRail(el) {
+  if (!el || typeof window === 'undefined') return
+  const rect = el.getBoundingClientRect()
+  const maxLeft = window.innerWidth - RIGHT_RAIL_RESERVE_PX - rect.width - 8
+  if (rect.left > maxLeft && pos.value.left == null) {
+    pos.value = {
+      right: Math.max(6, window.innerWidth - maxLeft - rect.width),
+      bottom: pos.value.bottom ?? 72,
+      left: null,
+      top: null,
+    }
+    persist()
   }
 }
 
@@ -183,9 +201,9 @@ const sheetStyle = computed(() => displayCellStyles.value.sheet)
 const peekSheetStyle = computed(() => peekCellStyles.value.sheet)
 
 const stateLabel = computed(() => {
-  if (props.state === 'working') return '工作中'
-  if (props.state === 'waiting') return '等人'
-  return '闲置'
+  if (props.state === 'working') return t('furnace.working')
+  if (props.state === 'waiting') return t('furnace.waiting')
+  return t('furnace.idle')
 })
 
 const petStyle = computed(() => {
@@ -207,6 +225,7 @@ let dragOff = { x: 0, y: 0 }
 let lastDragX = 0
 let visibilityHandler = null
 let intersectionObserver = null
+let resizeHandler = null
 
 function scheduleFrame() {
   window.clearTimeout(animTimer)
@@ -379,11 +398,24 @@ onMounted(() => {
     } else {
       pos.value = defaultPos()
     }
-    minimized.value = localStorage.getItem(MIN_KEY) === '1'
+    const minRaw = localStorage.getItem(MIN_KEY)
+    minimized.value = minRaw === null ? true : minRaw === '1'
   } catch {
     pos.value = defaultPos()
+    minimized.value = true
   }
   scheduleFrame()
+  requestAnimationFrame(() => nudgeAwayFromRightRail(rootEl.value))
+  resizeHandler = () => {
+    if (dragging.value) return
+    if (pos.value.left != null && rootEl.value) {
+      pos.value = clampPos(pos.value.left, pos.value.top, rootEl.value)
+      persist()
+    } else {
+      nudgeAwayFromRightRail(rootEl.value)
+    }
+  }
+  window.addEventListener('resize', resizeHandler)
 
   // PET-01: pause when the tab is hidden or the sprite leaves the viewport.
   try {
@@ -416,6 +448,8 @@ onUnmounted(() => {
   window.clearTimeout(hideTimer)
   window.clearTimeout(pokeTimer)
   window.clearTimeout(animTimer)
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+  resizeHandler = null
   if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
   visibilityHandler = null
   intersectionObserver?.disconnect()

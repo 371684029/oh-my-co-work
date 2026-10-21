@@ -75,6 +75,17 @@
             </el-popover>
             <NotificationInbox />
             <el-button
+              v-if="isDesktop && detail.session"
+              size="default"
+              text
+              bg
+              :title="detachWindowLabel"
+              aria-label="在新窗口打开本会话"
+              @click="openSessionDetached"
+            >
+              新窗口
+            </el-button>
+            <el-button
               v-if="detail.session"
               size="default"
               text
@@ -249,7 +260,8 @@
 </template>
 
 <script setup>
-import { onUnmounted, defineAsyncComponent, ref, nextTick } from 'vue'
+import { onUnmounted, defineAsyncComponent, ref, nextTick, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'
@@ -306,6 +318,19 @@ import {
 } from './workbench/composables/useFurnaceSync'
 import { useFlowStore } from '../stores/flow.js'
 import { journalPathToDocFile } from '../composables/messageDocLinks.js'
+import { useDesktopBridge } from '../composables/useDesktopBridge.js'
+import { t } from '../i18n/zh-CN.js'
+
+const { isDesktop, openDetachedWindow } = useDesktopBridge()
+const detachWindowLabel = computed(() => t('desktop.openDetachedWindow'))
+
+async function openSessionDetached() {
+  const id = activeId.value
+  if (!id) return
+  const path = `/workbench/${id}`
+  const winId = await openDetachedWindow({ path })
+  if (!winId) ElMessage.warning('无法打开新窗口（仅桌面版支持）')
+}
 
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),

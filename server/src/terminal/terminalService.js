@@ -6,6 +6,7 @@ import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
 import { emitSession, emitTerminalOutput, setWsTerminalAttach } from '../bus.js'
 import { getAppSettings } from '../appSettings.js'
+import { quotaLimits, redactOpts } from './quota.js'
 import { pickWindowsMatch } from '../commandResolver.js'
 import { redactText } from './redact.js'
 import {
@@ -35,20 +36,6 @@ let adapterEventHandler = null
 
 export function setAdapterEventHandler(fn) {
   adapterEventHandler = typeof fn === 'function' ? fn : null
-}
-
-function quotaLimits() {
-  const q = getAppSettings().quota || {}
-  return {
-    maxConcurrent: Number(q.maxConcurrentTerminals) || 8,
-    maxLogBytes: Math.max(1, Number(q.maxLogMiB) || 10) * 1024 * 1024,
-    maxReplayChars: Math.max(32, Number(q.maxReplayKiB) || 256) * 1024,
-  }
-}
-
-function redactOpts() {
-  const r = getAppSettings().redact || {}
-  return { enabled: r.enabled !== false, patternsText: r.patternsText || '' }
 }
 
 function countRunningTerminals(sessionId, { exceptMemberId, exceptPair } = {}) {
