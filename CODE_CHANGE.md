@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/composables/{inputIntent,inputDraftHistory,acwConfirm,notificationInbox}.js web/src/components/NotificationInbox.vue server/src/agentRefine.js web/src/views/workbench/** docs/{5.2.0,5.4.0}-plan.md server/test/{agentRefine,ptyPlain}.test.js | UX-01/03/05、FUR-06、REF-07、NTF-05/06、DOC-17、TEST-03
 2026-10-21 | A/M | server/src/{furnaceArchive,furnaceLifecycle,docsHub}.js shared/furnaceContextEstimate.js web/src/{composables/{furnaceReopen,messageDocLinks},components/{MessageDocText,terminal/TerminalView}.vue,views/workbench/**} server/test/{furnaceArchive,refineRoundtrip}.test.js web/test/*.test.mjs docs/5.2.0-plan.md | FUR-05 熔炉归档+上下文提示；DOC-15 场景入口；CP-13 WebGL；TEST/REF 单测
 
 ---
