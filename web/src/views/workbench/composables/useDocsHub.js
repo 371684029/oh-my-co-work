@@ -26,6 +26,18 @@ import {
   toggleDocsPin,
   isDocsPinned,
 } from '../../docs/docsReadingHistory.js'
+import {
+  docsFileLabel,
+  docsKindTag,
+  docsSessionStatusClass,
+  docsSessionStatusLabel,
+} from '../../docs/docsHubStatusUi.js'
+import {
+  docsHubSortOptions,
+  readDocsHubSortMode,
+  writeDocsHubSortMode,
+} from '../../docs/docsHubSortUi.js'
+import { t } from '../../../i18n/index.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -40,21 +52,9 @@ let _stopWatchers = []
 let _stopDocsListSub = null
 
 // ===== 排序 =====
-const SORT_KEY = 'acw.docsHubSort'
-const sortOptions = [
-  { label: '按群模板', value: 'group' },
-  { label: '按时间', value: 'time' },
-]
+const sortOptions = docsHubSortOptions(t)
 
-function readStoredSort() {
-  try {
-    return localStorage.getItem(SORT_KEY) === 'time' ? 'time' : 'group'
-  } catch {
-    return 'group'
-  }
-}
-
-const sort = ref(readStoredSort())
+const sort = ref(readDocsHubSortMode())
 
 // ===== 列表 =====
 const listData = ref(null)
@@ -326,39 +326,10 @@ function formatTime(v) {
   return d.toLocaleString()
 }
 
-function fileLabel(f) {
-  if (f?.kind === 'step') {
-    const m = /step-(\d{2})/.exec(f.name || '')
-    return m ? `节点台账 · step-${m[1]}` : '节点台账'
-  }
-  return f?.title || f?.name || ''
-}
-
-function kindTag(kind) {
-  if (kind === 'announce') return 'primary'
-  if (kind === 'step') return 'success'
-  return 'info'
-}
-
-function statusLabel(s) {
-  const m = {
-    active: '进行中',
-    running: '执行中',
-    waiting_human: '待确认',
-    interrupted: '待恢复',
-    archived: '已归档',
-    failed: '失败',
-    paused: '暂停',
-  }
-  return m[s] || s || '未知'
-}
-
-function statusClass(s) {
-  if (s === 'archived') return 'archived'
-  if (s === 'waiting_human' || s === 'failed') return 'waiting'
-  if (s === 'interrupted' || s === 'paused') return 'interrupted'
-  return 'active'
-}
+const fileLabel = docsFileLabel
+const kindTag = docsKindTag
+const statusLabel = docsSessionStatusLabel
+const statusClass = docsSessionStatusClass
 
 // ===== 加载 =====
 async function ensureWorkFolders() {
@@ -544,11 +515,7 @@ function initDocsHub({ route, router }) {
   })
   _stopWatchers.push(
     watch(sort, (v) => {
-      try {
-        localStorage.setItem(SORT_KEY, v)
-      } catch {
-        /* 隐私模式忽略 */
-      }
+      writeDocsHubSortMode(v)
       loadList()
     }),
     watch(searchQuery, (v) => {

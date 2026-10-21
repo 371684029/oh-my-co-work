@@ -5,16 +5,16 @@
       <!-- 栏 1：群模板/时间跨度分类导航 -->
       <aside class="dh-col dh-col-groups">
         <div class="dh-col-head">
-          <span class="dh-col-title">{{ sort === 'group' ? '群模板' : '时间跨度' }}</span>
+          <span class="dh-col-title">{{ docsHubColTitle(sort) }}</span>
           <el-button
             size="small"
             type="primary"
             link
-            aria-label="导出全部文档"
+            :aria-label="docsHubExportAllAria()"
             :loading="exportingAll"
             @click="onExportAll"
           >
-            导出全部
+            {{ docsHubExportAllLabel() }}
           </el-button>
         </div>
 
@@ -25,11 +25,11 @@
             type="button"
             class="dh-group-item"
             :class="{ active: selectedGroupId === 'all' }"
-            aria-label="查看全部群模板文档"
+            :aria-label="docsHubAllGroupsAria()"
             @click="selectedGroupId = 'all'"
           >
             <AcwIcon class="dh-group-item-icon" name="folder" :size="16" />
-            <span class="dh-group-item-name">全部群模板</span>
+            <span class="dh-group-item-name">{{ docsHubAllGroupsLabel() }}</span>
             <span class="dh-group-item-count">{{ totalSessionsCount }}</span>
           </button>
 
@@ -43,7 +43,7 @@
               type="button"
               class="dh-group-item"
               :class="{ active: selectedGroupId === groupKey(g) }"
-              :aria-label="`查看群模板 ${g.groupTitle} 的文档`"
+              :aria-label="docsHubViewGroupAria(g.groupTitle)"
               @click="selectedGroupId = groupKey(g)"
             >
               <AcwIcon class="dh-group-item-icon" name="users" :size="16" />
@@ -54,16 +54,16 @@
               v-if="g.groupId"
               type="button"
               class="dh-group-export-btn"
-              title="导出该群文档"
-              :aria-label="`导出群模板 ${g.groupTitle} 的全部文档`"
+              :title="docsHubExportGroupShort()"
+              :aria-label="docsHubExportGroupAria(g.groupTitle)"
               @click.stop="onExportGroup(g.groupId)"
             >
-              导出
+              {{ docsHubExportGroupShort() }}
             </button>
           </div>
 
           <div v-if="!listLoading && !groups.length" class="dh-empty-tip">
-            暂无群模板
+            {{ docsHubNoGroups() }}
           </div>
         </div>
 
@@ -89,7 +89,7 @@
         <div class="dh-search-box">
           <el-input
             v-model="searchQuery"
-            placeholder="全文搜索…"
+            :placeholder="docsHubSearchPlaceholder()"
             clearable
             size="small"
           />
@@ -103,13 +103,13 @@
             :loading="listLoading"
             @click="refresh"
           >
-            刷新
+            {{ docsHubRefreshLabel() }}
           </el-button>
         </div>
 
         <div v-if="docsPinned.length || docsRecent.length" class="dh-quick-docs">
           <div v-if="docsPinned.length" class="dh-quick-section">
-            <div class="dh-quick-title">已固定</div>
+            <div class="dh-quick-title">{{ docsHubPinnedSectionTitle() }}</div>
             <button
               v-for="item in docsPinned"
               :key="`p:${item.sessionId}:${item.name}`"
@@ -121,13 +121,13 @@
               <span class="dh-quick-name">{{ item.label || item.name }}</span>
               <span
                 class="dh-quick-pin"
-                title="取消固定"
+                :title="docsHubUnpinTitle()"
                 @click.stop="onTogglePin(item)"
               >★</span>
             </button>
           </div>
           <div v-if="docsRecent.length" class="dh-quick-section">
-            <div class="dh-quick-title">最近打开</div>
+            <div class="dh-quick-title">{{ docsHubRecentSectionTitle() }}</div>
             <button
               v-for="item in docsRecent.slice(0, 8)"
               :key="`r:${item.sessionId}:${item.name}`"
@@ -245,13 +245,13 @@
                 <span class="dh-time-row-meta">{{ relativeTime(it.mtimeMs) }}</span>
               </button>
               <div v-if="!displayedTimeItems.length" class="dh-empty-tip">
-                该时间段暂无文档
+                {{ docsHubNoDocsInRange() }}
               </div>
             </template>
           </template>
 
           <div v-if="!listLoading && !listError && !hasDocs" class="dh-empty-tip">
-            暂无会话文档
+            {{ docsHubNoSessionDocs() }}
           </div>
         </div>
       </aside>
@@ -261,18 +261,16 @@
         <!-- 未选中提示 -->
         <div v-if="!current" class="dh-welcome-pane">
           <div class="dh-welcome-hero">
-            <h2 class="dh-welcome-title">{{ hasDocs ? '选择左侧文档查看' : '还没有会话文档' }}</h2>
+            <h2 class="dh-welcome-title">
+              {{ hasDocs ? docsHubWelcomeSelectTitle() : docsHubWelcomeEmptyTitle() }}
+            </h2>
             <p class="dh-welcome-desc">
-              {{
-                hasDocs
-                  ? '从左侧列表中选择群报告、节点台账或会话索引'
-                  : '工作流跑完产生的群报告与节点审计台账将自动汇总于此'
-              }}
+              {{ hasDocs ? docsHubWelcomeSelectDesc() : docsHubWelcomeEmptyDesc() }}
             </p>
             <div v-if="!hasDocs" class="dh-welcome-actions">
-              <el-button type="primary" @click="goWorkbench">去工作台开聊</el-button>
+              <el-button type="primary" @click="goWorkbench">{{ docsHubGoWorkbenchLabel() }}</el-button>
               <p class="dh-welcome-tip">
-                跑完一个群流程后，群报告与节点台账会自动出现在左侧列表。
+                {{ docsHubWelcomeEmptyTip() }}
               </p>
             </div>
           </div>
@@ -280,7 +278,7 @@
 
         <!-- 读取中 -->
         <div v-else-if="fileLoading" class="dh-welcome-pane">
-          <p class="dh-welcome-desc">正在加载文档内容…</p>
+          <p class="dh-welcome-desc">{{ docsHubLoadingFile() }}</p>
         </div>
 
         <!-- 文件详情与正文 -->
@@ -382,9 +380,9 @@
           <nav
             v-if="docOutline.length && !editing"
             class="dh-outline"
-            aria-label="文档目录"
+            :aria-label="docsHubOutlineAria()"
           >
-            <div class="dh-outline-title">目录</div>
+            <div class="dh-outline-title">{{ docsHubOutlineTitle() }}</div>
             <button
               v-for="item in docOutline"
               :key="item.slug"
@@ -512,10 +510,55 @@ import {
 } from './docsHubFilterUi.js'
 import { highlightSearchSnippet } from './docsHubSearchUi.js'
 import {
+  createDocOutlineObserver,
+  initialOutlineSlug,
+  listDocHeadingElements,
+  scrollDocHeading,
+} from './docsHubOutlineUi.js'
+import {
   docsExpandSessionInTree,
   isDocsSessionExpanded,
   toggleDocsSessionExpansion,
 } from './docsHubSessionUi.js'
+import {
+  docsCopyAnchorFallbackMessage,
+  docsCopyAnchorSuccessMessage,
+  docsCopyCodeFailedMessage,
+  docsCopyCodeSuccessMessage,
+  docsExportAllErrorMessage,
+  docsExportAllSuccessMessage,
+  docsExportGroupErrorMessage,
+  docsExportGroupSuccessMessage,
+  docsLinkResolveFailedMessage,
+  docsPrintPopupBlockedMessage,
+} from './docsHubMessages.js'
+import {
+  docsHubAllGroupsAria,
+  docsHubAllGroupsLabel,
+  docsHubColTitle,
+  docsHubExportAllAria,
+  docsHubExportAllLabel,
+  docsHubExportGroupAria,
+  docsHubExportGroupShort,
+  docsHubGoWorkbenchLabel,
+  docsHubLoadingFile,
+  docsHubNoDocsInRange,
+  docsHubNoGroups,
+  docsHubNoSessionDocs,
+  docsHubOutlineAria,
+  docsHubOutlineTitle,
+  docsHubPinnedSectionTitle,
+  docsHubRecentSectionTitle,
+  docsHubRefreshLabel,
+  docsHubSearchPlaceholder,
+  docsHubViewGroupAria,
+  docsHubWelcomeEmptyDesc,
+  docsHubWelcomeEmptyTitle,
+  docsHubWelcomeSelectDesc,
+  docsHubWelcomeSelectTitle,
+  docsHubWelcomeEmptyTip,
+  docsHubUnpinTitle,
+} from './docsHubCopy.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -556,7 +599,7 @@ function onExportPrint() {
     bodyHtml: renderedHtml.value,
     proseCss,
   })
-  if (!openDocPrintWindow(html)) ElMessage.warning('请允许弹出窗口以打印/保存 PDF')
+  if (!openDocPrintWindow(html)) ElMessage.warning(docsPrintPopupBlockedMessage())
 }
 
 const selectedGroupId = ref('all')
@@ -652,9 +695,9 @@ function highlightSnippet(snippet, query) {
 async function onExportGroup(groupId) {
   try {
     await api.docs.downloadDocsExport(groupId)
-    ElMessage.success('群文档导出成功')
+    ElMessage.success(docsExportGroupSuccessMessage())
   } catch (e) {
-    ElMessage.error(e?.message || '导出失败')
+    ElMessage.error(docsExportGroupErrorMessage(e))
   }
 }
 
@@ -662,9 +705,9 @@ async function onExportAll() {
   exportingAll.value = true
   try {
     await api.docs.downloadAllDocsExport()
-    ElMessage.success('全量文档导出成功')
+    ElMessage.success(docsExportAllSuccessMessage())
   } catch (e) {
-    ElMessage.error(e?.message || '全量导出失败')
+    ElMessage.error(docsExportAllErrorMessage(e))
   } finally {
     exportingAll.value = false
   }
@@ -682,12 +725,7 @@ let outlineObserver = null
 
 function scrollToHeading(slug) {
   const root = contentScrollRef.value
-  if (!root || !slug) return
-  const el = root.querySelector(`#${CSS.escape(slug)}`)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    activeOutlineSlug.value = slug
-  }
+  if (scrollDocHeading(root, slug)) activeOutlineSlug.value = slug
 }
 
 async function copyHeadingAnchor(slug) {
@@ -695,9 +733,9 @@ async function copyHeadingAnchor(slug) {
   const hash = `#${slug}`
   try {
     await navigator.clipboard.writeText(hash)
-    ElMessage.success('已复制锚点链接')
+    ElMessage.success(docsCopyAnchorSuccessMessage())
   } catch {
-    ElMessage.success(`锚点 ${hash}`)
+    ElMessage.success(docsCopyAnchorFallbackMessage(hash))
   }
 }
 
@@ -713,17 +751,11 @@ function setupOutlineObserver() {
   teardownOutlineObserver()
   const root = contentScrollRef.value
   if (!root || !docOutline.value.length) return
-  const headings = [...root.querySelectorAll('h1[id], h2[id], h3[id]')]
-  if (!headings.length) return
-  outlineObserver = new IntersectionObserver(
-    (entries) => {
-      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-      if (visible[0]?.target?.id) activeOutlineSlug.value = visible[0].target.id
-    },
-    { root, rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] },
-  )
-  for (const h of headings) outlineObserver.observe(h)
-  if (!activeOutlineSlug.value && headings[0]?.id) activeOutlineSlug.value = headings[0].id
+  const headings = listDocHeadingElements(root)
+  outlineObserver = createDocOutlineObserver(root, (slug) => {
+    activeOutlineSlug.value = slug
+  })
+  if (!activeOutlineSlug.value) activeOutlineSlug.value = initialOutlineSlug(headings)
 }
 
 watch([file, editing, renderedHtml], () => {
@@ -736,8 +768,8 @@ watch([file, editing, renderedHtml], () => {
 
 async function onContentClick(e) {
   const handled = await handleDocsProseClick(e, {
-    onCopied: () => ElMessage.success('已复制代码'),
-    onCopyFailed: () => ElMessage.warning('复制失败'),
+    onCopied: () => ElMessage.success(docsCopyCodeSuccessMessage()),
+    onCopyFailed: () => ElMessage.warning(docsCopyCodeFailedMessage()),
   })
   if (handled) return
 
@@ -760,7 +792,7 @@ async function onContentClick(e) {
       expandFor(r.sessionId)
       selectFile(r.sessionId, r.name)
     } else {
-      ElMessage.warning('无法定位文档')
+      ElMessage.warning(docsLinkResolveFailedMessage())
     }
   }
 }

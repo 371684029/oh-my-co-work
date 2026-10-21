@@ -5,5 +5,6 @@ import { cyclePickerIndex } from '../src/views/workbench/composables/sessionComp
 test('cyclePickerIndex wraps', () => {
   assert.equal(cyclePickerIndex(0, 1, 3), 1)
   assert.equal(cyclePickerIndex(0, -1, 3), 2)
+  assert.equal(cyclePickerIndex(2, 1, 3), 0)
   assert.equal(cyclePickerIndex(0, 1, 0), 0)
 })

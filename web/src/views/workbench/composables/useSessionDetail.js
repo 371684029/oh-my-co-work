@@ -20,6 +20,12 @@ import {
   stepInputHistory,
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
+import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
+import {
+  canSendPlainMessage,
+  pickSlashCommandOnSubmit,
+  shouldSubmitHumanGate,
+} from './sessionSenderSubmitUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -77,7 +83,6 @@ import {
   nextSkippedFlowGroupExpansion,
 } from './sessionFlowNavUi.js'
 import { nextGateIdempotencyKey } from './sessionGateIdempotency.js'
-import { cyclePickerIndex } from './sessionComposerPickerUi.js'
 import {
   computeNeedsHuman,
   announceKickoffFromContext,
@@ -848,39 +853,24 @@ function onComposerKeydown(e) {
     }
   }
 
+  const store = useComposerStore()
+
   // # 面板：群聊 / 文件夹 / #1…
-  if (useComposerStore().hashOpen) {
+  if (store.hashOpen) {
     const list = filteredHashItems.value
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      useComposerStore().hashOpen = false
-      return
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (!list.length) return
-      useComposerStore().hashIndex = cyclePickerIndex(
-        useComposerStore().hashIndex,
-        1,
-        list.length,
-      )
-      return
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (!list.length) return
-      useComposerStore().hashIndex = cyclePickerIndex(
-        useComposerStore().hashIndex,
-        -1,
-        list.length,
-      )
-      return
-    }
-    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
-      if (!list.length) return
-      e.preventDefault()
-      e.stopPropagation()
-      insertHashItem(list[useComposerStore().hashIndex] || list[0])
+    if (
+      handleComposerPickerListKeydown(e, {
+        listLength: list.length,
+        index: store.hashIndex,
+        setIndex: (i) => {
+          store.hashIndex = i
+        },
+        onPick: () => insertHashItem(list[store.hashIndex] || list[0]),
+        onClose: () => {
+          store.hashOpen = false
+        },
+      })
+    ) {
       return
     }
     if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -893,36 +883,26 @@ function onComposerKeydown(e) {
   }
 
   // @ 面板：仅成员协助（节点重跑已从面板移除，避免误触重头跑）
-  if (useComposerStore().atOpen) {
+  if (store.atOpen) {
     const members = filteredAtMembers.value
-    const total = members.length
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      useComposerStore().atOpen = false
-      return
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (!total) return
-      useComposerStore().atIndex = cyclePickerIndex(useComposerStore().atIndex, 1, total)
-      return
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (!total) return
-      useComposerStore().atIndex = cyclePickerIndex(useComposerStore().atIndex, -1, total)
-      return
-    }
-    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
-      if (!total) return
-      e.preventDefault()
-      e.stopPropagation()
-      insertAtMember(members[useComposerStore().atIndex] || members[0])
+    if (
+      handleComposerPickerListKeydown(e, {
+        listLength: members.length,
+        index: store.atIndex,
+        setIndex: (i) => {
+          store.atIndex = i
+        },
+        onPick: () => insertAtMember(members[store.atIndex] || members[0]),
+        onClose: () => {
+          store.atOpen = false
+        },
+      })
+    ) {
       return
     }
   }
 
-  if (!useComposerStore().slashOpen) {
+  if (!store.slashOpen) {
     if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
       setTimeout(syncSlashFromInput, 0)
     }
@@ -943,31 +923,23 @@ function onComposerKeydown(e) {
     }, 0)
   }
   const list = filteredSlashCmds.value
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    useComposerStore().slashOpen = false
+  if (
+    handleComposerPickerListKeydown(e, {
+      listLength: list.length,
+      index: store.slashIndex,
+      setIndex: (i) => {
+        store.slashIndex = i
+      },
+      onPick: () => runSlash(list[store.slashIndex] || list[0]),
+      onClose: () => {
+        store.slashOpen = false
+      },
+      selectOnTab: false,
+      enterRequiresSlashPrefix: true,
+      readSenderText,
+    })
+  ) {
     return
-  }
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    if (!list.length) return
-    useComposerStore().slashIndex = cyclePickerIndex(useComposerStore().slashIndex, 1, list.length)
-    return
-  }
-  if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    if (!list.length) return
-    useComposerStore().slashIndex = cyclePickerIndex(useComposerStore().slashIndex, -1, list.length)
-    return
-  }
-  if (e.key === 'Enter' && !e.shiftKey && list.length) {
-    // 指令模式：Enter 执行选中项，不发消息
-    const t = readSenderText()
-    if (t.startsWith('/')) {
-      e.preventDefault()
-      e.stopPropagation()
-      runSlash(list[useComposerStore().slashIndex] || list[0])
-    }
   }
 }
 
@@ -1200,15 +1172,17 @@ async function onSenderSubmit() {
   const atts = [...pendingFiles.value]
 
   // /指令 提交时执行而非发消息
+  const slashCmd = pickSlashCommandOnSubmit(
+    text,
+    slashCommands.value,
+    filteredSlashCmds.value[useComposerStore().slashIndex],
+  )
   if (text.startsWith('/')) {
-    const token = text.slice(1).trim().split(/\s+/)[0] || ''
-    const cmd =
-      slashCommands.value.find((c) => c.enabled !== false && c.slash === token) ||
-      filteredSlashCmds.value[useComposerStore().slashIndex]
-    if (cmd) {
-      await runSlash(cmd)
+    if (slashCmd) {
+      await runSlash(slashCmd)
       return
     }
+    const token = text.slice(1).trim().split(/\s+/)[0] || ''
     ElMessage.warning(`未找到指令 /${token}，可在 设置 → 斜杠 / 快捷键 中配置`)
     return
   }
@@ -1224,17 +1198,14 @@ async function onSenderSubmit() {
         name: m.name,
       })),
     )
-  if (
-    (g?.content?.mode === 'human_input' || g?.content?.mode === 'need_params') &&
-    !mentionAssist
-  ) {
+  if (shouldSubmitHumanGate(g, mentionAssist)) {
     await submitHuman(g)
     return
   }
   // 启动闸门 / 审核闸门：Enter 只发消息，保持 pending，不默认通过或拒绝
   // 人工闸门下纯 @：走发消息协助，不当项目参数提交
 
-  if (!text && !atts.length) return
+  if (!canSendPlainMessage(text, atts.length)) return
 
   pushInputHistory(composerScopeKey(activeId.value), text)
   composerHistIndex = -1
