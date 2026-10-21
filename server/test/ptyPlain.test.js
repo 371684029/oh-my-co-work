@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 import {
   renderPtyPlainText,
   furnaceGuiTranscript,
@@ -147,5 +152,16 @@ test('furnaceTurnCopyPlain returns cleaned assistant body', () => {
   const raw = '> 3:00 PM\nHello from agent\nWorked for 1s'
   assert.match(furnaceTurnCopyPlain('assistant', raw), /Hello from agent/)
   assert.equal(furnaceTurnCopyPlain('user', '  hi  '), 'hi')
+})
+
+test('cursor CLI golden sample keeps Chinese and emoji in GUI transcript', () => {
+  const raw = fs.readFileSync(
+    path.join(__dirname, 'fixtures', 'cursor-cli-gui-sample.txt'),
+    'utf8',
+  )
+  const text = furnaceGuiTranscript(raw, { cols: 100, rows: 24, profile: 'cursor' })
+  assert.match(text, /多智能体/)
+  assert.match(text, /😀/)
+  assert.match(text, /5\.2\.0/)
 })
 

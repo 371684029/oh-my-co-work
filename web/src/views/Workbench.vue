@@ -73,6 +73,7 @@
                 <div v-else class="chat-search-empty">没有匹配的消息</div>
               </div>
             </el-popover>
+            <NotificationInbox />
             <el-button
               v-if="detail.session"
               size="default"
@@ -254,6 +255,7 @@ import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
 import MessageDocText from '../components/MessageDocText.vue'
+import NotificationInbox from '../components/NotificationInbox.vue'
 import SessionRail from './workbench/components/SessionRail.vue'
 import FlowRail from './workbench/components/FlowRail.vue'
 import ComposerPanel from './workbench/components/ComposerPanel.vue'

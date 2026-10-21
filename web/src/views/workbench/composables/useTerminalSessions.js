@@ -1,6 +1,6 @@
 import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { inferFurnaceAgent, isFurnaceMember } from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
 import {
@@ -23,6 +23,8 @@ import {
   estimateFromTerminalReplay,
   pickLiveFurnaceTerminal,
 } from '../../../composables/furnaceReopen.js'
+import { acwConfirm } from '../../../composables/acwConfirm.js'
+import { recordNotificationInbox } from '../../../composables/notificationInbox.js'
 import {
   terminalBridge,
   activeId,
@@ -45,11 +47,20 @@ const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
 
-function pushDesktopNotification(title, body, { id, deepLink, level = 'action' } = {}) {
+function pushDesktopNotification(title, body, { id, deepLink, level = 'action', sessionId } = {}) {
   const t = String(title || '').trim()
   const b = String(body || '').trim()
   if (!t) return
+  const sid =
+    sessionId ||
+    (String(deepLink || '').match(/^session:([A-Za-z0-9_-]+)/)?.[1] ?? null)
+  recordNotificationInbox({ id, title: t, body: b, deepLink, level, sessionId: sid })
   const prefs = notificationPrefsRef().value
+  const viewingSameSession =
+    sid && activeId.value === sid && !document.hidden && document.hasFocus()
+  if (level === 'action' && viewingSameSession) {
+    useFlowStore().bumpActionUnread()
+  }
   if (!prefs.enabled || !shouldNotifyLevel(level)) return
   if (prefs.onlyWhenUnfocused && !document.hidden && document.hasFocus()) return
   const desktop = window.__ACW_DESKTOP_API__
@@ -187,15 +198,13 @@ async function killTerminal(terminalId) {
 
 async function closeFurnaceProcess() {
   if (!activeId.value) return
-  try {
-    await ElMessageBox.confirm('结束 Grok 进程，这一轮对话会丢掉。工作台会话还在。', '关闭熔炉', {
-      type: 'warning',
-      confirmButtonText: '关闭',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
+  const ok = await acwConfirm('furnace.close', {
+    title: '关闭熔炉',
+    message: '结束 Grok 进程，这一轮对话会丢掉。工作台会话还在。',
+    confirmButtonText: '关闭',
+    type: 'warning',
+  })
+  if (!ok) return
   try {
     await api.sessions.closeFurnace(activeId.value)
     await loadTerminals(activeId.value)
@@ -216,20 +225,13 @@ async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent 
   const liveSame = !!liveTerminal
   const estimate = liveTerminal ? estimateFromTerminalReplay(liveTerminal, furnaceAgent) : null
   if (liveSame && !skipConfirm) {
-    try {
-      await ElMessageBox.confirm(
-        buildFurnaceReopenConfirmCopy({ furnaceAgent, estimate }),
-        '新开熔炉',
-        {
-          type: 'warning',
-          confirmButtonText: '新开并归档',
-          cancelButtonText: '取消',
-          dangerouslyUseHTMLString: false,
-        },
-      )
-    } catch {
-      return
-    }
+    const ok = await acwConfirm('furnace.reopen', {
+      title: '新开熔炉',
+      message: buildFurnaceReopenConfirmCopy({ furnaceAgent, estimate }),
+      confirmButtonText: '新开并归档',
+      type: 'warning',
+    })
+    if (!ok) return
   }
   try {
     const r = await api.sessions.reopenFurnace(activeId.value, {

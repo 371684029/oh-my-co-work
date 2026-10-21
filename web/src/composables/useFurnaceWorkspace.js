@@ -7,6 +7,18 @@ import { furnaceWorkspaceOpen } from './furnaceUi.js'
 import { isTerminalRunning, terminalStatusText, connectionStatusText } from './terminalStatus'
 import { useLocalUploads } from './localUploads'
 import { buildFurnaceSubmitSequence } from './bracketedPaste.js'
+import {
+  furnaceScopeKey,
+  loadInputDraft,
+  pushInputHistory,
+  saveInputDraft,
+  stepInputHistory,
+} from './inputDraftHistory.js'
+import {
+  historyNavigationDelta,
+  isHistoryNavigationKey,
+  shouldSubmitOnEnter,
+} from './inputIntent.js'
 
 /**
  * 熔炉干活面（GUI/TUI 同一条 grok 进程）的状态与逻辑。
@@ -22,6 +34,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
   /** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
   const tuiEverShown = ref(surface.value === 'tui')
   const draft = ref('')
+  let furnaceHistIndex = -1
   const sent = ref([])
   const chatTurns = ref([])
   const pendingFiles = ref([])
@@ -235,6 +248,8 @@ export function useFurnaceWorkspace(props, emit, refs) {
       return
     }
     if (!payload || !isRunning.value || uploading.value) return
+    pushInputHistory(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), payload)
+    furnaceHistIndex = -1
     sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
     chatTurns.value.push({ id: nextTurnId(), role: 'user', text: payload })
     const { payload: ptyPayload, submit } = buildFurnaceSubmitSequence(payload)
@@ -245,6 +260,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
       }, 50)
     }
     draft.value = ''
+    saveInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), '')
     pendingFiles.value = []
     stickBottom.value = true
     nextTick(scrollLog)
@@ -285,11 +301,40 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function onComposerKey(ev) {
-    if (ev.key !== 'Enter' || ev.shiftKey) return
-    if (ev.isComposing || ev.keyCode === 229) return
+    if (isHistoryNavigationKey(ev) && !String(draft.value || '').trim() && props.sessionId) {
+      const step = stepInputHistory(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), {
+        index: furnaceHistIndex,
+        delta: historyNavigationDelta(ev),
+      })
+      if (step) {
+        ev.preventDefault()
+        furnaceHistIndex = step.index
+        draft.value = step.text
+        return
+      }
+    }
+    if (!shouldSubmitOnEnter(ev)) return
     ev.preventDefault()
     sendChat()
   }
+
+  watch(draft, (v) => {
+    if (!props.sessionId) return
+    saveInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), v)
+  })
+
+  watch(
+    () => [props.sessionId, furnaceAgentKind.value],
+    () => {
+      furnaceHistIndex = -1
+      if (!props.sessionId) {
+        draft.value = ''
+        return
+      }
+      draft.value = loadInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value))
+    },
+    { immediate: true },
+  )
 
   watch(liveText, () => {
     syncAssistantFromTranscript()
@@ -320,8 +365,23 @@ export function useFurnaceWorkspace(props, emit, refs) {
     }
   })
 
+  const showInputTips = ref(false)
+  function dismissFurnaceTips() {
+    showInputTips.value = false
+    try {
+      localStorage.setItem('acw.furnace.tips.v1', '1')
+    } catch {
+      /* ignore */
+    }
+  }
+
   onMounted(() => {
     furnaceWorkspaceOpen.value = true
+    try {
+      showInputTips.value = localStorage.getItem('acw.furnace.tips.v1') !== '1'
+    } catch {
+      showInputTips.value = true
+    }
     syncAssistantFromTranscript()
     nextTick(scrollLog)
   })
@@ -366,5 +426,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
     onPaste,
     onComposerKey,
     pickFiles,
+    showInputTips,
+    dismissFurnaceTips,
   }
 }

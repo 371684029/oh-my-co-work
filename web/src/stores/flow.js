@@ -17,6 +17,7 @@ export const useFlowStore = defineStore('flow', () => {
   const expandedSkippedFlowGroups = ref({})
   const rightTab = ref(readSavedRightTab())
   const docsUnread = ref(0)
+  const actionUnread = ref(0)
 
   watch(rightTab, (v) => {
     try {
@@ -34,12 +35,23 @@ export const useFlowStore = defineStore('flow', () => {
     docsUnread.value = 0
   }
 
+  function bumpActionUnread(n = 1) {
+    actionUnread.value = Math.min(99, actionUnread.value + Number(n || 1))
+  }
+
+  function clearActionUnread() {
+    actionUnread.value = 0
+  }
+
   return {
     expandedNodeId,
     expandedSkippedFlowGroups,
     rightTab,
     docsUnread,
+    actionUnread,
     bumpDocsUnread,
     clearDocsUnread,
+    bumpActionUnread,
+    clearActionUnread,
   }
 })

@@ -16,6 +16,15 @@ import {
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
+import {
+  composerScopeKey,
+  loadInputDraft,
+  pushInputHistory,
+  saveInputDraft,
+  stepInputHistory,
+} from '../../../composables/inputDraftHistory.js'
+import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
+import { acwConfirm } from '../../../composables/acwConfirm.js'
 
 
 /**
@@ -55,6 +64,8 @@ const gating = ref(false)
 // ===== 输入区 =====
 /** XSender 实例：该组件无可靠 v-model，提交时用 ref 取文 */
 const senderRef = ref(null)
+let composerHistIndex = -1
+let composerDraftTimer = 0
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
 /** 待发送附件 */
@@ -1190,6 +1201,11 @@ async function loadDetail(id) {
 
 async function selectSession(id) {
   if (!id) return
+  const prev = activeId.value
+  if (prev && prev !== id) {
+    saveInputDraft(composerScopeKey(prev), readSenderTextRaw())
+  }
+  composerHistIndex = -1
   activeId.value = id
   terminalBridge.resetTerminals?.()
   _router.replace(`/workbench/${id}`)
@@ -1198,6 +1214,8 @@ async function selectSession(id) {
   terminalBridge.bindWs?.(id)
   await Promise.all([loadDetail(id), terminalBridge.loadTerminals?.(id)])
   terminalBridge.revealFurnaceTui?.()
+  const savedDraft = loadInputDraft(composerScopeKey(id))
+  if (savedDraft) await replaceSenderText(savedDraft)
 }
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
@@ -1510,9 +1528,34 @@ function onSenderChange() {
   syncSlashFromInput()
   syncAtFromInput()
   syncHashFromInput()
+  window.clearTimeout(composerDraftTimer)
+  composerDraftTimer = window.setTimeout(() => {
+    if (activeId.value) saveInputDraft(composerScopeKey(activeId.value), readSenderTextRaw())
+  }, 400)
 }
 
 function onComposerKeydown(e) {
+  const pickerOpen =
+    useComposerStore().hashOpen || useComposerStore().atOpen || useComposerStore().slashOpen
+  if (
+    !pickerOpen &&
+    isHistoryNavigationKey(e) &&
+    activeId.value &&
+    !readSenderTextRaw().trim()
+  ) {
+    const delta = historyNavigationDelta(e)
+    const step = stepInputHistory(composerScopeKey(activeId.value), {
+      index: composerHistIndex,
+      delta,
+    })
+    if (step) {
+      e.preventDefault()
+      composerHistIndex = step.index
+      void replaceSenderText(step.text)
+      return
+    }
+  }
+
   // # 面板：群聊 / 文件夹 / #1…
   if (useComposerStore().hashOpen) {
     const list = filteredHashItems.value
@@ -1965,6 +2008,10 @@ async function onSenderSubmit() {
 
   if (!text && !atts.length) return
 
+  pushInputHistory(composerScopeKey(activeId.value), text)
+  composerHistIndex = -1
+  saveInputDraft(composerScopeKey(activeId.value), '')
+
   if (!activeId.value) {
     ElMessage.warning('请先选择会话')
     return
@@ -2114,15 +2161,13 @@ async function doDelete(targetId) {
     ElMessage.warning('没有可删除的会话')
     return
   }
-  try {
-    await ElMessageBox.confirm('确认删除该聊天？不可恢复', '删除', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
+  const ok = await acwConfirm('session.delete', {
+    title: '删除',
+    message: '确认删除该聊天？不可恢复',
+    confirmButtonText: '删除',
+    type: 'warning',
+  })
+  if (!ok) return
   const wasActive = activeId.value === id
   try {
     await api.sessions.remove(id)

@@ -1,0 +1,11 @@
+Cursor Agent v1.0 · session abc
+────────────────────────────────
+> 帮我读一下 README.md 并总结
+
+⏺ Read README.md
+  项目是一个群聊式多智能体协同台…
+
+✓ 总结：支持 Grok 与 Cursor CLI 熔炉，文档中心汇总台账。
+
+用户：再加一句中文测试 😀🛠️
+Assistant: 已记录 emoji 与中文：协同台 5.2.0。

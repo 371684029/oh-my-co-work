@@ -268,6 +268,16 @@
             class="furnace-file-input"
             @change="onFileInputChange"
           />
+          <el-alert
+            v-if="showInputTips"
+            type="info"
+            :closable="true"
+            show-icon
+            class="furnace-input-tips"
+            title="熔炉三件套"
+            description="复制：终端里先选中再 Ctrl/Cmd+C（有选区不会中断任务）；粘贴：多行请用 TUI + Shift+Ctrl/Cmd+V；选择：Shift 拖选或 macOS Option 点击。"
+            @close="dismissFurnaceTips"
+          />
           <div class="furnace-compose-main">
             <textarea
               ref="composerEl"
@@ -491,6 +501,8 @@ const {
   onPaste,
   onComposerKey,
   pickFiles,
+  showInputTips,
+  dismissFurnaceTips,
 } = useFurnaceWorkspace(props, emit, {
   surface,
   focused,
@@ -556,6 +568,7 @@ function furnaceHotkeyTargeted(e) {
 
 function onKeyDown(e) {
   if (!furnaceHotkeyTargeted(e)) return
+  if (e.target?.closest?.('.xterm-screen, .xterm-helper-textarea')) return
   if (!(e.metaKey || e.ctrlKey)) return
   if (e.key === '1') {
     e.preventDefault()

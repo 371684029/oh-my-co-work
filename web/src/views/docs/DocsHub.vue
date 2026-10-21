@@ -225,6 +225,12 @@
                   : '工作流跑完产生的群报告与节点审计台账将自动汇总于此'
               }}
             </p>
+            <div v-if="!hasDocs" class="dh-welcome-actions">
+              <el-button type="primary" @click="goWorkbench">去工作台开聊</el-button>
+              <p class="dh-welcome-tip">
+                跑完一个群流程后，群报告与节点台账会自动出现在左侧列表。
+              </p>
+            </div>
           </div>
         </div>
 
@@ -420,6 +426,10 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+
+function goWorkbench() {
+  void router.push('/workbench')
+}
 
 const selectedGroupId = ref('all')
 const selectedTimeRange = ref('all')
@@ -1283,6 +1293,20 @@ onUnmounted(() => {
   font-size: 13px;
   line-height: 1.6;
   color: var(--ecw-text-2, #6e6e73);
+}
+
+.dh-welcome-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dh-welcome-tip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ecw-text-3, #86868b);
 }
 
 .dh-content-head {

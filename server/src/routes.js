@@ -954,11 +954,12 @@ router.get('/docs/refine-prompt', (req, res) => {
 
 router.post('/docs/refine', (req, res) => {
   try {
-    const { sessionId, input, output, conclusion, source } = req.body || {}
-    res.json(appendAgentRefine({ sessionId, input, output, conclusion, source }))
+    const { sessionId, input, output, conclusion, source, requestId } = req.body || {}
+    res.json(appendAgentRefine({ sessionId, input, output, conclusion, source, requestId }))
   } catch (e) {
-    const status = e.code === 'NO_SESSION' || e.code === 'BAD_SESSION' ? 400 : 400
-    res.status(status).json({ error: e.message })
+    const status =
+      e.code === 'RATE_LIMIT' ? 429 : e.code === 'PAYLOAD_TOO_LARGE' ? 413 : 400
+    res.status(status).json({ error: e.message, code: e.code })
   }
 })
 
