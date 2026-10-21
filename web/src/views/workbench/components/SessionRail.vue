@@ -9,6 +9,7 @@
           size="default"
           filterable
           class="start-target-select"
+          aria-label="选择群模板或成员以开聊"
         >
           <el-option-group v-if="groups.length" label="群模板">
             <el-option

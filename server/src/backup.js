@@ -388,6 +388,25 @@ function applyStagedToLive(work) {
   }
 }
 
+async function applyStagedToLiveAsync(work) {
+  assertTreeNoSymlinks(work)
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  await cp(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
+  for (const suf of ['-wal', '-shm']) {
+    if (fs.existsSync(stagedDb + suf)) {
+      await cp(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+    }
+  }
+  const stagedJournals = path.join(work, 'journals')
+  if (fs.existsSync(stagedJournals)) {
+    await copyTreeAsync(stagedJournals, path.join(DATA_ROOT, 'journals'))
+  }
+  const stagedUploads = path.join(work, 'uploads')
+  if (fs.existsSync(stagedUploads)) {
+    await copyTreeAsync(stagedUploads, path.join(DATA_ROOT, 'uploads'))
+  }
+}
+
 function restoreFromAside(aside) {
   for (const rel of LIVE_RELS) {
     const live = path.join(DATA_ROOT, rel)
@@ -466,7 +485,7 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
 
   const initDbFn = deps.initDb || initDb
   const checkSqlite = deps.checkSqliteFile || checkSqliteFile
-  const applyLive = deps.applyLive || applyStagedToLive
+  const applyLive = deps.applyLive || applyStagedToLiveAsync
 
   let pre = null
   try {
@@ -494,7 +513,7 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
     work = entry.path
   }
 
-  return applyRestoreWork({
+  return applyRestoreWorkAsync({
     work,
     ownWork,
     entry,
@@ -505,7 +524,7 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
   })
 }
 
-function applyRestoreWork({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
+function applyRestoreWorkSync({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
   try {
     assertTreeNoSymlinks(work)
   } catch (e) {
@@ -581,6 +600,82 @@ function applyRestoreWork({ work, ownWork, entry, pre, initDbFn, checkSqlite, ap
   }
 }
 
+async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
+  try {
+    assertTreeNoSymlinks(work)
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
+  }
+
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(stagedDb)) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
+  }
+  try {
+    assertRegularFile(stagedDb, '备份库')
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
+  }
+  const check = checkSqlite(stagedDb)
+  if (!check.ok) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
+      code: 'INTEGRITY_FAIL',
+    })
+  }
+
+  closeDb()
+
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const aside = path.join(
+    DATA_ROOT,
+    'backups',
+    `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${String(d.getMilliseconds()).padStart(3, '0')}`,
+  )
+  fs.mkdirSync(aside, { recursive: true })
+  const moveAside = (rel) => {
+    const src = path.join(DATA_ROOT, rel)
+    if (fs.existsSync(src)) {
+      fs.cpSync(src, path.join(aside, rel), { recursive: true })
+      fs.rmSync(src, { recursive: true, force: true })
+    }
+  }
+
+  try {
+    for (const rel of LIVE_RELS) moveAside(rel)
+    await applyLive(work)
+    initDbFn()
+    return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
+  } catch (err) {
+    try {
+      restoreFromAside(aside)
+    } catch (rb) {
+      console.warn('[acw] restore rollback', rb?.message || rb)
+      err.rollbackError = rb
+    }
+    try {
+      initDbFn()
+    } catch (reopen) {
+      console.error('[acw] restore reinit', reopen?.message || reopen)
+      err.dbReopenFailed = true
+      err.dbReopenError = reopen
+    }
+    throw err
+  } finally {
+    if (ownWork && work) {
+      try {
+        fs.rmSync(work, { recursive: true, force: true })
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
 function restoreBackupUnlocked(filename, deps = {}) {
   const name = path.basename(String(filename || ''))
   if (!BACKUP_NAME_RE.test(name)) {
@@ -621,7 +716,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = entry.path
   }
 
-  return applyRestoreWork({
+  return applyRestoreWorkSync({
     work,
     ownWork,
     entry,

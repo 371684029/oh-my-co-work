@@ -32,6 +32,7 @@ import {
   adapterChoices,
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
+import { formatSessionTime } from './sessionFormatUtils.js'
 
 
 /**
@@ -900,14 +901,7 @@ function stepTypeLabel(t) {
 
 const statusType = sessionStatusType
 
-function formatTime(iso) {
-  if (!iso) return ''
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
+const formatTime = formatSessionTime
 
 function roleLabel(m) {
   if (m.role === 'user') return '我'
