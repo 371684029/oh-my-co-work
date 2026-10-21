@@ -245,6 +245,9 @@ export function defaultNotificationSettings() {
     levels: { action: true, error: true, done: false },
     sound: true,
     onlyWhenUnfocused: true,
+    quietHours: { enabled: false, start: '22:00', end: '07:00' },
+    remindIntervalMs: 30_000,
+    maxReminders: 3,
   }
 }
 
@@ -252,6 +255,7 @@ function normalizeNotifications(raw) {
   const d = defaultNotificationSettings()
   if (!raw || typeof raw !== 'object') return d
   const levels = raw.levels && typeof raw.levels === 'object' ? raw.levels : {}
+  const qh = raw.quietHours && typeof raw.quietHours === 'object' ? raw.quietHours : {}
   return {
     enabled: raw.enabled !== false,
     sound: raw.sound !== false,
@@ -261,6 +265,14 @@ function normalizeNotifications(raw) {
       error: levels.error !== false,
       done: levels.done === true,
     },
+    quietHours: {
+      enabled: qh.enabled === true,
+      start: String(qh.start || d.quietHours.start),
+      end: String(qh.end || d.quietHours.end),
+    },
+    remindIntervalMs:
+      Number(raw.remindIntervalMs) > 0 ? Number(raw.remindIntervalMs) : d.remindIntervalMs,
+    maxReminders: Number(raw.maxReminders) > 0 ? Number(raw.maxReminders) : d.maxReminders,
   }
 }
 

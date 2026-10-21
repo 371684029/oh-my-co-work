@@ -26,7 +26,7 @@
             :class="{ active: selectedGroupId === 'all' }"
             @click="selectedGroupId = 'all'"
           >
-            <span class="dh-group-item-icon">📁</span>
+            <AcwIcon class="dh-group-item-icon" name="folder" :size="16" />
             <span class="dh-group-item-name">全部群模板</span>
             <span class="dh-group-item-count">{{ totalSessionsCount }}</span>
           </button>
@@ -43,7 +43,7 @@
               :class="{ active: selectedGroupId === groupKey(g) }"
               @click="selectedGroupId = groupKey(g)"
             >
-              <span class="dh-group-item-icon">👥</span>
+              <AcwIcon class="dh-group-item-icon" name="users" :size="16" />
               <span class="dh-group-item-name">{{ g.groupTitle }}</span>
               <span class="dh-group-item-count">{{ sessionCount(g) }}</span>
             </button>
@@ -498,6 +498,7 @@ import {
 } from './docsExport.js'
 import proseCss from './docProse.css?raw'
 import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
+import AcwIcon from '../../components/icons/AcwIcon.vue'
 
 const route = useRoute()
 const router = useRouter()

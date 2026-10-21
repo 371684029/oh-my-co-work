@@ -46,6 +46,7 @@ async function req(path, options = {}) {
 
 export const api = {
   health: () => req('/health'),
+  notify: (payload) => req('/notify', { method: 'POST', body: JSON.stringify(payload) }),
   docs: {
     list: (sort = 'group') => req(`/docs/list?sort=${encodeURIComponent(sort)}`),
     sessionSummary: (sessionId) =>

@@ -9,6 +9,9 @@ const defaults = () => ({
   levels: { action: true, error: true, done: false },
   sound: true,
   onlyWhenUnfocused: true,
+  quietHours: { enabled: false, start: '22:00', end: '07:00' },
+  remindIntervalMs: 30_000,
+  maxReminders: 3,
 })
 
 const prefs = ref(defaults())
@@ -28,6 +31,7 @@ export async function loadNotificationPrefs(force = false) {
         ...defaults(),
         ...n,
         levels: { ...defaults().levels, ...(n.levels || {}) },
+        quietHours: { ...defaults().quietHours, ...(n.quietHours || {}) },
       }
     } else {
       prefs.value = defaults()

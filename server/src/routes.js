@@ -73,6 +73,8 @@ import {
   BACKUP_DOWNLOAD_RE,
 } from './backup.js'
 import { readJournalRelative, readSessionAnnouncement } from './journal.js'
+import { emitAll } from './bus.js'
+import { assertNotifyRateLimit, validateNotifyPayload } from './externalNotify.js'
 import {
   uploadMiddleware,
   furnaceUploadMiddleware,
@@ -100,6 +102,22 @@ const router = Router()
 // DESK-02: stable per-process identity so the desktop shell can tell "our"
 // server apart from a foreign process that happens to occupy the port.
 const INSTANCE_ID = process.env.ACW_INSTANCE_ID || randomUUID()
+
+router.post('/notify', (req, res) => {
+  try {
+    const payload = validateNotifyPayload(req.body || {})
+    assertNotifyRateLimit(payload.source)
+    const id = `ext:${payload.source}:${Date.now()}`
+    emitAll({
+      type: 'external.notify',
+      payload: { ...payload, id },
+    })
+    res.json({ ok: true, id })
+  } catch (e) {
+    const status = e.code === 'RATE_LIMIT' ? 429 : 400
+    res.status(status).json({ error: e.message, code: e.code })
+  }
+})
 
 router.get('/health', (_req, res) => {
   let version = '0.4.0'

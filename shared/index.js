@@ -173,6 +173,15 @@ export {
 
 export { estimateFurnaceContext, formatFurnaceContextHint } from './furnaceContextEstimate.js'
 export { inferFurnaceCliBanner } from './furnaceCliState.js'
+export {
+  shouldDedupeNotification,
+  isWithinQuietHours,
+  shouldSuppressForegroundNotification,
+  shouldThrottleNotification,
+  mergeGateNotificationBodies,
+  shouldStopReminding,
+  canDeliverDesktopNotification,
+} from './notificationPolicy.js'
 
 /** 去 CSI / OSC，给卡片预览用；GUI 请用 furnaceGuiTranscript */
 export function stripAnsi(value) {

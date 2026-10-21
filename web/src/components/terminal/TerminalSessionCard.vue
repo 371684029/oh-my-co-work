@@ -37,7 +37,7 @@
     <footer class="terminal-card-foot">
       <span class="terminal-meta">
         <span class="terminal-card-cwd" :title="terminal.cwd">
-          <span aria-hidden="true">📁</span> {{ terminal.cwd || '—' }}
+          <AcwIcon name="folder" :size="14" /> {{ terminal.cwd || '—' }}
         </span>
         <template v-if="elapsedText">
           <span class="terminal-meta-sep">·</span>
@@ -67,6 +67,7 @@ import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { stripAnsi } from '@acw/shared'
 import { isTerminalRunning, terminalStatusText } from '../../composables/terminalStatus'
+import AcwIcon from '../icons/AcwIcon.vue'
 
 const props = defineProps({
   terminal: { type: Object, required: true },

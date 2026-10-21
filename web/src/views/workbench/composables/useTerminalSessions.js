@@ -7,6 +7,8 @@ import {
   isFurnaceMember,
   estimateFurnaceContext,
   formatFurnaceContextHint,
+  canDeliverDesktopNotification,
+  shouldDedupeNotification,
 } from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
 import {
@@ -54,6 +56,8 @@ const lastTerminalSize = ref(null)
 let ws = null
 const furnaceCliNotifyKind = new Map()
 const furnaceContextWarned = new Set()
+const notifyLastSentAt = new Map()
+const notifyRemindCount = new Map()
 
 function pushDesktopNotification(title, body, { id, deepLink, level = 'action', sessionId } = {}) {
   const t = String(title || '').trim()
@@ -72,8 +76,31 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
   if (level === 'action' && viewingSameSession) {
     useFlowStore().bumpActionUnread()
   }
-  if (!prefs.enabled || !shouldNotifyLevel(level)) return
-  if (prefs.onlyWhenUnfocused && !document.hidden && document.hasFocus()) return
+  const now = Date.now()
+  const notifyId = String(id || `${t}\0${b}`)
+  const delivery = canDeliverDesktopNotification({
+    enabled: prefs.enabled && shouldNotifyLevel(level),
+    levelAllowed: shouldNotifyLevel(level),
+    now,
+    quiet: prefs.quietHours,
+    foreground: {
+      onlyWhenUnfocused: prefs.onlyWhenUnfocused,
+      documentHidden: document.hidden,
+      documentHasFocus: document.hasFocus(),
+      viewingSameSession,
+      level,
+    },
+    throttleMs: Number(prefs.remindIntervalMs) || 30_000,
+    lastSentAt: notifyLastSentAt.get(notifyId) || 0,
+    remind: {
+      sentCount: notifyRemindCount.get(notifyId) || 0,
+      maxReminders: Number(prefs.maxReminders) || 3,
+    },
+    dedupe: shouldDedupeNotification(notifyId, now),
+  })
+  if (!delivery.ok) return
+  notifyLastSentAt.set(notifyId, now)
+  notifyRemindCount.set(notifyId, (notifyRemindCount.get(notifyId) || 0) + 1)
   const desktop = window.__ACW_DESKTOP_API__
   if (desktop?.notify) {
     desktop.notify(t, { body: b, id, deepLink })
@@ -383,6 +410,15 @@ function bindWs(sessionId) {
   ws = connectSessionWs(
     sessionId,
     async (ev) => {
+      if (ev.type === 'external.notify') {
+        const p = ev.payload || {}
+        pushDesktopNotification(p.title, p.body, {
+          id: p.id,
+          deepLink: p.deepLink,
+          level: p.level || 'action',
+        })
+        return
+      }
       if (activeId.value !== sessionId) return
       if (ev.type === 'terminal.opened') {
         const terminal = ev.payload?.terminal

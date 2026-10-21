@@ -2,7 +2,9 @@
   <el-popover placement="bottom-end" :width="380" trigger="click" @show="onOpen">
     <template #reference>
       <el-badge :value="unreadInboxCount || undefined" :hidden="!unreadInboxCount" class="inbox-badge">
-        <el-button size="default" text bg aria-label="通知收件箱">🔔</el-button>
+        <el-button size="default" text bg aria-label="通知收件箱">
+          <AcwIcon name="bell" :size="18" />
+        </el-button>
       </el-badge>
     </template>
     <div class="inbox-panel">
@@ -44,6 +46,7 @@ import {
   inboxSummarySince,
 } from '../composables/notificationInbox.js'
 import { parseNotificationDeepLink } from '../composables/notificationDeepLink.js'
+import AcwIcon from './icons/AcwIcon.vue'
 
 const router = useRouter()
 const items = notificationInboxRef()

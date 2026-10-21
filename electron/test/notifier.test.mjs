@@ -4,6 +4,7 @@ import {
   shouldDedupeNotification,
   parseSessionDeepLink,
   parseNotificationDeepLink,
+  createNotifier,
 } from '../lib/notifier.mjs'
 
 test('shouldDedupeNotification collapses repeats within window', () => {
@@ -24,4 +25,41 @@ test('parseNotificationDeepLink accepts docs deep links', () => {
   assert.equal(d.type, 'docs')
   assert.equal(d.sessionId, 's1')
   assert.equal(d.file, 'ANNOUNCEMENT.md')
+})
+
+test('createNotifier click focuses window and routes deepLink (NTF-T2)', () => {
+  const clicks = []
+  class FakeNotification {
+    constructor({ title, body }) {
+      this.title = title
+      this.body = body
+    }
+    on(evt, fn) {
+      if (evt === 'click') this._click = fn
+    }
+    show() {
+      clicks.push(this)
+    }
+  }
+  FakeNotification.isSupported = () => true
+  let focused = false
+  let deepLink = ''
+  const notifier = createNotifier({
+    Notification: FakeNotification,
+    getMainWindow: () => ({
+      isDestroyed: () => false,
+      show: () => {},
+      focus: () => {
+        focused = true
+      },
+    }),
+    onDeepLink: (link) => {
+      deepLink = link
+    },
+  })
+  assert.equal(notifier.notify({ title: 'Gate', body: 'Confirm', deepLink: 'session:s1' }), true)
+  assert.equal(clicks.length, 1)
+  clicks[0]._click()
+  assert.equal(focused, true)
+  assert.equal(deepLink, 'session:s1')
 })

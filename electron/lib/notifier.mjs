@@ -3,25 +3,9 @@
  * Dedupe, click-to-focus, optional deepLink for session routing.
  */
 
-const DEFAULT_DEDUPE_MS = 8000
+import { shouldDedupeNotification } from '@acw/shared'
 
-/** @type {Map<string, number>} */
-const recentKeys = new Map()
-
-export function shouldDedupeNotification(key, now = Date.now(), windowMs = DEFAULT_DEDUPE_MS) {
-  const k = String(key || '').trim()
-  if (!k) return false
-  const last = recentKeys.get(k)
-  if (last != null && now - last < windowMs) return true
-  recentKeys.set(k, now)
-  if (recentKeys.size > 200) {
-    const cutoff = now - windowMs * 2
-    for (const [id, t] of recentKeys) {
-      if (t < cutoff) recentKeys.delete(id)
-    }
-  }
-  return false
-}
+export { shouldDedupeNotification }
 
 /**
  * @param {object} deps

@@ -39,7 +39,7 @@
           :title="isPagefill ? '退出满屏，回到中栏' : '满屏：铺满整个页面，不调用系统全屏'"
           @click="togglePagefill"
         >
-          <span aria-hidden="true">{{ isPagefill ? '↙' : '▣' }}</span>
+          <AcwIcon :name="isPagefill ? 'fullscreen-exit' : 'grid'" :size="14" />
           {{ isPagefill ? '退出满屏' : '满屏' }}
         </button>
         <button
@@ -49,7 +49,7 @@
           :title="isFullscreen ? '退出终端全屏' : '全屏：交给浏览器，铺满显示器'"
           @click="toggleTerminalFullscreen"
         >
-          <span aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+          <AcwIcon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" :size="14" />
           {{ isFullscreen ? '退出全屏' : '全屏' }}
         </button>
         <button
@@ -136,6 +136,7 @@ import {
   connectionStatusText,
 } from '../../composables/terminalStatus'
 import { usePagefill } from '../../composables/pagefill'
+import AcwIcon from '../icons/AcwIcon.vue'
 
 const props = defineProps({
   terminal: { type: Object, required: true },

@@ -25,7 +25,11 @@
             :title="isFullscreen ? '退出全屏' : '全屏'"
             @click="toggleWorkbenchFullscreen"
           >
-            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <AcwIcon
+              class="fullscreen-icon"
+              :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+              :size="16"
+            />
             <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
         </div>
@@ -117,7 +121,11 @@
             :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
             @click="toggleWorkbenchFullscreen"
           >
-            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <AcwIcon
+              class="fullscreen-icon"
+              :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+              :size="16"
+            />
             <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
         </div>
@@ -156,6 +164,7 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
+import AcwIcon from './components/icons/AcwIcon.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
 import {

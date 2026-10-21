@@ -306,7 +306,24 @@ function registerIpc() {
     const body = String(payload?.options?.body || '')
     const id = payload?.options?.id
     const deepLink = payload?.options?.deepLink
-    return ensureNotifier().notify({ id, title, body, deepLink })
+    const shown = ensureNotifier().notify({ id, title, body, deepLink })
+    if (shown && mainWindow && !mainWindow.isDestroyed()) {
+      if (!mainWindow.isFocused() || !mainWindow.isVisible()) {
+        mainWindow.flashFrame(true)
+        setTimeout(() => {
+          try {
+            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.flashFrame(false)
+          } catch {
+            /* ignore */
+          }
+        }, 4500)
+      }
+      if (process.platform === 'darwin' && app.dock?.setBadge) {
+        const next = Math.min(99, trayPendingCount + 1)
+        app.dock.setBadge(String(next > 0 ? next : ''))
+      }
+    }
+    return shown
   })
 
   ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) => desktopUpdateResult(manifest))
