@@ -97,6 +97,11 @@ import {
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
+import {
+  messageSendMentionFeedback,
+  messageSendNewSessionId,
+  shouldRefreshCurrentSessionAfterSend,
+} from './sessionMessageSendUi.js'
 import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
@@ -1276,17 +1281,19 @@ async function onSenderSubmit() {
     const r = await api.sessions.message(activeId.value, text, atts)
     clearSender()
     pendingFiles.value = []
-    if (r.mentionPending) {
-      ElMessage.success(mentionPendingSuccessMessage(r.offsiteMode))
-      if (r.mainGateWaiting) {
+    const mention = messageSendMentionFeedback(r)
+    if (mention) {
+      ElMessage.success(mentionPendingSuccessMessage(mention.offsiteMode))
+      if (mention.mainGateWaiting) {
         ElMessage.info(mainGateWaitingInfoMessage())
       }
     }
-    if (r.newSession && r.session) {
+    const newSid = messageSendNewSessionId(r)
+    if (newSid) {
       await loadLists()
-      await selectSession(r.session.id)
+      await selectSession(newSid)
       ElMessage.success(newTaskCreatedMessage())
-    } else {
+    } else if (shouldRefreshCurrentSessionAfterSend(r)) {
       await loadDetail(activeId.value)
       sessions.value = await api.sessions.list()
     }

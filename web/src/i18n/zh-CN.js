@@ -231,6 +231,13 @@ export const strings = {
       active: '进行中',
       archived: '已归档',
     },
+    flowRail: {
+      tabFlow: '流程',
+      tabTimeline: '时间线',
+      tabDocs: '文档中心',
+      archivedHint: '已归档',
+      offsiteHint: '临时协助进行中',
+    },
     sessionStatus: {
       pending: '待跑',
       notRun: '待跑',

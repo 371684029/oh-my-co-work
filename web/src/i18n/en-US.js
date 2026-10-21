@@ -231,6 +231,13 @@ export const strings = {
       active: 'Active',
       archived: 'Archived',
     },
+    flowRail: {
+      tabFlow: 'Flow',
+      tabTimeline: 'Timeline',
+      tabDocs: 'Docs hub',
+      archivedHint: 'Archived',
+      offsiteHint: 'Off-site assist in progress',
+    },
     sessionStatus: {
       pending: 'Pending',
       notRun: 'Not run',

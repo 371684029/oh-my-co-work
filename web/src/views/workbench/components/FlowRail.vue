@@ -15,7 +15,7 @@
         @click="flowStore.rightTab = 'flow'"
       >
         <span class="wb-right-tab-icon" aria-hidden="true">⚡</span>
-        流程
+        {{ flowRailTabFlow() }}
       </button>
       <button
         type="button"
@@ -27,7 +27,7 @@
         @click="flowStore.rightTab = 'timeline'"
       >
         <span class="wb-right-tab-icon" aria-hidden="true">🕐</span>
-        时间线
+        {{ flowRailTabTimeline() }}
       </button>
       <button
         type="button"
@@ -39,7 +39,7 @@
         @click="flowStore.rightTab = 'docs'"
       >
         <span class="wb-right-tab-icon" aria-hidden="true">📄</span>
-        文档中心
+        {{ flowRailTabDocs() }}
         <span v-if="flowStore.docsUnread > 0" class="wb-right-tab-badge">{{
           flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
         }}</span>
@@ -49,7 +49,7 @@
     <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
     <div v-show="flowStore.rightTab === 'flow'" class="wb-right-pane">
       <p v-if="detail?.session?.status === 'archived'" class="flow-archive-hint">
-        已归档
+        {{ flowRailArchivedHint() }}
         <template v-if="archiveOutcomeTag">
           ·
           <span
@@ -60,7 +60,7 @@
         </template>
       </p>
       <p v-else-if="offsiteActive" class="flow-offsite-hint">
-        临时协助进行中
+        {{ flowRailOffsiteHint() }}
       </p>
       <template v-if="flowEntries.length">
         <template v-for="entry in flowEntries" :key="entry.key">
@@ -519,6 +519,13 @@
 
 <script setup>
 import { t } from '../../../i18n/index.js'
+import {
+  flowRailArchivedHint,
+  flowRailOffsiteHint,
+  flowRailTabDocs,
+  flowRailTabFlow,
+  flowRailTabTimeline,
+} from '../composables/flowRailCopy.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   detail,
