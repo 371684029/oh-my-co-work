@@ -69,6 +69,12 @@ async function main() {
     assert.equal(await skip.count(), 1)
     const text = (await skip.textContent()) || ''
     assert.match(text, /主内容/)
+    const main = page.locator('#main-content')
+    assert.equal(await main.count(), 1)
+    const health = await fetch(`${base}/api/health`)
+    assert.equal(health.status, 200)
+    const h = await health.json()
+    assert.equal(h.ok, true)
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})

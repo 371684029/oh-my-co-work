@@ -6,7 +6,12 @@ import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
 import { cp } from 'node:fs/promises'
-import { moveLiveAsideAsync, moveLiveAsideSync } from './backup/moveLiveAside.js'
+import {
+  moveLiveAsideAsync,
+  moveLiveAsideSync,
+  restoreFromAsideAsync,
+  restoreFromAsideSync,
+} from './backup/moveLiveAside.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -408,17 +413,6 @@ async function applyStagedToLiveAsync(work) {
   }
 }
 
-function restoreFromAside(aside) {
-  for (const rel of LIVE_RELS) {
-    const live = path.join(DATA_ROOT, rel)
-    if (fs.existsSync(live)) fs.rmSync(live, { recursive: true, force: true })
-  }
-  if (!aside || !fs.existsSync(aside)) return
-  for (const name of fs.readdirSync(aside)) {
-    fs.cpSync(path.join(aside, name), path.join(DATA_ROOT, name), { recursive: true })
-  }
-}
-
 /**
  * 4.2.0：从 data/backups/ 恢复一份 tar.gz 或目录备份。
  * 流程：恢复前自动再打一份「恢复前备份」→ 解包/定位 staging → integrity 校验 →
@@ -568,7 +562,7 @@ function applyRestoreWorkSync({ work, ownWork, entry, pre, initDbFn, checkSqlite
     return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
   } catch (err) {
     try {
-      restoreFromAside(aside)
+      restoreFromAsideSync(DATA_ROOT, aside, LIVE_RELS)
     } catch (rb) {
       console.warn('[acw] restore rollback', rb?.message || rb)
       err.rollbackError = rb
@@ -635,7 +629,7 @@ async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, chec
     return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
   } catch (err) {
     try {
-      restoreFromAside(aside)
+      await restoreFromAsideAsync(DATA_ROOT, aside, LIVE_RELS)
     } catch (rb) {
       console.warn('[acw] restore rollback', rb?.message || rb)
       err.rollbackError = rb

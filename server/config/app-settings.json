@@ -49,13 +49,13 @@
   },
   "notifications": {
     "enabled": true,
+    "sound": true,
+    "onlyWhenUnfocused": true,
     "levels": {
       "action": true,
       "error": true,
       "done": false
     },
-    "sound": true,
-    "onlyWhenUnfocused": true,
     "quietHours": {
       "enabled": false,
       "start": "22:00",

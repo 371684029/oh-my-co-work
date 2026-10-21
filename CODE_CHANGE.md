@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | server/src/{backup/{moveLiveAside,backup.js},terminal/{ptyLaunch,terminalService}} web/src/views/workbench/composables/{sessionFlowUi,useSessionDetail} scripts/ci-e2e-smoke.mjs server/test/moveLiveAside.test.js web/test/sessionFlowUi.test.mjs docs/5.1.0-plan.md | SRV-01 restoreFromAsideAsync、SRV-04 ptyLaunch、FE-01 flowNodeClass、QA-01 e2e 加强
 2026-10-21 | A/M | server/src/runners/{runMember,scriptMemberConfig,runners.js} web/src/{views/settings/{Members,Groups},views/workbench/composables/{sessionReviewUi,useSessionDetail}} server/test/runProcessModule.test.js web/test/sessionReviewUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | SRV-04 runMember、FE-01 sessionReviewUi、UX-03 成员/群模板 aria
 2026-10-21 | A/M | server/src/runners/{runProcess,runners.js} web/src/views/workbench/composables/{sessionOffsiteUi,useSessionDetail} scripts/ci-e2e-smoke.mjs .github/workflows/ci.yml package.json server/test/runProcessModule.test.js web/test/sessionOffsiteUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | SRV-04 runProcess、FE-01 sessionOffsiteUi、QA-01 CI Playwright smoke
 2026-10-21 | A/M | server/src/runners/{scriptSpawn,runners.js} web/src/{views/settings/About,workbench/composables/{sessionComposerUi,sessionMessageUi,useSessionDetail}} .github/workflows/ci.yml server/test/scriptSpawn.test.js web/test/{sessionComposerUi,sessionMessageUi}.test.mjs docs/5.1.0-plan.md | SRV-04 scriptSpawn、FE-01 composer/message UI、QA-01 CI test:web、UX-03 关于页 aria

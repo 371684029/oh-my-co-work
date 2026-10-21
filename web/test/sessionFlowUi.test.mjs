@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import {
   buildFlowEntries,
   computeFlowHistorySplitIndex,
+  flowNodeClass,
   isCurrentStepNode,
+  isWaitingHumanStep,
   pickFlowAnchorNodeId,
 } from '../src/views/workbench/composables/sessionFlowUi.js'
 
@@ -35,6 +37,19 @@ test('pickFlowAnchorNodeId prefers waiting human at current step', () => {
     { id: 'n3', step_type: 'member', step_index: 2, status: 'pending' },
   ]
   assert.equal(pickFlowAnchorNodeId(nodes, session), 'n2')
+})
+
+test('flowNodeClass highlights running and current steps', () => {
+  const session = { current_step_index: 1, status: 'active' }
+  assert.equal(
+    flowNodeClass({ step_type: 'member', step_index: 1, status: 'running' }, session),
+    'running',
+  )
+  assert.equal(
+    flowNodeClass({ step_type: 'member', step_index: 1, status: 'pending' }, session),
+    'current',
+  )
+  assert.equal(isWaitingHumanStep({ step_type: 'human', step_index: 1, status: 'pending' }, session), true)
 })
 
 test('computeFlowHistorySplitIndex uses clone batch when present', () => {

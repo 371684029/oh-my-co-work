@@ -38,6 +38,7 @@ import {
   nodeHasAdapt,
   nodeHasRefine,
   pickFlowAnchorNodeId,
+  flowNodeClass,
 } from './sessionFlowUi.js'
 import {
   archiveOutcomeOf,
@@ -715,11 +716,6 @@ function isCurrent(n) {
   return isCurrentStepNode(n, detail.value.session)
 }
 
-function isWaitingHuman(n) {
-  if (n.step_type === 'offsite') return n.status === 'waiting_human' || n.status === 'running'
-  return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
-}
-
 const offsiteActive = computed(() =>
   computeOffsiteActive(detail.value?.session, detail.value?.nodes),
 )
@@ -753,23 +749,7 @@ function offsiteInvokedLabel(n) {
 }
 
 function flowClass(n) {
-  if (n.step_type === 'offsite') {
-    if (n.status === 'running' || n.status === 'waiting_human') return 'offsite-active'
-    return 'offsite-idle'
-  }
-  if (n.step_type === 'archive') {
-    if (n.status === 'waiting_human') return 'human-wait'
-    if (n.status === 'succeeded') return 'done'
-    return 'pending'
-  }
-  if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
-  if (n.status === 'failed') return 'failed'
-  if (isWaitingHuman(n) || n.status === 'waiting_human') return 'human-wait'
-  // 执行中：呼吸焦点；当前待跑：静态高亮
-  if (n.status === 'running') return 'running'
-  if (isCurrent(n)) return 'current'
-  if (n.step_type === 'human' || n.gate) return 'human-config'
-  return 'pending'
+  return flowNodeClass(n, detail.value?.session)
 }
 
 function toggleNodeExpand(n) {
