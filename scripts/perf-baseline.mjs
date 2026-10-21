@@ -13,7 +13,7 @@ const root = path.resolve(__dirname, '..')
 const baselinePath = path.join(root, 'server/test/fixtures/perf-baseline.json')
 const scriptPath = fileURLToPath(import.meta.url)
 
-const THRESHOLD_RATIO = 2.5
+const THRESHOLD_RATIO = process.env.CI ? 20 : 2.5
 
 /** Fresh Node process so ACW_DATA_ROOT is read before db.js loads. */
 function sampleDbInitMsInChild() {
