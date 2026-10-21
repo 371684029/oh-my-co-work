@@ -534,7 +534,7 @@ router.post('/sessions/:id/e2e/spawn-terminal', async (req, res) => {
     const result = await runTerminal({
       launch: {
         cmd: process.env.SHELL || '/bin/sh',
-        args: ['-lc', 'exec sleep 600'],
+        args: ['-lc', 'printf "ACW_E2E_READY\\n"; exec sleep 600'],
         label: 'sh',
       },
       cwd: DATA_ROOT,

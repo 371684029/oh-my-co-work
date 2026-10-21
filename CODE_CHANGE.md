@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/{composables/{sessionMessageSendActions,sessionMentionAssistUi,flowRailCopy,useSessionDetail},components/FlowRail.vue} server/src/routes/sessionsRoutes.js scripts/ci-e2e-smoke.mjs web/test/{flowRailCopy,sessionMentionAssistUi}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | FE-01 message send 模块、DSK-08 flow 角标、QA-01 PTY READY 回显
 2026-10-21 | A/M | server/src/routes/sessionsRoutes.js server/test/e2eSmokeSpawnRoute.test.js scripts/ci-e2e-smoke.mjs web/src/views/workbench/composables/{sessionSlashActions,useSessionDetail}.js docs/5.1.0-plan.md | QA-01 浏览器 PTY echo smoke、FE-01 sessionSlashActions
 2026-10-21 | A/M | web/src/views/workbench/{composables/{sessionGateActions,sessionFlowRestartUi,useSessionDetail},components/FlowRail.vue} scripts/ci-e2e-smoke.mjs web/test/sessionGateActions.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/5.1.0-plan.md | FE-01 sessionGateActions、DSK-08 flow 续跑按钮、QA-01 composer 附件 smoke
 2026-10-21 | A/M | web/src/views/workbench/{composables/{sessionHumanGateRouteUi,sessionComposerPanelUi,useSessionDetail},components/ComposerPanel.vue} web/src/i18n/{zh-CN,en-US}.js server/test/srv01ProductionBackup.test.js web/test/sessionHumanGateRouteUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 human gate 路由、DSK-08 composer 工具栏、SRV-01 sync 边界单测

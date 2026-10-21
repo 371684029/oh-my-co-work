@@ -251,14 +251,20 @@ async function main() {
     const spawnBody = await spawnRes.json()
     assert.ok(spawnBody.terminalId, 'spawn should return terminalId')
 
+    let spawnedTerm = null
     for (let i = 0; i < 40; i++) {
       const termsRes = await fetch(`${base}/api/sessions/${session.id}/terminals`, {
         headers: { 'X-ACW-Token': token, Origin: origin },
       })
       const termsBody = await termsRes.json()
-      if ((termsBody.terminals || []).some((t) => t.id === spawnBody.terminalId)) break
+      spawnedTerm = (termsBody.terminals || []).find((t) => t.id === spawnBody.terminalId)
+      if (spawnedTerm?.replay?.includes('ACW_E2E_READY')) break
       await page.waitForTimeout(250)
     }
+    assert.ok(
+      spawnedTerm?.replay?.includes('ACW_E2E_READY'),
+      'spawned PTY should emit ACW_E2E_READY in replay',
+    )
 
     const enterTerminal = page.getByRole('button', {
       name: /进入终端|查看终端|Enter terminal|View terminal/i,
