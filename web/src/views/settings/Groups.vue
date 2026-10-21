@@ -38,7 +38,7 @@
       aria-label="搜索群模板"
     />
 
-    <el-table :data="filteredList" stripe>
+    <el-table :data="filteredList" stripe aria-label="群模板列表">
       <el-table-column prop="title" label="名称" />
       <el-table-column prop="work_folder" label="工作文件夹" show-overflow-tooltip />
       <el-table-column label="步骤数" width="90">
