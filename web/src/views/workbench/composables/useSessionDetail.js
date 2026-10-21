@@ -102,6 +102,7 @@ import {
   messageSendNewSessionId,
   shouldRefreshCurrentSessionAfterSend,
 } from './sessionMessageSendUi.js'
+import { humanGateShouldSendAsMessage } from './sessionHumanGateRouteUi.js'
 import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
@@ -1310,16 +1311,7 @@ async function submitHuman(m) {
   if (gating.value) return
   const text = readSenderText()
   // 闸门「提交」按钮：纯 @ 协助不当参数
-  if (
-    text &&
-    isMentionAssistOnly(
-      text,
-      (members.value || []).map((x) => ({
-        display_name: x.display_name,
-        name: x.name,
-      })),
-    )
-  ) {
+  if (humanGateShouldSendAsMessage(text, members.value)) {
     await onSenderSubmit()
     return
   }

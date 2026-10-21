@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/{composables/{sessionHumanGateRouteUi,sessionComposerPanelUi,useSessionDetail},components/ComposerPanel.vue} web/src/i18n/{zh-CN,en-US}.js server/test/srv01ProductionBackup.test.js web/test/sessionHumanGateRouteUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 human gate 路由、DSK-08 composer 工具栏、SRV-01 sync 边界单测
 2026-10-21 | A/M | web/src/components/terminal/{FurnaceChatComposer,FurnaceWorkspace}.vue web/src/composables/{furnaceComposerRefs,useFurnaceWorkspace}.js web/test/{furnaceComposerRefs,furnaceScroll}.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01/ENG-04 FurnaceChatComposer 子组件 + composer ref 桥接
 2026-10-21 | A/M | web/src/views/workbench/{composables/sessionRailCopy.js,components/SessionRail.vue} web/src/i18n/{zh-CN,en-US}.js scripts/ci-e2e-smoke.mjs web/test/sessionRailCopy.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08/UX-03 SessionRail i18n+aria、QA-01 开聊下拉 smoke
 2026-10-21 | A/M | web/src/components/terminal/{FurnaceChatTurns,FurnaceWorkspace}.vue web/src/views/workbench/{composables/{sessionMessageSendUi,flowRailCopy,useSessionDetail},components/FlowRail.vue} web/src/i18n/{zh-CN,en-US}.js web/test/{sessionMessageSendUi,furnaceScroll}.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 FurnaceChatTurns + sessionMessageSendUi、DSK-08 flowRail i18n

@@ -20,6 +20,15 @@ test('SRV-01: main routes use async createBackup', () => {
   assert.doesNotMatch(routes, /\brestoreBackup\s*\(/)
 })
 
+test('SRV-01: sync restore rollback still uses sync createBackup (test/legacy boundary)', () => {
+  const backup = fs.readFileSync(path.join(root, 'src/backup.js'), 'utf8')
+  const start = backup.indexOf('function restoreBackupUnlocked(')
+  const end = backup.indexOf('export function restoreBackup', start + 1)
+  const syncBlock = backup.slice(start, end > start ? end : start + 4000)
+  assert.match(syncBlock, /\bcreateBackup\s*\(\)/)
+  assert.doesNotMatch(syncBlock, /createBackupAsync/)
+})
+
 test('SRV-01: async restore path pre-backup uses createBackupAsync', () => {
   const backup = fs.readFileSync(path.join(root, 'src/backup.js'), 'utf8')
   const start = backup.indexOf('async function restoreBackupUnlockedAsync')
