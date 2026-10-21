@@ -399,6 +399,7 @@ export const strings = {
       failed: '操作失败',
     },
     flow: {
+      restartFromHere: '从这里继续',
       restartOffsiteBlocked: '临时协助没有「重新开始」；请点右侧正常节点「从这里继续」',
       restartArchiveBlocked: '归档节点没有「重新开始」；请点右侧正常节点',
       restartJump: '已跳到「{title}」继续{suffix}',

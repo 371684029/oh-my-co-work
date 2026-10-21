@@ -200,6 +200,8 @@ async function main() {
 
     const composer = page.getByRole('region', { name: /消息输入区|Message composer/i })
     await composer.waitFor({ state: 'visible', timeout: 30000 })
+    const attachBtn = composer.getByRole('button', { name: /^附件$|^Attach$/ })
+    await attachBtn.waitFor({ state: 'visible', timeout: 15000 })
     const footerToggle = page.locator('.footer-toggle').first()
     if ((await footerToggle.getAttribute('aria-expanded')) === 'false') {
       await footerToggle.click()

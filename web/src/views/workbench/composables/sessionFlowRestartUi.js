@@ -10,6 +10,10 @@ export function restartArchiveBlockedMessage() {
   return t('workbench.flow.restartArchiveBlocked')
 }
 
+export function flowRailRestartFromHereLabel() {
+  return t('workbench.flow.restartFromHere')
+}
+
 export function restartFromNodeSuccessMessage({ title, forwardJump, wasArchived, wasOffsite, offsiteArchived }) {
   const suffix = wasArchived
     ? t('workbench.flow.restartSuffixRecovered')
