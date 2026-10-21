@@ -91,6 +91,15 @@ async function main() {
     const list = await backups.json()
     assert.ok(Array.isArray(list.backups))
 
+    const created = await fetch(`${base}/api/update/backup`, {
+      method: 'POST',
+      headers: { 'X-ACW-Token': token, Origin: origin },
+    })
+    assert.equal(created.status, 200)
+    const backup = await created.json()
+    assert.equal(backup.ok, true)
+    assert.ok(backup.path || backup.format)
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})

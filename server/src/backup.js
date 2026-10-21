@@ -315,10 +315,15 @@ export function restoreBackup(filename, deps = {}) {
   }
 }
 
+/** SRV-01: shared sync tar extract (CLI restore + tests). */
+export function tarExtractSync(archivePath, destDir) {
+  execFileSync('tar', ['-xzf', archivePath, '-C', destDir], { stdio: 'pipe' })
+}
+
 function tarExtractArchive(archivePath, destDir, { async = false } = {}) {
   const args = ['-xzf', archivePath, '-C', destDir]
   if (!async) {
-    execFileSync('tar', args, { stdio: 'pipe' })
+    tarExtractSync(archivePath, destDir)
     return Promise.resolve()
   }
   return new Promise((resolve, reject) => {
@@ -564,7 +569,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
-      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+      tarExtractSync(entry.path, work)
     } catch (e) {
       fs.rmSync(work, { recursive: true, force: true })
       throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })

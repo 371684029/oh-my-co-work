@@ -1,6 +1,6 @@
 <template>
-  <div class="restore-center">
-    <h2>还原中心</h2>
+  <div class="restore-center" aria-labelledby="restore-center-title">
+    <h2 id="restore-center-title">还原中心</h2>
     <p class="restore-lead">
       炼化备份与流程步骤 git 快照的统一入口。步骤回退在工作台流程轨展开节点后操作。
     </p>
