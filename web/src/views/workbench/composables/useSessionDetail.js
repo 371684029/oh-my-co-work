@@ -88,6 +88,7 @@ import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sess
 import { createSessionGateActions } from './sessionGateActions.js'
 import { createSessionLoadActions } from './sessionLoadActions.js'
 import { createSessionComposerPanelSyncActions } from './sessionComposerPanelSyncActions.js'
+import { createSessionComposerPanelToggleActions } from './sessionComposerPanelToggleActions.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -598,6 +599,16 @@ const { syncSlashFromInput, syncAtFromInput, syncHashFromInput, onSenderChange }
     draftTimerRef: composerDraftTimerRef,
   })
 
+const { toggleSlashPanel, closeComposerPanel, toggleAtPanel, toggleHashPanel } =
+  createSessionComposerPanelToggleActions({
+    readSenderText,
+    readSenderTextRaw,
+    appendSenderText,
+    syncSlashFromInput,
+    syncAtFromInput,
+    syncHashFromInput,
+  })
+
 function onComposerKeydown(e) {
   const pickerOpen =
     useComposerStore().hashOpen || useComposerStore().atOpen || useComposerStore().slashOpen
@@ -707,64 +718,6 @@ function onComposerKeydown(e) {
     })
   ) {
     return
-  }
-}
-
-function toggleSlashPanel() {
-  useComposerStore().atOpen = false
-  useComposerStore().hashOpen = false
-  useComposerStore().slashOpen = !useComposerStore().slashOpen
-  if (useComposerStore().slashOpen) {
-    useComposerStore().slashQuery = ''
-    useComposerStore().slashIndex = 0
-    // setText 是插入：只追加唤起符
-    appendSenderText('/')
-    syncSlashFromInput()
-  }
-}
-
-/** 关闭 / @ # 浮层（与 Esc 一致，不关输入框里的唤起符） */
-function closeComposerPanel(kind) {
-  if (kind === 'slash') {
-    useComposerStore().slashOpen = false
-    useComposerStore().slashQuery = ''
-    return
-  }
-  if (kind === 'at') {
-    useComposerStore().atOpen = false
-    useComposerStore().atQuery = ''
-    return
-  }
-  if (kind === 'hash') {
-    useComposerStore().hashOpen = false
-    useComposerStore().hashQuery = ''
-  }
-}
-
-function toggleAtPanel() {
-  useComposerStore().slashOpen = false
-  useComposerStore().hashOpen = false
-  useComposerStore().atOpen = !useComposerStore().atOpen
-  if (useComposerStore().atOpen) {
-    useComposerStore().atQuery = ''
-    useComposerStore().atIndex = 0
-    const cur = readSenderText()
-    appendSenderText(cur && !/\s$/.test(cur) ? ' @' : '@')
-    syncAtFromInput()
-  }
-}
-
-function toggleHashPanel() {
-  useComposerStore().slashOpen = false
-  useComposerStore().atOpen = false
-  useComposerStore().hashOpen = !useComposerStore().hashOpen
-  if (useComposerStore().hashOpen) {
-    useComposerStore().hashQuery = ''
-    useComposerStore().hashIndex = 0
-    const cur = readSenderTextRaw()
-    // 只追加唤起用 #（选中后 strip，不进正文）；勿把全文再 setText 一遍
-    appendSenderText(cur && !/\s$/.test(cur) ? ' #' : '#')
-    syncHashFromInput()
   }
 }
 
