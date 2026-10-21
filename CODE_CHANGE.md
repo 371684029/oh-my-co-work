@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/composables/{sessionWorkbenchFeedbackUi,sessionSlashRunUi,useSessionDetail} web/src/i18n/{zh-CN,en-US}.js web/test/sessionWorkbenchFeedbackUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01/ENG-04 工作台 toast 模块、DSK-08 workbench.* i18n
 2026-10-21 | A/M | web/src/views/{docs/{docsHubInDocSearchUi,docsHubCopy,DocsHub.vue},workbench/composables/{sessionFlowRestartUi,useSessionDetail,useDocsHub}} web/src/i18n/{zh-CN,en-US}.js web/test/{docsHubInDocSearchUi,sessionFlowRestartUi}.test.mjs | FE-01 正文搜索/流程重启、DSK-08 i18n
 2026-10-21 | A/M | web/src/{composables/{furnaceWorkspacePresentation,useFurnaceWorkspace},views/workbench/{composables/{sessionPinFeedbackUi,useSessionDetail},components/ComposerPanel.vue},i18n/{zh-CN,en-US}.js} web/test/{furnaceWorkspacePresentation,sessionPinFeedbackUi}.test.mjs | DSK-08 熔炉文案 i18n、UX-03 composer 折叠 aria、pin toast
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionSlashRunUi,sessionMessageFeedbackUi,useSessionDetail} scripts/ci-e2e-smoke.mjs web/src/i18n/{zh-CN,en-US}.js web/test/{sessionSlashRunUi,sessionMessageFeedbackUi}.test.mjs docs/5.1.0-plan.md | FE-01 slash/消息 toast、QA-01 composer Enter e2e

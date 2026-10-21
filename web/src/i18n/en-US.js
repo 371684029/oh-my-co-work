@@ -1,5 +1,9 @@
 /** English strings (DSK-08 partial; extend as pages migrate off hard-coded copy). */
 export const strings = {
+  common: {
+    confirm: 'OK',
+    cancel: 'Cancel',
+  },
   a11y: {
     skipToMain: 'Skip to main content',
     settingsNav: 'Settings navigation',
@@ -76,6 +80,46 @@ export const strings = {
       executed: 'Ran /{slash}',
       notFound: 'Unknown command /{token}. Configure it under Settings → Slash / hotkeys.',
       agentInsert: 'Please assist, {name}: ',
+      urlPromptDefault: 'Open URL',
+    },
+    composer: {
+      empty: 'Composer is empty',
+      copySuccess: 'Copied',
+      copyFailed: 'Copy failed',
+    },
+    announce: {
+      openHint: 'Open {path}',
+      openHintDefault: 'Open group report Markdown',
+      openedPath: 'Opened {path}',
+      openedDefault: 'Opened group report',
+      openFailed: 'Could not open',
+      refreshed: 'Group report refreshed',
+      refreshFailed: 'Refresh failed',
+    },
+    notes: {
+      saved: 'Notes saved',
+      saveFailed: 'Could not save notes',
+    },
+    adapter: {
+      answered: 'Answered tool question',
+    },
+    conv: {
+      unrecognized: 'Could not identify session',
+      renameTitle: 'Rename',
+      renameInput: 'Chat title',
+      renamed: 'Renamed',
+    },
+    hash: {
+      itemFallback: 'This item',
+      emptyInsert: 'Nothing to insert for “{name}”',
+    },
+    delete: {
+      noSession: 'No session to delete',
+      title: 'Delete',
+      message: 'Delete this chat? This cannot be undone.',
+      confirm: 'Delete',
+      success: 'Deleted',
+      failed: 'Delete failed',
     },
     message: {
       needSession: 'Select a session first',

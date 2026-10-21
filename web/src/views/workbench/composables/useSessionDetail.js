@@ -51,6 +51,7 @@ import {
   slashCommandNotFoundMessage,
   slashNeedsUrlPrompt,
   slashRunSuccessMessage,
+  slashUrlPromptDefault,
 } from './sessionSlashRunUi.js'
 import {
   mainGateWaitingInfoMessage,
@@ -67,6 +68,27 @@ import {
   restartFromNodeSuccessMessage,
   restartOffsiteBlockedMessage,
 } from './sessionFlowRestartUi.js'
+import {
+  adapterAnsweredMessage,
+  announceMdHintLabel,
+  announceOpenFailedMessage,
+  announceOpenedMessage,
+  announceRefreshFailedMessage,
+  announceRefreshedMessage,
+  composerCopyFailedMessage,
+  composerCopySuccessMessage,
+  composerEmptyMessage,
+  convRenamePromptOptions,
+  convRenamedMessage,
+  convUnrecognizedSessionMessage,
+  deleteConfirmDialogOptions,
+  deleteFailedMessage,
+  deleteNoSessionMessage,
+  deleteSuccessMessage,
+  hashItemEmptyInsertMessage,
+  sessionNotesSaveFailedMessage,
+  sessionNotesSavedMessage,
+} from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -330,7 +352,7 @@ function clearSender() {
 async function copyComposerText() {
   const text = readSenderText()
   if (!text) {
-    ElMessage.warning('输入框为空')
+    ElMessage.warning(composerEmptyMessage())
     return
   }
   try {
@@ -347,9 +369,9 @@ async function copyComposerText() {
       document.execCommand('copy')
       document.body.removeChild(ta)
     }
-    ElMessage.success('已复制')
+    ElMessage.success(composerCopySuccessMessage())
   } catch (e) {
-    ElMessage.warning(e?.message || '复制失败')
+    ElMessage.warning(composerCopyFailedMessage(e))
   }
 }
 
@@ -599,7 +621,7 @@ const announceMdHint = computed(() => {
     (activeId.value
       ? `journals/sessions/${activeId.value}/ANNOUNCEMENT.md`
       : '')
-  return p ? `打开 ${p}` : '打开群报告 Markdown'
+  return announceMdHintLabel(p)
 })
 
 /** 用系统默认程序打开 ANNOUNCEMENT.md */
@@ -614,9 +636,9 @@ async function openAnnouncementMd() {
         path: r.path,
       }
     }
-    ElMessage.success(r?.absolutePath ? `已打开 ${r.absolutePath}` : '已打开群报告 MD')
+    ElMessage.success(announceOpenedMessage(r?.absolutePath))
   } catch (e) {
-    ElMessage.warning(e.message || '打开失败')
+    ElMessage.warning(announceOpenFailedMessage(e))
   } finally {
     announceOpenLoading.value = false
   }
@@ -650,9 +672,9 @@ async function rebuildAnnouncement() {
   try {
     await api.sessions.refreshAnnouncement(activeId.value, { modes: ['io'] })
     await loadDetail(activeId.value)
-    ElMessage.success('群报告已刷新')
+    ElMessage.success(announceRefreshedMessage())
   } catch (e) {
-    ElMessage.error(e.message || '刷新失败')
+    ElMessage.error(announceRefreshFailedMessage(e))
   } finally {
     announceLoading.value = false
   }
@@ -670,9 +692,9 @@ async function saveSessionNotes() {
         notes: sessionNotesDraft.value,
       }
     }
-    ElMessage.success('备注已保存')
+    ElMessage.success(sessionNotesSavedMessage())
   } catch (e) {
-    ElMessage.error(e.message || '保存备注失败')
+    ElMessage.error(sessionNotesSaveFailedMessage(e))
   } finally {
     notesSaving.value = false
   }
@@ -693,7 +715,7 @@ async function answerAdapterQuestion(m, choice, action = 'adapter_answer') {
     })
     clearSender()
     await loadDetail(activeId.value)
-    ElMessage.success('已回答工具提问')
+    ElMessage.success(adapterAnsweredMessage())
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -728,7 +750,7 @@ async function onConvMenu(command, item) {
   const action = convMenuActionFromCommand(cmd)
   const id = sessionIdFromConvItem(item)
   if (!id) {
-    ElMessage.warning('无法识别该会话')
+    ElMessage.warning(convUnrecognizedSessionMessage())
     return
   }
   if (action === 'pin') {
@@ -749,17 +771,18 @@ async function onConvMenu(command, item) {
         sessions.value.find((s) => s.id === id)?.title ||
         (detail.value?.session?.id === id ? detail.value.session.title : '') ||
         ''
-      const { value } = await ElMessageBox.prompt('聊天名称', '重命名', {
-        inputValue: current,
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
+      const renameOpts = convRenamePromptOptions(current)
+      const { value } = await ElMessageBox.prompt(renameOpts.message, renameOpts.title, {
+        inputValue: renameOpts.inputValue,
+        confirmButtonText: renameOpts.confirmButtonText,
+        cancelButtonText: renameOpts.cancelButtonText,
       })
       if (value?.trim()) {
         await api.sessions.rename(id, value.trim())
         if (activeId.value === id) editTitle.value = value.trim()
         sessions.value = await api.sessions.list()
         if (detail.value?.session?.id === id) await loadDetail(id)
-        ElMessage.success('已重命名')
+        ElMessage.success(convRenamedMessage())
       }
     } catch {
       /* 取消 */
@@ -1055,7 +1078,7 @@ async function insertHashItem(h) {
   useComposerStore().hashQuery = ''
   if (!insert) {
     await replaceSenderText(stripped)
-    ElMessage.warning(`${h.name || h.label || '该项'}暂无内容可插入`)
+    ElMessage.warning(hashItemEmptyInsertMessage(h.name || h.label))
     return
   }
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
@@ -1161,7 +1184,7 @@ async function runSlash(cmd) {
   try {
     let url
     if (slashNeedsUrlPrompt(cmd)) {
-      const { value } = await ElMessageBox.prompt(cmd.description || '打开网址', cmd.name, {
+      const { value } = await ElMessageBox.prompt(cmd.description || slashUrlPromptDefault(), cmd.name, {
         inputValue: cmd.url || 'https://',
       })
       url = value
@@ -1366,13 +1389,12 @@ async function rename() {
 async function doDelete(targetId) {
   const id = resolveSessionId(targetId, activeId.value)
   if (!id) {
-    ElMessage.warning('没有可删除的会话')
+    ElMessage.warning(deleteNoSessionMessage())
     return
   }
+  const deleteOpts = deleteConfirmDialogOptions()
   const ok = await acwConfirm('session.delete', {
-    title: '删除',
-    message: '确认删除该聊天？不可恢复',
-    confirmButtonText: '删除',
+    ...deleteOpts,
     type: 'warning',
   })
   if (!ok) return
@@ -1387,9 +1409,9 @@ async function doDelete(targetId) {
       activeId.value = ''
       _router.replace('/workbench')
     }
-    ElMessage.success('已删除')
+    ElMessage.success(deleteSuccessMessage())
   } catch (e) {
-    ElMessage.error(e.message || '删除失败')
+    ElMessage.error(deleteFailedMessage(e))
   }
 }
 

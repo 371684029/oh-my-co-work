@@ -2,6 +2,10 @@
  * I18N-01: user-visible strings (Chinese primary; extend with en-US later).
  */
 export const strings = {
+  common: {
+    confirm: '确定',
+    cancel: '取消',
+  },
   a11y: {
     skipToMain: '跳到主内容',
     settingsNav: '设置导航',
@@ -78,6 +82,46 @@ export const strings = {
       executed: '已执行 /{slash}',
       notFound: '未找到指令 /{token}，可在 设置 → 斜杠 / 快捷键 中配置',
       agentInsert: '请【{name}】协助处理：',
+      urlPromptDefault: '打开网址',
+    },
+    composer: {
+      empty: '输入框为空',
+      copySuccess: '已复制',
+      copyFailed: '复制失败',
+    },
+    announce: {
+      openHint: '打开 {path}',
+      openHintDefault: '打开群报告 Markdown',
+      openedPath: '已打开 {path}',
+      openedDefault: '已打开群报告 MD',
+      openFailed: '打开失败',
+      refreshed: '群报告已刷新',
+      refreshFailed: '刷新失败',
+    },
+    notes: {
+      saved: '备注已保存',
+      saveFailed: '保存备注失败',
+    },
+    adapter: {
+      answered: '已回答工具提问',
+    },
+    conv: {
+      unrecognized: '无法识别该会话',
+      renameTitle: '重命名',
+      renameInput: '聊天名称',
+      renamed: '已重命名',
+    },
+    hash: {
+      itemFallback: '该项',
+      emptyInsert: '{name} 暂无内容可插入',
+    },
+    delete: {
+      noSession: '没有可删除的会话',
+      title: '删除',
+      message: '确认删除该聊天？不可恢复',
+      confirm: '删除',
+      success: '已删除',
+      failed: '删除失败',
     },
     message: {
       needSession: '请先选择会话',
