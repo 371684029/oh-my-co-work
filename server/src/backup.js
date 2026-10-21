@@ -5,7 +5,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
-import { cp, mkdir, rm } from 'node:fs/promises'
+import { cp } from 'node:fs/promises'
+import { moveLiveAsideAsync, moveLiveAsideSync } from './backup/moveLiveAside.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -560,17 +561,8 @@ function applyRestoreWorkSync({ work, ownWork, entry, pre, initDbFn, checkSqlite
     'backups',
     `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${String(d.getMilliseconds()).padStart(3, '0')}`,
   )
-  fs.mkdirSync(aside, { recursive: true })
-  const moveAside = (rel) => {
-    const src = path.join(DATA_ROOT, rel)
-    if (fs.existsSync(src)) {
-      fs.cpSync(src, path.join(aside, rel), { recursive: true })
-      fs.rmSync(src, { recursive: true, force: true })
-    }
-  }
-
   try {
-    for (const rel of LIVE_RELS) moveAside(rel)
+    moveLiveAsideSync(DATA_ROOT, aside, LIVE_RELS)
     applyLive(work)
     initDbFn()
     return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
@@ -636,17 +628,8 @@ async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, chec
     'backups',
     `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${String(d.getMilliseconds()).padStart(3, '0')}`,
   )
-  await mkdir(aside, { recursive: true })
-  const moveAsideAsync = async (rel) => {
-    const src = path.join(DATA_ROOT, rel)
-    if (fs.existsSync(src)) {
-      await cp(src, path.join(aside, rel), { recursive: true })
-      await rm(src, { recursive: true, force: true })
-    }
-  }
-
   try {
-    for (const rel of LIVE_RELS) await moveAsideAsync(rel)
+    await moveLiveAsideAsync(DATA_ROOT, aside, LIVE_RELS)
     await applyLive(work)
     initDbFn()
     return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
