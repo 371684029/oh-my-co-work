@@ -12,6 +12,12 @@ import {
   restoreFromAsideAsync,
   restoreFromAsideSync,
 } from './backup/moveLiveAside.js'
+import {
+  copyLiveSqliteAsync,
+  copyLiveSqliteSync,
+  stageJournalsAndUploadsAsync,
+  stageJournalsAndUploadsSync,
+} from './backup/stagingWork.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -117,30 +123,8 @@ export function createBackup(opts = {}) {
   if (!fs.existsSync(liveDb)) {
     throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
   }
-  fs.copyFileSync(liveDb, dbCopy)
-  // checkpoint 后通常无 wal/shm；若仍有则一并拷
-  for (const suf of ['-wal', '-shm']) {
-    const side = liveDb + suf
-    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
-      fs.copyFileSync(side, dbCopy + suf)
-    }
-  }
-
-  const journalsSrc = path.join(DATA_ROOT, 'journals')
-  const journalsDst = path.join(work, 'journals')
-  if (fs.existsSync(journalsSrc)) {
-    fs.cpSync(journalsSrc, journalsDst, { recursive: true })
-  } else {
-    fs.mkdirSync(journalsDst, { recursive: true })
-  }
-
-  if (opts.includeUploads !== false) {
-    const upSrc = path.join(DATA_ROOT, 'uploads')
-    const upDst = path.join(work, 'uploads')
-    if (fs.existsSync(upSrc)) {
-      fs.cpSync(upSrc, upDst, { recursive: true })
-    }
-  }
+  copyLiveSqliteSync(liveDb, dbCopy)
+  stageJournalsAndUploadsSync(work, DATA_ROOT, { includeUploads: opts.includeUploads })
 
   const meta = {
     createdAt: new Date().toISOString(),
@@ -211,27 +195,8 @@ export async function createBackupAsync(opts = {}) {
   if (!fs.existsSync(liveDb)) {
     throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
   }
-  await cp(liveDb, dbCopy)
-  for (const suf of ['-wal', '-shm']) {
-    const side = liveDb + suf
-    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
-      await cp(side, dbCopy + suf)
-    }
-  }
-
-  const journalsSrc = path.join(DATA_ROOT, 'journals')
-  const journalsDst = path.join(work, 'journals')
-  if (fs.existsSync(journalsSrc)) {
-    await copyTreeAsync(journalsSrc, journalsDst)
-  } else {
-    fs.mkdirSync(journalsDst, { recursive: true })
-  }
-
-  if (opts.includeUploads !== false) {
-    const upSrc = path.join(DATA_ROOT, 'uploads')
-    const upDst = path.join(work, 'uploads')
-    await copyTreeAsync(upSrc, upDst)
-  }
+  await copyLiveSqliteAsync(liveDb, dbCopy)
+  await stageJournalsAndUploadsAsync(work, DATA_ROOT, { includeUploads: opts.includeUploads })
 
   const meta = {
     createdAt: new Date().toISOString(),

@@ -28,7 +28,7 @@ import {
   adapterChoices,
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
-import { formatSessionTime } from './sessionFormatUtils.js'
+import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
   computeFlowHistorySplitIndex,
@@ -752,15 +752,8 @@ function toggleNodeExpand(n) {
   useFlowStore().expandedNodeId = useFlowStore().expandedNodeId === n.id ? null : n.id
 }
 
-/** 流程轨 I/O：业务摘要（用户输入 / 完成概况），不堆 id·路径·命令 */
 function formatIo(val, role = 'auto') {
-  try {
-    return formatBusinessIo(val, role)
-  } catch {
-    if (val == null) return '（无）'
-    if (typeof val === 'string') return val || '（空）'
-    return '（无业务摘要）'
-  }
+  return formatSessionIo(val, role)
 }
 
 async function loadLists() {

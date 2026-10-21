@@ -3,11 +3,10 @@ import path from 'node:path'
 import * as pty from 'node-pty'
 import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
-import { emitSession, emitTerminalOutput, setWsTerminalAttach } from '../bus.js'
-import { quotaLimits, redactOpts } from './quota.js'
+import { setWsTerminalAttach } from '../bus.js'
+import { quotaLimits } from './quota.js'
 import { publicTerminal } from './publicTerminal.js'
 import { normalizePtyLaunch, resolveWindowsExecutable } from './ptyLaunch.js'
-import { redactText } from './redact.js'
 import {
   appendAdapterReply,
   defaultAdapterPaths,
@@ -26,12 +25,12 @@ import {
   readTerminalLogPath as readTerminalLogPathImpl,
   readTerminalLogPreview as readTerminalLogPreviewImpl,
 } from './terminalLog.js'
+import { emitTerminal, flushOutput, queueOutput } from './terminalOutput.js'
 
 export { normalizePtyLaunch, resolveWindowsExecutable }
 
 const terminals = new Map()
 
-const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
 const RETAIN_FINISHED_GLOBAL = 200
 
@@ -98,70 +97,6 @@ function persistTerminal(entry) {
     )
   } catch {
     /* tests may run without sqlite tables */
-  }
-}
-
-function appendReplay(entry, data) {
-  const maxChars = quotaLimits().maxReplayChars
-  entry.replay += data
-  if (entry.replay.length > maxChars) {
-    entry.replay = entry.replay.slice(-maxChars)
-    entry.replayTruncated = true
-  }
-}
-
-function emitTerminal(entry, type, payload = {}) {
-  emitSession(entry.sessionId, {
-    type,
-    payload: {
-      terminalId: entry.id,
-      ...payload,
-    },
-  })
-}
-
-function emitTerminalStream(entry, payload = {}) {
-  emitTerminalOutput(entry.sessionId, entry.id, {
-    type: 'terminal.output',
-    payload: {
-      terminalId: entry.id,
-      ...payload,
-    },
-  })
-}
-
-function flushOutput(entry) {
-  entry.flushTimer = null
-  if (!entry.pendingOutput) return
-  const data = entry.pendingOutput
-  entry.pendingOutput = ''
-  entry.seq += 1
-  emitTerminalStream(entry, { seq: entry.seq, data })
-}
-
-function queueOutput(entry, data) {
-  const text = String(data || '')
-  if (!text) return
-  // 实时回放 / WebSocket 保持原文，避免脱敏改字节长度弄乱 TUI。
-  appendReplay(entry, text)
-  entry.pendingOutput += text
-  if (entry.logStream && !entry.logTruncated) {
-    const logged = redactText(text, redactOpts())
-    const maxLog = quotaLimits().maxLogBytes
-    const bytes = Buffer.byteLength(logged)
-    const remaining = maxLog - entry.logBytes
-    if (remaining > 0) {
-      const chunk = bytes <= remaining ? logged : Buffer.from(logged).subarray(0, remaining)
-      entry.logStream.write(chunk)
-      entry.logBytes += Math.min(bytes, remaining)
-    }
-    if (bytes > remaining) {
-      entry.logTruncated = true
-      entry.logStream.write('\n[oh-my-co-work] terminal log truncated\n')
-    }
-  }
-  if (!entry.flushTimer) {
-    entry.flushTimer = setTimeout(() => flushOutput(entry), OUTPUT_BATCH_MS)
   }
 }
 
