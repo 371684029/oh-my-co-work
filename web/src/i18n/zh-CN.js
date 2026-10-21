@@ -80,6 +80,28 @@ export const strings = {
       emptyTip: '跑完一个群流程后，群报告与节点台账会自动出现在左侧列表。',
     },
     unpinTitle: '取消固定',
+    reading: {
+      themeLight: '浅色',
+      themeDark: '深色',
+      focus: '专注',
+      exitFocus: '退出专注',
+    },
+    actions: {
+      edit: '编辑',
+      save: '保存',
+      cancel: '取消',
+      readonlyHint: '台账为只读（审计留痕）',
+      codeLineNumbers: '代码行号',
+      pinDoc: '固定',
+      unpinDoc: '取消固定',
+      exportHtml: '导出 HTML',
+      exportPdf: '导出 PDF',
+    },
+    inDoc: {
+      prev: '上一个',
+      next: '下一个',
+      close: '关闭',
+    },
     sortByGroup: '按群模板',
     sortByTime: '按时间',
     timeRange: {

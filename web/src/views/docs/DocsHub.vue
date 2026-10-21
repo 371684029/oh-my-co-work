@@ -298,9 +298,9 @@
 
           <div v-if="inDocSearch && inDocMarkTotal && !editing" class="dh-in-doc-search">
             <span class="dh-in-doc-search-label">正文「{{ inDocSearch.query }}」· {{ inDocSearchLabel }}</span>
-            <el-button size="small" @click="stepInDocSearchMark(-1)">上一个</el-button>
-            <el-button size="small" @click="stepInDocSearchMark(1)">下一个</el-button>
-            <el-button size="small" link type="info" @click="clearInDocSearch">关闭</el-button>
+            <el-button size="small" @click="stepInDocSearchMark(-1)">{{ docsHubInDocPrevLabel() }}</el-button>
+            <el-button size="small" @click="stepInDocSearchMark(1)">{{ docsHubInDocNextLabel() }}</el-button>
+            <el-button size="small" link type="info" @click="clearInDocSearch">{{ docsHubInDocCloseLabel() }}</el-button>
           </div>
 
           <div v-if="!editing" class="dh-reading-bar">
@@ -317,7 +317,7 @@
               @change="setReadingFontScale"
             />
             <el-button size="small" plain @click="toggleReadingTheme">
-              {{ readingPrefs.theme === 'dark' ? '浅色' : '深色' }}
+              {{ docsHubReadingThemeLabel(readingPrefs.theme) }}
             </el-button>
             <el-button
               size="small"
@@ -325,23 +325,23 @@
               plain
               @click="toggleReadingFocus"
             >
-              {{ readingPrefs.focus ? '退出专注' : '专注' }}
+              {{ docsHubReadingFocusLabel(readingPrefs.focus) }}
             </el-button>
           </div>
 
           <div class="dh-content-actions">
             <template v-if="canEdit">
               <el-button v-if="!editing" size="small" type="primary" @click="startEdit">
-                编辑
+                {{ docsHubEditLabel() }}
               </el-button>
               <template v-else>
                 <el-button size="small" type="primary" :loading="saving" @click="save">
-                  保存
+                  {{ docsHubSaveLabel() }}
                 </el-button>
-                <el-button size="small" :disabled="saving" @click="cancelEdit">取消</el-button>
+                <el-button size="small" :disabled="saving" @click="cancelEdit">{{ docsHubCancelLabel() }}</el-button>
               </template>
             </template>
-            <span v-else class="dh-readonly-hint">台账为只读（审计留痕）</span>
+            <span v-else class="dh-readonly-hint">{{ docsHubReadonlyHint() }}</span>
             <el-button
               v-if="!editing && file"
               size="small"
@@ -349,7 +349,7 @@
               plain
               @click="toggleCodeLineNumbers"
             >
-              代码行号
+              {{ docsHubCodeLineNumbersLabel() }}
             </el-button>
             <el-button
               v-if="current && file && !editing"
@@ -358,13 +358,13 @@
               :type="isCurrentPinned() ? 'primary' : 'default'"
               @click="pinCurrentDoc"
             >
-              {{ isCurrentPinned() ? '取消固定' : '固定' }}
+              {{ docsHubPinDocLabel(isCurrentPinned()) }}
             </el-button>
             <el-button v-if="file && !editing" size="small" plain @click="onExportHtml">
-              导出 HTML
+              {{ docsHubExportHtmlLabel() }}
             </el-button>
             <el-button v-if="file && !editing" size="small" plain @click="onExportPrint">
-              导出 PDF
+              {{ docsHubExportPdfLabel() }}
             </el-button>
           </div>
 
@@ -558,6 +558,19 @@ import {
   docsHubWelcomeSelectTitle,
   docsHubWelcomeEmptyTip,
   docsHubUnpinTitle,
+  docsHubReadingThemeLabel,
+  docsHubReadingFocusLabel,
+  docsHubEditLabel,
+  docsHubSaveLabel,
+  docsHubCancelLabel,
+  docsHubReadonlyHint,
+  docsHubCodeLineNumbersLabel,
+  docsHubPinDocLabel,
+  docsHubExportHtmlLabel,
+  docsHubExportPdfLabel,
+  docsHubInDocPrevLabel,
+  docsHubInDocNextLabel,
+  docsHubInDocCloseLabel,
 } from './docsHubCopy.js'
 
 const route = useRoute()

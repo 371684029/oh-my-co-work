@@ -101,3 +101,55 @@ export function docsHubWelcomeEmptyTip() {
 export function docsHubUnpinTitle() {
   return t('docs.unpinTitle')
 }
+
+export function docsHubReadingThemeLabel(theme) {
+  return theme === 'dark' ? t('docs.reading.themeLight') : t('docs.reading.themeDark')
+}
+
+export function docsHubReadingFocusLabel(focus) {
+  return focus ? t('docs.reading.exitFocus') : t('docs.reading.focus')
+}
+
+export function docsHubEditLabel() {
+  return t('docs.actions.edit')
+}
+
+export function docsHubSaveLabel() {
+  return t('docs.actions.save')
+}
+
+export function docsHubCancelLabel() {
+  return t('docs.actions.cancel')
+}
+
+export function docsHubReadonlyHint() {
+  return t('docs.actions.readonlyHint')
+}
+
+export function docsHubCodeLineNumbersLabel() {
+  return t('docs.actions.codeLineNumbers')
+}
+
+export function docsHubPinDocLabel(pinned) {
+  return pinned ? t('docs.actions.unpinDoc') : t('docs.actions.pinDoc')
+}
+
+export function docsHubExportHtmlLabel() {
+  return t('docs.actions.exportHtml')
+}
+
+export function docsHubExportPdfLabel() {
+  return t('docs.actions.exportPdf')
+}
+
+export function docsHubInDocPrevLabel() {
+  return t('docs.inDoc.prev')
+}
+
+export function docsHubInDocNextLabel() {
+  return t('docs.inDoc.next')
+}
+
+export function docsHubInDocCloseLabel() {
+  return t('docs.inDoc.close')
+}

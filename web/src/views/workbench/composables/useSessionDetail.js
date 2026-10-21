@@ -26,6 +26,11 @@ import {
   pickSlashCommandOnSubmit,
   shouldSubmitHumanGate,
 } from './sessionSenderSubmitUi.js'
+import {
+  convMenuActionFromCommand,
+  normalizeMenuCommand,
+  sessionIdFromConvItem,
+} from './sessionConvMenuUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -665,15 +670,6 @@ function onConvChange(item) {
   if (id) selectSession(id)
 }
 
-function normalizeMenuCommand(command) {
-  if (command == null) return ''
-  if (typeof command === 'string' || typeof command === 'number') return String(command)
-  if (typeof command === 'object') {
-    return String(command.command ?? command.key ?? command.value ?? '')
-  }
-  return String(command)
-}
-
 async function togglePin(id, pinned) {
   if (!id) return
   try {
@@ -693,24 +689,25 @@ async function togglePin(id, pinned) {
 
 async function onConvMenu(command, item) {
   const cmd = normalizeMenuCommand(command)
-  const id = item?.uniqueKey || item?.id || item?.key
+  const action = convMenuActionFromCommand(cmd)
+  const id = sessionIdFromConvItem(item)
   if (!id) {
     ElMessage.warning('无法识别该会话')
     return
   }
-  if (cmd === 'pin' || cmd === '置顶') {
+  if (action === 'pin') {
     await togglePin(id, true)
     return
   }
-  if (cmd === 'unpin' || cmd === '取消置顶') {
+  if (action === 'unpin') {
     await togglePin(id, false)
     return
   }
-  if (cmd === 'delete' || cmd === '删除') {
+  if (action === 'delete') {
     await doDelete(id)
     return
   }
-  if (cmd === 'rename' || cmd === '重命名') {
+  if (action === 'rename') {
     try {
       const current =
         sessions.value.find((s) => s.id === id)?.title ||
