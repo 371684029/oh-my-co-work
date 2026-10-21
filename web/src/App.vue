@@ -1,6 +1,6 @@
 <template>
   <div ref="appRoot" class="ecw-layout" :class="{ 'reduce-effects': reduceEffects }">
-    <a class="skip-link" href="#main-content">跳到主内容</a>
+    <a class="skip-link" href="#main-content">{{ t('a11y.skipToMain') }}</a>
     <header class="ecw-topbar" :class="{ 'is-docs-topbar': isDocsRoute }">
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
@@ -196,6 +196,7 @@ import {
 } from './composables/furnaceUi.js'
 import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
+import { t } from './i18n/zh-CN.js'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'

@@ -75,6 +75,22 @@ async function main() {
     assert.equal(health.status, 200)
     const h = await health.json()
     assert.equal(h.ok, true)
+
+    const origin = base
+    const boot = await fetch(`${base}/api/bootstrap`, {
+      method: 'POST',
+      headers: { Origin: origin },
+    })
+    assert.equal(boot.status, 200)
+    const { token } = await boot.json()
+    assert.ok(token)
+    const backups = await fetch(`${base}/api/update/backups`, {
+      headers: { 'X-ACW-Token': token, Origin: origin },
+    })
+    assert.equal(backups.status, 200)
+    const list = await backups.json()
+    assert.ok(Array.isArray(list.backups))
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})
