@@ -77,6 +77,7 @@ import {
   nextSkippedFlowGroupExpansion,
 } from './sessionFlowNavUi.js'
 import { nextGateIdempotencyKey } from './sessionGateIdempotency.js'
+import { cyclePickerIndex } from './sessionComposerPickerUi.js'
 import {
   computeNeedsHuman,
   announceKickoffFromContext,
@@ -858,13 +859,21 @@ function onComposerKeydown(e) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (!list.length) return
-      useComposerStore().hashIndex = (useComposerStore().hashIndex + 1) % list.length
+      useComposerStore().hashIndex = cyclePickerIndex(
+        useComposerStore().hashIndex,
+        1,
+        list.length,
+      )
       return
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!list.length) return
-      useComposerStore().hashIndex = (useComposerStore().hashIndex - 1 + list.length) % list.length
+      useComposerStore().hashIndex = cyclePickerIndex(
+        useComposerStore().hashIndex,
+        -1,
+        list.length,
+      )
       return
     }
     if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
@@ -895,13 +904,13 @@ function onComposerKeydown(e) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (!total) return
-      useComposerStore().atIndex = (useComposerStore().atIndex + 1) % total
+      useComposerStore().atIndex = cyclePickerIndex(useComposerStore().atIndex, 1, total)
       return
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!total) return
-      useComposerStore().atIndex = (useComposerStore().atIndex - 1 + total) % total
+      useComposerStore().atIndex = cyclePickerIndex(useComposerStore().atIndex, -1, total)
       return
     }
     if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
@@ -942,13 +951,13 @@ function onComposerKeydown(e) {
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     if (!list.length) return
-    useComposerStore().slashIndex = (useComposerStore().slashIndex + 1) % list.length
+    useComposerStore().slashIndex = cyclePickerIndex(useComposerStore().slashIndex, 1, list.length)
     return
   }
   if (e.key === 'ArrowUp') {
     e.preventDefault()
     if (!list.length) return
-    useComposerStore().slashIndex = (useComposerStore().slashIndex - 1 + list.length) % list.length
+    useComposerStore().slashIndex = cyclePickerIndex(useComposerStore().slashIndex, -1, list.length)
     return
   }
   if (e.key === 'Enter' && !e.shiftKey && list.length) {

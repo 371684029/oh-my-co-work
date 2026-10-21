@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/docs/{docsHubSessionUi,DocsHub.vue} web/src/views/workbench/composables/{sessionComposerPickerUi,useSessionDetail} web/src/views/settings/SettingsLayout.vue web/src/i18n/{zh-CN,en-US}.js packages/README.md web/test/{docsHubSessionUi,sessionComposerPickerUi}.test.mjs docs/5.1.0-plan.md | FE-01 DocsHub/composer、DSK-08 设置菜单 i18n、DESK-07 README
 2026-10-21 | A/M | web/src/composables/{furnaceWorkspacePresentation,useFurnaceWorkspace} web/src/views/settings/SettingsLayout.vue web/test/furnaceWorkspacePresentation.test.mjs server/test/backupRestore.test.js web/src/i18n/{zh-CN,en-US}.js docs/5.1.0-plan.md | FE-01 熔炉文案、SRV-01 async 单测、UX-03 设置布局 aria
 2026-10-21 | A/M | web/src/i18n/index.js web/src/{main,App}.vue web/src/views/settings/Prefs.vue scripts/ci-e2e-smoke.mjs web/test/i18n.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08 locale 切换、QA-01 terminals API smoke
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionListUi,sessionBubbleListUi,useSessionDetail} web/src/views/settings/Shortcuts.vue scripts/ci-e2e-smoke.mjs server/test/backupRestore.test.js web/test/{sessionListUi,sessionBubbleListUi}.test.mjs docs/5.1.0-plan.md | FE-01 列表/气泡、SRV-01 async 往返测、QA-01 sessions smoke、UX-03 Shortcuts
