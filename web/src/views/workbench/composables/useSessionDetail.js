@@ -1,5 +1,5 @@
 import { ref, computed, watch, nextTick } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import {
   formatBusinessIo,
   wholeOutputText,
@@ -17,30 +17,11 @@ import {
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
-import {
-  convMenuActionFromCommand,
-  normalizeMenuCommand,
-  sessionIdFromConvItem,
-} from './sessionConvMenuUi.js'
 import { resolveSessionId } from './sessionActionUi.js'
-import {
-  parseStartTarget,
-  startChatFailedMessage,
-  startChatNeedTargetMessage,
-  startChatSuccessMessage,
-} from './sessionStartChatUi.js'
-import {
-  DEMO_FLOW_GROUP_TITLE,
-  demoFlowLoadFailedMessage,
-  demoFlowMissingMessage,
-  findGroupByTitle,
-} from './sessionDemoFlowUi.js'
-import { t } from '../../../i18n/index.js'
+import { createSessionConvActions } from './sessionConvActions.js'
+import { createSessionStartChatActions } from './sessionStartChatActions.js'
+import { createSessionNotesActions } from './sessionNotesActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
-import {
-  sessionPinFailedMessage,
-  sessionPinSuccessMessage,
-} from './sessionPinFeedbackUi.js'
 import {
   restartArchiveBlockedMessage,
   restartFromNodeSuccessMessage,
@@ -55,16 +36,11 @@ import {
   composerCopyFailedMessage,
   composerCopySuccessMessage,
   composerEmptyMessage,
-  convRenamePromptOptions,
-  convRenamedMessage,
-  convUnrecognizedSessionMessage,
   deleteConfirmDialogOptions,
   deleteFailedMessage,
   deleteNoSessionMessage,
   deleteSuccessMessage,
   hashItemEmptyInsertMessage,
-  sessionNotesSaveFailedMessage,
-  sessionNotesSavedMessage,
 } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
@@ -664,142 +640,39 @@ async function rebuildAnnouncement() {
   }
 }
 
-async function saveSessionNotes() {
-  if (!activeId.value) return
-  notesSaving.value = true
-  try {
-    const r = await api.sessions.saveNotes(activeId.value, sessionNotesDraft.value)
-    sessionNotesDraft.value = r.notes ?? sessionNotesDraft.value
-    if (detail.value?.session) {
-      detail.value.session.context = {
-        ...(detail.value.session.context || {}),
-        notes: sessionNotesDraft.value,
-      }
-    }
-    ElMessage.success(sessionNotesSavedMessage())
-  } catch (e) {
-    ElMessage.error(sessionNotesSaveFailedMessage(e))
-  } finally {
-    notesSaving.value = false
-  }
-}
-
 function onConvChange(item) {
   const id = item?.uniqueKey || item?.id
   if (id) selectSession(id)
 }
 
-async function togglePin(id, pinned) {
-  if (!id) return
-  try {
-    const s = await api.sessions.pin(id, pinned)
-    sessions.value = await api.sessions.list()
-    if (detail.value?.session?.id === id) {
-      detail.value = {
-        ...detail.value,
-        session: { ...detail.value.session, pinned: !!s?.pinned },
-      }
-    }
-    ElMessage.success(sessionPinSuccessMessage(pinned))
-  } catch (e) {
-    ElMessage.error(sessionPinFailedMessage(e))
-  }
-}
+const deleteSessionRef = { doDelete: async () => {} }
 
-async function onConvMenu(command, item) {
-  const cmd = normalizeMenuCommand(command)
-  const action = convMenuActionFromCommand(cmd)
-  const id = sessionIdFromConvItem(item)
-  if (!id) {
-    ElMessage.warning(convUnrecognizedSessionMessage())
-    return
-  }
-  if (action === 'pin') {
-    await togglePin(id, true)
-    return
-  }
-  if (action === 'unpin') {
-    await togglePin(id, false)
-    return
-  }
-  if (action === 'delete') {
-    await doDelete(id)
-    return
-  }
-  if (action === 'rename') {
-    try {
-      const current =
-        sessions.value.find((s) => s.id === id)?.title ||
-        (detail.value?.session?.id === id ? detail.value.session.title : '') ||
-        ''
-      const renameOpts = convRenamePromptOptions(current)
-      const { value } = await ElMessageBox.prompt(renameOpts.message, renameOpts.title, {
-        inputValue: renameOpts.inputValue,
-        confirmButtonText: renameOpts.confirmButtonText,
-        cancelButtonText: renameOpts.cancelButtonText,
-      })
-      if (value?.trim()) {
-        await api.sessions.rename(id, value.trim())
-        if (activeId.value === id) editTitle.value = value.trim()
-        sessions.value = await api.sessions.list()
-        if (detail.value?.session?.id === id) await loadDetail(id)
-        ElMessage.success(convRenamedMessage())
-      }
-    } catch {
-      /* 取消 */
-    }
-  }
-}
+const { togglePin, onConvMenu } = createSessionConvActions({
+  sessions,
+  detail,
+  activeId,
+  editTitle,
+  loadDetail,
+  api,
+  deleteSessionRef,
+})
 
-async function startChat(opts = {}) {
-  const quiet = !!(opts && typeof opts === 'object' && !(opts instanceof Event) && opts.quiet)
-  const parsed = parseStartTarget(startTarget.value)
-  if (!parsed) {
-    ElMessage.warning(startChatNeedTargetMessage())
-    return
-  }
-  const { kind, id } = parsed
-  if (startingChat.value) return
-  startingChat.value = true
-  try {
-    const s =
-      kind === 'm:'
-        ? await api.members.startSession(id, {})
-        : await api.groups.startSession(id, {})
-    await loadLists()
-    await selectSession(s.id)
-    if (!quiet) {
-      ElMessage.success(startChatSuccessMessage(kind, s.reused))
-    }
-    return s
-  } catch (e) {
-    // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」
-    ElMessage.warning(startChatFailedMessage(e))
-  } finally {
-    startingChat.value = false
-  }
-}
+const { startChat, startDemoChat } = createSessionStartChatActions({
+  startTarget,
+  startingChat,
+  groups,
+  loadLists,
+  selectSession,
+  api,
+})
 
-/** 欢迎页：一键开聊演示流 */
-async function startDemoChat() {
-  if (startingChat.value) return
-  let demo = findGroupByTitle(groups.value, DEMO_FLOW_GROUP_TITLE)
-  if (!demo) {
-    try {
-      await loadLists()
-    } catch (e) {
-      ElMessage.warning(demoFlowLoadFailedMessage(e, t))
-      return
-    }
-    demo = findGroupByTitle(groups.value, DEMO_FLOW_GROUP_TITLE)
-  }
-  if (!demo) {
-    ElMessage.warning(demoFlowMissingMessage(t))
-    return
-  }
-  startTarget.value = `g:${demo.id}`
-  await startChat()
-}
+const { saveSessionNotes } = createSessionNotesActions({
+  activeId,
+  sessionNotesDraft,
+  detail,
+  notesSaving,
+  api,
+})
 
 function syncSlashFromInput() {
   const text = readSenderText()
@@ -1234,6 +1107,7 @@ async function doDelete(targetId) {
     ElMessage.error(deleteFailedMessage(e))
   }
 }
+deleteSessionRef.doDelete = doDelete
 
 // ===== 生命周期（Workbench 装配层调用）=====
 
