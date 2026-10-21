@@ -4,25 +4,52 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.resolve(__dirname, '..')
 const baselinePath = path.join(root, 'server/test/fixtures/perf-baseline.json')
+const scriptPath = fileURLToPath(import.meta.url)
 
 const THRESHOLD_RATIO = 2.5
 
-async function sampleDbInit() {
+/** Fresh Node process so ACW_DATA_ROOT is read before db.js loads. */
+function sampleDbInitMsInChild() {
+  const dataRoot = fs.mkdtempSync(path.join(root, 'server/test/fixtures/.perf-'))
+  const r = spawnSync(process.execPath, [scriptPath, '--sample'], {
+    env: { ...process.env, ACW_DATA_ROOT: dataRoot },
+    encoding: 'utf8',
+  })
+  if (r.status !== 0) {
+    throw new Error(r.stderr || r.stdout || 'perf sample child failed')
+  }
+  const lines = String(r.stdout || '')
+    .trim()
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+  const ms = Number(lines.at(-1))
+  if (!Number.isFinite(ms)) throw new Error(`invalid sample ms: ${r.stdout}`)
+  return ms
+}
+
+async function runSampleMode() {
   const t0 = performance.now()
-  process.env.ACW_DATA_ROOT = fs.mkdtempSync(path.join(root, 'server/test/fixtures/.perf-'))
   const { initDb } = await import('../server/src/db.js')
   initDb()
-  return performance.now() - t0
+  process.stdout.write(String(performance.now() - t0))
 }
 
 async function main() {
-  const dbInitMs = await sampleDbInit()
+  if (process.argv.includes('--sample')) {
+    await runSampleMode()
+    return
+  }
+
+  sampleDbInitMsInChild()
+  const dbInitMs = sampleDbInitMsInChild()
   const samples = {
     recordedAt: new Date().toISOString(),
     node: process.version,
