@@ -153,6 +153,7 @@
       </ul>
       <template #footer>
         <el-button type="primary" @click="dismissFirstRun">开始探索</el-button>
+        <el-button @click="go('settings/wizard')">首次向导</el-button>
         <el-button @click="go('settings')">打开设置</el-button>
       </template>
     </el-dialog>

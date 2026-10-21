@@ -22,6 +22,7 @@
     "pack": "node scripts/pack-release.mjs",
     "pack:desktop-win": "node scripts/pack-release.mjs --desktop",
     "validate:packages": "node scripts/validate-release-packages.mjs",
+    "release:gate": "node scripts/release-gate.mjs",
     "build": "npm run build -w web",
     "lint": "eslint .",
     "test": "npm run test -w server",

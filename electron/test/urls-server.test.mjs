@@ -30,9 +30,16 @@ test('normalizeAppOrigin 拒绝非 http(s)', () => {
   assert.equal(normalizeAppOrigin('http://127.0.0.1:3799/foo'), 'http://127.0.0.1:3799')
 })
 
-test('desktopUpdateResult 从不报告成功', () => {
+test('desktopUpdateResult 需显式 action', () => {
   assert.deepEqual(desktopUpdateResult(null), { ok: false, reason: 'invalid-manifest' })
-  assert.deepEqual(desktopUpdateResult({ version: '5.0.0' }), { ok: false, reason: 'not-implemented' })
+  assert.deepEqual(desktopUpdateResult({ version: '5.0.0' }), { ok: false, reason: 'unknown-action' })
+})
+
+test('desktopUpdateResult status 可读 pending', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-upd-'))
+  const r = desktopUpdateResult({ action: 'status' }, { userDataRoot: dir })
+  assert.equal(r.ok, true)
+  assert.equal(r.pending, null)
 })
 
 test('readAppVersion 优先 about.json，回落到 package.json', () => {

@@ -7,6 +7,7 @@
         <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
         <el-menu-item index="/settings/shortcuts">斜杠 / 快捷键</el-menu-item>
         <el-menu-item index="/settings/snippets">提示词片段</el-menu-item>
+        <el-menu-item index="/settings/wizard">首次向导</el-menu-item>
       </el-menu>
 
       <div class="settings-side-divider" aria-hidden="true" />

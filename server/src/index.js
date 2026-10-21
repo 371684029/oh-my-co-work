@@ -34,6 +34,7 @@ import {
 } from './localAccess.js'
 
 import { applyAugmentedPath } from './pathEnv.js'
+import { startLocalScheduler } from './localScheduler.js'
 
 applyAugmentedPath()
 
@@ -206,6 +207,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`[acw] groups ${listGroups({ includeDemo: true }).length}, members ${listMembers({ includeDemo: true }).length}`)
   console.log(`[acw] lifecycle ${JSON.stringify(getLifecycleStatus())}`)
   startLifecycleWatch()
+  startLocalScheduler()
 })
 
 setExitHandler((reason) => {

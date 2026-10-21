@@ -30,10 +30,4 @@ export function docsHubUrl(base, sessionId, file = 'ANNOUNCEMENT.md') {
   return `${origin}/docs?${q.toString()}`
 }
 
-/** 桌面静默更新尚未实现：禁止返回成功。 */
-export function desktopUpdateResult(manifest) {
-  if (!manifest || typeof manifest !== 'object') {
-    return { ok: false, reason: 'invalid-manifest' }
-  }
-  return { ok: false, reason: 'not-implemented' }
-}
+export { desktopUpdateResult } from './desktopUpdate.mjs'

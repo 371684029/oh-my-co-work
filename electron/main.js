@@ -16,7 +16,9 @@ import process from 'node:process'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { desktopUpdateResult, docsHubUrl, workbenchUrl } from './lib/urls.mjs'
-import { splashDataUrl } from './lib/splash.mjs'
+import { splashDataUrl, setSplashStatus } from './lib/splash.mjs'
+import { resolveDefaultAcwDataRoot } from './lib/dataDir.mjs'
+import { consumeApplyOnQuit } from './lib/desktopUpdate.mjs'
 import { applyDesktopOpenState } from './lib/windowState.mjs'
 import {
   isServerUp,
@@ -29,7 +31,6 @@ import {
   stopChild,
   waitHealth,
 } from './lib/server.mjs'
-import { resolveDefaultAcwDataRoot } from './lib/dataDir.mjs'
 import { releaseAllResources } from './lib/shutdown.mjs'
 import { createNotifier, parseNotificationDeepLink } from './lib/notifier.mjs'
 
@@ -379,7 +380,12 @@ function registerIpc() {
     return shown
   })
 
-  ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) => desktopUpdateResult(manifest))
+  ipcMain.handle('acw:apply-desktop-update', (_evt, manifest) =>
+    desktopUpdateResult(manifest || {}, {
+      userDataRoot: resolveDefaultAcwDataRoot(),
+      appRoot,
+    }),
+  )
 
   ipcMain.handle('acw:minimize-to-tray', () => {
     if (!mainWindow) return false
@@ -510,8 +516,10 @@ if (!gotLock) {
       createTray()
       await createMainWindow()
       appendLog('splash window shown')
+      await setSplashStatus(mainWindow?.webContents, '正在启动本机服务…')
       await ensureServer()
       appendLog('server ready')
+      await setSplashStatus(mainWindow?.webContents, '正在加载工作台…')
       await loadWorkbench()
       appendLog('workbench loaded')
     } catch (e) {
@@ -539,6 +547,11 @@ app.on('before-quit', (event) => {
   isQuitting = true
   const port = Number(process.env.ACW_PORT || 3780)
   void releaseAllResources(port).finally(() => {
+    try {
+      consumeApplyOnQuit(resolveDefaultAcwDataRoot(), appRoot)
+    } catch {
+      /* ignore */
+    }
     stopChild(serverChild)
     serverChild = null
     app.exit(0)

@@ -969,19 +969,29 @@ function onResourcePageVisible() {
   if (document.visibilityState === 'visible') loadResources({ quiet: true })
 }
 
+let resetResourcePoll = null
+
 onMounted(() => {
   load()
   void loadDataDir()
   window.__ACW_DESKTOP_API__?.getNotificationPlatform?.().then((p) => {
     if (p && typeof p === 'object') notifyPlatform.value = p
   }).catch(() => {})
-  resourcePoll = window.setInterval(() => loadResources({ quiet: true }), 3000)
+  const pollMs = () => (typeof document !== 'undefined' && document.hidden ? 15_000 : 3000)
+  const tickResources = () => loadResources({ quiet: true })
+  resetResourcePoll = () => {
+    window.clearInterval(resourcePoll)
+    resourcePoll = window.setInterval(tickResources, pollMs())
+  }
+  resetResourcePoll()
+  document.addEventListener('visibilitychange', resetResourcePoll)
   document.addEventListener('visibilitychange', onResourcePageVisible)
   window.addEventListener('focus', onResourcePageVisible)
 })
 
 onUnmounted(() => {
   window.clearInterval(resourcePoll)
+  if (resetResourcePoll) document.removeEventListener('visibilitychange', resetResourcePoll)
   document.removeEventListener('visibilitychange', onResourcePageVisible)
   window.removeEventListener('focus', onResourcePageVisible)
 })

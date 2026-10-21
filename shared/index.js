@@ -1189,3 +1189,4 @@ export function formatScriptUserSummary({ ok, exitCode, stdout, stderr, label })
 // 4.6 全局模糊搜索：统一匹配器（shared/fuzzy）
 export * from "./fuzzy.js"
 export * from './stepParams.js'
+export * from './userFacingError.js'

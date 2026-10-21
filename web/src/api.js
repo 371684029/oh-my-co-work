@@ -1,3 +1,5 @@
+import { formatUserFacingError } from '@acw/shared'
+
 const BASE = '/api'
 let accessTokenPromise = null
 
@@ -35,7 +37,7 @@ async function req(path, options = {}) {
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    const err = new Error(data.error || res.statusText)
+    const err = new Error(formatUserFacingError({ message: data.error, code: data.code }, res.statusText))
     if (data.code) err.code = data.code
     if (data.conflicts) err.conflicts = data.conflicts
     err.status = res.status

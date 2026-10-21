@@ -25,6 +25,7 @@ import { runTerminal } from './terminal/terminalService.js'
 import { applyFurnaceGrokRuntime } from './furnaceSituation.js'
 import { composeMemberPrompt } from './promptSnippets.js'
 import { getAppSettings } from './appSettings.js'
+import { listAgentDefinitions } from './agentRegistry.js'
 
 /**
  * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
@@ -597,6 +598,14 @@ export async function runMember(
     )
 
     if (usesTerminalExecution(script)) {
+      let adapter = script.adapter || script.terminal?.adapter || null
+      if (!adapter && furnaceAgent) {
+        const def = listAgentDefinitions().find((d) => d.id === furnaceAgent)
+        if (def?.structuredAdapter === 'jsonl') adapter = 'jsonl'
+      }
+      if (script.sandbox?.readOnly === true) {
+        env.ACW_SANDBOX_READONLY = '1'
+      }
       return runTerminal({
         launch,
         cwd,
@@ -610,7 +619,7 @@ export async function runMember(
         stdinText: passStdin && humanInput != null ? String(humanInput) : script.stdinText || null,
         cols: isFurnaceMember(member) ? 120 : script.terminal?.cols,
         rows: isFurnaceMember(member) ? 40 : script.terminal?.rows,
-        adapter: script.adapter || script.terminal?.adapter || null,
+        adapter,
         furnaceAgent,
       })
     }

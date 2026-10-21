@@ -54,6 +54,8 @@ import {
   getDataDirStatus,
   migrateLegacyDataToCurrent,
 } from './dataDirMigration.js'
+import { listBundledSkills, installSkillPack } from './skillPack.js'
+import { tickLocalScheduler } from './localScheduler.js'
 import { listBuiltinTemplates, BUILTIN_TEMPLATES } from './builtinTemplates.js'
 import {
   exportMemberTemplate,
@@ -537,6 +539,25 @@ router.post('/system/migrate-data-dir', (_req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message })
   }
+})
+
+router.get('/skills/bundled', (_req, res) => {
+  res.json({ skills: listBundledSkills() })
+})
+router.post('/skills/install', (req, res) => {
+  try {
+    res.status(201).json(installSkillPack(req.body || {}))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/scheduler/tick', (_req, res) => {
+  res.json({ started: tickLocalScheduler() })
+})
+
+router.get('/mcp/connections', (_req, res) => {
+  res.json({ connections: getAppSettings().mcpConnections || [] })
 })
 
 router.get('/templates/builtin', (_req, res) => {

@@ -66,9 +66,17 @@
               <el-button v-if="updateResult.url" size="small" type="primary" plain @click="openUrl(updateResult.url)">
                 打开下载页
               </el-button>
+              <template v-if="isDesktop && updateResult.url">
+                <el-button size="small" :loading="updateDownloading" @click="downloadDesktopUpdate">
+                  下载到本机
+                </el-button>
+                <el-button size="small" type="warning" plain :loading="updateApplying" @click="applyOnQuit">
+                  退出时安装
+                </el-button>
+              </template>
             </template>
           </template>
-          <span v-else class="muted tiny">启动时也会检查（设置可关）；只读版本号，不自动安装</span>
+          <span v-else class="muted tiny">启动时也会检查（设置可关）；桌面端可下载 zip，退出时写入安装说明</span>
         </div>
 
         <!-- 备份与恢复 -->
@@ -176,7 +184,7 @@ import { api } from '../../api'
 import AppLogo from '../../components/AppLogo.vue'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 
-const { isDesktop, desktopEnv, initDesktopBridge } = useDesktopBridge()
+const { isDesktop, desktopEnv, initDesktopBridge, applyDesktopUpdate } = useDesktopBridge()
 initDesktopBridge()
 
 const data = ref({
@@ -202,6 +210,8 @@ const showRestoreSelect = ref(false)
 const selectedRestoreFile = ref('')
 const restoreRunning = ref(false)
 const diagLoading = ref(false)
+const updateDownloading = ref(false)
+const updateApplying = ref(false)
 
 async function exportDiagnostics() {
   diagLoading.value = true
@@ -240,6 +250,38 @@ async function checkUpdate() {
     ElMessage.error(e?.message || '检查更新失败')
   } finally {
     updateChecking.value = false
+  }
+}
+
+async function downloadDesktopUpdate() {
+  const u = updateResult.value
+  if (!u?.url || !u?.latest) return
+  updateDownloading.value = true
+  try {
+    const r = await applyDesktopUpdate({
+      action: 'download',
+      url: u.url,
+      version: u.latest,
+    })
+    if (r?.ok) ElMessage.success(`已下载 v${u.latest}（${Math.round((r.bytes || 0) / 1024 / 1024)} MB）`)
+    else ElMessage.warning(r?.reason || '下载失败')
+  } catch (e) {
+    ElMessage.error(e?.message || '下载失败')
+  } finally {
+    updateDownloading.value = false
+  }
+}
+
+async function applyOnQuit() {
+  updateApplying.value = true
+  try {
+    const r = await applyDesktopUpdate({ action: 'apply' })
+    if (r?.ok) ElMessage.success('已标记：下次退出时写入安装说明（保留用户数据目录）')
+    else ElMessage.warning(r?.reason || '请先下载更新包')
+  } catch (e) {
+    ElMessage.error(e?.message || '操作失败')
+  } finally {
+    updateApplying.value = false
   }
 }
 

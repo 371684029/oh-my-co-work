@@ -146,7 +146,7 @@ export function defaultQuotaSettings() {
 export function defaultRedactSettings() {
   return {
     enabled: true,
-    patternsText: '',
+    patternsText: 'ghp_[A-Za-z0-9]{20,}\nBearer\\s+[A-Za-z0-9._-]{10,}',
   }
 }
 
@@ -295,6 +295,32 @@ function normalizeUpdateCheck(raw) {
   return { startup: r.startup !== false }
 }
 
+function normalizeScheduledJobs(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((j) => j && j.groupId)
+    .map((j) => ({
+      id: String(j.id || j.groupId).slice(0, 64),
+      groupId: String(j.groupId),
+      title: j.title ? String(j.title).slice(0, 200) : '',
+      hour: Math.max(0, Math.min(23, Number(j.hour) || 9)),
+      minute: Math.max(0, Math.min(59, Number(j.minute) || 0)),
+      enabled: j.enabled !== false,
+    }))
+}
+
+function normalizeMcpConnections(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((c) => c && c.name)
+    .map((c) => ({
+      name: String(c.name).slice(0, 120),
+      url: String(c.url || '').slice(0, 512),
+      readOnly: c.readOnly !== false,
+      notes: String(c.notes || '').slice(0, 500),
+    }))
+}
+
 function normalizeCustomAgents(raw) {
   if (!Array.isArray(raw)) return []
   return raw
@@ -339,6 +365,8 @@ export function getAppSettings() {
       customAgents: normalizeCustomAgents(raw.customAgents),
       promptSnippets: normalizePromptSnippets(raw.promptSnippets),
       onboarding: normalizeOnboarding(raw.onboarding),
+      scheduledJobs: normalizeScheduledJobs(raw.scheduledJobs),
+      mcpConnections: normalizeMcpConnections(raw.mcpConnections),
     }
   } catch {
     return {
@@ -357,6 +385,8 @@ export function getAppSettings() {
       customAgents: [],
       promptSnippets: [],
       onboarding: defaultOnboardingSettings(),
+      scheduledJobs: [],
+      mcpConnections: [],
     }
   }
 }
@@ -439,6 +469,14 @@ export function updateAppSettings(patch = {}) {
       patch.onboarding !== undefined
         ? normalizeOnboarding({ ...cur.onboarding, ...patch.onboarding })
         : cur.onboarding || defaultOnboardingSettings(),
+    scheduledJobs:
+      patch.scheduledJobs !== undefined
+        ? normalizeScheduledJobs(patch.scheduledJobs)
+        : cur.scheduledJobs || [],
+    mcpConnections:
+      patch.mcpConnections !== undefined
+        ? normalizeMcpConnections(patch.mcpConnections)
+        : cur.mcpConnections || [],
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')
