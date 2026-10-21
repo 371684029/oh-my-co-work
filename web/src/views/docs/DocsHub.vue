@@ -512,6 +512,12 @@ import {
 } from './docsHubFilterUi.js'
 import { highlightSearchSnippet } from './docsHubSearchUi.js'
 import {
+  createDocOutlineObserver,
+  initialOutlineSlug,
+  listDocHeadingElements,
+  scrollDocHeading,
+} from './docsHubOutlineUi.js'
+import {
   docsExpandSessionInTree,
   isDocsSessionExpanded,
   toggleDocsSessionExpansion,
@@ -682,12 +688,7 @@ let outlineObserver = null
 
 function scrollToHeading(slug) {
   const root = contentScrollRef.value
-  if (!root || !slug) return
-  const el = root.querySelector(`#${CSS.escape(slug)}`)
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    activeOutlineSlug.value = slug
-  }
+  if (scrollDocHeading(root, slug)) activeOutlineSlug.value = slug
 }
 
 async function copyHeadingAnchor(slug) {
@@ -713,17 +714,11 @@ function setupOutlineObserver() {
   teardownOutlineObserver()
   const root = contentScrollRef.value
   if (!root || !docOutline.value.length) return
-  const headings = [...root.querySelectorAll('h1[id], h2[id], h3[id]')]
-  if (!headings.length) return
-  outlineObserver = new IntersectionObserver(
-    (entries) => {
-      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
-      if (visible[0]?.target?.id) activeOutlineSlug.value = visible[0].target.id
-    },
-    { root, rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] },
-  )
-  for (const h of headings) outlineObserver.observe(h)
-  if (!activeOutlineSlug.value && headings[0]?.id) activeOutlineSlug.value = headings[0].id
+  const headings = listDocHeadingElements(root)
+  outlineObserver = createDocOutlineObserver(root, (slug) => {
+    activeOutlineSlug.value = slug
+  })
+  if (!activeOutlineSlug.value) activeOutlineSlug.value = initialOutlineSlug(headings)
 }
 
 watch([file, editing, renderedHtml], () => {

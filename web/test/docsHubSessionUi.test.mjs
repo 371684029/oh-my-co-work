@@ -13,6 +13,13 @@ test('docs session expand toggles', () => {
   assert.equal(next.s1, true)
 })
 
+test('toggleDocsSessionExpansion flips default expanded', () => {
+  const next = toggleDocsSessionExpansion({}, 's1')
+  assert.equal(isDocsSessionExpanded(next, 's1'), false)
+  const again = toggleDocsSessionExpansion(next, 's1')
+  assert.equal(isDocsSessionExpanded(again, 's1'), true)
+})
+
 test('docsExpandSessionInTree selects group', () => {
   const groups = [{ groupId: 'g1', sessions: [{ sessionId: 's9' }] }]
   const patch = docsExpandSessionInTree(groups, 's9', {})

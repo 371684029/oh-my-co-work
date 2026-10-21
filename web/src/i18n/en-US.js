@@ -44,6 +44,17 @@ export const strings = {
     projectSection: 'Project',
     metaSection: 'Other',
   },
+  docs: {
+    sortByGroup: 'By group template',
+    sortByTime: 'By time',
+    timeRange: {
+      all: 'All time',
+      today: 'Today',
+      week: 'Last 7 days',
+      month: 'Last 30 days',
+      older: 'Older',
+    },
+  },
 }
 
 export function t(key) {

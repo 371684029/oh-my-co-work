@@ -1,5 +1,7 @@
 /** DocsHub sidebar filters (FE-01 pure logic). */
 
+import { t } from '../../i18n/index.js'
+
 export const MS_PER_DAY = 24 * 60 * 60 * 1000
 
 export function docsTimeRangeBuckets(items, now = Date.now()) {
@@ -20,11 +22,11 @@ export function docsTimeRangeBuckets(items, now = Date.now()) {
   }
 
   return [
-    { key: 'all', label: '全部时间', icon: '🕒', count: allCount },
-    { key: 'today', label: '今天', icon: '⚡', count: todayCount },
-    { key: 'week', label: '最近 7 天', icon: '📅', count: weekCount },
-    { key: 'month', label: '最近 30 天', icon: '🗓️', count: monthCount },
-    { key: 'older', label: '更早以前', icon: '📦', count: olderCount },
+    { key: 'all', label: t('docs.timeRange.all'), icon: '🕒', count: allCount },
+    { key: 'today', label: t('docs.timeRange.today'), icon: '⚡', count: todayCount },
+    { key: 'week', label: t('docs.timeRange.week'), icon: '📅', count: weekCount },
+    { key: 'month', label: t('docs.timeRange.month'), icon: '🗓️', count: monthCount },
+    { key: 'older', label: t('docs.timeRange.older'), icon: '📦', count: olderCount },
   ]
 }
 

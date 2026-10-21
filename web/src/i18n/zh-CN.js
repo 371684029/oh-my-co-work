@@ -49,6 +49,17 @@ export const strings = {
     projectSection: '项目',
     metaSection: '其它',
   },
+  docs: {
+    sortByGroup: '按群模板',
+    sortByTime: '按时间',
+    timeRange: {
+      all: '全部时间',
+      today: '今天',
+      week: '最近 7 天',
+      month: '最近 30 天',
+      older: '更早以前',
+    },
+  },
 }
 
 export function t(key) {
