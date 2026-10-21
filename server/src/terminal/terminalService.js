@@ -14,7 +14,6 @@ import {
 } from './adapters/jsonl.js'
 import {
   killMemberProcesses,
-  killProcessTree,
   registerProcess,
   unregisterProcess,
 } from '../processRegistry.js'
@@ -27,13 +26,16 @@ import {
 } from './terminalLog.js'
 import { emitTerminal, flushOutput, queueOutput } from './terminalOutput.js'
 import { persistTerminal } from './terminalPersist.js'
+import {
+  forgetSessionTerminalsInMap,
+  killTerminalEntry,
+  markInterruptedTerminalsInDb,
+  pruneFinishedTerminals,
+} from './terminalLifecycle.js'
 
 export { normalizePtyLaunch, resolveWindowsExecutable }
 
 const terminals = new Map()
-
-const RETAIN_FINISHED = 20
-const RETAIN_FINISHED_GLOBAL = 200
 
 let adapterEventHandler = null
 
@@ -72,14 +74,7 @@ function nowIso() {
 const clampSize = clampTerminalSize
 
 function pruneFinished(sessionId) {
-  const finished = [...terminals.values()]
-    .filter((t) => t.sessionId === sessionId && t.status !== 'running' && t.status !== 'starting')
-    .sort((a, b) => String(b.finishedAt || '').localeCompare(String(a.finishedAt || '')))
-  for (const entry of finished.slice(RETAIN_FINISHED)) terminals.delete(entry.id)
-  const allFinished = [...terminals.values()]
-    .filter((t) => t.status !== 'running' && t.status !== 'starting')
-    .sort((a, b) => String(b.finishedAt || '').localeCompare(String(a.finishedAt || '')))
-  for (const entry of allFinished.slice(RETAIN_FINISHED_GLOBAL)) terminals.delete(entry.id)
+  pruneFinishedTerminals(terminals, sessionId)
 }
 
 /**
@@ -434,32 +429,7 @@ export function readTerminalLogPreview(sessionId, terminalId, opts = {}) {
 }
 
 export function forgetSessionTerminals(sessionId) {
-  for (const [id, entry] of [...terminals.entries()]) {
-    if (entry.sessionId !== sessionId) continue
-    if (entry.flushTimer) clearTimeout(entry.flushTimer)
-    entry.flushTimer = null
-    entry.logStream?.end()
-    entry.logStream = null
-    if (typeof entry.adapterStop === 'function') {
-      try {
-        entry.adapterStop()
-      } catch {
-        /* ignore */
-      }
-      entry.adapterStop = null
-    }
-    if (entry.status === 'running' || entry.status === 'starting') {
-      entry.status = 'killed'
-      entry.signal = 'session_deleted'
-      try {
-        entry.process?.kill()
-        killProcessTree(entry.pid)
-      } catch {
-        /* process may already have exited */
-      }
-    }
-    terminals.delete(id)
-  }
+  forgetSessionTerminalsInMap(terminals, sessionId)
 }
 
 /**
@@ -469,33 +439,11 @@ export function forgetSessionTerminals(sessionId) {
  * @returns {number} rows updated (0 when the table is unavailable, e.g. in tests)
  */
 export function markInterruptedTerminalsOnBoot() {
-  try {
-    const info = getDb()
-      .prepare(
-        `UPDATE terminal_sessions
-            SET status = 'interrupted', finished_at = ?
-          WHERE status IN ('running', 'starting')`,
-      )
-      .run(nowIso())
-    return Number(info?.changes || 0)
-  } catch {
-    return 0
-  }
+  return markInterruptedTerminalsInDb(getDb, nowIso)
 }
 
 export function killTerminal(id, reason = 'user') {
-  const entry = terminals.get(id)
-  if (!entry) return false
-  if (entry.status !== 'running' && entry.status !== 'starting') return true
-  entry.status = 'killed'
-  entry.signal = reason
-  try {
-    entry.process?.kill()
-    killProcessTree(entry.pid)
-  } catch {
-    return false
-  }
-  return true
+  return killTerminalEntry(terminals.get(id), reason)
 }
 
 const terminalWsDeps = {

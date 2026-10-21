@@ -58,6 +58,14 @@ import { reviewAction, reviewLabel } from './sessionReviewUi.js'
 import { isPendingGateMessage } from './sessionGateUi.js'
 import { findPendingGateMessage } from './sessionPendingGate.js'
 import { isArchiveStatusMessage } from './sessionBubbleUi.js'
+import {
+  parseSessionContext,
+  extractSessionParamsList,
+  sessionGroupCardFromContext,
+  sessionGroupFolderFromContext,
+  previewHashValue,
+  footerCollapsedHintForPendingGate,
+} from './sessionContextUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -413,54 +421,19 @@ const pendingGate = computed(() => {
 })
 
 function sessionCtx() {
-  const ctx = detail.value?.session?.context || detail.value?.session?.context_json
-  if (typeof ctx === 'string') {
-    try {
-      return JSON.parse(ctx)
-    } catch {
-      return null
-    }
-  }
-  return ctx || null
+  return parseSessionContext(detail.value?.session)
 }
 
 /** 会话项目参数 #1 #2…（不含系统 #群聊） */
-const sessionParamsList = computed(() => {
-  const c = sessionCtx()
-  if (Array.isArray(c?.paramsList) && c.paramsList.length) {
-    return c.paramsList.slice(0, MAX_PROJECT_PARAMS)
-  }
-  if (c?.params && typeof c.params === 'object') {
-    const keys = Object.keys(c.params)
-      .filter((k) => /^#\d+$/.test(k))
-      .map((k) => Number(k.slice(1)))
-      .filter((n) => n >= 1 && n <= MAX_PROJECT_PARAMS)
-      .sort((a, b) => a - b)
-    if (keys.length) return keys.map((n) => c.params[`#${n}`])
-  }
-  return []
-})
+const sessionParamsList = computed(() =>
+  extractSessionParamsList(sessionCtx(), MAX_PROJECT_PARAMS),
+)
 
 /** #群聊 → 整份群聊名片 */
-const sessionGroupCard = computed(() => {
-  const c = sessionCtx()
-  if (!c) return ''
-  return c.groupCard || c.params?.['#群聊'] || c.params?.['群聊'] || ''
-})
+const sessionGroupCard = computed(() => sessionGroupCardFromContext(sessionCtx()))
 
 /** #文件夹 → 群聊工作目录 */
-const sessionGroupFolder = computed(() => {
-  const c = sessionCtx()
-  if (!c) return ''
-  return (
-    c.groupFolder ||
-    c.params?.['#文件夹'] ||
-    c.params?.['文件夹'] ||
-    c.primaryWorkFolder ||
-    c.workFolders?.[0] ||
-    ''
-  )
-})
+const sessionGroupFolder = computed(() => sessionGroupFolderFromContext(sessionCtx()))
 
 /**
  * # 文本快捷候选（# 只是唤起键，选中后只插入正文）
@@ -558,27 +531,10 @@ const filteredHashItems = computed(() => {
   return filtered
 })
 
-function previewHashValue(v) {
-  const s = String(v || '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (!s) return ''
-  return s.length > 48 ? `${s.slice(0, 48)}…` : s
-}
-
 /** 折叠时底栏提示文案 */
-const footerCollapsedHint = computed(() => {
-  if (pendingGate.value) {
-    if (pendingGate.value.content?.mode === 'session_start') return '确认开始 · 展开'
-    if (pendingGate.value.content?.mode === 'human_input') return '请输入 · 展开'
-    if (pendingGate.value.content?.mode === 'need_params') return '请输入 · 展开'
-    if (pendingGate.value.content?.mode === 'adapter_question') return '工具提问 · 展开'
-    if (pendingGate.value.content?.mode === 'interrupted') return '崩溃恢复 · 展开'
-    if (pendingGate.value.content?.requireHuman) return '须人工同意 · 展开'
-    return '待你处理 · 展开'
-  }
-  return '输入消息 · 展开'
-})
+const footerCollapsedHint = computed(() =>
+  footerCollapsedHintForPendingGate(pendingGate.value),
+)
 
 /** 运行时：当前需要人介入（闸门 / 等人状态）→ 标红突出 */
 const needsHuman = computed(() => {
