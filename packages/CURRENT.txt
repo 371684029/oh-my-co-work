@@ -4,7 +4,7 @@ kind=runtime-bundle
 needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
-file.linux-x64=oh-my-co-work-v5-linux-x64.zip
-size.linux-x64=24583043
-commit.linux-x64=f810bd3a71dfc1c2b8e51c323a382cd1cf9cacf7
-built.linux-x64=2026-10-21T07:17:44.187Z
+file.darwin-arm64=oh-my-co-work-v5-darwin-arm64.zip
+size.darwin-arm64=24424904
+commit.darwin-arm64=707aa46d2a01c5a615c19976f0b463d614f05cff
+built.darwin-arm64=2026-10-21T07:21:37.807Z

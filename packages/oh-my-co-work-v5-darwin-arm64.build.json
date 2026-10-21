@@ -6,8 +6,8 @@
   "version": "5.3.0",
   "major": 5,
   "platform": "darwin-arm64",
-  "sourceCommit": "f810bd3a71dfc1c2b8e51c323a382cd1cf9cacf7",
-  "builtAt": "2026-10-21T07:17:40.141Z",
+  "sourceCommit": "707aa46d2a01c5a615c19976f0b463d614f05cff",
+  "builtAt": "2026-10-21T07:21:37.807Z",
   "needsNpmInstall": false,
   "requiredAssets": [
     "web/dist/assets/spritesheet-*.webp"
