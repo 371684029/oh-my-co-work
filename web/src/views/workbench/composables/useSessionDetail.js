@@ -1,5 +1,4 @@
 import { ref, computed, watch } from 'vue'
-import { formatBusinessIo } from '@acw/shared'
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
@@ -11,7 +10,6 @@ import { createSessionDeleteActions } from './sessionDeleteActions.js'
 import { createSessionRenameActions } from './sessionRenameActions.js'
 import { createSessionDocsHubActions } from './sessionDocsHubActions.js'
 import { createSessionComposerCopyActions } from './sessionComposerCopyActions.js'
-import { createFlowScrollToAnchor } from './sessionFlowScrollUi.js'
 import { createSessionRestartActions } from './sessionRestartActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import { announceMdHintLabel } from './sessionWorkbenchFeedbackUi.js'
@@ -26,35 +24,14 @@ import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
 import { createSessionMessageSendActions } from './sessionMessageSendActions.js'
 import { formatSessionTime } from './sessionFormatUtils.js'
-import {
-  buildFlowEntries,
-  computeFlowHistorySplitIndex,
-  isClonedNode,
-  nodeHasAdapt,
-  nodeHasRefine,
-  pickFlowAnchorNodeId,
-} from './sessionFlowUi.js'
-import {
-  archiveOutcomeOf,
-  buildConversationItems,
-  CONVERSATION_MENU,
-} from './sessionListUi.js'
-import {
-  mapMessageToBubbleItem,
-  mapTerminalToBubbleItem,
-  mergeBubbleRowsByTime,
-  shouldHideMessageFromBubbleList,
-} from './sessionBubbleListUi.js'
-import { mapAnnounceProgressNode } from './sessionAnnounceUi.js'
+import { isClonedNode, nodeHasAdapt, nodeHasRefine } from './sessionFlowUi.js'
+import { buildConversationItems, CONVERSATION_MENU } from './sessionListUi.js'
 import {
   computeOffsiteActive,
   findActiveOffsiteNode,
   computeOffsiteMode,
 } from './sessionOffsiteUi.js'
 import { reviewAction, reviewLabel } from './sessionReviewUi.js'
-import { findPendingGateMessage } from './sessionPendingGate.js'
-import { isArchiveStatusMessage } from './sessionBubbleUi.js'
-import { parseSessionContext, footerCollapsedHintForPendingGate } from './sessionContextUi.js'
 import { createSessionContextComputeds } from './sessionContextComputeds.js'
 import { createSessionNodePresentation } from './sessionNodePresentation.js'
 import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
@@ -65,19 +42,9 @@ import { createSessionComposerPanelToggleActions } from './sessionComposerPanelT
 import { createSessionComposerInsertActions } from './sessionComposerInsertActions.js'
 import { createSessionComposerKeydownActions } from './sessionComposerKeydownActions.js'
 import { createSessionSenderInputBridge } from './sessionSenderInputBridge.js'
-import { createSessionFlowRailHandlers } from './sessionFlowRailHandlers.js'
+import { createSessionGateAndBubbleComputeds } from './sessionGateAndBubbleComputeds.js'
+import { createSessionFlowAnchorComputeds } from './sessionFlowAnchorComputeds.js'
 import { nextGateIdempotencyKey } from './sessionGateIdempotency.js'
-import {
-  computeNeedsHuman,
-  announceKickoffFromContext,
-  announceUserNotesFromContext,
-} from './sessionAttentionUi.js'
-import {
-  composerFooterHintForGate,
-  composerPlaceholderForGate,
-  composerToolbarHintForGate,
-  showComposerHintIForGate,
-} from './sessionComposerUi.js'
 
 
 /**
@@ -247,89 +214,54 @@ const {
   getOffsiteMode: () => offsiteMode.value,
 })
 
+const statusLabel = sessionStatusLabel
+const statusType = sessionStatusType
+const formatTime = formatSessionTime
+
+const {
+  bubbleList,
+  pendingGate,
+  footerCollapsedHint,
+  needsHuman,
+  archiveOutcomeTag,
+  announceKickoff,
+  announceUserNotes,
+  announceProgress,
+  composerPlaceholder,
+  composerToolbarHint,
+  showComposerHintI,
+  composerFooterHint,
+} = createSessionGateAndBubbleComputeds({
+  detail,
+  terminalBridge,
+  messageText,
+  roleLabel,
+  shortSender,
+  isPendingGate,
+  statusLabel,
+})
+
+const {
+  flowEntries,
+  flowHistorySplitIndex,
+  flowAnchorNodeId,
+  scrollFlowToAnchor,
+  clearFlowScrollTimer,
+  isSkippedFlowGroupExpanded,
+  toggleSkippedFlowGroup,
+  isFlowHistoryNode,
+} = createSessionFlowAnchorComputeds({
+  detail,
+  getActiveOffsiteId: () => activeOffsiteNode.value?.id,
+  flowScrollTimerRef,
+})
+
 const convMenu = CONVERSATION_MENU
 
 /** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
 const conversationItems = computed(() =>
   buildConversationItems(sessions.value, listFilter.value),
 )
-
-function isArchiveMessage(m) {
-  return isArchiveStatusMessage(m, messageText(m))
-}
-
-/** Element-Plus-X BubbleList — 大气气泡 + 发送人简称 */
-const bubbleList = computed(() => {
-  if (!detail.value?.messages) return []
-  const bubbleDeps = { messageText, roleLabel, shortSender, isArchiveMessage }
-  const messages = detail.value.messages
-    .filter((m) => !shouldHideMessageFromBubbleList(m, isArchiveMessage))
-    .map((m) => mapMessageToBubbleItem(m, bubbleDeps))
-  const terminals = (terminalBridge.terminalSessions?.value || []).map(mapTerminalToBubbleItem)
-  return mergeBubbleRowsByTime(messages, terminals)
-})
-
-const pendingGate = computed(() => {
-  if (!detail.value) return null
-  return findPendingGateMessage(
-    detail.value.session,
-    detail.value.messages,
-    detail.value.nodes,
-    isPendingGate,
-  )
-})
-
-/** 折叠时底栏提示文案 */
-const footerCollapsedHint = computed(() =>
-  footerCollapsedHintForPendingGate(pendingGate.value),
-)
-
-/** 运行时：当前需要人介入（闸门 / 等人状态）→ 标红突出 */
-const needsHuman = computed(() =>
-  computeNeedsHuman(detail.value?.session, pendingGate.value),
-)
-
-const archiveOutcomeTag = computed(() => {
-  if (!detail.value?.session) return null
-  const o = archiveOutcomeOf(detail.value.session, detail.value.nodes)
-  if (!o) return null
-  if (o === 'failed') return { label: '失败', type: 'danger', ok: false }
-  return { label: '成功', type: 'success', ok: true }
-})
-
-/** 群报告：启动说明 */
-const announceKickoff = computed(() =>
-  announceKickoffFromContext(parseSessionContext(detail.value?.session)),
-)
-
-/** 群报告：用户参与附言列表 */
-const announceUserNotes = computed(() =>
-  announceUserNotesFromContext(parseSessionContext(detail.value?.session)),
-)
-
-/**
- * 群报告：每个节点的实质入/出（含脚本额外产出、审核附言）
- * 不展示「开始/结束」空话
- */
-const announceProgress = computed(() => {
-  const nodes = detail.value?.nodes || []
-  return nodes.map((n) =>
-    mapAnnounceProgressNode(n, {
-      formatIo: formatBusinessIo,
-      statusLabel,
-    }),
-  )
-})
-
-/** 底部唯一输入框：有闸门时兼作附言/人工输入 */
-const composerPlaceholder = computed(() => composerPlaceholderForGate(pendingGate.value))
-const composerToolbarHint = computed(() => composerToolbarHintForGate(pendingGate.value))
-const showComposerHintI = computed(() => showComposerHintIForGate(pendingGate.value))
-const composerFooterHint = computed(() => composerFooterHintForGate(pendingGate.value))
-
-const statusLabel = sessionStatusLabel
-const statusType = sessionStatusType
-const formatTime = formatSessionTime
 
 const { loadLists, loadDetail, selectSession } = createSessionLoadActions({
   sessions,
@@ -455,38 +387,6 @@ const { insertAtMember, insertHashItem } = createSessionComposerInsertActions({
   readSenderText,
   readSenderTextRaw,
   replaceSenderText,
-})
-
-/**
- * 将相邻的「未跑过且已废弃」节点归为一段并默认收起。
- * 已执行节点（成功/失败/执行中/场外）和当前轨将要跑的节点保持展开。
- */
-const flowEntries = computed(() =>
-  buildFlowEntries(detail.value?.nodes, detail.value?.session),
-)
-
-/** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
-const flowHistorySplitIndex = computed(() =>
-  computeFlowHistorySplitIndex(detail.value?.nodes, detail.value?.session),
-)
-
-const { isSkippedFlowGroupExpanded, toggleSkippedFlowGroup, isFlowHistoryNode } =
-  createSessionFlowRailHandlers({
-    getNodes: () => detail.value?.nodes,
-    getHistorySplitIndex: () => flowHistorySplitIndex.value,
-  })
-
-/** 流程轨应锚定滚动的节点：场外当前段 → 待确认 → 执行中 → 当前步 → 游标步 */
-const flowAnchorNodeId = computed(() =>
-  pickFlowAnchorNodeId(detail.value?.nodes, detail.value?.session, {
-    activeOffsiteId: activeOffsiteNode.value?.id,
-  }),
-)
-
-const { scrollFlowToAnchor, clearFlowScrollTimer } = createFlowScrollToAnchor({
-  getAnchorNodeId: () => flowAnchorNodeId.value,
-  isFlowTabActive: () => useFlowStore().rightTab === 'flow',
-  timerRef: flowScrollTimerRef,
 })
 
 const { restartFromNode } = createSessionRestartActions({
