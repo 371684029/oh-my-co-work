@@ -126,6 +126,13 @@ async function main() {
     const healthAfter = await fetch(`${base}/api/health`)
     assert.equal(healthAfter.status, 200)
 
+    const sessionsRes = await fetch(`${base}/api/sessions`, {
+      headers: { 'X-ACW-Token': token, Origin: origin },
+    })
+    assert.equal(sessionsRes.status, 200)
+    const sessionsBody = await sessionsRes.json()
+    assert.ok(Array.isArray(sessionsBody))
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})

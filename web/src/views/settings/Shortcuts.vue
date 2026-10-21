@@ -1,8 +1,8 @@
 <template>
-  <div class="shortcuts-page">
+  <div class="shortcuts-page" role="main" :aria-label="t('a11y.shortcutsPage')">
     <div class="page-head">
       <div>
-        <h2 class="page-title">斜杠指令与快捷键脚本</h2>
+        <h2 id="shortcuts-page-title" class="page-title">斜杠指令与快捷键脚本</h2>
         <p class="page-desc">
           聊天 <code>/</code> 为<strong>斜杠指令</strong>（脚本工作目录可自动填）。勾选<strong>快捷键触发</strong>的项用于任意位置绑键跑脚本（脚本工作目录须手填，逻辑相同）。
         </p>
@@ -23,7 +23,9 @@
       :closable="false"
       show-icon
       class="hint"
-      title="内置快捷键（5.2.0）"
+      :title="t('a11y.shortcutsBuiltinHotkeys')"
+      role="region"
+      :aria-label="t('a11y.shortcutsBuiltinHotkeys')"
     >
       <ul class="builtin-hotkeys">
         <li><kbd>Ctrl/Cmd+K</kbd> — 命令面板（会话 / 导航 / 缩放 / 主题）</li>
@@ -238,6 +240,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
+import { t } from '../../i18n/zh-CN.js'
 
 const commands = ref([])
 const members = ref([])

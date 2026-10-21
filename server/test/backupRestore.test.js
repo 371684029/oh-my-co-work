@@ -57,7 +57,7 @@ test('restore round-trip: data rolls back to the backup point, pre-restore backu
   writeJournal(session.id, 'ANNOUNCEMENT.md', '第二版公告')
   assert.equal(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c >= 2, true)
 
-  const r = backup.restoreBackup(backupName)
+  const r = await backup.restoreBackupAsync(backupName)
   assert.equal(r.ok, true)
   assert.equal(r.restoredFrom, backupName)
 
