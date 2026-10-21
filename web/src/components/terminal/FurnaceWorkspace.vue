@@ -399,6 +399,12 @@ import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
 import { inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
 import { getFurnaceTurnMeta } from '../../composables/furnaceTurnMeta.js'
 import { writeClipboardText } from '../../composables/terminalClipboardBridge.js'
+import {
+  furnaceAgentDisplayLabel,
+  furnaceAgentFromHotkey,
+  isEventWithinFurnaceRoot,
+  shouldIgnoreFurnaceHotkeyTarget,
+} from './furnaceWorkspaceUi.js'
 
 const getTurnMeta = getFurnaceTurnMeta
 
@@ -440,7 +446,7 @@ watch(
     activeAgent.value = inferFurnaceAgent(props.terminal)
   },
 )
-const agentLabel = computed(() => (activeAgent.value === 'cursor' ? 'Cursor' : 'Grok'))
+const agentLabel = computed(() => furnaceAgentDisplayLabel(activeAgent.value))
 const tuiHistoryOpen = ref(false)
 const tuiHistStick = ref(true)
 
@@ -561,25 +567,14 @@ watch(
   },
 )
 
-function furnaceHotkeyTargeted(e) {
-  const root = workspaceRoot.value
-  if (!root || typeof window === 'undefined') return false
-  const path = typeof e.composedPath === 'function' ? e.composedPath() : []
-  if (path.includes(root)) return true
-  return root.contains(e.target) || root.contains(document.activeElement)
-}
-
 function onKeyDown(e) {
-  if (!furnaceHotkeyTargeted(e)) return
-  if (e.target?.closest?.('.xterm-screen, .xterm-helper-textarea')) return
+  if (!isEventWithinFurnaceRoot(workspaceRoot.value, e)) return
+  if (shouldIgnoreFurnaceHotkeyTarget(e.target)) return
   if (!(e.metaKey || e.ctrlKey)) return
-  if (e.key === '1') {
-    e.preventDefault()
-    setActiveAgent('grok')
-  } else if (e.key === '2') {
-    e.preventDefault()
-    setActiveAgent('cursor')
-  }
+  const agent = furnaceAgentFromHotkey(e.key)
+  if (!agent) return
+  e.preventDefault()
+  setActiveAgent(agent)
 }
 
 onMounted(() => {

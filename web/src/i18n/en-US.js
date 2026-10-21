@@ -12,6 +12,9 @@ export const strings = {
     timelineTab: 'Timeline',
     docsTab: 'Docs hub',
     workbenchMain: 'Session main area',
+    composer: 'Message composer',
+    commandPaletteSearch: 'Command palette search',
+    commandPaletteList: 'Command list',
   },
   furnace: {
     idle: 'Idle',

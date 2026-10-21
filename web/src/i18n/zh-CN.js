@@ -14,6 +14,9 @@ export const strings = {
     timelineTab: '时间线',
     docsTab: '文档中心',
     workbenchMain: '会话主区域',
+    composer: '消息输入区',
+    commandPaletteSearch: '命令面板搜索',
+    commandPaletteList: '命令列表',
   },
   furnace: {
     idle: '闲置',

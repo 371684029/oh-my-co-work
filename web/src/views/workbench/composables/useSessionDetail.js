@@ -70,6 +70,7 @@ import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
 } from './sessionFlowNavUi.js'
+import { nextGateIdempotencyKey } from './sessionGateIdempotency.js'
 import {
   computeNeedsHuman,
   announceKickoffFromContext,
@@ -1360,11 +1361,7 @@ async function onSenderSubmit() {
   }
 }
 
-function nextIdempotencyKey(action, nodeInstanceId) {
-  return `gate_${action || 'x'}_${nodeInstanceId || 'none'}_${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`
-}
+const nextIdempotencyKey = nextGateIdempotencyKey
 
 async function submitHuman(m) {
   if (gating.value) return
