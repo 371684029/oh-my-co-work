@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/docs/{DocsHubContentColumn.vue,DocsHub.vue} docs/{5.1.0,5.3.0}-plan.md | FE-01/ENG-04 DocsHub 正文栏 DocsHubContentColumn（outline/正文搜索/编辑区）
 2026-10-21 | A/M | web/src/views/{docs/{DocsHubSessionsColumn.vue,DocsHub.vue,docsHubStatusUi.js},workbench/{composables/sessionComposerPanelUi,components/ComposerPanel.vue}} web/src/i18n/{zh-CN,en-US}.js server/test/srv01ProductionBackup.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 DocsHubSessionsColumn、DSK-08 docs status/composer toolbar、SRV-01 路由 async 单测
 2026-10-21 | A/M | web/src/views/{docs/{DocsHubGroupsColumn.vue,DocsHub.vue},workbench/composables/sessionComposerUi.js} web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | FE-01 DocsHubGroupsColumn、DSK-08 composer 占位/提示 i18n
 2026-10-21 | A/M | web/src/views/docs/{DocsHubWelcomePane.vue,DocsHub.vue,docsHubCopy.js} web/src/i18n/{zh-CN,en-US}.js scripts/ci-e2e-smoke.mjs web/test/docsHubCopy.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 DocsHubWelcomePane、UX-03/QA-01 docs e2e aria
