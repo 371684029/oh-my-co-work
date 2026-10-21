@@ -75,6 +75,28 @@ export const strings = {
       emptyTip: 'After a group workflow finishes, reports and ledgers show up in the list.',
     },
     unpinTitle: 'Unpin',
+    reading: {
+      themeLight: 'Light',
+      themeDark: 'Dark',
+      focus: 'Focus',
+      exitFocus: 'Exit focus',
+    },
+    actions: {
+      edit: 'Edit',
+      save: 'Save',
+      cancel: 'Cancel',
+      readonlyHint: 'Ledger is read-only (audit trail)',
+      codeLineNumbers: 'Code line numbers',
+      pinDoc: 'Pin',
+      unpinDoc: 'Unpin',
+      exportHtml: 'Export HTML',
+      exportPdf: 'Export PDF',
+    },
+    inDoc: {
+      prev: 'Previous',
+      next: 'Next',
+      close: 'Close',
+    },
     sortByGroup: 'By group template',
     sortByTime: 'By time',
     timeRange: {
