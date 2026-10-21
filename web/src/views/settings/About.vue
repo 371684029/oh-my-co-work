@@ -37,7 +37,12 @@
           </el-tag>
         </div>
         <div class="update-row" style="margin-top: 12px">
-          <el-button size="small" :loading="diagLoading" @click="exportDiagnostics">
+          <el-button
+            size="small"
+            aria-label="导出诊断信息 JSON"
+            :loading="diagLoading"
+            @click="exportDiagnostics"
+          >
             导出诊断信息
           </el-button>
           <span class="muted tiny">本地 JSON（日志尾部、版本、设置摘要；密钥已脱敏）</span>
@@ -50,7 +55,12 @@
 
         <!-- 检查更新 -->
         <div class="update-row">
-          <el-button size="small" :loading="updateChecking" @click="checkUpdate">
+          <el-button
+            size="small"
+            aria-label="检查应用更新"
+            :loading="updateChecking"
+            @click="checkUpdate"
+          >
             检查更新
           </el-button>
           <template v-if="updateResult">
@@ -82,7 +92,12 @@
         <!-- 备份与恢复 -->
         <div class="update-divider" />
         <div class="update-row">
-          <el-button size="small" :loading="backupCreating" @click="createBackupNow">
+          <el-button
+            size="small"
+            aria-label="立即创建数据备份"
+            :loading="backupCreating"
+            @click="createBackupNow"
+          >
             立即备份
           </el-button>
           <span v-if="lastBackupName" class="update-last-backup">最近备份：{{ lastBackupName }}</span>

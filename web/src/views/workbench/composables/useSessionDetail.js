@@ -46,6 +46,13 @@ import {
 } from './sessionListUi.js'
 import { mapAnnounceProgressNode } from './sessionAnnounceUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
+import {
+  composerFooterHintForGate,
+  composerPlaceholderForGate,
+  composerToolbarHintForGate,
+  showComposerHintIForGate,
+} from './sessionComposerUi.js'
+import { roleLabel as roleLabelForMessage, shortSender as shortSenderForMessage } from './sessionMessageUi.js'
 
 
 /**
@@ -657,61 +664,10 @@ const announceProgress = computed(() => {
 })
 
 /** 底部唯一输入框：有闸门时兼作附言/人工输入 */
-const composerPlaceholder = computed(() => {
-  const g = pendingGate.value
-  if (!g) return '发消息… @成员 · #参数 · @节点重跑'
-  const mode = g.content?.mode
-  if (mode === 'session_start') {
-    if (g.content?.callArgs || g.content?.captureParams === false) {
-      return '可选参数全文作 #a；点「通过」启动…'
-    }
-    return g.content?.captureParams
-      ? '可先输入说明/参数，再点「通过」启动…'
-      : '可先输入说明，再点「通过」启动…'
-  }
-  if (mode === 'human_input' || mode === 'need_params') {
-    return g.content?.captureParams || mode === 'need_params'
-      ? '在此输入参数（空格/换行分段 → #1 #2…），Enter 或点「提交」'
-      : '在此输入内容，Enter 或点「提交」'
-  }
-  if (mode === 'adapter_question') {
-    return '工具在问你：可点选项，或先输入再提交'
-  }
-  if (mode === 'interrupted') {
-    return '服务曾中断：继续=从中断处恢复 · 放弃=跳过未完成步骤（进程到设置里释放）'
-  }
-  // 通用审核（产出审核/节点审核等）：把闸门标题放进 placeholder
-  const gateTitle = g.content?.text || g.content?.title
-  return gateTitle ? `${gateTitle} · 可先写意见，再点「同意」或「拒绝」` : '可先写意见，再点「同意」或「拒绝」…'
-})
-
-const composerToolbarHint = computed(() => {
-  if (pendingGate.value) {
-    const mode = pendingGate.value.content?.mode
-    if (mode === 'human_input' || mode === 'need_params') return '下方输入 · Enter 提交'
-    if (mode === 'session_start') return 'Enter=发消息 · 点「通过」启动'
-    if (mode === 'interrupted') return '点「继续」或「放弃」'
-    if (mode === 'adapter_question') return '点选项或提交回答工具'
-    return 'Enter=附言 · 点同意/拒绝定局'
-  }
-  return '@ 成员/节点 · # 参数 · / 指令 · Enter 发送'
-})
-
-/** 同意/拒绝旁已有闸门详情 i，不再并排第二个 */
-const showComposerHintI = computed(() => {
-  if (!pendingGate.value) return true
-  const mode = pendingGate.value.content?.mode
-  return ['session_start', 'human_input', 'need_params', 'adapter_question', 'interrupted'].includes(
-    mode,
-  )
-})
-
-const composerFooterHint = computed(() => {
-  if (pendingGate.value) {
-    return '待确认与消息共用下方输入框 · 附言会记入群报告'
-  }
-  return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告'
-})
+const composerPlaceholder = computed(() => composerPlaceholderForGate(pendingGate.value))
+const composerToolbarHint = computed(() => composerToolbarHintForGate(pendingGate.value))
+const showComposerHintI = computed(() => showComposerHintIForGate(pendingGate.value))
+const composerFooterHint = computed(() => composerFooterHintForGate(pendingGate.value))
 
 const statusLabel = sessionStatusLabel
 
@@ -728,45 +684,11 @@ const statusType = sessionStatusType
 const formatTime = formatSessionTime
 
 function roleLabel(m) {
-  if (m.role === 'user') return '我'
-  if (m.type === 'gate') {
-    if (m.content?.mode === 'session_start') return '确认开始'
-    if (m.content?.mode === 'human_input') return '请输入'
-    if (m.content?.mode === 'need_params') return '请输入'
-    if (m.content?.mode === 'interrupted') return '崩溃恢复'
-    if (m.content?.mode === 'adapter_question') return '工具提问'
-    return '待你处理'
-  }
-  if (m.role === 'system') return '系统'
-  if (m.member_id) {
-    const mem = members.value.find((x) => x.id === m.member_id)
-    return mem?.display_name || '成员'
-  }
-  if (m.role === 'assistant' || m.role === 'member') return '成员'
-  return m.role || '未知'
+  return roleLabelForMessage(m, members.value)
 }
 
-/** 气泡上展示的发送人简称 */
 function shortSender(m, fullName) {
-  const full = fullName || roleLabel(m)
-  if (!full) return '?'
-  if (full === '我' || full === '系统' || full === '待你处理' || full === '闸门' || full === '成员') return full
-  if (full === '请输入' || full === '人工输入') return '输入'
-  // 中文名：最多 4 字，超过取前 2 字作简称
-  if (/[\u4e00-\u9fff]/.test(full)) {
-    if (full.length <= 4) return full
-    return full.slice(0, 2)
-  }
-  // 英文 / 混合：多词取首字母，否则截 4 字符
-  const parts = full.split(/[\s._-]+/).filter(Boolean)
-  if (parts.length >= 2) {
-    return parts
-      .map((p) => p[0])
-      .join('')
-      .slice(0, 4)
-      .toUpperCase()
-  }
-  return full.length <= 6 ? full : full.slice(0, 4)
+  return shortSenderForMessage(m, fullName, members.value)
 }
 
 function isPendingGate(m) {
