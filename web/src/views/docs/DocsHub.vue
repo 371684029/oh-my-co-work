@@ -503,6 +503,14 @@ import {
 import proseCss from './docProse.css?raw'
 import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
 import AcwIcon from '../../components/icons/AcwIcon.vue'
+import {
+  docsTimeRangeBuckets,
+  filterDocsItemsByTimeRange,
+  docsGroupKey,
+  filterDocsGroupsById,
+  totalDocsSessionCount,
+} from './docsHubFilterUi.js'
+import { highlightSearchSnippet } from './docsHubSearchUi.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -551,68 +559,23 @@ const selectedTimeRange = ref('all')
 const expandedSessions = ref({})
 const exportingAll = ref(false)
 
-const timeRanges = computed(() => {
-  const allCount = items.value.length
-  const now = Date.now()
-  const oneDay = 24 * 60 * 60 * 1000
-  const sevenDays = 7 * oneDay
-  const thirtyDays = 30 * oneDay
+const timeRanges = computed(() => docsTimeRangeBuckets(items.value))
 
-  let todayCount = 0
-  let weekCount = 0
-  let monthCount = 0
-  let olderCount = 0
-
-  for (const it of items.value) {
-    const diff = now - Number(it.mtimeMs || 0)
-    if (diff <= oneDay) todayCount++
-    if (diff <= sevenDays) weekCount++
-    if (diff <= thirtyDays) monthCount++
-    if (diff > thirtyDays) olderCount++
-  }
-
-  return [
-    { key: 'all', label: '全部时间', icon: '🕒', count: allCount },
-    { key: 'today', label: '今天', icon: '⚡', count: todayCount },
-    { key: 'week', label: '最近 7 天', icon: '📅', count: weekCount },
-    { key: 'month', label: '最近 30 天', icon: '🗓️', count: monthCount },
-    { key: 'older', label: '更早以前', icon: '📦', count: olderCount },
-  ]
-})
-
-const displayedTimeItems = computed(() => {
-  if (selectedTimeRange.value === 'all') return items.value
-  const now = Date.now()
-  const oneDay = 24 * 60 * 60 * 1000
-  const sevenDays = 7 * oneDay
-  const thirtyDays = 30 * oneDay
-
-  return items.value.filter((it) => {
-    const diff = now - Number(it.mtimeMs || 0)
-    if (selectedTimeRange.value === 'today') return diff <= oneDay
-    if (selectedTimeRange.value === 'week') return diff <= sevenDays
-    if (selectedTimeRange.value === 'month') return diff <= thirtyDays
-    if (selectedTimeRange.value === 'older') return diff > thirtyDays
-    return true
-  })
-})
+const displayedTimeItems = computed(() =>
+  filterDocsItemsByTimeRange(items.value, selectedTimeRange.value),
+)
 
 function groupKey(g) {
-  return g.groupId || 'none'
+  return docsGroupKey(g)
 }
 
 function sessionCount(g) {
   return (g.sessions || []).length
 }
 
-const totalSessionsCount = computed(() => {
-  return groups.value.reduce((acc, g) => acc + (g.sessions || []).length, 0)
-})
+const totalSessionsCount = computed(() => totalDocsSessionCount(groups.value))
 
-const displayedGroups = computed(() => {
-  if (selectedGroupId.value === 'all') return groups.value
-  return groups.value.filter((g) => groupKey(g) === selectedGroupId.value)
-})
+const displayedGroups = computed(() => filterDocsGroupsById(groups.value, selectedGroupId.value))
 
 function isSessionExpanded(id) {
   return expandedSessions.value[id] !== false
@@ -681,13 +644,7 @@ watch(
 )
 
 function highlightSnippet(snippet, query) {
-  if (!snippet || !query) return snippet || ''
-  const escaped = snippet.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const q = query.trim()
-  if (!q) return escaped
-  const words = q.split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const re = new RegExp(`(${words.join('|')})`, 'gi')
-  return escaped.replace(re, '<mark>$1</mark>')
+  return highlightSearchSnippet(snippet, query)
 }
 
 async function onExportGroup(groupId) {
