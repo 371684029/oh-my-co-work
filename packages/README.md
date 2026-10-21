@@ -16,7 +16,7 @@ Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js�
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
-| darwin-arm64 | [`oh-my-co-work-v5-darwin-arm64.zip`](./oh-my-co-work-v5-darwin-arm64.zip) | 24422679 | `e8fd2e67e154` | 2026-10-21T06:45:40.412Z |
+| linux-x64 | [`oh-my-co-work-v5-linux-x64.zip`](./oh-my-co-work-v5-linux-x64.zip) | 24580950 | `e8fd2e67e154` | 2026-10-21T06:45:40.492Z |
 
 版本：`5.3.0`（大版本 v5）
 
