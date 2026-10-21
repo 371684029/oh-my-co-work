@@ -132,7 +132,7 @@ test('directory backup can be listed and restored', async () => {
   assert.equal(hit.format, 'dir')
 
   writeJournal(session.id, 'ANNOUNCEMENT.md', '改过了')
-  const r = backup.restoreBackup(dirName)
+  const r = await backup.restoreBackupAsync(dirName)
   assert.equal(r.ok, true)
   assert.equal(
     fs.readFileSync(path.join(dataRoot, 'journals', 'sessions', session.id, 'ANNOUNCEMENT.md'), 'utf8'),
@@ -140,15 +140,15 @@ test('directory backup can be listed and restored', async () => {
   )
 })
 
-test('restore rolls live data back if apply fails after move-aside', () => {
+test('restore rolls live data back if apply fails after move-aside', async () => {
   const session = seedSession('回滚组')
   writeJournal(session.id, 'ANNOUNCEMENT.md', '回滚应还在')
   const created = backup.createBackup()
   const later = seedSession('回滚后应还在')
-  assert.throws(
+  await assert.rejects(
     () =>
-      backup.restoreBackup(path.basename(created.path), {
-        applyLive: () => {
+      backup.restoreBackupAsync(path.basename(created.path), {
+        applyLive: async () => {
           throw new Error('injected apply fail')
         },
       }),
@@ -187,7 +187,7 @@ test('restore rejects archives that plant journal symlinks', async () => {
   const evil = path.join(dataRoot, 'backups', evilName)
   const entries = fs.readdirSync(extract)
   execFileSync('tar', ['-czf', evil, '-C', extract, ...entries])
-  assert.throws(() => backup.restoreBackup(evilName), /符号链接/)
+  await assert.rejects(() => backup.restoreBackupAsync(evilName), /符号链接/)
   assert.ok(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c >= 1)
 })
 

@@ -19,6 +19,10 @@ export const strings = {
     commandPaletteList: '命令列表',
     shortcutsPage: '斜杠指令与快捷键',
     shortcutsBuiltinHotkeys: '内置快捷键说明',
+    settingsSideNav: '设置导航',
+    settingsProjectMenu: '项目设置菜单',
+    settingsMetaMenu: '其它设置菜单',
+    settingsMain: '设置主内容',
   },
   furnace: {
     idle: '闲置',

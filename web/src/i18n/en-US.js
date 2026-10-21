@@ -17,6 +17,10 @@ export const strings = {
     commandPaletteList: 'Command list',
     shortcutsPage: 'Slash commands and hotkeys',
     shortcutsBuiltinHotkeys: 'Built-in keyboard shortcuts',
+    settingsSideNav: 'Settings navigation',
+    settingsProjectMenu: 'Project settings menu',
+    settingsMetaMenu: 'Other settings menu',
+    settingsMain: 'Settings main content',
   },
   furnace: {
     idle: 'Idle',

@@ -1,12 +1,12 @@
 <template>
   <div class="settings-layout">
-    <aside class="settings-side" aria-label="设置侧栏">
+    <aside class="settings-side" role="navigation" :aria-label="t('a11y.settingsSideNav')">
       <div class="settings-side-label">项目</div>
       <el-menu
         :default-active="route.path"
         router
         class="settings-menu"
-        aria-label="项目设置菜单"
+        :aria-label="t('a11y.settingsProjectMenu')"
       >
         <el-menu-item index="/settings/members">成员管理</el-menu-item>
         <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
@@ -22,7 +22,7 @@
         :default-active="route.path"
         router
         class="settings-menu settings-menu--meta"
-        aria-label="其它设置菜单"
+        :aria-label="t('a11y.settingsMetaMenu')"
       >
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
           设置
@@ -41,7 +41,13 @@
         </el-menu-item>
       </el-menu>
     </aside>
-    <div id="settings-main" class="settings-body" tabindex="-1">
+    <div
+      id="settings-main"
+      class="settings-body"
+      tabindex="-1"
+      role="main"
+      :aria-label="t('a11y.settingsMain')"
+    >
       <router-view />
     </div>
   </div>
@@ -49,6 +55,8 @@
 
 <script setup>
 import { useRoute } from 'vue-router'
+import { t } from '../../i18n/index.js'
+
 const route = useRoute()
 </script>
 
