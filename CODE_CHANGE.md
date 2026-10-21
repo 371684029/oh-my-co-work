@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/workbench/composables/{sessionComposerPanelSyncActions,useSessionDetail} web/test/sessionComposerPanelSyncActions.test.mjs docs/5.1.0-plan.md | FE-01 composer 面板 sync 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionLoadActions,useSessionDetail} server/test/srv01ProductionBackup.test.js web/test/sessionLoadActions.test.mjs docs/5.1.0-plan.md | FE-01 load/select 模块、SRV-01 backup CLI 单测
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionFlowScrollUi,sessionRestartActions,useSessionDetail} web/test/{sessionFlowScrollUi,sessionRestartActions}.test.mjs docs/5.1.0-plan.md | FE-01 flow scroll + restartFromNode 模块
 2026-10-21 | A/M | web/src/{composables/terminalStatus.js,views/workbench/composables/{sessionDocsHubActions,sessionComposerCopyActions,useSessionDetail}} web/test/{sessionDocsHubActions,sessionComposerCopyActions}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/5.3.0-plan.md | DSK-08 terminal.status i18n、FE-01 docs/composer copy 模块

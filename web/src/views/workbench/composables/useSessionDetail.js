@@ -11,7 +11,6 @@ import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   composerScopeKey,
-  saveInputDraft,
   stepInputHistory,
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
@@ -88,6 +87,7 @@ import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi
 import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
 import { createSessionGateActions } from './sessionGateActions.js'
 import { createSessionLoadActions } from './sessionLoadActions.js'
+import { createSessionComposerPanelSyncActions } from './sessionComposerPanelSyncActions.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -99,12 +99,6 @@ import {
   announceUserNotesFromContext,
 } from './sessionAttentionUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
-import {
-  applyComposerPanelPatch,
-  atPanelStateFromText,
-  hashPanelStateFromText,
-  slashPanelStateFromText,
-} from './sessionComposerSync.js'
 import {
   composerFooterHintForGate,
   composerPlaceholderForGate,
@@ -160,7 +154,12 @@ const composerHistIndexRef = {
     composerHistIndex = v
   },
 }
-let composerDraftTimer = 0
+const composerDraftTimerRef = { id: 0 }
+const hashInsertLockUntilRef = {
+  get until() {
+    return hashInsertLockUntil
+  },
+}
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
 /** 待发送附件 */
@@ -590,45 +589,14 @@ const { openAnnouncementMd, rebuildAnnouncement } = createSessionAnnounceActions
 
 const { copyComposerText } = createSessionComposerCopyActions({ readSenderText })
 
-function syncSlashFromInput() {
-  const text = readSenderText()
-  const store = useComposerStore()
-  const patch = slashPanelStateFromText(text)
-  applyComposerPanelPatch(store, patch)
-  if (patch.slashOpen) store.slashIndex = 0
-}
-
-/** 光标在末尾的 @query 时弹出成员面板 */
-function syncAtFromInput() {
-  const text = readSenderText()
-  const store = useComposerStore()
-  const patch = atPanelStateFromText(text)
-  if (patch) {
-    applyComposerPanelPatch(store, patch)
-    if (patch.atOpen) store.atIndex = 0
-  }
-}
-
-/** 光标在末尾的 #query 时弹出文本快捷面板 */
-function syncHashFromInput() {
-  const text = readSenderTextRaw().replace(/\s+$/u, '')
-  const store = useComposerStore()
-  const patch = hashPanelStateFromText(text, { locked: Date.now() < hashInsertLockUntil })
-  if (patch) {
-    applyComposerPanelPatch(store, patch)
-    if (patch.hashOpen) store.hashIndex = 0
-  }
-}
-
-function onSenderChange() {
-  syncSlashFromInput()
-  syncAtFromInput()
-  syncHashFromInput()
-  window.clearTimeout(composerDraftTimer)
-  composerDraftTimer = window.setTimeout(() => {
-    if (activeId.value) saveInputDraft(composerScopeKey(activeId.value), readSenderTextRaw())
-  }, 400)
-}
+const { syncSlashFromInput, syncAtFromInput, syncHashFromInput, onSenderChange } =
+  createSessionComposerPanelSyncActions({
+    activeId,
+    readSenderText,
+    readSenderTextRaw,
+    hashInsertLockUntilRef,
+    draftTimerRef: composerDraftTimerRef,
+  })
 
 function onComposerKeydown(e) {
   const pickerOpen =
