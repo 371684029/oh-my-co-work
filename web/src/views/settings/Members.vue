@@ -9,7 +9,14 @@
       </div>
       <div class="page-head-actions">
         <el-button @click="triggerImportTemplate">导入模板</el-button>
-        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <input
+          ref="importFileRef"
+          type="file"
+          accept=".json,.acw.json"
+          class="hidden-file-input"
+          aria-label="选择成员模板 JSON 文件"
+          @change="onImportFile"
+        />
         <el-button type="primary" @click="openCreate()">新建成员</el-button>
       </div>
     </div>
@@ -20,6 +27,7 @@
       placeholder="搜索成员（支持拼音/首字母，如 cy、chengyuan）"
       clearable
       :prefix-icon="SearchIcon"
+      aria-label="搜索成员"
     />
 
     <el-table :data="filteredList" stripe>

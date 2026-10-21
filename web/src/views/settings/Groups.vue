@@ -17,7 +17,14 @@
             </el-dropdown-menu>
           </template>
         </el-dropdown>
-        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <input
+          ref="importFileRef"
+          type="file"
+          accept=".json,.acw.json"
+          class="hidden-file-input"
+          aria-label="选择群模板 JSON 文件"
+          @change="onImportFile"
+        />
         <el-button type="primary" @click="openCreate()">新建群模板</el-button>
       </div>
     </div>
@@ -28,6 +35,7 @@
       placeholder="搜索群模板（支持拼音/首字母）"
       clearable
       :prefix-icon="SearchIcon"
+      aria-label="搜索群模板"
     />
 
     <el-table :data="filteredList" stripe>
