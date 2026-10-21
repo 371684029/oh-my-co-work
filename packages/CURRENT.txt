@@ -5,6 +5,6 @@ needsNpmInstall=false
 policy=one-major-latest-only; same-major-per-platform-overwrite; delete-older-majors
 # 各平台产物（按平台键合并，避免并行 CI 冲突）
 file.linux-x64=oh-my-co-work-v5-linux-x64.zip
-size.linux-x64=24610265
-commit.linux-x64=ec67828f01240369c721c501b04f85a6c444d438
-built.linux-x64=2026-10-21T10:50:33.931Z
+size.linux-x64=24610531
+commit.linux-x64=1fa02bbe067ad26facc101e337570e0047ac0149
+built.linux-x64=2026-10-21T10:53:31.380Z
