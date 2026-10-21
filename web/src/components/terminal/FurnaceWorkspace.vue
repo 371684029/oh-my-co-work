@@ -213,7 +213,7 @@
             </div>
             <div v-if="awaitingReply" class="furnace-turn is-assistant is-pending">
               <span class="furnace-turn-label">{{ agentLabel }}</span>
-              <div class="furnace-bubble is-pending">正在写…</div>
+              <div class="furnace-bubble is-pending">{{ furnaceChatPendingLabel() }}</div>
             </div>
           </div>
         </div>
@@ -223,7 +223,7 @@
           class="furnace-jump-latest"
           @click="jumpToLatest"
         >
-          回到最新
+          {{ furnaceJumpLatestLabel() }}
         </button>
         <form
           class="furnace-composer"
@@ -391,6 +391,8 @@ import {
   furnaceReopenLabel,
   furnaceRoleYouLabel,
   furnaceSendLabel,
+  furnaceChatPendingLabel,
+  furnaceJumpLatestLabel,
   furnaceStatusBarLine,
   furnaceTurnCopyEmptyMessage,
   furnaceTurnCopyFailedMessage,

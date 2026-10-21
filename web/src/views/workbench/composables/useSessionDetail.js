@@ -142,6 +142,13 @@ import {
 } from './sessionContextUi.js'
 import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
 import {
+  buildDocsHubQuery,
+  docsHubOpenUsesNewTab,
+  formatDocsHubSearchParams,
+  resolveAnnounceMdRelativePath,
+} from './sessionDocsNavUi.js'
+import { buildSessionGateBody } from './sessionGateRequestUi.js'
+import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
 } from './sessionFlowNavUi.js'
@@ -614,15 +621,9 @@ async function selectSession(id) {
 }
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
-const announceMdHint = computed(() => {
-  const p =
-    detail.value?.announcement?.path ||
-    detail.value?.session?.context?.announcementPath ||
-    (activeId.value
-      ? `journals/sessions/${activeId.value}/ANNOUNCEMENT.md`
-      : '')
-  return announceMdHintLabel(p)
-})
+const announceMdHint = computed(() =>
+  announceMdHintLabel(resolveAnnounceMdRelativePath(detail.value, activeId.value)),
+)
 
 /** 用系统默认程序打开 ANNOUNCEMENT.md */
 async function openAnnouncementMd() {
@@ -646,13 +647,15 @@ async function openAnnouncementMd() {
 
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
 function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
-  if (!activeId.value) return
-  const query = {
-    session: activeId.value,
-    file: file || 'ANNOUNCEMENT.md',
-  }
-  if (newTab || (!window.__ACW_DESKTOP_API__ && !window.__ACW_DESKTOP_ENV__)) {
-    const qs = new URLSearchParams(query).toString()
+  const query = buildDocsHubQuery(activeId.value, file)
+  if (!query) return
+  const useNewTab = docsHubOpenUsesNewTab({
+    newTab,
+    hasDesktopApi: !!window.__ACW_DESKTOP_API__,
+    hasDesktopEnv: !!window.__ACW_DESKTOP_ENV__,
+  })
+  if (useNewTab) {
+    const qs = formatDocsHubSearchParams(query)
     window.open(`/docs?${qs}`, '_blank', 'noopener')
     return
   }
@@ -660,7 +663,7 @@ function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   if (_router) {
     _router.push({ path: '/docs', query })
   } else {
-    const qs = new URLSearchParams(query).toString()
+    const qs = formatDocsHubSearchParams(query)
     window.location.assign(`/docs?${qs}`)
   }
 }
@@ -705,14 +708,17 @@ async function answerAdapterQuestion(m, choice, action = 'adapter_answer') {
   gating.value = true
   try {
     const text = readSenderText()
-    await api.sessions.gate(activeId.value, {
-      action,
-      text: text || undefined,
-      choice: choice || undefined,
-      questionId: m?.content?.questionId,
-      nodeInstanceId: m?.node_instance_id || undefined,
-      idempotencyKey: nextIdempotencyKey('adapter_answer', m?.content?.questionId),
-    })
+    await api.sessions.gate(
+      activeId.value,
+      buildSessionGateBody({
+        action,
+        text,
+        choice,
+        questionId: m?.content?.questionId,
+        nodeInstanceId: m?.node_instance_id,
+        idempotencyKey: nextIdempotencyKey('adapter_answer', m?.content?.questionId),
+      }),
+    )
     clearSender()
     await loadDetail(activeId.value)
     ElMessage.success(adapterAnsweredMessage())
@@ -1308,12 +1314,15 @@ async function submitHuman(m) {
   }
   gating.value = true
   try {
-    await api.sessions.gate(activeId.value, {
-      action: 'submit',
-      text,
-      nodeInstanceId: m.node_instance_id,
-      idempotencyKey: nextIdempotencyKey('submit', m.node_instance_id),
-    })
+    await api.sessions.gate(
+      activeId.value,
+      buildSessionGateBody({
+        action: 'submit',
+        text,
+        nodeInstanceId: m.node_instance_id,
+        idempotencyKey: nextIdempotencyKey('submit', m.node_instance_id),
+      }),
+    )
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
@@ -1330,12 +1339,15 @@ async function approveSessionStart(m) {
   gating.value = true
   try {
     const text = readSenderText()
-    await api.sessions.gate(activeId.value, {
-      action: 'approve_start',
-      text,
-      nodeInstanceId: m?.node_instance_id || undefined,
-      idempotencyKey: nextIdempotencyKey('approve_start', m?.node_instance_id),
-    })
+    await api.sessions.gate(
+      activeId.value,
+      buildSessionGateBody({
+        action: 'approve_start',
+        text,
+        nodeInstanceId: m?.node_instance_id,
+        idempotencyKey: nextIdempotencyKey('approve_start', m?.node_instance_id),
+      }),
+    )
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
@@ -1354,12 +1366,15 @@ async function gate(m, action) {
   try {
     // 同意/拒绝/归档等：附言取自底部唯一输入框（X07）
     const text = readSenderText()
-    await api.sessions.gate(activeId.value, {
-      action,
-      text: text || undefined,
-      nodeInstanceId: m?.node_instance_id || undefined,
-      idempotencyKey: nextIdempotencyKey(action, m?.node_instance_id),
-    })
+    await api.sessions.gate(
+      activeId.value,
+      buildSessionGateBody({
+        action,
+        text,
+        nodeInstanceId: m?.node_instance_id,
+        idempotencyKey: nextIdempotencyKey(action, m?.node_instance_id),
+      }),
+    )
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()

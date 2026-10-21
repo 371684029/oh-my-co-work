@@ -132,6 +132,14 @@ export function furnaceSendLabel() {
   return t('furnace.compose.send')
 }
 
+export function furnaceChatPendingLabel() {
+  return t('furnace.compose.chatPending')
+}
+
+export function furnaceJumpLatestLabel() {
+  return t('furnace.compose.jumpLatest')
+}
+
 export function furnaceTuiHistoryTitle(open) {
   return open ? t('furnace.tuiDrawer.collapseHistory') : t('furnace.tuiDrawer.expandHistory')
 }
