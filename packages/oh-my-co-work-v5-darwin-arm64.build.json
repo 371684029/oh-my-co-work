@@ -3,11 +3,11 @@
   "name": "oh-my-co-work",
   "kind": "runtime-bundle",
   "desktop": "browser",
-  "version": "4.9.1",
-  "major": 4,
-  "platform": "win32-x64",
-  "sourceCommit": "29cd3884ed3a4a1f6e728aad7eb74503bb376be8",
-  "builtAt": "2026-10-14T01:58:00.466Z",
+  "version": "5.3.0",
+  "major": 5,
+  "platform": "darwin-arm64",
+  "sourceCommit": "90d265310bb6aedfe98ca042af32e68db4166715",
+  "builtAt": "2026-10-21T06:41:53.572Z",
   "needsNpmInstall": false,
   "requiredAssets": [
     "web/dist/assets/spritesheet-*.webp"
