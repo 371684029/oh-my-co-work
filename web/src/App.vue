@@ -5,25 +5,52 @@
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
         <div class="top-left docs-top-left">
-          <AppLogo size="md" class="brand-logo brand-logo--clickable" title="返回工作台" @click="goWorkbench" />
-          <h1 class="docs-brand-title">文档中心</h1>
+          <AppLogo
+            size="md"
+            class="brand-logo brand-logo--clickable"
+            :title="shellLogoBackWorkbenchTitle()"
+            @click="goWorkbench"
+          />
+          <h1 class="docs-brand-title">{{ shellDocsHubTitle() }}</h1>
         </div>
         <div class="top-right docs-top-right">
-          <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
+          <div class="zoom-ctrl" data-fullscreen-control role="group" :aria-label="shellZoomGroupAria()">
+            <button
+              type="button"
+              :aria-label="shellZoomOutAria()"
+              :title="shellZoomOutTitle()"
+              :disabled="zoom <= ZOOM_MIN"
+              @click="stepZoom(-1)"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              class="zoom-val"
+              :aria-label="shellZoomResetAria()"
+              :title="shellZoomResetTitle()"
+              @click="setZoom(1)"
+            >
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button
+              type="button"
+              :aria-label="shellZoomInAria()"
+              :title="shellZoomInTitle()"
+              :disabled="zoom >= ZOOM_MAX"
+              @click="stepZoom(1)"
+            >
+              +
+            </button>
           </div>
           <button type="button" class="dh-back-btn" @click="goWorkbench">
-            返回工作台
+            {{ shellBackToWorkbenchLabel() }}
           </button>
           <button
             type="button"
             class="fullscreen-button"
             data-fullscreen-control
-            :title="isFullscreen ? '退出全屏' : '全屏'"
+            :title="shellFullscreenTitle(isFullscreen)"
             @click="toggleWorkbenchFullscreen"
           >
             <AcwIcon
@@ -31,7 +58,7 @@
               :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
               :size="16"
             />
-            <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
+            <span>{{ shellFullscreenLabel(isFullscreen) }}</span>
           </button>
         </div>
       </template>
@@ -48,18 +75,18 @@
           <AppLogo size="md" class="brand-logo" />
           <div class="brand-block">
             <span class="brand">oh-my-co-work</span>
-            <span class="brand-sub" title="节点是死的，人是活的 — 流动的 Workflow · 终端守护者"
-              >人机协同 · 万物归元 · 皆可 Workflow · <em class="brand-guard">终端守护者</em></span
+            <span class="brand-sub" :title="`${shellBrandTagline()} ${shellBrandGuardEmphasis()}`"
+              >{{ shellBrandTagline() }} <em class="brand-guard">{{ shellBrandGuardEmphasis() }}</em></span
             >
           </div>
-          <nav class="top-nav" aria-label="主导航" data-fullscreen-control>
+          <nav class="top-nav" :aria-label="shellPrimaryNavAria()" data-fullscreen-control>
             <button
               type="button"
               class="nav-item"
               :class="{ active: nav === 'workbench' }"
               @click="go('workbench')"
             >
-              工作台
+              {{ shellNavWorkbench() }}
             </button>
             <el-popover
               placement="bottom"
@@ -73,17 +100,17 @@
                   type="button"
                   class="nav-item nav-item--docs"
                   :class="{ active: nav === 'docs' }"
-                  title="文档中心 (Ctrl+Shift+D)"
+                  :title="shellNavDocsTitle()"
                   @click="goDocs()"
                 >
-                  文档中心
+                  {{ shellNavDocs() }}
                   <span v-if="flowStore.docsUnread > 0" class="nav-docs-badge">{{
                     flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
                   }}</span>
                 </button>
               </template>
               <div v-if="navDocsPreview.length" class="nav-docs-preview">
-                <div class="nav-docs-preview-title">最近打开</div>
+                <div class="nav-docs-preview-title">{{ shellDocsPreviewTitle() }}</div>
                 <button
                   v-for="item in navDocsPreview"
                   :key="`${item.sessionId}:${item.name}`"
@@ -95,7 +122,7 @@
                   <span v-if="item.sessionTitle" class="nav-docs-preview-sub">{{ item.sessionTitle }}</span>
                 </button>
               </div>
-              <p v-else class="nav-docs-preview-empty">暂无最近文档</p>
+              <p v-else class="nav-docs-preview-empty">{{ shellDocsPreviewEmpty() }}</p>
             </el-popover>
             <button
               type="button"
@@ -103,23 +130,45 @@
               :class="{ active: nav === 'settings' }"
               @click="go('settings')"
             >
-              设置
+              {{ shellNavSettings() }}
             </button>
           </nav>
         </div>
         <div class="top-right">
-          <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
+          <div class="zoom-ctrl" data-fullscreen-control role="group" :aria-label="shellZoomGroupAria()">
+            <button
+              type="button"
+              :aria-label="shellZoomOutAria()"
+              :title="shellZoomOutTitle()"
+              :disabled="zoom <= ZOOM_MIN"
+              @click="stepZoom(-1)"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              class="zoom-val"
+              :aria-label="shellZoomResetAria()"
+              :title="shellZoomResetTitle()"
+              @click="setZoom(1)"
+            >
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button
+              type="button"
+              :aria-label="shellZoomInAria()"
+              :title="shellZoomInTitle()"
+              :disabled="zoom >= ZOOM_MAX"
+              @click="stepZoom(1)"
+            >
+              +
+            </button>
           </div>
           <button
             type="button"
             class="fullscreen-button"
             data-fullscreen-control
-            :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
+            :title="shellWorkbenchFullscreenTitle(isFullscreen)"
             @click="toggleWorkbenchFullscreen"
           >
             <AcwIcon
@@ -127,7 +176,7 @@
               :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
               :size="16"
             />
-            <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
+            <span>{{ shellWorkbenchFullscreenLabel(isFullscreen) }}</span>
           </button>
         </div>
       </template>
@@ -197,6 +246,31 @@ import {
 import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
 import { t } from './i18n/index.js'
+import {
+  shellLogoBackWorkbenchTitle,
+  shellDocsHubTitle,
+  shellBackToWorkbenchLabel,
+  shellZoomGroupAria,
+  shellZoomOutAria,
+  shellZoomOutTitle,
+  shellZoomResetAria,
+  shellZoomResetTitle,
+  shellZoomInAria,
+  shellZoomInTitle,
+  shellFullscreenTitle,
+  shellFullscreenLabel,
+  shellWorkbenchFullscreenTitle,
+  shellWorkbenchFullscreenLabel,
+  shellPrimaryNavAria,
+  shellNavWorkbench,
+  shellNavDocs,
+  shellNavDocsTitle,
+  shellNavSettings,
+  shellDocsPreviewTitle,
+  shellDocsPreviewEmpty,
+  shellBrandTagline,
+  shellBrandGuardEmphasis,
+} from './composables/appShellCopy.js'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'

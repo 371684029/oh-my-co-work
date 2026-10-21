@@ -174,6 +174,10 @@ async function main() {
     })
     assert.equal(dismissGuide.status, 200)
 
+    await page.goto(`${base}/workbench`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const primaryNav = page.getByRole('navigation', { name: /主导航|Primary navigation/i })
+    await primaryNav.waitFor({ state: 'visible', timeout: 15000 })
+
     await page.goto(`${base}/workbench/${session.id}`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
