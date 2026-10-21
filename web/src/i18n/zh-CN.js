@@ -15,6 +15,8 @@ export const strings = {
     docsTab: '文档中心',
     workbenchMain: '会话主区域',
     composer: '消息输入区',
+    composerExpand: '展开输入区',
+    composerCollapse: '折叠输入区',
     commandPaletteSearch: '命令面板搜索',
     commandPaletteList: '命令列表',
     shortcutsPage: '斜杠指令与快捷键',
@@ -41,6 +43,24 @@ export const strings = {
     closeFurnace: '关闭熔炉',
     gui: 'GUI',
     tui: 'TUI',
+    chips: {
+      current: '现在做到哪了？只看当前格。',
+      missing: '当前格缺什么？',
+      gate: '过闸的话只说通过或拒绝，先告诉我卡在哪。',
+    },
+    fail: {
+      cliNotRunning: '本机没有把 {cmd} 跑起来。常见原因：没装、没进 PATH、或还没登录。',
+      exitCode: '进程已退出（exit {code}）。',
+      stopped: '这轮已经停了，所以没有新画面，也不能往进程里打字。',
+    },
+    footer: {
+      stopped: '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮',
+      chatPagefill: '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘',
+      chatInline: '已在三栏中栏 · 可再满屏或全屏',
+      tuiFocused: 'TUI 输入中 · Esc 退出焦点 · 右侧箭头展开记录 · 菜单用键盘',
+      tuiPagefillEsc: '再按 Esc 缩小回工作台',
+      tuiIdle: '点 TUI 继续输入',
+    },
   },
   workbench: {
     start: {
@@ -65,6 +85,11 @@ export const strings = {
       mentionOffsite: '已进入临时协助',
       mainGateWaiting: '主流程仍停在当前确认，临时协助不替代提交',
       newTask: '已创建新任务',
+    },
+    pin: {
+      pinned: '已置顶',
+      unpinned: '已取消置顶',
+      failed: '操作失败',
     },
     gate: {
       approveStart: '已通过，开始执行',

@@ -58,6 +58,10 @@ import {
   needSelectSessionMessage,
   newTaskCreatedMessage,
 } from './sessionMessageFeedbackUi.js'
+import {
+  sessionPinFailedMessage,
+  sessionPinSuccessMessage,
+} from './sessionPinFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -708,9 +712,9 @@ async function togglePin(id, pinned) {
         session: { ...detail.value.session, pinned: !!s?.pinned },
       }
     }
-    ElMessage.success(pinned ? '已置顶' : '已取消置顶')
+    ElMessage.success(sessionPinSuccessMessage(pinned))
   } catch (e) {
-    ElMessage.error(e.message || '操作失败')
+    ElMessage.error(sessionPinFailedMessage(e))
   }
 }
 

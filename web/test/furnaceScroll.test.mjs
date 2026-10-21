@@ -38,7 +38,7 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
   assert.match(vueSrc, /class="furnace-tui-drawer"/)
   assert.match(vueSrc, /tuiHistoryOpen/)
   assert.match(vueSrc, /chatTurns/)
-  assert.match(presentationSrc, /右侧箭头展开记录/)
+  assert.match(presentationSrc, /furnace\.footer\.tuiFocused/)
   assert.doesNotMatch(vueSrc, /preserve-history/)
   assert.doesNotMatch(vueSrc, /furnace-tui-history/)
   assert.doesNotMatch(viewSrc, /preserveHistory/)

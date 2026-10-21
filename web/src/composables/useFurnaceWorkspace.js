@@ -27,7 +27,7 @@ import {
   shouldSubmitOnEnter,
 } from './inputIntent.js'
 import {
-  FURNACE_QUICK_CHIPS,
+  furnaceQuickChips,
   furnaceBuddyMood,
   furnaceFailHint,
   furnaceFooterHint,
@@ -71,7 +71,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
     },
   })
 
-  const quickChips = FURNACE_QUICK_CHIPS
+  const quickChips = computed(() => furnaceQuickChips())
 
   const isRunning = computed(() => isTerminalRunning(props.terminal.status))
   const isStopped = computed(() =>
