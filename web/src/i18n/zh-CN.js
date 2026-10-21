@@ -102,6 +102,19 @@ export const strings = {
       next: '下一个',
       close: '关闭',
     },
+    list: {
+      searching: '搜索中…',
+      noHits: '无匹配结果',
+      hitLine: '第 {line} 行',
+      loading: '加载中…',
+    },
+    pinQuickTitle: '固定',
+    badges: {
+      adapt: '适配',
+      cloned: '克隆',
+    },
+    truncatedWarn: '文件超过 1MB，已截断显示',
+    editPlaceholder: '在此编辑群报告 Markdown',
     sortByGroup: '按群模板',
     sortByTime: '按时间',
     timeRange: {

@@ -140,7 +140,7 @@
               <span
                 v-if="!isPinnedItem(item)"
                 class="dh-quick-pin is-off"
-                title="固定"
+                :title="docsHubPinQuickTitle()"
                 @click.stop="onTogglePin(item)"
               >☆</span>
             </button>
@@ -150,8 +150,8 @@
         <div class="dh-sessions-menu">
           <!-- 全文搜索结果 -->
           <template v-if="isSearching">
-            <div v-if="searchLoading" class="dh-empty-tip">搜索中…</div>
-            <div v-else-if="!searchResults.length" class="dh-empty-tip">无匹配结果</div>
+            <div v-if="searchLoading" class="dh-empty-tip">{{ docsHubSearchingLabel() }}</div>
+            <div v-else-if="!searchResults.length" class="dh-empty-tip">{{ docsHubNoSearchHitsLabel() }}</div>
             <template v-else>
               <button
                 v-for="hit in searchResults"
@@ -163,14 +163,14 @@
                 <div class="dh-hit-title">{{ hit.title || hit.name }}</div>
                 <div class="dh-hit-meta">{{ hit.groupTitle }} · {{ hit.sessionTitle }}</div>
                 <div class="dh-hit-snippet" v-html="highlightSnippet(hit.snippet, searchQuery)" />
-                <div class="dh-hit-line">第 {{ hit.line }} 行</div>
+                <div class="dh-hit-line">{{ docsHubHitLineLabel(hit.line) }}</div>
               </button>
             </template>
           </template>
 
           <!-- 正常列表 -->
           <template v-else>
-            <div v-if="listLoading && !hasDocs" class="dh-empty-tip">加载中…</div>
+            <div v-if="listLoading && !hasDocs" class="dh-empty-tip">{{ docsHubListLoadingLabel() }}</div>
             <div v-else-if="listError && !hasDocs" class="dh-empty-tip">{{ listError }}</div>
 
             <!-- 按群分组展示 -->
@@ -220,8 +220,8 @@
                     >
                       <span class="dh-file-row-name">{{ fileLabel(f) }}</span>
                       <span class="dh-kind-chip">{{ f.title }}</span>
-                      <span v-if="f.meta?.adapt" class="dh-badge dh-badge--adapt">适配</span>
-                      <span v-if="f.meta?.cloned" class="dh-badge dh-badge--cloned">克隆</span>
+                      <span v-if="f.meta?.adapt" class="dh-badge dh-badge--adapt">{{ docsHubBadgeAdaptLabel() }}</span>
+                      <span v-if="f.meta?.cloned" class="dh-badge dh-badge--cloned">{{ docsHubBadgeClonedLabel() }}</span>
                     </button>
                   </div>
                 </div>
@@ -293,7 +293,7 @@
               <span>{{ formatSize(file.size) }}</span>
               <span>{{ formatTime(file.mtimeMs) }}</span>
             </div>
-            <p v-if="file.truncated" class="dh-truncated-warn">文件超过 1MB，已截断显示</p>
+            <p v-if="file.truncated" class="dh-truncated-warn">{{ docsHubTruncatedWarn() }}</p>
           </div>
 
           <div v-if="inDocSearch && inDocMarkTotal && !editing" class="dh-in-doc-search">
@@ -401,7 +401,7 @@
               type="textarea"
               class="dh-editor"
               :autosize="{ minRows: 12, maxRows: 42 }"
-              placeholder="在此编辑群报告 Markdown"
+              :placeholder="docsHubEditPlaceholder()"
             />
             <div
               class="dh-editor-preview doc-prose"
@@ -571,6 +571,15 @@ import {
   docsHubInDocPrevLabel,
   docsHubInDocNextLabel,
   docsHubInDocCloseLabel,
+  docsHubSearchingLabel,
+  docsHubNoSearchHitsLabel,
+  docsHubHitLineLabel,
+  docsHubListLoadingLabel,
+  docsHubPinQuickTitle,
+  docsHubBadgeAdaptLabel,
+  docsHubBadgeClonedLabel,
+  docsHubTruncatedWarn,
+  docsHubEditPlaceholder,
 } from './docsHubCopy.js'
 
 const route = useRoute()

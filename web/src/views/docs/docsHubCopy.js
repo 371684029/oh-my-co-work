@@ -153,3 +153,39 @@ export function docsHubInDocNextLabel() {
 export function docsHubInDocCloseLabel() {
   return t('docs.inDoc.close')
 }
+
+export function docsHubSearchingLabel() {
+  return t('docs.list.searching')
+}
+
+export function docsHubNoSearchHitsLabel() {
+  return t('docs.list.noHits')
+}
+
+export function docsHubHitLineLabel(line) {
+  return t('docs.list.hitLine').replace('{line}', String(line ?? ''))
+}
+
+export function docsHubListLoadingLabel() {
+  return t('docs.list.loading')
+}
+
+export function docsHubPinQuickTitle() {
+  return t('docs.pinQuickTitle')
+}
+
+export function docsHubBadgeAdaptLabel() {
+  return t('docs.badges.adapt')
+}
+
+export function docsHubBadgeClonedLabel() {
+  return t('docs.badges.cloned')
+}
+
+export function docsHubTruncatedWarn() {
+  return t('docs.truncatedWarn')
+}
+
+export function docsHubEditPlaceholder() {
+  return t('docs.editPlaceholder')
+}
