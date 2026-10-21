@@ -17,3 +17,7 @@ export function slashRunSuccessMessage(r, cmd) {
 export function slashCommandNotFoundMessage(token) {
   return t('workbench.slash.notFound').replace('{token}', token || '')
 }
+
+export function slashUrlPromptDefault() {
+  return t('workbench.slash.urlPromptDefault')
+}
