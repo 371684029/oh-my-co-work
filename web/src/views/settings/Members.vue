@@ -685,6 +685,35 @@ async function save() {
             }
           : { ...baseConfig },
     }
+    if (form.value.refine) {
+      const plan = await api.members.refinePlan({
+        memberId: form.value._editId || undefined,
+        displayName: body.displayName,
+        kind: body.kind,
+        config: body.config,
+      })
+      if (plan?.reason === 'will_patch' && plan.files?.length) {
+        const lines = plan.files
+          .filter((f) => f.willPatch)
+          .map(
+            (f) =>
+              `· ${f.path}\n  ${String(f.snippet || '')
+                .split('\n')
+                .slice(0, 4)
+                .join('\n  ')}`,
+          )
+          .join('\n\n')
+        await ElMessageBox.confirm(
+          `保存后将修改 ${plan.fileCount} 个源文件并插入炼化契约（已有备份机制）。\n\n${lines}`,
+          '炼化改源确认',
+          {
+            type: 'warning',
+            confirmButtonText: '确认保存并改源',
+            cancelButtonText: '取消',
+          },
+        )
+      }
+    }
     let saved
     if (form.value._editId) {
       saved = await api.members.update(form.value._editId, body)

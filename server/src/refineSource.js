@@ -106,6 +106,36 @@ export function applyRefineContract(filePath, opts = {}) {
 /**
  * 勾选炼化并保存时：备份 → 改源文件契约 → 立刻写入 format 规格（不等第一次群聊跑完）。
  */
+/** 保存前预览：将改哪些文件、契约片段（5.2.0 REF-03，不落盘）。 */
+export function planRefineOnMemberSave(member) {
+  const title = safeTitle(member)
+  const paths = collectAdaptSourcePaths(member)
+  const assess = assessAdaptFiles(paths)
+  const needPatch = (assess.files || []).filter((f) => {
+    try {
+      return !fs.readFileSync(f.path, 'utf8').includes(REFINE_MARK)
+    } catch {
+      return false
+    }
+  })
+  const files = []
+  for (const f of needPatch) {
+    const r = computeRefineContractContent(f.path, { title })
+    if (r.ok) {
+      const idx = r.next.indexOf(REFINE_MARK)
+      const snippet =
+        idx >= 0 ? r.next.slice(idx, idx + 520) : r.next.slice(0, 520)
+      files.push({ path: f.path, snippet, willPatch: true })
+    } else {
+      files.push({ path: f.path, willPatch: false, reason: r.reason })
+    }
+  }
+  let reason = assess.ok ? 'ok' : assess.reason
+  if (assess.ok && !needPatch.length) reason = 'already'
+  else if (assess.ok && files.some((x) => x.willPatch)) reason = 'will_patch'
+  return { ok: assess.ok, reason, title, files, fileCount: needPatch.length }
+}
+
 export function applyRefineOnMemberSave(member) {
   const title = safeTitle(member)
   const spec = {

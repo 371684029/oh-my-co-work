@@ -115,6 +115,8 @@ export const api = {
     remove: (id) => req(`/members/${id}`, { method: 'DELETE' }),
     restoreRefine: (id) =>
       req(`/members/${id}/refine/restore`, { method: 'POST', body: '{}' }),
+    refinePlan: (body) =>
+      req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
   },

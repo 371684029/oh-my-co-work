@@ -35,6 +35,7 @@ import {
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
 import { restoreMemberRefine } from './refineRestore.js'
+import { planRefineOnMemberSave } from './refineSource.js'
 import {
   touchHeartbeat,
   notifyClientGone,
@@ -258,6 +259,35 @@ router.post('/members/:id/clone', (req, res) => {
 router.patch('/members/:id', (req, res) => {
   try {
     res.json(updateMember(req.params.id, req.body || {}))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.post('/members/refine/plan', (req, res) => {
+  try {
+    const body = req.body || {}
+    let member
+    if (body.memberId) {
+      const src = getMember(body.memberId)
+      if (!src) return res.status(404).json({ error: '成员不存在' })
+      member = {
+        ...src,
+        display_name: body.displayName || body.display_name || src.display_name,
+        kind: body.kind || src.kind,
+        config: body.config !== undefined ? body.config : src.config,
+      }
+    } else {
+      member = {
+        id: 'plan',
+        kind: body.kind,
+        display_name: body.displayName || body.display_name || '成员',
+        config: body.config || {},
+      }
+    }
+    if (!member.config?.refine?.enabled) {
+      return res.json({ ok: false, reason: 'refine_disabled', files: [] })
+    }
+    res.json(planRefineOnMemberSave(member))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

@@ -20,4 +20,5 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
   applyDesktopUpdate: (manifest) => ipcRenderer.invoke('acw:apply-desktop-update', manifest),
   readClipboard: () => ipcRenderer.invoke('acw:clipboard-read'),
   writeClipboard: (text) => ipcRenderer.invoke('acw:clipboard-write', text),
+  setTrayStatus: (payload) => ipcRenderer.invoke('acw:tray-status', payload || {}),
 })

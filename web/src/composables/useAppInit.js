@@ -10,6 +10,7 @@ import {
 import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
 import { loadNotificationPrefs } from './useNotificationPrefs.js'
+import { syncTrayStatus } from './syncTrayStatus.js'
 
 export function useAppInit() {
   const desktop = useDesktopBridge()
@@ -90,9 +91,12 @@ export function useAppInit() {
     }
   }
 
+  const clearTrayOnFocus = () => syncTrayStatus({ pending: 0, status: 'idle' })
+
   onMounted(() => {
     desktop.initDesktopBridge()
     document.addEventListener('fullscreenchange', syncFullscreenState)
+    window.addEventListener('focus', clearTrayOnFocus)
     syncFullscreenState()
     void loadNotificationPrefs()
     refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
@@ -100,6 +104,7 @@ export function useAppInit() {
 
   onUnmounted(() => {
     document.removeEventListener('fullscreenchange', syncFullscreenState)
+    window.removeEventListener('focus', clearTrayOnFocus)
   })
 
   return {

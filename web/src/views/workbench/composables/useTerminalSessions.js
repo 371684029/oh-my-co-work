@@ -16,6 +16,7 @@ import {
 } from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
 import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
+import { syncTrayStatus } from '../../../composables/syncTrayStatus.js'
 import {
   terminalBridge,
   activeId,
@@ -417,6 +418,7 @@ function bindWs(sessionId) {
         ElMessage.info({ message: '群报告已更新 · 可在文档中心查看', duration: 5000, showClose: true })
       }
       if (ev.type === 'gate.request') {
+        syncTrayStatus({ pending: 1, status: 'action' })
         const title = detail.value?.session?.title || '工作台'
         pushDesktopNotification(`[${title}] 等你确认`, '流程需要你处理，点击返回应用', {
           id: `gate:${sessionId}:${ev.payload?.gateId || ev.payload?.id || 'x'}`,

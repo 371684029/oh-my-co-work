@@ -309,6 +309,7 @@
             :terminal="terminal"
             :prefs="prefs"
             paste-context="furnace"
+            :session-id="sessionId"
             :active="surface === 'tui'"
             @input="$emit('input', $event)"
             @resize="$emit('resize', $event)"

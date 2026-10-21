@@ -35,6 +35,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow = null
 let notifier = null
+let trayPendingCount = 0
 let tray = null
 let trayOk = false
 let isQuitting = false
@@ -142,6 +143,15 @@ function appIconPath() {
   return png
 }
 
+function refreshTrayToolTip() {
+  if (!tray) return
+  tray.setToolTip(
+    trayPendingCount > 0
+      ? `oh-my-co-work · ${trayPendingCount} 项待处理`
+      : 'oh-my-co-work',
+  )
+}
+
 function createTray() {
   if (tray) return
   const iconPath = appIconPath()
@@ -150,7 +160,7 @@ function createTray() {
     const image = nativeImage.createFromPath(iconPath)
     if (image.isEmpty()) return
     tray = new Tray(image)
-    tray.setToolTip('oh-my-co-work')
+    refreshTrayToolTip()
     tray.setContextMenu(
       Menu.buildFromTemplate([
         { label: '打开工作台', click: () => showMainWindow() },
@@ -247,6 +257,12 @@ async function loadWorkbench() {
 }
 
 function registerIpc() {
+  ipcMain.handle('acw:tray-status', (_evt, payload) => {
+    trayPendingCount = Math.max(0, Number(payload?.pending) || 0)
+    refreshTrayToolTip()
+    return true
+  })
+
   ipcMain.handle('acw:clipboard-read', () => clipboard.readText())
   ipcMain.handle('acw:clipboard-write', (_evt, text) => {
     clipboard.writeText(String(text ?? ''))

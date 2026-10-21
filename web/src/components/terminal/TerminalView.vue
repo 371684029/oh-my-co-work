@@ -58,6 +58,9 @@ import {
   buildPasteConfirmMessage,
   shouldConfirmTerminalPaste,
 } from '../../composables/terminalPasteConfirm.js'
+import { api } from '../../api.js'
+import { wrapBracketedPaste, chunkBracketedPaste } from '../../composables/bracketedPaste.js'
+import { pathsToTerminalPaste } from '../../composables/terminalFilePaste.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -66,6 +69,8 @@ const props = defineProps({
   active: { type: Boolean, default: true },
   /** shell | furnace | agent — furnace 多行粘贴不弹确认 (CP-08) */
   pasteContext: { type: String, default: 'shell' },
+  /** 有值时支持拖入/粘贴文件到 inbox 并写入路径 (CP-09) */
+  sessionId: { type: String, default: '' },
 })
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
@@ -140,6 +145,57 @@ function toggleForceSelection() {
       ? '强制选择提示：请按住 Shift 拖选（macOS 可用 Option）'
       : '已关闭强制选择提示',
   )
+}
+
+async function emitPathPaste(text) {
+  const payload = String(text || '').trim()
+  if (!payload || !isRunning.value) return
+  const chunks =
+    payload.length > 4096 || payload.includes('\n')
+      ? chunkBracketedPaste(payload)
+      : [wrapBracketedPaste(payload)]
+  for (const chunk of chunks) emit('input', chunk)
+}
+
+async function ingestTerminalFiles(fileList) {
+  if (!props.sessionId || !isRunning.value) {
+    ElMessage.warning('需要会话上下文才能落盘文件')
+    return
+  }
+  const arr = [...fileList].filter(Boolean)
+  if (!arr.length) return
+  try {
+    const r = await api.sessions.uploadFurnaceFiles(props.sessionId, arr)
+    const paths = (r.files || []).map((f) => f.relPath || f.name).filter(Boolean)
+    if (!paths.length) return
+    const text = pathsToTerminalPaste(paths, {
+      asAtRef: props.pasteContext === 'furnace',
+    })
+    await emitPathPaste(text)
+    ElMessage.success(`已写入 ${paths.length} 个路径引用`)
+  } catch (e) {
+    ElMessage.error(e.message || '文件落盘失败')
+  }
+}
+
+function onHostDragOver(ev) {
+  if (!props.sessionId || !isRunning.value) return
+  ev.preventDefault()
+}
+
+function onHostDrop(ev) {
+  if (!props.sessionId || !isRunning.value) return
+  ev.preventDefault()
+  const files = ev.dataTransfer?.files
+  if (files?.length) void ingestTerminalFiles(files)
+}
+
+function onHostPaste(ev) {
+  const files = ev.clipboardData?.files
+  const text = String(ev.clipboardData?.getData('text') || '').trim()
+  if (!props.sessionId || !isRunning.value || !files?.length || text) return
+  ev.preventDefault()
+  void ingestTerminalFiles(files)
 }
 
 async function findInTerminal() {
@@ -261,6 +317,9 @@ onMounted(async () => {
       y: ev.clientY - rect.top,
     }
   })
+  host.value?.addEventListener('dragover', onHostDragOver)
+  host.value?.addEventListener('drop', onHostDrop)
+  host.value?.addEventListener('paste', onHostPaste)
   document.addEventListener('click', closeCtxMenu)
   xterm.onData((data) => {
     if (!isRunning.value) return
@@ -358,6 +417,9 @@ defineExpose({
 })
 
 onBeforeUnmount(() => {
+  host.value?.removeEventListener('dragover', onHostDragOver)
+  host.value?.removeEventListener('drop', onHostDrop)
+  host.value?.removeEventListener('paste', onHostPaste)
   document.removeEventListener('click', closeCtxMenu)
   window.clearTimeout(fitTimer)
   unsubOutput?.()
