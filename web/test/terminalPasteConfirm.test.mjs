@@ -28,3 +28,10 @@ test('shouldConfirmTerminalPaste respects single-line paste', () => {
     false,
   )
 })
+
+test('shouldConfirmTerminalPaste triggers on multi-line shell paste', () => {
+  assert.equal(
+    shouldConfirmTerminalPaste({ data: 'a\nb\nc', pasteContext: 'shell' }),
+    true,
+  )
+})

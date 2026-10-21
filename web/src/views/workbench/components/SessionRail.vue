@@ -130,6 +130,15 @@
                 >
               </span>
             </el-tooltip>
+            <button
+              type="button"
+              class="conv-docs-btn"
+              title="文档中心"
+              aria-label="打开本会话文档"
+              @click.stop="openSessionDocs(item.id)"
+            >
+              📄
+            </button>
             <span v-if="item.timeLabel" class="conv-time">{{ item.timeLabel }}</span>
           </div>
         </template>
@@ -157,7 +166,15 @@ import {
   convMenu,
   onConvChange,
   onConvMenu,
+  openDocsHub,
+  selectSession,
 } from '../composables/useSessionDetail'
+
+function openSessionDocs(sessionId) {
+  if (!sessionId) return
+  selectSession(sessionId)
+  openDocsHub()
+}
 </script>
 
 <style scoped>
@@ -215,6 +232,20 @@ import {
   vertical-align: middle;
   cursor: default;
 }
+.conv-docs-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.65;
+}
+.conv-docs-btn:hover {
+  opacity: 1;
+}
+
 .conv-time {
   flex-shrink: 0;
   font-size: 11.5px;

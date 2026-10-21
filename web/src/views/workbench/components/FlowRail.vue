@@ -92,6 +92,16 @@
                       >{{ n.step_index + 1 }}</span
                     >
                     <span class="flow-step-name">{{ n.title }}</span>
+                    <el-button
+                      v-if="nodeJournalDocFile(n)"
+                      size="small"
+                      text
+                      type="primary"
+                      class="flow-node-doc-btn"
+                      @click.stop="openNodeJournal(n)"
+                    >
+                      台账
+                    </el-button>
                     <el-tag
                       v-if="nodeHasAdapt(n)"
                       size="small"
@@ -247,7 +257,12 @@
                     <div class="flow-io-label">输出（做了啥）</div>
                     <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
                   </div>
-                  <div v-if="n.journalPath" class="flow-io-path">台账：{{ n.journalPath }}</div>
+                  <div v-if="n.journalPath" class="flow-io-path">
+                    台账：{{ n.journalPath }}
+                    <el-button size="small" text type="primary" @click.stop="openNodeJournal(n)">
+                      在文档中心打开
+                    </el-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -472,12 +487,23 @@ import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { handleDocsProseClick, readDocsCodeLineNumbers } from '../../docs/docsCodeFence.js'
 import { getDocsList, subscribeDocsList } from '../../docs/docsListStore.js'
+import { journalPathToDocFile } from '../../../composables/messageDocLinks.js'
 import {
   docsReadingClassNames,
   docsReadingStyle,
   readDocsReadingPrefs,
 } from '../../docs/docsReadingPrefs.js'
 import { openPath } from '../composables/useDocsHub'
+
+function nodeJournalDocFile(n) {
+  return journalPathToDocFile(n?.journalPath)
+}
+
+function openNodeJournal(n) {
+  const file = nodeJournalDocFile(n)
+  if (!file) return
+  openDocsHub({ file })
+}
 
 const flowStore = useFlowStore()
 const isDocsHubTab = computed(

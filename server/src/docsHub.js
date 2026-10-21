@@ -21,6 +21,7 @@ const FILE_KINDS = [
   { re: /^ANNOUNCEMENT\.md$/, kind: 'announce', title: '群报告' },
   { re: /^README\.md$/, kind: 'index', title: '文档索引' },
   { re: /^nodes\/step-(\d{2})-([A-Za-z0-9_-]+)\.md$/, kind: 'step', title: '节点台账' },
+  { re: /^furnace\/archive-.+\.md$/, kind: 'furnace', title: '熔炉对话归档' },
 ]
 
 function journalRoot() {
@@ -99,10 +100,14 @@ function scanSessionDir(sessionId) {
       for (const sub of fs.readdirSync(path.join(dir, 'nodes'), { withFileTypes: true })) {
         if (sub.isFile()) push(`nodes/${sub.name}`)
       }
+    } else if (entry.isDirectory() && entry.name === 'furnace') {
+      for (const sub of fs.readdirSync(path.join(dir, 'furnace'), { withFileTypes: true })) {
+        if (sub.isFile()) push(`furnace/${sub.name}`)
+      }
     }
   }
   files.sort((a, b) => {
-    const rank = { announce: 0, index: 1, step: 2 }
+    const rank = { announce: 0, index: 1, step: 2, furnace: 3 }
     if (rank[a.kind] !== rank[b.kind]) return rank[a.kind] - rank[b.kind]
     if (a.kind === 'step' && b.kind === 'step') return a.step - b.step
     return a.name.localeCompare(b.name)

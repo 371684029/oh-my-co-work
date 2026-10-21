@@ -35,6 +35,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 import { isTerminalRunning } from '../../composables/terminalStatus'
@@ -85,6 +86,7 @@ let lastSeq = 0
 let fitTimer = 0
 let unsubOutput = null
 let searchAddon = null
+let webglAddon = null
 const forceSelection = ref(false)
 const ctxMenu = ref({ open: false, x: 0, y: 0 })
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
@@ -286,6 +288,28 @@ onMounted(async () => {
     searchAddon = null
   }
   xterm.open(host.value)
+  if (prefs.renderer !== 'dom') {
+    try {
+      webglAddon = new WebglAddon()
+      webglAddon.onContextLoss(() => {
+        try {
+          webglAddon?.dispose()
+        } catch {
+          /* ignore */
+        }
+        webglAddon = null
+        try {
+          webglAddon = new WebglAddon()
+          xterm.loadAddon(webglAddon)
+        } catch {
+          /* fall back to canvas/DOM */
+        }
+      })
+      xterm.loadAddon(webglAddon)
+    } catch {
+      webglAddon = null
+    }
+  }
   xterm.attachCustomKeyEventHandler((ev) => {
     if (ev.type !== 'keydown') return true
     if ((ev.ctrlKey || ev.metaKey) && String(ev.key || '').toLowerCase() === 'f') {

@@ -178,7 +178,13 @@
                       { 'is-archive': item._kind === 'archive' },
                     ]"
                   >
-                    <div v-if="item.content" class="bubble-text">{{ item.content }}</div>
+                    <MessageDocText
+                      v-if="item.content"
+                      class="bubble-text"
+                      :text="item.content"
+                      :session-id="activeId"
+                      @open-doc="onBubbleOpenDoc"
+                    />
                     <div v-if="item.attachments?.length" class="bubble-files">
                       <a
                         v-for="f in item.attachments"
@@ -247,6 +253,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
+import MessageDocText from '../components/MessageDocText.vue'
 import SessionRail from './workbench/components/SessionRail.vue'
 import FlowRail from './workbench/components/FlowRail.vue'
 import ComposerPanel from './workbench/components/ComposerPanel.vue'
@@ -271,6 +278,7 @@ import {
   selectSession,
   terminalPrefs,
   furnaceSurface,
+  openDocsHub,
 } from './workbench/composables/useSessionDetail'
 import {
   initTerminalSessions,
@@ -311,6 +319,11 @@ initSessionDetail({ route, router })
 initTerminalSessions()
 initFurnaceSync({ route, router })
 startWorkbench()
+
+function onBubbleOpenDoc({ file }) {
+  if (!file) return
+  openDocsHub({ file })
+}
 
 // —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——
 const chatSearchOpen = ref(false)

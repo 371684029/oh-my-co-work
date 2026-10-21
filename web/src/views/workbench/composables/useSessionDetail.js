@@ -1232,11 +1232,11 @@ async function openAnnouncementMd() {
 }
 
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
-function openDocsHub({ newTab = false } = {}) {
+function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   if (!activeId.value) return
   const query = {
     session: activeId.value,
-    file: 'ANNOUNCEMENT.md',
+    file: file || 'ANNOUNCEMENT.md',
   }
   if (newTab || (!window.__ACW_DESKTOP_API__ && !window.__ACW_DESKTOP_ENV__)) {
     const qs = new URLSearchParams(query).toString()

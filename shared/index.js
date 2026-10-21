@@ -171,6 +171,8 @@ export {
   furnaceTurnCopyPlain,
 } from './ptyPlain.js'
 
+export { estimateFurnaceContext, formatFurnaceContextHint } from './furnaceContextEstimate.js'
+
 /** 去 CSI / OSC，给卡片预览用；GUI 请用 furnaceGuiTranscript */
 export function stripAnsi(value) {
   return String(value || '')

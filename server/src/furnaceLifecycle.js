@@ -10,6 +10,7 @@ import { runMember } from './runners.js'
 import { syncFurnaceSessionContext } from './furnaceSituation.js'
 import { killTerminal, listSessionTerminals } from './terminal/terminalService.js'
 import { killMemberProcesses } from './processRegistry.js'
+import { archiveFurnaceTranscript } from './furnaceArchive.js'
 
 function furnaceMember() {
   return listMembers({ includeDemo: true }).find((m) => isFurnaceMember(m)) || null
@@ -56,7 +57,7 @@ export function closeFurnace(sessionId) {
   return { ok: true, closed: true, killed }
 }
 
-export async function reopenFurnace(sessionId, { agent } = {}) {
+export async function reopenFurnace(sessionId, { agent, archiveTranscript = false, terminalId } = {}) {
   const session = requireSession(sessionId)
   const member = furnaceMember()
   if (!member) throw new Error('未找到熔炉成员')
@@ -64,6 +65,14 @@ export async function reopenFurnace(sessionId, { agent } = {}) {
     throw new Error('熔炉还没接到 Grok，请先在设置里打开 Grok Build')
   }
   const furnaceAgent = normalizeFurnaceAgent(agent)
+  let archived = null
+  if (archiveTranscript && terminalId) {
+    try {
+      archived = archiveFurnaceTranscript(sessionId, { terminalId, agent: furnaceAgent })
+    } catch (e) {
+      console.warn('[acw] furnace archive before reopen failed', e?.message || e)
+    }
+  }
   const nodeInstanceId = furnaceNodeId(sessionId, member.id)
   if (!nodeInstanceId) {
     throw new Error('这场会话还没有熔炉节点，请先从流程里开一次熔炉')
@@ -95,5 +104,6 @@ export async function reopenFurnace(sessionId, { agent } = {}) {
     nodeInstanceId,
     furnaceAgent,
     replaced: true,
+    archived,
   }
 }

@@ -19,6 +19,11 @@ import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/us
 import { syncTrayStatus } from '../../../composables/syncTrayStatus.js'
 import { refreshDocsForSession } from '../../docs/docsListStore.js'
 import {
+  buildFurnaceReopenConfirmCopy,
+  estimateFromTerminalReplay,
+  pickLiveFurnaceTerminal,
+} from '../../../composables/furnaceReopen.js'
+import {
   terminalBridge,
   activeId,
   detail,
@@ -203,23 +208,23 @@ async function closeFurnaceProcess() {
 async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent } = {}) {
   if (!activeId.value) return
   const furnaceAgent = inferFurnaceAgent({ furnaceAgent: agent })
-  const liveSame = (terminalSessions.value || []).some(
-    (t) =>
-      isFurnaceTuiContext(t) &&
-      isTerminalRunning(t.status) &&
-      inferFurnaceAgent(t) === furnaceAgent,
-  )
+  const liveTerminal = pickLiveFurnaceTerminal(terminalSessions.value, {
+    agent: furnaceAgent,
+    isFurnaceTuiContext,
+    isTerminalRunning,
+  })
+  const liveSame = !!liveTerminal
+  const estimate = liveTerminal ? estimateFromTerminalReplay(liveTerminal, furnaceAgent) : null
   if (liveSame && !skipConfirm) {
     try {
       await ElMessageBox.confirm(
-        furnaceAgent === 'cursor'
-          ? '会结束当前 Cursor CLI，再开一条空对话。Grok 进程还在。'
-          : '会结束当前 Grok，再开一条空对话。Cursor CLI 若在跑会留下。工作台会话还在。',
+        buildFurnaceReopenConfirmCopy({ furnaceAgent, estimate }),
         '新开熔炉',
         {
           type: 'warning',
-          confirmButtonText: '新开',
+          confirmButtonText: '新开并归档',
           cancelButtonText: '取消',
+          dangerouslyUseHTMLString: false,
         },
       )
     } catch {
@@ -227,14 +232,23 @@ async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent 
     }
   }
   try {
-    const r = await api.sessions.reopenFurnace(activeId.value, { agent: furnaceAgent })
+    const r = await api.sessions.reopenFurnace(activeId.value, {
+      agent: furnaceAgent,
+      archiveTranscript: liveSame && !!liveTerminal?.id,
+      terminalId: liveTerminal?.id || null,
+    })
     await loadTerminals(activeId.value)
+    if (r?.archived?.rel) {
+      refreshDocsForSession(activeId.value)
+    }
     const tid = r?.terminalId
     if (tid) revealFurnaceTui(tid)
     if (quiet) return
     if (r?.ok) {
+      const archivedNote = r?.archived?.name ? '，旧对话已写入文档中心' : ''
       ElMessage.success(
-        furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空',
+        (furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空') +
+          archivedNote,
       )
     } else ElMessage.warning(r?.summary || '新开熔炉未成功')
   } catch (e) {
