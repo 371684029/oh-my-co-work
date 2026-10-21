@@ -298,7 +298,9 @@
           </div>
 
           <div v-if="inDocSearch && inDocMarkTotal && !editing" class="dh-in-doc-search">
-            <span class="dh-in-doc-search-label">正文「{{ inDocSearch.query }}」· {{ inDocSearchLabel }}</span>
+            <span class="dh-in-doc-search-label">{{
+              docsHubInDocSearchBanner(inDocSearch.query, inDocSearchLabel)
+            }}</span>
             <el-button size="small" @click="stepInDocSearchMark(-1)">{{ docsHubInDocPrevLabel() }}</el-button>
             <el-button size="small" @click="stepInDocSearchMark(1)">{{ docsHubInDocNextLabel() }}</el-button>
             <el-button size="small" link type="info" @click="clearInDocSearch">{{ docsHubInDocCloseLabel() }}</el-button>
@@ -572,6 +574,7 @@ import {
   docsHubInDocPrevLabel,
   docsHubInDocNextLabel,
   docsHubInDocCloseLabel,
+  docsHubInDocSearchBanner,
   docsHubSearchingLabel,
   docsHubNoSearchHitsLabel,
   docsHubHitLineLabel,

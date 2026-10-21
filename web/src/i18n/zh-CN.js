@@ -91,6 +91,14 @@ export const strings = {
       unpinned: '已取消置顶',
       failed: '操作失败',
     },
+    flow: {
+      restartOffsiteBlocked: '临时协助没有「重新开始」；请点右侧正常节点「从这里继续」',
+      restartArchiveBlocked: '归档节点没有「重新开始」；请点右侧正常节点',
+      restartJump: '已跳到「{title}」继续{suffix}',
+      restartContinue: '已从「{title}」继续{suffix}',
+      restartSuffixRecovered: ' · 已恢复',
+      restartSuffixOffsiteArchived: ' · 临时协助本段已归档',
+    },
     gate: {
       approveStart: '已通过，开始执行',
       cancelStart: '已取消，任务关闭',
@@ -171,6 +179,7 @@ export const strings = {
       prev: '上一个',
       next: '下一个',
       close: '关闭',
+      banner: '正文「{query}」· {pager}',
     },
     list: {
       searching: '搜索中…',
