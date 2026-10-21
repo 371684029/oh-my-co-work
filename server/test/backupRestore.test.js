@@ -191,3 +191,16 @@ test('restore rejects archives that plant journal symlinks', async () => {
   assert.ok(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c >= 1)
 })
 
+test('createBackupAsync produces tar.gz like sync createBackup', async () => {
+  const asyncResult = await backup.createBackupAsync()
+  assert.equal(asyncResult.ok, true)
+  assert.ok(asyncResult.path)
+})
+
+test('restoreBackupAsync roundtrip', async () => {
+  const created = await backup.createBackupAsync()
+  const name = path.basename(created.path)
+  const r = await backup.restoreBackupAsync(name)
+  assert.equal(r.ok, true)
+})
+

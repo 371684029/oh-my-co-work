@@ -1,3 +1,5 @@
+import { formatUserFacingError } from '@acw/shared'
+
 const BASE = '/api'
 let accessTokenPromise = null
 
@@ -34,14 +36,23 @@ async function req(path, options = {}) {
   })
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || res.statusText)
+  if (!res.ok) {
+    const err = new Error(formatUserFacingError({ message: data.error, code: data.code }, res.statusText))
+    if (data.code) err.code = data.code
+    if (data.conflicts) err.conflicts = data.conflicts
+    err.status = res.status
+    throw err
+  }
   return data
 }
 
 export const api = {
   health: () => req('/health'),
+  notify: (payload) => req('/notify', { method: 'POST', body: JSON.stringify(payload) }),
   docs: {
     list: (sort = 'group') => req(`/docs/list?sort=${encodeURIComponent(sort)}`),
+    sessionSummary: (sessionId) =>
+      req(`/docs/sessions/${encodeURIComponent(sessionId)}`),
     file: (sessionId, name) =>
       req(`/docs/file?sessionId=${encodeURIComponent(sessionId)}&name=${encodeURIComponent(name)}`),
     saveAnnouncement: (sessionId, markdown) =>
@@ -106,6 +117,22 @@ export const api = {
         sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''
       }`),
   },
+  restoreCenter: {
+    list: () => req('/restore-center'),
+  },
+  diagnostics: () => req('/diagnostics'),
+  system: {
+    dataDir: () => req('/system/data-dir'),
+    migrateDataDir: () => req('/system/migrate-data-dir', { method: 'POST', body: '{}' }),
+  },
+  agentRegistry: {
+    list: () => req('/agent-registry'),
+    parseProfiles: () => req('/agent-registry/parse-profiles'),
+    parseSamples: (agentId) =>
+      req(`/agent-registry/parse-samples?agentId=${encodeURIComponent(agentId || 'generic-cli')}`),
+    recordParseSample: (body) =>
+      req('/agent-registry/parse-samples', { method: 'POST', body: JSON.stringify(body || {}) }),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),
@@ -113,8 +140,16 @@ export const api = {
       req(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(body || {}) }),
     clone: (id, body) => req(`/members/${id}/clone`, { method: 'POST', body: JSON.stringify(body || {}) }),
     remove: (id) => req(`/members/${id}`, { method: 'DELETE' }),
+    restoreRefine: (id, { force = false } = {}) =>
+      req(`/members/${id}/refine/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ force: !!force }),
+      }),
+    refinePlan: (body) =>
+      req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    exportTemplate: (id) => req(`/members/${id}/export-template`),
   },
   groups: {
     list: () => req('/groups'),
@@ -125,10 +160,29 @@ export const api = {
     remove: (id) => req(`/groups/${id}`, { method: 'DELETE' }),
     startSession: (id, body) =>
       req(`/groups/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    exportTemplate: (id) => req(`/groups/${id}/export-template`),
   },
+  templates: {
+    import: (pack, { onConflict = 'rename', vars = null } = {}) =>
+      req('/templates/import', {
+        method: 'POST',
+        body: JSON.stringify({ pack, onConflict, vars }),
+      }),
+    listBuiltin: () => req('/templates/builtin'),
+    applyBuiltin: (id, body = {}) =>
+      req(`/templates/builtin/${encodeURIComponent(id)}/apply`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
+  usageStats: () => req('/usage-stats'),
   sessions: {
     list: (status) => req(status ? `/sessions?status=${status}` : '/sessions'),
     get: (id) => req(`/sessions/${id}`),
+    timeline: (id, category = 'all') =>
+      req(
+        `/sessions/${id}/timeline?category=${encodeURIComponent(category)}`,
+      ),
     rename: (id, title) => req(`/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
     pin: (id, pinned = true) =>
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
@@ -170,6 +224,31 @@ export const api = {
       req(`/sessions/${id}/restart-from-node`, {
         method: 'POST',
         body: JSON.stringify(body || {}),
+      }),
+    downloadAudit: async (sessionId) => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}/audit-export`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit-${sessionId}.md`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+    terminalLogPreview: (sessionId, terminalId) =>
+      req(
+        `/sessions/${sessionId}/terminals/${terminalId}/log?format=json`,
+      ),
+    previewStepRevert: (sessionId, nodeId) =>
+      req(`/sessions/${sessionId}/nodes/${nodeId}/step-revert/preview`),
+    applyStepRevert: (sessionId, nodeId, { force = false } = {}) =>
+      req(`/sessions/${sessionId}/nodes/${nodeId}/step-revert`, {
+        method: 'POST',
+        body: JSON.stringify({ force }),
       }),
     message: (id, text, attachments = []) =>
       req(`/sessions/${id}/messages`, {

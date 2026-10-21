@@ -43,7 +43,13 @@
               popper-class="chat-search-popper"
             >
               <template #reference>
-                <el-button size="default" text bg @click="chatSearchOpen = !chatSearchOpen">
+                <el-button
+                  size="default"
+                  text
+                  bg
+                  aria-label="搜索本会话聊天"
+                  @click="chatSearchOpen = !chatSearchOpen"
+                >
                   搜索聊天
                 </el-button>
               </template>
@@ -73,17 +79,39 @@
                 <div v-else class="chat-search-empty">没有匹配的消息</div>
               </div>
             </el-popover>
+            <NotificationInbox />
+            <el-button
+              v-if="isDesktop && detail.session"
+              size="default"
+              text
+              bg
+              :title="detachWindowLabel"
+              aria-label="在新窗口打开本会话"
+              @click="openSessionDetached"
+            >
+              新窗口
+            </el-button>
             <el-button
               v-if="detail.session"
               size="default"
               text
               bg
               :type="detail.session.pinned ? 'primary' : 'default'"
+              :aria-label="detail.session.pinned ? '取消置顶本会话' : '置顶本会话'"
               @click="togglePin(detail.session.id, !detail.session.pinned)"
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button size="default" text bg type="danger" @click="doDelete()">删除</el-button>
+            <el-button
+              size="default"
+              text
+              bg
+              type="danger"
+              aria-label="删除本会话"
+              @click="doDelete()"
+            >
+              删除
+            </el-button>
           </div>
         </div>
 
@@ -178,7 +206,13 @@
                       { 'is-archive': item._kind === 'archive' },
                     ]"
                   >
-                    <div v-if="item.content" class="bubble-text">{{ item.content }}</div>
+                    <MessageDocText
+                      v-if="item.content"
+                      class="bubble-text"
+                      :text="item.content"
+                      :session-id="activeId"
+                      @open-doc="onBubbleOpenDoc"
+                    />
                     <div v-if="item.attachments?.length" class="bubble-files">
                       <a
                         v-for="f in item.attachments"
@@ -242,11 +276,14 @@
 </template>
 
 <script setup>
-import { onUnmounted, defineAsyncComponent, ref, nextTick } from 'vue'
+import { onUnmounted, defineAsyncComponent, ref, nextTick, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
+import MessageDocText from '../components/MessageDocText.vue'
+import NotificationInbox from '../components/NotificationInbox.vue'
 import SessionRail from './workbench/components/SessionRail.vue'
 import FlowRail from './workbench/components/FlowRail.vue'
 import ComposerPanel from './workbench/components/ComposerPanel.vue'
@@ -295,6 +332,21 @@ import {
   disposeFurnaceSync,
   startWorkbench,
 } from './workbench/composables/useFurnaceSync'
+import { useFlowStore } from '../stores/flow.js'
+import { journalPathToDocFile } from '../composables/messageDocLinks.js'
+import { useDesktopBridge } from '../composables/useDesktopBridge.js'
+import { t } from '../i18n/zh-CN.js'
+
+const { isDesktop, openDetachedWindow } = useDesktopBridge()
+const detachWindowLabel = computed(() => t('desktop.openDetachedWindow'))
+
+async function openSessionDetached() {
+  const id = activeId.value
+  if (!id) return
+  const path = `/workbench/${id}`
+  const winId = await openDetachedWindow({ path })
+  if (!winId) ElMessage.warning('无法打开新窗口（仅桌面版支持）')
+}
 
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),
@@ -311,6 +363,15 @@ initSessionDetail({ route, router })
 initTerminalSessions()
 initFurnaceSync({ route, router })
 startWorkbench()
+
+const flowStore = useFlowStore()
+
+function onBubbleOpenDoc({ file, path }) {
+  if (!activeId.value) return
+  const resolved = journalPathToDocFile(path || file) || file
+  if (!resolved) return
+  flowStore.focusRailDoc(activeId.value, resolved)
+}
 
 // —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——
 const chatSearchOpen = ref(false)

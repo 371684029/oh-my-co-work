@@ -4,8 +4,9 @@ import { spawnSync } from 'node:child_process'
 import * as pty from 'node-pty'
 import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
-import { emitSession } from '../bus.js'
-import { getAppSettings } from '../appSettings.js'
+import { emitSession, emitTerminalOutput, setWsTerminalAttach } from '../bus.js'
+import { quotaLimits, redactOpts } from './quota.js'
+import { publicTerminal } from './publicTerminal.js'
 import { pickWindowsMatch } from '../commandResolver.js'
 import { redactText } from './redact.js'
 import {
@@ -19,36 +20,23 @@ import {
   registerProcess,
   unregisterProcess,
 } from '../processRegistry.js'
+import {
+  MAX_INPUT_CHARS,
+  MAX_INPUT_BYTES_PER_SECOND,
+  MAX_INPUT_MESSAGES_PER_SECOND,
+  clampTerminalSize,
+} from './inputLimits.js'
 
 const terminals = new Map()
-// 64KiB per message: the client chunks large pastes (≤4KiB pieces), so a single
-// legitimate message is far smaller; this headroom avoids rejecting a paste that
-// slipped through as one message. (5.1.0 CLI-07)
-const MAX_INPUT_CHARS = 65_536
+
 const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
 const RETAIN_FINISHED_GLOBAL = 200
-const MAX_INPUT_BYTES_PER_SECOND = 256 * 1024
-const MAX_INPUT_MESSAGES_PER_SECOND = 500
 
 let adapterEventHandler = null
 
 export function setAdapterEventHandler(fn) {
   adapterEventHandler = typeof fn === 'function' ? fn : null
-}
-
-function quotaLimits() {
-  const q = getAppSettings().quota || {}
-  return {
-    maxConcurrent: Number(q.maxConcurrentTerminals) || 8,
-    maxLogBytes: Math.max(1, Number(q.maxLogMiB) || 10) * 1024 * 1024,
-    maxReplayChars: Math.max(32, Number(q.maxReplayKiB) || 256) * 1024,
-  }
-}
-
-function redactOpts() {
-  const r = getAppSettings().redact || {}
-  return { enabled: r.enabled !== false, patternsText: r.patternsText || '' }
 }
 
 function countRunningTerminals(sessionId, { exceptMemberId, exceptPair } = {}) {
@@ -79,11 +67,7 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-function clampSize(value, fallback, min, max) {
-  const n = Number(value)
-  if (!Number.isFinite(n)) return fallback
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
+const clampSize = clampTerminalSize
 
 function persistTerminal(entry) {
   try {
@@ -124,37 +108,6 @@ function appendReplay(entry, data) {
   }
 }
 
-function publicTerminal(entry, { includeReplay = false } = {}) {
-  if (!entry) return null
-  return {
-    id: entry.id,
-    sessionId: entry.sessionId,
-    nodeInstanceId: entry.nodeInstanceId,
-    memberId: entry.memberId,
-    runId: entry.runId,
-    label: entry.label,
-    runtime: entry.runtime,
-    command: entry.command || null,
-    furnaceAgent: entry.furnaceAgent || null,
-    cwd: entry.cwd,
-    status: entry.status,
-    pid: entry.pid,
-    cols: entry.cols,
-    rows: entry.rows,
-    seq: entry.seq,
-    exitCode: entry.exitCode,
-    signal: entry.signal,
-    startedAt: entry.startedAt,
-    finishedAt: entry.finishedAt,
-    log: entry.logName,
-    logTruncated: entry.logTruncated,
-    replayTruncated: entry.replayTruncated,
-    adapter: entry.adapterType || null,
-    lastError: entry.lastError || null,
-    ...(includeReplay ? { replay: entry.replay } : {}),
-  }
-}
-
 function send(ws, event) {
   if (ws?.readyState === 1) ws.send(JSON.stringify(event))
 }
@@ -169,13 +122,23 @@ function emitTerminal(entry, type, payload = {}) {
   })
 }
 
+function emitTerminalStream(entry, payload = {}) {
+  emitTerminalOutput(entry.sessionId, entry.id, {
+    type: 'terminal.output',
+    payload: {
+      terminalId: entry.id,
+      ...payload,
+    },
+  })
+}
+
 function flushOutput(entry) {
   entry.flushTimer = null
   if (!entry.pendingOutput) return
   const data = entry.pendingOutput
   entry.pendingOutput = ''
   entry.seq += 1
-  emitTerminal(entry, 'terminal.output', { seq: entry.seq, data })
+  emitTerminalStream(entry, { seq: entry.seq, data })
 }
 
 function queueOutput(entry, data) {
@@ -626,7 +589,37 @@ export function readTerminalLogPath(sessionId, terminalId) {
   const entry = terminals.get(terminalId)
   if (!entry || entry.sessionId !== sessionId) return null
   if (entry.logPath && fs.existsSync(entry.logPath)) return entry.logPath
+  const row = getDb()
+    .prepare('SELECT log_path FROM terminal_sessions WHERE id = ? AND session_id = ?')
+    .get(terminalId, sessionId)
+  if (row?.log_path && fs.existsSync(row.log_path)) return row.log_path
   return null
+}
+
+/** Tail log for in-app replay preview (5.3.0 TRC-04). */
+export function readTerminalLogPreview(sessionId, terminalId, { maxBytes = 48_000 } = {}) {
+  const file = readTerminalLogPath(sessionId, terminalId)
+  if (!file) return null
+  try {
+    const stat = fs.statSync(file)
+    const start = Math.max(0, stat.size - maxBytes)
+    const fd = fs.openSync(file, 'r')
+    try {
+      const buf = Buffer.alloc(stat.size - start)
+      fs.readSync(fd, buf, 0, buf.length, start)
+      const text = buf.toString('utf8')
+      return {
+        text,
+        truncated: start > 0,
+        bytes: stat.size,
+        path: file,
+      }
+    } finally {
+      fs.closeSync(fd)
+    }
+  } catch {
+    return null
+  }
 }
 
 export function forgetSessionTerminals(sessionId) {
@@ -714,6 +707,7 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
   }
 
   if (message.type === 'terminal.attach') {
+    setWsTerminalAttach(ws, terminalId)
     if (entry.pendingOutput) {
       if (entry.flushTimer) clearTimeout(entry.flushTimer)
       flushOutput(entry)

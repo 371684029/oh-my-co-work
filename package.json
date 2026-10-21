@@ -1,6 +1,6 @@
 {
   "name": "oh-my-co-work",
-  "version": "4.9.1",
+  "version": "5.3.0",
   "private": true,
   "type": "module",
   "description": "群聊式多智能体协同台 MVP",
@@ -22,11 +22,13 @@
     "pack": "node scripts/pack-release.mjs",
     "pack:desktop-win": "node scripts/pack-release.mjs --desktop",
     "validate:packages": "node scripts/validate-release-packages.mjs",
+    "release:gate": "node scripts/release-gate.mjs",
     "build": "npm run build -w web",
     "lint": "eslint .",
     "test": "npm run test -w server",
     "test:web": "node --test web/test/*.test.mjs",
-    "test:electron": "node --test electron/test/*.test.mjs"
+    "test:electron": "node --test electron/test/*.test.mjs",
+    "test:perf": "node scripts/perf-baseline.mjs"
   },
   "engines": {
     "node": ">=18"

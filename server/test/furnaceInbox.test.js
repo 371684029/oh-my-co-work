@@ -57,6 +57,10 @@ test('blocks executables and allows images', () => {
 test('pty attach text is one line with relative paths', () => {
   const text = buildFurnacePtyAttachText('看图', [{ relPath: 'inbox/s1/a.png' }])
   assert.equal(text, '看图 请阅读工作目录文件 inbox/s1/a.png')
+  const cursor = buildFurnacePtyAttachText('看图', [{ relPath: 'inbox/s1/a.png' }], {
+    agent: 'cursor',
+  })
+  assert.equal(cursor, '看图 @inbox/s1/a.png')
   assert.equal(text.includes('\n'), false)
   assert.equal(
     buildFurnacePtyAttachText('', [{ relPath: 'inbox/s1/a.png' }, { relPath: 'inbox/s1/b.md' }]),

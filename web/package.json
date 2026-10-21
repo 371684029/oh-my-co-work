@@ -1,6 +1,6 @@
 {
   "name": "@acw/web",
-  "version": "4.9.1",
+  "version": "5.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,8 +12,13 @@
     "@acw/shared": "*",
     "@element-plus/icons-vue": "^2.3.1",
     "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-unicode11": "^0.9.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^6.0.0",
     "element-plus": "^2.9.7",
+    "highlight.js": "^11.12.0",
     "markdown-it": "^15.0.1",
     "pinia": "^2.1.7",
     "vue": "^3.5.13",

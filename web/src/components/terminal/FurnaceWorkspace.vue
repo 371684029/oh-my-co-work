@@ -100,6 +100,15 @@
           </details>
         </div>
       </header>
+      <div
+        v-if="cliBanner"
+        class="furnace-cli-banner"
+        :class="`is-${cliBanner.kind}`"
+        role="status"
+      >
+        <strong>{{ cliBanner.title }}</strong>
+        <span>{{ cliBanner.hint }}</span>
+      </div>
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
@@ -130,10 +139,16 @@
             </div>
             <div v-else-if="showWelcome" class="furnace-welcome">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
-              <h3>本机 Grok 已接进协同台</h3>
+              <h3>{{ welcomeTitle }}</h3>
               <p>
-                同一条进程：这里是对话框，菜单和模型在 TUI。细节在工作目录
-                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。聊太长就「新开熔炉」。
+                同一条 {{ agentBrand }} 进程：这里是对话框，完整交互在 TUI。
+                <template v-if="activeAgent === 'cursor'">
+                  多行粘贴请用 TUI；登录问题在终端里按提示完成。
+                </template>
+                <template v-else>
+                  细节在工作目录 <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。
+                </template>
+                聊太长就「新开熔炉」。
               </p>
               <ul>
                 <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
@@ -161,6 +176,14 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <button
+                type="button"
+                class="furnace-turn-copy"
+                title="复制本条（纯文本）"
+                @click="copyTurn(turn)"
+              >
+                复制
+              </button>
               <div class="furnace-bubble">
                 <template v-if="turn.role === 'assistant'">
                   <div
@@ -254,6 +277,16 @@
             class="furnace-file-input"
             @change="onFileInputChange"
           />
+          <el-alert
+            v-if="showInputTips"
+            type="info"
+            :closable="true"
+            show-icon
+            class="furnace-input-tips"
+            title="熔炉三件套"
+            description="复制：终端里先选中再 Ctrl/Cmd+C（有选区不会中断任务）；粘贴：多行请用 TUI + Shift+Ctrl/Cmd+V；选择：Shift 拖选或 macOS Option 点击。"
+            @close="dismissFurnaceTips"
+          />
           <div class="furnace-compose-main">
             <textarea
               ref="composerEl"
@@ -302,6 +335,8 @@
             :key="terminal.id"
             :terminal="terminal"
             :prefs="prefs"
+            paste-context="furnace"
+            :session-id="sessionId"
             :active="surface === 'tui'"
             @input="$emit('input', $event)"
             @resize="$emit('resize', $event)"
@@ -336,6 +371,7 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span>{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">复制</button>
               <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
             </div>
           </div>
@@ -353,22 +389,31 @@
 
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
-import { parseFurnaceTurnText, inferFurnaceAgent } from '@acw/shared'
+import { inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
+import { getFurnaceTurnMeta } from '../../composables/furnaceTurnMeta.js'
+import { writeClipboardText } from '../../composables/terminalClipboardBridge.js'
 
-const turnMetaCache = new Map()
-function getTurnMeta(text) {
-  const key = String(text || '')
-  if (turnMetaCache.has(key)) return turnMetaCache.get(key)
-  const meta = parseFurnaceTurnText(key)
-  if (turnMetaCache.size > 200) turnMetaCache.clear()
-  turnMetaCache.set(key, meta)
-  return meta
+const getTurnMeta = getFurnaceTurnMeta
+
+async function copyTurn(turn) {
+  const text = furnaceTurnCopyPlain(turn?.role, turn?.text)
+  if (!text) {
+    ElMessage.warning('没有可复制的内容')
+    return
+  }
+  try {
+    await writeClipboardText(text)
+    ElMessage.success('已复制本条（纯文本）')
+  } catch {
+    ElMessage.warning('复制失败')
+  }
 }
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -389,6 +434,12 @@ const composerEl = ref(null)
 const guiEnabled = false
 const surface = ref(guiEnabled && props.defaultSurface === 'chat' ? 'chat' : 'tui')
 const activeAgent = ref(inferFurnaceAgent(props.terminal))
+watch(
+  () => props.terminal?.furnaceAgent ?? props.terminal?.id,
+  () => {
+    activeAgent.value = inferFurnaceAgent(props.terminal)
+  },
+)
 const agentLabel = computed(() => (activeAgent.value === 'cursor' ? 'Cursor' : 'Grok'))
 const tuiHistoryOpen = ref(false)
 const tuiHistStick = ref(true)
@@ -434,6 +485,8 @@ const {
   buddyTitle,
   buddyLine,
   welcomeKicker,
+  welcomeTitle,
+  agentBrand,
   failHint,
   showFail,
   showWelcome,
@@ -450,6 +503,9 @@ const {
   onPaste,
   onComposerKey,
   pickFiles,
+  showInputTips,
+  dismissFurnaceTips,
+  cliBanner,
 } = useFurnaceWorkspace(props, emit, {
   surface,
   focused,
@@ -515,6 +571,7 @@ function furnaceHotkeyTargeted(e) {
 
 function onKeyDown(e) {
   if (!furnaceHotkeyTargeted(e)) return
+  if (e.target?.closest?.('.xterm-screen, .xterm-helper-textarea')) return
   if (!(e.metaKey || e.ctrlKey)) return
   if (e.key === '1') {
     e.preventDefault()
@@ -570,6 +627,32 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
+}
+
+.furnace-cli-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  background: rgba(64, 158, 255, 0.1);
+  border: 1px solid rgba(64, 158, 255, 0.25);
+}
+.furnace-cli-banner.is-error {
+  background: rgba(245, 108, 108, 0.12);
+  border-color: rgba(245, 108, 108, 0.35);
+}
+.furnace-cli-banner.is-auth,
+.furnace-cli-banner.is-approval {
+  background: rgba(230, 162, 60, 0.12);
+  border-color: rgba(230, 162, 60, 0.35);
+}
+.furnace-cli-banner strong {
+  font-size: 12px;
 }
 
 .furnace-head {
@@ -983,6 +1066,33 @@ onUnmounted(() => {
 
 .furnace-turn.is-assistant {
   align-items: flex-start;
+}
+
+.furnace-turn-copy,
+.furnace-tui-copy {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: #007aff;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 6px;
+  opacity: 0.85;
+}
+
+.furnace-turn-copy:hover,
+.furnace-tui-copy:hover {
+  text-decoration: underline;
+}
+
+.furnace-tui-line {
+  position: relative;
+}
+
+.furnace-tui-copy {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .furnace-turn-label {

@@ -7,8 +7,6 @@ import {
   formatSessionAutoTitle,
   extractCallArgsFromSlash,
   isMentionAssistOnly,
-  nodeStatusLabel,
-  isDiscardedUnexecutedFlowNode,
   stepTypeLabel as sharedStepTypeLabel,
   MAX_PROJECT_PARAMS,
   FURNACE_DISPLAY_NAME,
@@ -16,6 +14,33 @@ import {
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
+import {
+  composerScopeKey,
+  loadInputDraft,
+  pushInputHistory,
+  saveInputDraft,
+  stepInputHistory,
+} from '../../../composables/inputDraftHistory.js'
+import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
+import { acwConfirm } from '../../../composables/acwConfirm.js'
+import {
+  messageText,
+  formatSize,
+  fileIcon,
+  adapterChoices,
+} from './sessionMessageUtils.js'
+import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
+import { formatSessionTime } from './sessionFormatUtils.js'
+import {
+  buildFlowEntries,
+  computeFlowHistorySplitIndex,
+  isClonedNode,
+  isCurrentStepNode,
+  isFlowHistoryNode as isFlowHistoryNodeAt,
+  nodeHasAdapt,
+  nodeHasRefine,
+  pickFlowAnchorNodeId,
+} from './sessionFlowUi.js'
 
 
 /**
@@ -55,6 +80,8 @@ const gating = ref(false)
 // ===== 输入区 =====
 /** XSender 实例：该组件无可靠 v-model，提交时用 ref 取文 */
 const senderRef = ref(null)
+let composerHistIndex = -1
+let composerDraftTimer = 0
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
 /** 待发送附件 */
@@ -870,21 +897,7 @@ const composerFooterHint = computed(() => {
   return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告'
 })
 
-function statusLabel(s) {
-  if (s === 'pending' || s === 'not_run') return '待跑'
-  if (s === 'waiting_human') return '待确认'
-  const m = {
-    active: '进行中',
-    interrupted: '待恢复',
-    archived: '已归档',
-    failed: '失败',
-    paused: '暂停',
-    running: '执行中',
-    succeeded: '完成',
-    skipped: '已绕过',
-  }
-  return m[s] || nodeStatusLabel(s) || s
-}
+const statusLabel = sessionStatusLabel
 
 function nodeBypassed(n) {
   return !!(n?.output?.bypassed || n?.input?.bypassed)
@@ -894,24 +907,9 @@ function stepTypeLabel(t) {
   return sharedStepTypeLabel(t) || t
 }
 
-function statusType(s) {
-  // 已归档用中性 info，成功/失败另用 archiveOutcomeTag
-  if (s === 'archived') return 'info'
-  // 运行时等人：用危险色，强制注意
-  if (s === 'waiting_human') return 'danger'
-  if (s === 'interrupted') return 'warning'
-  if (s === 'failed') return 'danger'
-  return 'success'
-}
+const statusType = sessionStatusType
 
-function formatTime(iso) {
-  if (!iso) return ''
-  try {
-    return new Date(iso).toLocaleString()
-  } catch {
-    return iso
-  }
-}
+const formatTime = formatSessionTime
 
 function roleLabel(m) {
   if (m.role === 'user') return '我'
@@ -955,35 +953,6 @@ function shortSender(m, fullName) {
   return full.length <= 6 ? full : full.slice(0, 4)
 }
 
-function messageText(m) {
-  const t = m.content?.text
-  if (t != null && String(t).length) return String(t)
-  if (m.content?.attachments?.length) return ''
-  if (m.content && typeof m.content === 'object' && !m.content.text) {
-    return JSON.stringify(m.content)
-  }
-  return ''
-}
-
-function formatSize(n) {
-  const b = Number(n) || 0
-  if (b < 1024) return `${b} B`
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
-  return `${(b / 1024 / 1024).toFixed(1)} MB`
-}
-
-function fileIcon(f) {
-  const mime = String(f.mime || '')
-  const name = String(f.name || '')
-  if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return '🖼'
-  if (mime.includes('pdf') || /\.pdf$/i.test(name)) return '📄'
-  if (/\.(zip|rar|7z|tar|gz)$/i.test(name)) return '📦'
-  if (/\.(xlsx?|csv)$/i.test(name)) return '📊'
-  if (/\.(docx?|txt|md)$/i.test(name)) return '📝'
-  if (/\.(js|ts|py|json|vue|java|go)$/i.test(name)) return '💻'
-  return '📎'
-}
-
 function isPendingGate(m) {
   if (m.type !== 'gate' || !detail.value) return false
   if (m.content?.mode === 'archive_confirm') return false
@@ -996,14 +965,7 @@ function isPendingGate(m) {
 
 function isCurrent(n) {
   if (!detail.value) return false
-  if (n.step_type === 'offsite') return false
-  const s = detail.value.session
-  if (s.status === 'archived') return false
-  return (
-    n.step_index === s.current_step_index &&
-    n.status !== 'succeeded' &&
-    n.status !== 'skipped'
-  )
+  return isCurrentStepNode(n, detail.value.session)
 }
 
 function isWaitingHuman(n) {
@@ -1190,6 +1152,11 @@ async function loadDetail(id) {
 
 async function selectSession(id) {
   if (!id) return
+  const prev = activeId.value
+  if (prev && prev !== id) {
+    saveInputDraft(composerScopeKey(prev), readSenderTextRaw())
+  }
+  composerHistIndex = -1
   activeId.value = id
   terminalBridge.resetTerminals?.()
   _router.replace(`/workbench/${id}`)
@@ -1198,6 +1165,8 @@ async function selectSession(id) {
   terminalBridge.bindWs?.(id)
   await Promise.all([loadDetail(id), terminalBridge.loadTerminals?.(id)])
   terminalBridge.revealFurnaceTui?.()
+  const savedDraft = loadInputDraft(composerScopeKey(id))
+  if (savedDraft) await replaceSenderText(savedDraft)
 }
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
@@ -1232,13 +1201,24 @@ async function openAnnouncementMd() {
 }
 
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
-function openDocsHub() {
+function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   if (!activeId.value) return
-  window.open(
-    `/docs?session=${encodeURIComponent(activeId.value)}&file=${encodeURIComponent('ANNOUNCEMENT.md')}`,
-    '_blank',
-    'noopener',
-  )
+  const query = {
+    session: activeId.value,
+    file: file || 'ANNOUNCEMENT.md',
+  }
+  if (newTab || (!window.__ACW_DESKTOP_API__ && !window.__ACW_DESKTOP_ENV__)) {
+    const qs = new URLSearchParams(query).toString()
+    window.open(`/docs?${qs}`, '_blank', 'noopener')
+    return
+  }
+  useFlowStore().clearDocsUnread()
+  if (_router) {
+    _router.push({ path: '/docs', query })
+  } else {
+    const qs = new URLSearchParams(query).toString()
+    window.location.assign(`/docs?${qs}`)
+  }
 }
 
 /** 刷新群报告台账文件（后台 MD）；界面始终跟节点 / # 参数走 */
@@ -1274,10 +1254,6 @@ async function saveSessionNotes() {
   } finally {
     notesSaving.value = false
   }
-}
-
-function adapterChoices(m) {
-  return Array.isArray(m?.content?.choices) ? m.content.choices.filter(Boolean) : []
 }
 
 async function answerAdapterQuestion(m, choice, action = 'adapter_answer') {
@@ -1499,9 +1475,34 @@ function onSenderChange() {
   syncSlashFromInput()
   syncAtFromInput()
   syncHashFromInput()
+  window.clearTimeout(composerDraftTimer)
+  composerDraftTimer = window.setTimeout(() => {
+    if (activeId.value) saveInputDraft(composerScopeKey(activeId.value), readSenderTextRaw())
+  }, 400)
 }
 
 function onComposerKeydown(e) {
+  const pickerOpen =
+    useComposerStore().hashOpen || useComposerStore().atOpen || useComposerStore().slashOpen
+  if (
+    !pickerOpen &&
+    isHistoryNavigationKey(e) &&
+    activeId.value &&
+    !readSenderTextRaw().trim()
+  ) {
+    const delta = historyNavigationDelta(e)
+    const step = stepInputHistory(composerScopeKey(activeId.value), {
+      index: composerHistIndex,
+      delta,
+    })
+    if (step) {
+      e.preventDefault()
+      composerHistIndex = step.index
+      void replaceSenderText(step.text)
+      return
+    }
+  }
+
   // # 面板：群聊 / 文件夹 / #1…
   if (useComposerStore().hashOpen) {
     const list = filteredHashItems.value
@@ -1709,42 +1710,13 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-function isDiscardedUnexecutedNode(n) {
-  return isDiscardedUnexecutedFlowNode(n, {
-    currentStepIndex: detail.value?.session?.current_step_index,
-    isCurrent: isCurrent(n),
-  })
-}
-
 /**
  * 将相邻的「未跑过且已废弃」节点归为一段并默认收起。
  * 已执行节点（成功/失败/执行中/场外）和当前轨将要跑的节点保持展开。
  */
-const flowEntries = computed(() => {
-  const entries = []
-  for (const node of detail.value?.nodes || []) {
-    if (node.step_type === 'archive') continue
-    const previous = entries.at(-1)
-    if (isDiscardedUnexecutedNode(node) && previous?.type === 'skipped') {
-      previous.nodes.push(node)
-      previous.key = `skipped-${previous.nodes[0].id}-${node.id}`
-    } else if (isDiscardedUnexecutedNode(node)) {
-      entries.push({ type: 'skipped', key: `skipped-${node.id}-${node.id}`, nodes: [node] })
-    } else {
-      entries.push({ type: 'node', key: `node-${node.id}`, nodes: [node] })
-    }
-  }
-  return entries
-})
-
-function nodeHasAdapt(n) {
-  return !!(n?.input?.adapt || n?.output?.adapt)
-}
-
-/** 4.5 炼化：节点 input 带 refine 标记（refined / fallback / source）即视为已炼化/走格式化节点 */
-function nodeHasRefine(n) {
-  return !!n?.input?.refine
-}
+const flowEntries = computed(() =>
+  buildFlowEntries(detail.value?.nodes, detail.value?.session),
+)
 
 function isSkippedFlowGroupExpanded(entry) {
   return !!useFlowStore().expandedSkippedFlowGroups[entry.key]
@@ -1757,61 +1729,21 @@ function toggleSkippedFlowGroup(entry) {
   }
 }
 
-function isClonedNode(n) {
-  return !!(n?.output?.cloned || n?.input?.cloned)
-}
-
 /** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
-const flowHistorySplitIndex = computed(() => {
-  const nodes = detail.value?.nodes || []
-  if (!nodes.length) return 0
-  const last = detail.value?.session?.context?.lastRestart
-  const batch = last?.cloneBatchId
-  if (batch) {
-    const i = nodes.findIndex(
-      (n) => (n.output?.cloneBatchId || n.input?.cloneBatchId) === batch,
-    )
-    if (i > 0) return i
-  }
-  const cur = Number(detail.value?.session?.current_step_index)
-  if (!Number.isFinite(cur)) return 0
-  const i = nodes.findIndex((n) => Number(n.step_index) >= cur)
-  return i > 0 ? i : 0
-})
+const flowHistorySplitIndex = computed(() =>
+  computeFlowHistorySplitIndex(detail.value?.nodes, detail.value?.session),
+)
 
 function isFlowHistoryNode(n) {
-  const nodes = detail.value?.nodes || []
-  const i = nodes.findIndex((x) => x.id === n.id)
-  return i >= 0 && i < flowHistorySplitIndex.value
+  return isFlowHistoryNodeAt(n, detail.value?.nodes, flowHistorySplitIndex.value)
 }
 
 /** 流程轨应锚定滚动的节点：场外当前段 → 待确认 → 执行中 → 当前步 → 游标步 */
-const flowAnchorNodeId = computed(() => {
-  const nodes = detail.value?.nodes || []
-  if (!nodes.length) return null
-  const off = activeOffsiteNode.value
-  if (off?.id) return off.id
-  const archWait = nodes.find(
-    (n) => n.step_type === 'archive' && n.status === 'waiting_human' && isCurrent(n),
-  )
-  if (archWait) return archWait.id
-  const waitingAtCur = nodes.find(
-    (n) => n.status === 'waiting_human' && Number(n.step_index) === Number(detail.value?.session?.current_step_index),
-  )
-  if (waitingAtCur) return waitingAtCur.id
-  const waiting = [...nodes].reverse().find((n) => n.status === 'waiting_human')
-  if (waiting) return waiting.id
-  const running = nodes.find((n) => n.status === 'running')
-  if (running) return running.id
-  const cur = nodes.find((n) => isCurrent(n))
-  if (cur) return cur.id
-  const idx = Number(detail.value?.session?.current_step_index)
-  if (Number.isFinite(idx)) {
-    const byIdx = nodes.find((n) => Number(n.step_index) === idx)
-    if (byIdx) return byIdx.id
-  }
-  return nodes[nodes.length - 1]?.id || null
-})
+const flowAnchorNodeId = computed(() =>
+  pickFlowAnchorNodeId(detail.value?.nodes, detail.value?.session, {
+    activeOffsiteId: activeOffsiteNode.value?.id,
+  }),
+)
 
 function scrollFlowToAnchor() {
   if (useFlowStore().rightTab !== 'flow') return
@@ -1953,6 +1885,10 @@ async function onSenderSubmit() {
   // 人工闸门下纯 @：走发消息协助，不当项目参数提交
 
   if (!text && !atts.length) return
+
+  pushInputHistory(composerScopeKey(activeId.value), text)
+  composerHistIndex = -1
+  saveInputDraft(composerScopeKey(activeId.value), '')
 
   if (!activeId.value) {
     ElMessage.warning('请先选择会话')
@@ -2103,15 +2039,13 @@ async function doDelete(targetId) {
     ElMessage.warning('没有可删除的会话')
     return
   }
-  try {
-    await ElMessageBox.confirm('确认删除该聊天？不可恢复', '删除', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
+  const ok = await acwConfirm('session.delete', {
+    title: '删除',
+    message: '确认删除该聊天？不可恢复',
+    confirmButtonText: '删除',
+    type: 'warning',
+  })
+  if (!ok) return
   const wasActive = activeId.value === id
   try {
     await api.sessions.remove(id)

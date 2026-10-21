@@ -8,7 +8,10 @@ import {
   assessAdaptFiles,
   collectAdaptSourcePaths,
   createAdaptBackup,
-  isProbablyBinary,
+  readScriptSource,
+  restoreAdaptManifest,
+  stampManifestAfterPatch,
+  writeScriptSource,
 } from './adaptBackup.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
 
@@ -81,24 +84,60 @@ function insertAfterPreamble(text, block, nl) {
   return `${head}${block}${tail}`
 }
 
-export function applyRefineContract(filePath, { title } = {}) {
+export function computeRefineContractContent(filePath, { title } = {}) {
   const ext = path.extname(filePath).toLowerCase()
   const commentable = /\.(mjs|cjs|js|ts|tsx|jsx|py|ps1|bat|cmd|sh)$/i.test(ext)
-  if (!commentable) return { patched: false, reason: 'not_commentable' }
+  if (!commentable) return { ok: false, reason: 'not_commentable' }
   const raw = fs.readFileSync(filePath)
-  if (isProbablyBinary(raw)) return { patched: false, reason: 'binary' }
-  const text = raw.toString('utf8')
-  if (text.includes(REFINE_MARK)) return { patched: false, reason: 'already' }
-  const nl = nlOf(text)
+  const src = readScriptSource(raw)
+  if (!src.ok) return { ok: false, reason: src.reason }
+  if (src.text.includes(REFINE_MARK)) return { ok: false, reason: 'already' }
+  const nl = src.nl || nlOf(src.text)
   const heading = String(title || '产出台账').trim() || '产出台账'
-  const next = insertAfterPreamble(text, refineBlock(filePath, heading, nl), nl)
-  fs.writeFileSync(filePath, next, 'utf8')
+  const next = insertAfterPreamble(src.text, refineBlock(filePath, heading, nl), nl)
+  return { ok: true, next, hasBom: src.hasBom }
+}
+
+export function applyRefineContract(filePath, opts = {}) {
+  const r = computeRefineContractContent(filePath, opts)
+  if (!r.ok) return { patched: false, reason: r.reason }
+  writeScriptSource(filePath, r.next, { hasBom: r.hasBom })
   return { patched: true, reason: 'ok' }
 }
 
 /**
  * 勾选炼化并保存时：备份 → 改源文件契约 → 立刻写入 format 规格（不等第一次群聊跑完）。
  */
+/** 保存前预览：将改哪些文件、契约片段（5.2.0 REF-03，不落盘）。 */
+export function planRefineOnMemberSave(member) {
+  const title = safeTitle(member)
+  const paths = collectAdaptSourcePaths(member)
+  const assess = assessAdaptFiles(paths)
+  const needPatch = (assess.files || []).filter((f) => {
+    try {
+      return !fs.readFileSync(f.path, 'utf8').includes(REFINE_MARK)
+    } catch {
+      return false
+    }
+  })
+  const files = []
+  for (const f of needPatch) {
+    const r = computeRefineContractContent(f.path, { title })
+    if (r.ok) {
+      const idx = r.next.indexOf(REFINE_MARK)
+      const snippet =
+        idx >= 0 ? r.next.slice(idx, idx + 520) : r.next.slice(0, 520)
+      files.push({ path: f.path, snippet, willPatch: true })
+    } else {
+      files.push({ path: f.path, willPatch: false, reason: r.reason })
+    }
+  }
+  let reason = assess.ok ? 'ok' : assess.reason
+  if (assess.ok && !needPatch.length) reason = 'already'
+  else if (assess.ok && files.some((x) => x.willPatch)) reason = 'will_patch'
+  return { ok: assess.ok, reason, title, files, fileCount: needPatch.length }
+}
+
 export function applyRefineOnMemberSave(member) {
   const title = safeTitle(member)
   const spec = {
@@ -136,14 +175,35 @@ export function applyRefineOnMemberSave(member) {
       backup = null
     }
     if (reason === 'ok') {
-      for (const f of needPatch) {
-        try {
-          const r = applyRefineContract(f.path, { title })
-          if (r.patched) patched.push(f.path)
-        } catch {
-          reason = 'patch_failed'
-          break
+      const staged = []
+      try {
+        for (const f of needPatch) {
+          const r = computeRefineContractContent(f.path, { title })
+          if (!r.ok) {
+            reason = r.reason === 'already' ? 'already' : 'patch_failed'
+            break
+          }
+          staged.push({ path: f.path, next: r.next, hasBom: r.hasBom })
         }
+        if (reason === 'ok') {
+          for (const s of staged) {
+            writeScriptSource(s.path, s.next, { hasBom: s.hasBom })
+            patched.push(s.path)
+          }
+          if (backup?.manifestPath && patched.length) {
+            stampManifestAfterPatch(backup.manifestPath, patched)
+          }
+        }
+      } catch {
+        reason = 'patch_failed'
+      }
+      if (reason === 'patch_failed' && backup?.manifestPath) {
+        try {
+          restoreAdaptManifest(backup.manifestPath)
+        } catch {
+          /* best effort rollback */
+        }
+        patched.length = 0
       }
     }
   }
@@ -155,6 +215,7 @@ export function applyRefineOnMemberSave(member) {
     format: spec,
     refinedAt: prev.refinedAt || new Date().toISOString(),
     refineBackup: backup?.zipPath || prev.refineBackup || null,
+    refineBackupManifest: backup?.manifestPath || prev.refineBackupManifest || null,
     patched: patched.length ? patched : prev.patched || [],
     patchReason: reason,
   }
@@ -183,6 +244,7 @@ export function refineSaveStatusText(prep) {
       backup_failed: '备份失败，未改源文件',
       patch_failed: '写入失败，未继续改源文件',
       unreadable: '源文件无法读取',
+      not_utf8: '源文件不是 UTF-8（请转为 UTF-8 或去掉 GBK 等编码后再炼化）',
     }[prep.reason]
     return `炼化规格已保存；${why || prep.reason}。跑起来仍会按规格整理进文档中心。`
   }

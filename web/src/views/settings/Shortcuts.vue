@@ -18,6 +18,21 @@
       title="斜杠指令：选脚本可自动填脚本工作目录。快捷键触发跑脚本：脚本工作目录必填且不会自动填写（页内/桌面绑键同一规则）。"
     />
 
+    <el-alert
+      type="success"
+      :closable="false"
+      show-icon
+      class="hint"
+      title="内置快捷键（5.2.0）"
+    >
+      <ul class="builtin-hotkeys">
+        <li><kbd>Ctrl/Cmd+K</kbd> — 命令面板（会话 / 导航 / 缩放 / 主题）</li>
+        <li><kbd>Ctrl/Cmd+Shift+D</kbd> — 打开文档中心</li>
+        <li><kbd>Ctrl/Cmd+1</kbd> / <kbd>2</kbd> — 熔炉内切换 Grok / Cursor（焦点在熔炉且不在 xterm 选区时）</li>
+        <li>终端 <kbd>Ctrl/Cmd+F</kbd> — 终端内搜索；有选区时 <kbd>Ctrl/Cmd+C</kbd> 复制不中断</li>
+      </ul>
+    </el-alert>
+
     <el-table :data="commands" stripe v-loading="loading">
       <el-table-column label="启用" width="72">
         <template #default="{ row }">

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { ROOT, getDb, parseJson } from './db.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { defaultStepFlow, normalizeFurnaceSurface } from '@acw/shared'
+import { normalizePromptSnippets } from './promptSnippets.js'
 
 const SETTINGS_PATH = process.env.ACW_APP_SETTINGS_PATH
   ? path.resolve(process.env.ACW_APP_SETTINGS_PATH)
@@ -110,10 +111,46 @@ export function defaultTerminalSettings() {
   return {
     theme: 'project-dark',
     fontSize: 13,
+    fontFamily:
+      "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace",
+    lineHeight: 1.35,
+    letterSpacing: 0.2,
     cursorBlink: true,
     pastePolicy: 'confirm',
     autoCollapseOnExit: false,
     scrollback: 5000,
+    renderer: 'webgl',
+  }
+}
+
+export function defaultUiSettings() {
+  return {
+    reduceEffects: false,
+    colorScheme: 'system',
+    furnacePet: {
+      showOnWorkbench: true,
+      showOnSettings: false,
+      showOnDocs: false,
+      hideWhenTerminalFullscreen: true,
+    },
+  }
+}
+
+function normalizeUi(raw) {
+  const d = defaultUiSettings()
+  if (!raw || typeof raw !== 'object') return d
+  const scheme = String(raw.colorScheme || d.colorScheme).toLowerCase()
+  const colorScheme = ['system', 'light', 'dark'].includes(scheme) ? scheme : d.colorScheme
+  const fp = raw.furnacePet && typeof raw.furnacePet === 'object' ? raw.furnacePet : {}
+  return {
+    reduceEffects: raw.reduceEffects === true,
+    colorScheme,
+    furnacePet: {
+      showOnWorkbench: fp.showOnWorkbench !== false,
+      showOnSettings: fp.showOnSettings === true,
+      showOnDocs: fp.showOnDocs === true,
+      hideWhenTerminalFullscreen: fp.hideWhenTerminalFullscreen !== false,
+    },
   }
 }
 
@@ -128,7 +165,7 @@ export function defaultQuotaSettings() {
 export function defaultRedactSettings() {
   return {
     enabled: true,
-    patternsText: '',
+    patternsText: 'ghp_[A-Za-z0-9]{20,}\nBearer\\s+[A-Za-z0-9._-]{10,}',
   }
 }
 
@@ -145,14 +182,28 @@ function normalizeTerminal(raw) {
     ? raw.theme
     : d.theme
   const pastePolicy = raw.pastePolicy === 'allow' ? 'allow' : 'confirm'
+  const renderer = raw.renderer === 'dom' ? 'dom' : 'webgl'
   return {
     theme,
     fontSize: clampInt(raw.fontSize, d.fontSize, 10, 22),
+    fontFamily:
+      typeof raw.fontFamily === 'string' && raw.fontFamily.trim()
+        ? raw.fontFamily.trim()
+        : d.fontFamily,
+    lineHeight: clampNum(raw.lineHeight, d.lineHeight, 1, 2),
+    letterSpacing: clampNum(raw.letterSpacing, d.letterSpacing, -1, 4),
     cursorBlink: raw.cursorBlink !== false,
     pastePolicy,
     autoCollapseOnExit: !!raw.autoCollapseOnExit,
     scrollback: clampInt(raw.scrollback, d.scrollback, 200, 20000),
+    renderer,
   }
+}
+
+function clampNum(value, fallback, min, max) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, n))
 }
 
 function normalizeQuota(raw) {
@@ -201,15 +252,105 @@ function ensureSettingsFile() {
   }
 }
 
+export function defaultOnboardingSettings() {
+  return { firstRunGuideDismissed: false }
+}
+
+function normalizeOnboarding(raw) {
+  const d = defaultOnboardingSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return { firstRunGuideDismissed: raw.firstRunGuideDismissed === true }
+}
+
 /** 未人工确认归档时，超时自动归档（小时）；默认 3 */
 function defaultUpdateCheckSettings() {
   // 4.7.0：降低打扰，启动检查更新默认开启（仅用 Message 轻提示不弹窗）
   return { startup: true }
 }
 
+/** 5.4.0 桌面系统通知偏好（本机 settings 文件） */
+export function defaultNotificationSettings() {
+  return {
+    enabled: true,
+    levels: { action: true, error: true, done: false },
+    sound: true,
+    onlyWhenUnfocused: true,
+    quietHours: { enabled: false, start: '22:00', end: '07:00' },
+    remindIntervalMs: 30_000,
+    maxReminders: 3,
+    /** NTF-18: inline reply / action buttons on OS notifications (default off). */
+    allowActionButtons: false,
+  }
+}
+
+function normalizeNotifications(raw) {
+  const d = defaultNotificationSettings()
+  if (!raw || typeof raw !== 'object') return d
+  const levels = raw.levels && typeof raw.levels === 'object' ? raw.levels : {}
+  const qh = raw.quietHours && typeof raw.quietHours === 'object' ? raw.quietHours : {}
+  return {
+    enabled: raw.enabled !== false,
+    sound: raw.sound !== false,
+    onlyWhenUnfocused: raw.onlyWhenUnfocused !== false,
+    levels: {
+      action: levels.action !== false,
+      error: levels.error !== false,
+      done: levels.done === true,
+    },
+    quietHours: {
+      enabled: qh.enabled === true,
+      start: String(qh.start || d.quietHours.start),
+      end: String(qh.end || d.quietHours.end),
+    },
+    remindIntervalMs:
+      Number(raw.remindIntervalMs) > 0 ? Number(raw.remindIntervalMs) : d.remindIntervalMs,
+    maxReminders: Number(raw.maxReminders) > 0 ? Number(raw.maxReminders) : d.maxReminders,
+    allowActionButtons: raw.allowActionButtons === true,
+  }
+}
+
 function normalizeUpdateCheck(raw) {
   const r = raw && typeof raw === 'object' ? raw : {}
   return { startup: r.startup !== false }
+}
+
+function normalizeScheduledJobs(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((j) => j && j.groupId)
+    .map((j) => ({
+      id: String(j.id || j.groupId).slice(0, 64),
+      groupId: String(j.groupId),
+      title: j.title ? String(j.title).slice(0, 200) : '',
+      hour: Math.max(0, Math.min(23, Number(j.hour) || 9)),
+      minute: Math.max(0, Math.min(59, Number(j.minute) || 0)),
+      enabled: j.enabled !== false,
+    }))
+}
+
+function normalizeMcpConnections(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((c) => c && c.name)
+    .map((c) => ({
+      name: String(c.name).slice(0, 120),
+      url: String(c.url || '').slice(0, 512),
+      readOnly: c.readOnly !== false,
+      notes: String(c.notes || '').slice(0, 500),
+    }))
+}
+
+function normalizeCustomAgents(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((a) => a && a.id)
+    .map((a) => ({
+      id: String(a.id).slice(0, 64),
+      displayName: String(a.displayName || a.id).slice(0, 120),
+      command: String(a.command || '').slice(0, 512),
+      pastePolicy: a.pastePolicy === 'bracketed' ? 'bracketed' : 'confirm',
+      structuredAdapter: a.structuredAdapter ? String(a.structuredAdapter) : null,
+    }))
 }
 
 export function normalizeAutoArchiveHours(v) {
@@ -238,6 +379,13 @@ export function getAppSettings() {
       quota: normalizeQuota(raw.quota),
       redact: normalizeRedact(raw.redact),
       updateCheck: normalizeUpdateCheck(raw.updateCheck),
+      notifications: normalizeNotifications(raw.notifications),
+      ui: normalizeUi(raw.ui),
+      customAgents: normalizeCustomAgents(raw.customAgents),
+      promptSnippets: normalizePromptSnippets(raw.promptSnippets),
+      onboarding: normalizeOnboarding(raw.onboarding),
+      scheduledJobs: normalizeScheduledJobs(raw.scheduledJobs),
+      mcpConnections: normalizeMcpConnections(raw.mcpConnections),
     }
   } catch {
     return {
@@ -251,6 +399,13 @@ export function getAppSettings() {
       quota: defaultQuotaSettings(),
       redact: defaultRedactSettings(),
       updateCheck: defaultUpdateCheckSettings(),
+      notifications: defaultNotificationSettings(),
+      ui: defaultUiSettings(),
+      customAgents: [],
+      promptSnippets: [],
+      onboarding: defaultOnboardingSettings(),
+      scheduledJobs: [],
+      mcpConnections: [],
     }
   }
 }
@@ -316,6 +471,31 @@ export function updateAppSettings(patch = {}) {
       patch.updateCheck !== undefined
         ? normalizeUpdateCheck({ ...cur.updateCheck, ...patch.updateCheck })
         : cur.updateCheck,
+    notifications:
+      patch.notifications !== undefined
+        ? normalizeNotifications({ ...cur.notifications, ...patch.notifications })
+        : cur.notifications,
+    ui: patch.ui !== undefined ? normalizeUi({ ...cur.ui, ...patch.ui }) : cur.ui,
+    customAgents:
+      patch.customAgents !== undefined
+        ? normalizeCustomAgents(patch.customAgents)
+        : cur.customAgents || [],
+    promptSnippets:
+      patch.promptSnippets !== undefined
+        ? normalizePromptSnippets(patch.promptSnippets)
+        : cur.promptSnippets || [],
+    onboarding:
+      patch.onboarding !== undefined
+        ? normalizeOnboarding({ ...cur.onboarding, ...patch.onboarding })
+        : cur.onboarding || defaultOnboardingSettings(),
+    scheduledJobs:
+      patch.scheduledJobs !== undefined
+        ? normalizeScheduledJobs(patch.scheduledJobs)
+        : cur.scheduledJobs || [],
+    mcpConnections:
+      patch.mcpConnections !== undefined
+        ? normalizeMcpConnections(patch.mcpConnections)
+        : cur.mcpConnections || [],
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

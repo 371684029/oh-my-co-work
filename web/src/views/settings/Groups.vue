@@ -5,7 +5,21 @@
         <h2 class="page-title">群聊模板</h2>
         <p class="page-desc">线性步骤编排。支持<strong>编辑</strong>与<strong>克隆</strong>。</p>
       </div>
-      <el-button type="primary" @click="openCreate()">新建群模板</el-button>
+      <div class="page-head-actions">
+        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <el-dropdown trigger="click" @command="applyBuiltinTemplate">
+          <el-button>从模板库创建</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="t in builtinTemplates" :key="t.id" :command="t.id">
+                {{ t.title }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <el-button type="primary" @click="openCreate()">新建群模板</el-button>
+      </div>
     </div>
 
     <el-input
@@ -22,10 +36,11 @@
       <el-table-column label="步骤数" width="90">
         <template #default="{ row }">{{ row.steps?.length || 0 }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="320">
+      <el-table-column label="操作" width="380">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openClone(row)">克隆</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
           <el-button link type="success" @click="start(row)">开聊</el-button>
           <el-button link type="info" @click="view(row)">查看</el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
@@ -291,6 +306,77 @@ const readonly = ref(false)
 const showBatch = ref(false)
 const batchMemberIds = ref([])
 const batchRefine = ref(false)
+const importFileRef = ref(null)
+const builtinTemplates = ref([])
+
+async function loadBuiltinTemplates() {
+  try {
+    const r = await api.templates.listBuiltin()
+    builtinTemplates.value = r.templates || []
+  } catch {
+    builtinTemplates.value = []
+  }
+}
+
+async function applyBuiltinTemplate(id) {
+  try {
+    await api.templates.applyBuiltin(id)
+    ElMessage.success('已从模板库创建群模板')
+    await load()
+  } catch (e) {
+    ElMessage.error(e.message || '创建失败')
+  }
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+async function exportTemplate(row) {
+  try {
+    const pack = await api.groups.exportTemplate(row.id)
+    const safe = String(row.title || 'group').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
+    downloadJson(`${safe}.acw.json`, pack)
+    ElMessage.success('已导出配置模板')
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+function triggerImportTemplate() {
+  importFileRef.value?.click()
+}
+
+async function onImportFile(ev) {
+  const file = ev.target?.files?.[0]
+  ev.target.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const pack = JSON.parse(text)
+    let vars = null
+    try {
+      const { value } = await ElMessageBox.prompt(
+        '工作目录（替换 {{WORKSPACE}}，留空则用服务端当前目录）',
+        '导入模板',
+        { inputPlaceholder: '可选' },
+      )
+      if (value && String(value).trim()) vars = { workspace: String(value).trim() }
+    } catch {
+      return
+    }
+    await api.templates.import(pack, { onConflict: 'rename', vars })
+    await load()
+    ElMessage.success('模板已导入')
+  } catch (e) {
+    ElMessage.error(e.message || '导入失败')
+  }
+}
 
 const globalAdminLabel = computed(() => {
   const r = appSettings.value?.resolvedAdmin
@@ -609,15 +695,35 @@ async function remove(row) {
 
 async function start(row) {
   try {
-    const s = await api.groups.startSession(row.id, {})
-    ElMessage.success('已开聊')
+    const { value: mode } = await ElMessageBox.confirm(
+      '选择开聊模式：试运行只检查路径与命令，不真正执行成员。',
+      `开聊 · ${row.title}`,
+      {
+        distinguishCancelAndClose: true,
+        confirmButtonText: '正式开聊',
+        cancelButtonText: '试运行',
+        type: 'info',
+      },
+    )
+      .then(() => ({ value: 'live' }))
+      .catch((action) => {
+        if (action === 'cancel') return { value: 'dry' }
+        throw Object.assign(new Error('已取消'), { silent: true })
+      })
+    const s = await api.groups.startSession(row.id, {
+      dryRun: mode === 'dry',
+    })
+    ElMessage.success(mode === 'dry' ? '已开聊（试运行）' : '已开聊')
     router.push(`/workbench/${s.id}`)
   } catch (e) {
-    ElMessage.error(e.message)
+    if (!e.silent) ElMessage.error(e.message)
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadBuiltinTemplates()
+})
 </script>
 
 <style scoped>
@@ -817,5 +923,15 @@ onMounted(load)
   margin-top: 16px;
   display: flex;
   gap: 10px;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 </style>

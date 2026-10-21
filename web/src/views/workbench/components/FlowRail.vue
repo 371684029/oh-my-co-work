@@ -1,13 +1,23 @@
 <template>
   <aside class="wb-right">
-    <div class="wb-right-tabs">
+    <div class="wb-right-tabs wb-right-tabs--segmented">
       <button
         type="button"
         class="wb-right-tab"
         :class="{ active: flowStore.rightTab === 'flow' }"
         @click="flowStore.rightTab = 'flow'"
       >
+        <span class="wb-right-tab-icon" aria-hidden="true">⚡</span>
         流程
+      </button>
+      <button
+        type="button"
+        class="wb-right-tab"
+        :class="{ active: flowStore.rightTab === 'timeline' }"
+        @click="flowStore.rightTab = 'timeline'"
+      >
+        <span class="wb-right-tab-icon" aria-hidden="true">🕐</span>
+        时间线
       </button>
       <button
         type="button"
@@ -15,7 +25,11 @@
         :class="{ active: isDocsHubTab }"
         @click="flowStore.rightTab = 'docs'"
       >
+        <span class="wb-right-tab-icon" aria-hidden="true">📄</span>
         文档中心
+        <span v-if="flowStore.docsUnread > 0" class="wb-right-tab-badge">{{
+          flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
+        }}</span>
       </button>
     </div>
 
@@ -87,6 +101,16 @@
                       >{{ n.step_index + 1 }}</span
                     >
                     <span class="flow-step-name">{{ n.title }}</span>
+                    <el-button
+                      v-if="nodeJournalDocFile(n)"
+                      size="small"
+                      text
+                      type="primary"
+                      class="flow-node-doc-btn"
+                      @click.stop="openNodeJournal(n)"
+                    >
+                      台账
+                    </el-button>
                     <el-tag
                       v-if="nodeHasAdapt(n)"
                       size="small"
@@ -214,6 +238,9 @@
                       · {{ reviewLabel(n) }}
                     </span>
                     <span v-if="n.gate" class="meta-gate"> · 待确认</span>
+                    <span v-if="nodeChangeSummary(n)" class="meta-change">
+                      · {{ nodeChangeSummary(n) }}
+                    </span>
                     <span class="flow-expand-caret">{{
                       flowStore.expandedNodeId === n.id ? '收起' : '展开'
                     }}</span>
@@ -238,11 +265,28 @@
                     <div class="flow-io-label">输入（用户说了啥）</div>
                     <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
                   </div>
+                  <div v-if="nodeChangePatch(n)" class="flow-io-block">
+                    <div class="flow-io-label">本步改动（git diff）</div>
+                    <pre class="flow-io-pre flow-io-pre--diff">{{ nodeChangePatch(n) }}</pre>
+                    <el-button
+                      size="small"
+                      type="warning"
+                      :loading="revertLoadingId === n.id"
+                      @click.stop="revertStepChanges(n)"
+                    >
+                      回退本步改动
+                    </el-button>
+                  </div>
                   <div class="flow-io-block">
                     <div class="flow-io-label">输出（做了啥）</div>
                     <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
                   </div>
-                  <div v-if="n.journalPath" class="flow-io-path">台账：{{ n.journalPath }}</div>
+                  <div v-if="n.journalPath" class="flow-io-path">
+                    台账：{{ n.journalPath }}
+                    <el-button size="small" text type="primary" @click.stop="openNodeJournal(n)">
+                      在文档中心打开
+                    </el-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -275,9 +319,46 @@
           </strong>
         </div>
       </template>
-      <div v-else class="flow-empty">
-        <p>开聊后显示流程步骤</p>
+      <EmptyState v-else title="暂无流程" description="开聊后显示流程步骤" />
+    </div>
+
+    <div v-show="flowStore.rightTab === 'timeline'" class="wb-right-pane timeline-pane">
+      <div class="timeline-toolbar">
+        <el-select
+          v-model="timelineFilter"
+          size="small"
+          style="width: 120px"
+          @change="loadSessionTimeline"
+        >
+          <el-option label="全部" value="all" />
+          <el-option label="步骤" value="node" />
+          <el-option label="闸门" value="gate" />
+          <el-option label="终端" value="terminal" />
+          <el-option label="文档" value="docs" />
+          <el-option label="场外" value="offsite" />
+        </el-select>
+        <el-button size="small" text :loading="timelineLoading" @click="loadSessionTimeline">
+          刷新
+        </el-button>
+        <el-button size="small" text :disabled="!activeId" @click="downloadSessionAudit">
+          审计导出
+        </el-button>
       </div>
+      <p v-if="!activeId" class="timeline-hint">请先选择会话</p>
+      <ul v-else-if="timelineEvents.length" class="timeline-list">
+        <li v-for="ev in timelineEvents" :key="ev.id">
+          <button type="button" class="timeline-item" @click="onTimelineEvent(ev)">
+            <span class="timeline-time">{{ formatTimelineAt(ev.at) }}</span>
+            <span class="timeline-cat">{{ timelineCatLabel(ev.category) }}</span>
+            <span class="timeline-title">{{ ev.title }}</span>
+          </button>
+        </li>
+      </ul>
+      <EmptyState
+        v-else-if="!timelineLoading"
+        title="暂无事件"
+        description="节点、闸门、终端与文档动态会出现在这里"
+      />
     </div>
 
     <!-- Tab：文档中心（含原群报告 MD，不再单独占一栏） -->
@@ -289,70 +370,79 @@
         </div>
         <div class="docs-rail-actions">
           <el-button
-            size="small"
-            plain
-            :disabled="!activeId"
-            @click="openDocsHub"
-          >
-            新标签打开
-          </el-button>
-          <el-button
-            v-if="detail?.session?.group_id"
-            size="small"
-            plain
-            :disabled="!activeId"
-            :loading="exportingRailDocs"
-            @click="onExportRailGroupDocs"
-          >
-            导出群
-          </el-button>
-          <el-button
-            size="small"
-            text
-            :disabled="!activeId"
-            :loading="announceOpenLoading"
-            :title="announceMdHint"
-            @click="openAnnouncementMd"
-          >
-            系统打开
-          </el-button>
-          <el-button
-            size="small"
             type="primary"
-            plain
-            :disabled="!activeId"
-            :loading="announceLoading"
-            @click="rebuildAnnouncement"
-          >
-            刷新报告
-          </el-button>
-          <el-button
             size="small"
-            type="primary"
-            plain
             :disabled="!activeId"
-            :loading="railDocsLoading"
-            @click="loadRailDocs"
+            @click="openDocsHub()"
           >
-            刷新
+            展开完整文档中心
           </el-button>
+          <el-dropdown trigger="click" class="docs-rail-more">
+            <el-button size="small" plain :disabled="!activeId">更多</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item :disabled="!activeId" @click="openDocsHub({ newTab: true })">
+                  新标签打开
+                </el-dropdown-item>
+                <el-dropdown-item
+                  v-if="detail?.session?.group_id"
+                  :disabled="!activeId || exportingRailDocs"
+                  @click="onExportRailGroupDocs"
+                >
+                  导出群
+                </el-dropdown-item>
+                <el-dropdown-item
+                  :disabled="!activeId || announceOpenLoading"
+                  @click="openAnnouncementMd"
+                >
+                  系统打开
+                </el-dropdown-item>
+                <el-dropdown-item
+                  :disabled="!activeId || announceLoading"
+                  @click="rebuildAnnouncement"
+                >
+                  刷新报告
+                </el-dropdown-item>
+                <el-dropdown-item :disabled="!activeId || railDocsLoading" @click="loadRailDocs">
+                  刷新列表
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
 
       <div v-if="detail && activeId" class="docs-rail-body">
         <!-- 文件选项列表 -->
         <div v-if="railDocFiles.length" class="docs-rail-files">
-          <button
-            v-for="f in railDocFiles"
-            :key="f.name"
-            type="button"
-            class="docs-rail-file-pill"
-            :class="{ active: selectedDocName === f.name }"
-            @click="onSelectRailDoc(f.name)"
+          <el-select
+            v-model="selectedDocName"
+            class="docs-rail-file-select"
+            size="small"
+            filterable
+            placeholder="选择文档"
+            @change="onSelectRailDoc"
           >
-            <span class="pill-name">{{ f.title || f.name }}</span>
-            <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
-          </button>
+            <el-option
+              v-for="f in railDocFiles"
+              :key="f.name"
+              :label="`${f.title || f.name}`"
+              :value="f.name"
+            />
+          </el-select>
+          <div class="docs-rail-file-pills" aria-hidden="true">
+            <button
+              v-for="f in railDocFiles"
+              :key="f.name"
+              type="button"
+              class="docs-rail-file-pill"
+              :class="{ active: selectedDocName === f.name }"
+              @click="onSelectRailDoc(f.name)"
+            >
+              <span class="pill-name">{{ f.title || f.name }}</span>
+              <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
+            </button>
+          </div>
         </div>
         <div v-else-if="!railDocsLoading" class="docs-rail-empty">
           当前会话暂无生成台账或报告
@@ -366,6 +456,8 @@
           </div>
           <div
             class="docs-rail-content doc-prose"
+            :class="railReadingClasses"
+            :style="railReadingStyle"
             v-html="renderedDocHtml"
             @click="onRailContentClick"
           />
@@ -399,11 +491,16 @@
         </div>
       </div>
 
-      <div v-else class="docs-rail-empty">
-        <p>选择会话后查看文档中心</p>
-      </div>
+      <EmptyState v-else title="文档中心" description="选择会话后查看群报告与台账" />
     </div>
 
+    <el-dialog v-model="terminalReplayOpen" title="终端回放（日志尾部）" width="640px" append-to-body>
+      <p v-if="terminalReplayMeta" class="timeline-hint">
+        {{ terminalReplayMeta.truncated ? '（仅显示尾部）' : '' }}
+        {{ terminalReplayMeta.bytes ? `${terminalReplayMeta.bytes} 字节` : '' }}
+      </p>
+      <pre class="flow-io-pre flow-io-pre--diff terminal-replay-pre">{{ terminalReplayText }}</pre>
+    </el-dialog>
   </aside>
 </template>
 
@@ -424,7 +521,6 @@ import {
   announceLoading,
   announceOpenLoading,
   notesSaving,
-  announceMdHint,
   isSkippedFlowGroupExpanded,
   toggleSkippedFlowGroup,
   flowClass,
@@ -449,15 +545,181 @@ import {
   rebuildAnnouncement,
   saveSessionNotes,
 } from '../composables/useSessionDetail'
-import { ref, watch, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import { api } from '../../../api'
 import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { handleDocsProseClick, readDocsCodeLineNumbers } from '../../docs/docsCodeFence.js'
+import { getDocsList, subscribeDocsList } from '../../docs/docsListStore.js'
+import { journalPathToDocFile } from '../../../composables/messageDocLinks.js'
+import {
+  docsReadingClassNames,
+  docsReadingStyle,
+  readDocsReadingPrefs,
+} from '../../docs/docsReadingPrefs.js'
 import { openPath } from '../composables/useDocsHub'
+import { recordDocsOpen } from '../../docs/docsReadingHistory.js'
+import { formatStepChangeSummary } from '@acw/shared'
+
+function nodeChangeSummary(n) {
+  return formatStepChangeSummary(n?.output?.changeSnapshot)
+}
+
+function nodeChangePatch(n) {
+  const cs = n?.output?.changeSnapshot
+  if (!cs?.patch) return ''
+  return `${cs.patch}${cs.patchTruncated ? '\n\n…（diff 已截断）' : ''}`
+}
+
+function nodeJournalDocFile(n) {
+  return journalPathToDocFile(n?.journalPath)
+}
+
+function openNodeJournal(n) {
+  const file = nodeJournalDocFile(n)
+  if (!file) return
+  openDocsHub({ file })
+}
 
 const flowStore = useFlowStore()
+const timelineEvents = ref([])
+const timelineFilter = ref('all')
+const timelineLoading = ref(false)
+const revertLoadingId = ref('')
+
+function formatTimelineAt(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString(undefined, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return String(iso)
+  }
+}
+
+function timelineCatLabel(cat) {
+  const m = { node: '步骤', gate: '闸门', terminal: '终端', docs: '文档', offsite: '场外' }
+  return m[cat] || cat || ''
+}
+
+async function loadSessionTimeline() {
+  if (!activeId.value) {
+    timelineEvents.value = []
+    return
+  }
+  timelineLoading.value = true
+  try {
+    const data = await api.sessions.timeline(activeId.value, timelineFilter.value)
+    timelineEvents.value = data.events || []
+  } catch (e) {
+    ElMessage.error(e.message || '加载时间线失败')
+  } finally {
+    timelineLoading.value = false
+  }
+}
+
+const terminalReplayOpen = ref(false)
+const terminalReplayText = ref('')
+const terminalReplayMeta = ref(null)
+
+async function downloadSessionAudit() {
+  if (!activeId.value) return
+  try {
+    await api.sessions.downloadAudit(activeId.value)
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+async function openTerminalReplay(terminalId) {
+  if (!activeId.value || !terminalId) return
+  try {
+    const preview = await api.sessions.terminalLogPreview(activeId.value, terminalId)
+    terminalReplayText.value = preview.text || ''
+    terminalReplayMeta.value = preview
+    terminalReplayOpen.value = true
+  } catch (e) {
+    ElMessage.error(e.message || '无法读取终端日志')
+  }
+}
+
+function onTimelineEvent(ev) {
+  if (!ev) return
+  if (ev.category === 'terminal' && ev.terminalId) {
+    openTerminalReplay(ev.terminalId)
+    return
+  }
+  if (ev.nodeId && detail.value?.nodes) {
+    const node = detail.value.nodes.find((n) => n.id === ev.nodeId)
+    if (node) {
+      flowStore.rightTab = 'flow'
+      toggleNodeExpand(node)
+      return
+    }
+  }
+  if (ev.kind === 'docs.journal' && ev.nodeId) {
+    const node = detail.value?.nodes?.find((n) => n.id === ev.nodeId)
+    if (node) openNodeJournal(node)
+  }
+}
+
+watch(
+  () => [flowStore.rightTab, activeId.value],
+  ([tab]) => {
+    if (tab === 'timeline') loadSessionTimeline()
+  },
+)
+
+async function revertStepChanges(n) {
+  const sid = activeId.value
+  if (!sid || !n?.id) return
+  try {
+    const preview = await api.sessions.previewStepRevert(sid, n.id)
+    if (!preview.ok) {
+      ElMessage.warning(preview.message || '无法回退')
+      return
+    }
+    const msg = preview.needsForce
+      ? `${preview.message}\n\n仍要继续吗？`
+      : preview.message || '将把工作区还原到本步执行前，继续？'
+    await ElMessageBox.confirm(msg, '回退本步改动', {
+      type: 'warning',
+      confirmButtonText: preview.needsForce ? '强制回退' : '确认回退',
+    })
+    revertLoadingId.value = n.id
+    await api.sessions.applyStepRevert(sid, n.id, { force: preview.needsForce })
+    ElMessage.success('已回退本步 git 改动')
+  } catch (e) {
+    if (e === 'cancel' || e === 'close') return
+    if (e.status === 409) {
+      try {
+        await ElMessageBox.confirm(e.message || '存在冲突，强制回退？', '冲突', {
+          type: 'warning',
+          confirmButtonText: '强制回退',
+        })
+        revertLoadingId.value = n.id
+        await api.sessions.applyStepRevert(sid, n.id, { force: true })
+        ElMessage.success('已强制回退')
+      } catch (e2) {
+        if (e2 !== 'cancel' && e2 !== 'close') ElMessage.error(e2.message || '回退失败')
+      } finally {
+        revertLoadingId.value = ''
+      }
+      return
+    }
+    ElMessage.error(e.message || '回退失败')
+  } finally {
+    revertLoadingId.value = ''
+  }
+}
 const isDocsHubTab = computed(
   () => flowStore.rightTab === 'docs' || flowStore.rightTab === 'announce',
 )
@@ -503,12 +765,39 @@ const exportingRailDocs = ref(false)
 let currentFileReqId = 0
 let currentListReqId = 0
 
+const railReadingPrefs = readDocsReadingPrefs()
+const railReadingClasses = docsReadingClassNames(railReadingPrefs)
+const railReadingStyle = docsReadingStyle(railReadingPrefs)
+
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
-  return md.value.render(selectedDocContent.value)
+  return md.value.render(selectedDocContent.value, {
+    docCodeLineNumbers: readDocsCodeLineNumbers(),
+    docSessionId: activeId.value,
+    docRelName: selectedDocName.value,
+  })
 })
 
-function onRailContentClick(e) {
+let stopDocsListSub = null
+onMounted(() => {
+  stopDocsListSub = subscribeDocsList((sessionId) => {
+    if (sessionId !== activeId.value || flowStore.rightTab !== 'docs') return
+    loadRailDocs()
+    if (selectedDocName.value) onSelectRailDoc(selectedDocName.value)
+  })
+})
+onUnmounted(() => {
+  stopDocsListSub?.()
+  stopDocsListSub = null
+})
+
+async function onRailContentClick(e) {
+  const handled = await handleDocsProseClick(e, {
+    onCopied: () => ElMessage.success('已复制代码'),
+    onCopyFailed: () => ElMessage.warning('复制失败'),
+  })
+  if (handled) return
+
   const pathEl = e.target.closest?.('.docs-path-link')
   if (pathEl) {
     e.preventDefault()
@@ -535,7 +824,7 @@ async function loadRailDocs() {
   }
   railDocsLoading.value = true
   try {
-    const res = await api.docs.list('group')
+    const res = await getDocsList('group')
     if (reqId !== currentListReqId || reqSessionId !== activeId.value) return
     let found = null
     for (const g of res?.groups || []) {
@@ -573,6 +862,12 @@ async function onSelectRailDoc(name) {
     const res = await api.docs.file(reqSessionId, name)
     if (reqId !== currentFileReqId || reqSessionId !== activeId.value) return
     selectedDocContent.value = res?.content || ''
+    recordDocsOpen({
+      sessionId: reqSessionId,
+      name,
+      label: railDocFiles.value.find((f) => f.name === name)?.title || name,
+      sessionTitle: detail.value?.session?.title || '',
+    })
   } catch (e) {
     if (reqId === currentFileReqId && reqSessionId === activeId.value) {
       ElMessage.error(e?.message || '读取文档内容失败')
@@ -608,6 +903,17 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => flowStore.railDocFocus,
+  async (req) => {
+    if (!req?.sessionId || !req?.name) return
+    if (req.sessionId !== activeId.value) return
+    flowStore.rightTab = 'docs'
+    await loadRailDocs()
+    await onSelectRailDoc(req.name)
+  },
 )
 </script>
 
@@ -742,9 +1048,18 @@ watch(
 
 .wb-right-tab.active {
   background: #fff;
-  color: var(--ecw-text-1, #1d1d1f);
+  color: var(--ecw-accent, #007aff);
   font-weight: 650;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.wb-right-tabs--segmented .wb-right-tab {
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.wb-right-tab-icon {
+  margin-right: 4px;
 }
 
 .wb-right-tab-badge {
@@ -987,6 +1302,57 @@ watch(
 }
 
 /* —— 第三栏：文档中心样式 —— */
+.timeline-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.timeline-hint {
+  font-size: 12px;
+  color: var(--ecw-text-3, #8e8ea0);
+}
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+.timeline-item {
+  display: grid;
+  grid-template-columns: 72px 44px 1fr;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: inherit;
+}
+.timeline-item:hover {
+  background: var(--ecw-surface-2, rgba(0, 0, 0, 0.05));
+}
+.timeline-time {
+  color: var(--ecw-text-3, #8e8ea0);
+  font-variant-numeric: tabular-nums;
+}
+.timeline-cat {
+  color: var(--ecw-text-2, #555);
+  font-size: 11px;
+}
+.timeline-title {
+  word-break: break-word;
+}
+
+.terminal-replay-pre {
+  max-height: 420px;
+  overflow: auto;
+}
+
 .docs-pane {
   display: flex;
   flex-direction: column;
@@ -1040,16 +1406,38 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  container-type: inline-size;
+  container-name: docs-rail;
 }
 
 .docs-rail-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.docs-rail-file-select {
+  display: none;
+  width: 100%;
+}
+
+.docs-rail-file-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   max-height: 96px;
   overflow-y: auto;
   padding: 4px 2px;
-  flex-shrink: 0;
+}
+
+@container docs-rail (max-width: 260px) {
+  .docs-rail-file-select {
+    display: block;
+  }
+  .docs-rail-file-pills {
+    display: none;
+  }
 }
 
 .docs-rail-file-pill {
@@ -1061,7 +1449,7 @@ watch(
   border: 0;
   background: rgba(143, 149, 158, 0.12);
   color: #646a73;
-  font-size: 11px;
+  font-size: var(--ecw-font-xs, 12px);
   line-height: 18px;
   cursor: pointer;
   transition: background 0.15s ease;

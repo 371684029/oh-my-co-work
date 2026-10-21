@@ -9,8 +9,11 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_ENV__', 'electron')
 
 contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
   notify: (title, options) => ipcRenderer.invoke('acw:notify', { title, options }),
+  getNotificationPlatform: () => ipcRenderer.invoke('acw:notification-platform'),
   minimizeToTray: () => ipcRenderer.invoke('acw:minimize-to-tray'),
   launchWorkflow: (sessionId) => ipcRenderer.invoke('acw:launch-workflow', sessionId),
+  openDetachedWindow: (pathOrPayload) =>
+    ipcRenderer.invoke('acw:open-detached-window', pathOrPayload),
   getZoom: () => webFrame.getZoomFactor(),
   setZoom: (factor) => {
     const f = Math.min(2, Math.max(0.5, Number(factor) || 1))
@@ -18,4 +21,15 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
     return f
   },
   applyDesktopUpdate: (manifest) => ipcRenderer.invoke('acw:apply-desktop-update', manifest),
+  readClipboard: () => ipcRenderer.invoke('acw:clipboard-read'),
+  writeClipboard: (text) => ipcRenderer.invoke('acw:clipboard-write', text),
+  setTrayStatus: (payload) => ipcRenderer.invoke('acw:tray-status', payload || {}),
+  onZoomMenu: (handler) => {
+    if (typeof handler !== 'function') return
+    ipcRenderer.on('acw:zoom-menu', (_event, payload) => handler(payload || {}))
+  },
+  onNotificationAction: (handler) => {
+    if (typeof handler !== 'function') return
+    ipcRenderer.on('acw:notification-action', (_event, payload) => handler(payload || {}))
+  },
 })

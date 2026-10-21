@@ -1,5 +1,6 @@
 <template>
-  <div ref="appRoot" class="ecw-layout">
+  <div ref="appRoot" class="ecw-layout" :class="{ 'reduce-effects': reduceEffects }">
+    <a class="skip-link" href="#main-content">跳到主内容</a>
     <header class="ecw-topbar" :class="{ 'is-docs-topbar': isDocsRoute }">
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
@@ -9,11 +10,11 @@
         </div>
         <div class="top-right docs-top-right">
           <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
           </div>
           <button type="button" class="dh-back-btn" @click="goWorkbench">
             返回工作台
@@ -25,7 +26,11 @@
             :title="isFullscreen ? '退出全屏' : '全屏'"
             @click="toggleWorkbenchFullscreen"
           >
-            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <AcwIcon
+              class="fullscreen-icon"
+              :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+              :size="16"
+            />
             <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
         </div>
@@ -56,6 +61,42 @@
             >
               工作台
             </button>
+            <el-popover
+              placement="bottom"
+              :width="280"
+              trigger="hover"
+              :show-after="200"
+              popper-class="nav-docs-preview-pop"
+            >
+              <template #reference>
+                <button
+                  type="button"
+                  class="nav-item nav-item--docs"
+                  :class="{ active: nav === 'docs' }"
+                  title="文档中心 (Ctrl+Shift+D)"
+                  @click="goDocs()"
+                >
+                  文档中心
+                  <span v-if="flowStore.docsUnread > 0" class="nav-docs-badge">{{
+                    flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
+                  }}</span>
+                </button>
+              </template>
+              <div v-if="navDocsPreview.length" class="nav-docs-preview">
+                <div class="nav-docs-preview-title">最近打开</div>
+                <button
+                  v-for="item in navDocsPreview"
+                  :key="`${item.sessionId}:${item.name}`"
+                  type="button"
+                  class="nav-docs-preview-item"
+                  @click="goDocsItem(item)"
+                >
+                  <span class="nav-docs-preview-name">{{ item.label || item.name }}</span>
+                  <span v-if="item.sessionTitle" class="nav-docs-preview-sub">{{ item.sessionTitle }}</span>
+                </button>
+              </div>
+              <p v-else class="nav-docs-preview-empty">暂无最近文档</p>
+            </el-popover>
             <button
               type="button"
               class="nav-item"
@@ -68,11 +109,11 @@
         </div>
         <div class="top-right">
           <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
           </div>
           <button
             type="button"
@@ -81,21 +122,43 @@
             :title="isFullscreen ? '退出工作台全屏' : '工作台全屏'"
             @click="toggleWorkbenchFullscreen"
           >
-            <span class="fullscreen-icon" aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+            <AcwIcon
+              class="fullscreen-icon"
+              :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'"
+              :size="16"
+            />
             <span>{{ isFullscreen ? '退出全屏' : '全屏' }}</span>
           </button>
         </div>
       </template>
     </header>
-    <main class="ecw-main">
+    <main id="main-content" class="ecw-main" tabindex="-1">
       <router-view />
     </main>
     <FurnaceSprite
-      v-show="!furnaceWorkspaceOpen && !isDocsRoute"
+      v-show="showFurnaceSprite"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
+      :docs-notify-seq="flowStore.docsNotifySeq"
       @click="onFurnaceClick"
+      @open-docs="onSpriteOpenDocs"
     />
+    <el-dialog v-model="firstRunGuideOpen" title="欢迎使用 oh-my-co-work" width="560px" destroy-on-close>
+      <p class="first-run-lead">
+        这是本机人机协同台：用<strong>群模板</strong>串起成员与脚本，在<strong>工作台</strong>里开聊、审核、看流程轨。
+      </p>
+      <ul class="first-run-list">
+        <li>设置 → <strong>群聊模板</strong>：一键开聊或试运行检查路径。</li>
+        <li>设置 → <strong>成员</strong>：脚本 / 回声 / 熔炉成员。</li>
+        <li><kbd>Ctrl/Cmd+K</kbd> 命令面板：跳转会话、缩放与主题。</li>
+      </ul>
+      <template #footer>
+        <el-button type="primary" @click="dismissFirstRun">开始探索</el-button>
+        <el-button @click="go('settings/wizard')">首次向导</el-button>
+        <el-button @click="go('settings')">打开设置</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog
       v-model="grokGuideOpen"
       title="Grok Build 教程"
@@ -110,19 +173,23 @@
         <el-button :type="grokCanContinue ? 'default' : 'primary'" @click="goGrokSettings">去设置</el-button>
       </template>
     </el-dialog>
+
+    <CommandPalette v-model="paletteOpen" />
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
+import AcwIcon from './components/icons/AcwIcon.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
+import CommandPalette from './components/CommandPalette.vue'
+import { useCommandPalette } from './composables/useCommandPalette.js'
 import {
   furnaceSpriteState,
-  furnaceWorkspaceOpen,
   grokProbe,
   grokCanRun,
   grokSetupNeeded,
@@ -131,8 +198,29 @@ import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
+import { useFlowStore } from './stores/flow.js'
+import {
+  readDocsReadingHistory,
+  recentDocsPreview,
+} from './views/docs/docsReadingHistory.js'
+import {
+  ZOOM_MIN,
+  ZOOM_MAX,
+  applyUiZoom,
+  readStoredZoom,
+  persistZoom,
+  stepUiZoom,
+  exposeUiZoomBridge,
+} from './composables/uiZoom.js'
+import {
+  normalizeFurnacePetPolicy,
+  shouldShowFurnacePet,
+} from './composables/furnacePetPolicy.js'
 
 const route = useRoute()
+const { paletteOpen, showPalette, hidePalette } = useCommandPalette()
+const flowStore = useFlowStore()
+const navDocsPreview = ref(recentDocsPreview(readDocsReadingHistory().recent, 3))
 const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
@@ -140,12 +228,19 @@ const appRoot = ref(null)
 const {
   isFullscreen,
   grokGuideOpen,
+  firstRunGuideOpen,
+  dismissFirstRunGuide,
   grokGuideStatus,
   grokExampleToml,
   grokCanContinue,
   refreshGrokGate,
   ensureFurnaceGrokWired,
+  reduceEffects,
 } = useAppInit()
+
+function dismissFirstRun() {
+  void dismissFirstRunGuide()
+}
 
 const furnaceTitle = computed(() => {
   const probe = grokProbe.value
@@ -162,40 +257,39 @@ const furnaceTitle = computed(() => {
   return `${FURNACE_DISPLAY_NAME} · 闲置`
 })
 
-const ZOOM_MIN = 0.6
-const ZOOM_MAX = 1.6
-const ZOOM_KEY = 'acw.uiZoom'
-const zoom = ref(1)
-
-function applyZoom(f) {
-  const api = window.__ACW_DESKTOP_API__
-  if (api?.setZoom) api.setZoom(f)
-  else document.documentElement.style.zoom = f === 1 ? '' : String(f)
-}
+const zoom = ref(readStoredZoom())
 
 function setZoom(f) {
-  const v = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, f)) * 100) / 100
+  const v = applyUiZoom(f)
   zoom.value = v
-  applyZoom(v)
-  try {
-    localStorage.setItem(ZOOM_KEY, String(v))
-  } catch {
-    /* ignore */
-  }
+  persistZoom(v)
 }
 
 function stepZoom(dir) {
-  setZoom(zoom.value + dir * 0.1)
+  setZoom(stepUiZoom(zoom.value, dir))
 }
 
-try {
-  const saved = Number(localStorage.getItem(ZOOM_KEY))
-  if (saved >= ZOOM_MIN && saved <= ZOOM_MAX && saved !== 1) setZoom(saved)
-} catch {
-  /* ignore */
-}
+if (zoom.value !== 1) applyUiZoom(zoom.value)
 
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
+
+const furnacePetPolicy = ref(normalizeFurnacePetPolicy())
+onMounted(async () => {
+  try {
+    const s = await api.appSettings.get()
+    furnacePetPolicy.value = normalizeFurnacePetPolicy(s?.ui?.furnacePet)
+  } catch {
+    /* defaults */
+  }
+})
+
+const showFurnaceSprite = computed(() =>
+  shouldShowFurnacePet({
+    routePath: route.path,
+    policy: furnacePetPolicy.value,
+    terminalFullscreen: isFullscreen.value,
+  }),
+)
 
 async function toggleWorkbenchFullscreen() {
   const ok = fullscreenElement()
@@ -207,14 +301,82 @@ async function toggleWorkbenchFullscreen() {
 watch(
   () => route.path,
   (p) => {
-    nav.value = p.startsWith('/settings') ? 'settings' : 'workbench'
+    if (p.startsWith('/settings')) nav.value = 'settings'
+    else if (p.startsWith('/docs')) nav.value = 'docs'
+    else nav.value = 'workbench'
   },
+  { immediate: true },
 )
 
 function go(v) {
   nav.value = v
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
 }
+
+function goDocs(query = {}) {
+  nav.value = 'docs'
+  flowStore.clearDocsUnread()
+  router.push({ path: '/docs', query })
+}
+
+function goDocsItem(item) {
+  if (!item?.sessionId || !item?.name) return goDocs()
+  goDocs({ session: item.sessionId, file: item.name })
+}
+
+function onSpriteOpenDocs() {
+  flowStore.clearDocsUnread()
+  goDocs()
+}
+
+function refreshNavDocsPreview() {
+  navDocsPreview.value = recentDocsPreview(readDocsReadingHistory().recent, 3)
+}
+
+watch(
+  () => route.path,
+  (p) => {
+    if (p.startsWith('/docs')) refreshNavDocsPreview()
+  },
+)
+
+function onGlobalKeydown(ev) {
+  const mod = ev.metaKey || ev.ctrlKey
+  if (mod && String(ev.key || '').toLowerCase() === 'k') {
+    ev.preventDefault()
+    if (paletteOpen.value) hidePalette()
+    else showPalette()
+    return
+  }
+  if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'd') {
+    ev.preventDefault()
+    goDocs()
+    return
+  }
+  if (mod && (ev.key === '=' || ev.key === '+' || ev.key === '-')) {
+    ev.preventDefault()
+    stepZoom(ev.key === '-' ? -1 : 1)
+    return
+  }
+  if (mod && (ev.key === '0' || ev.code === 'Digit0')) {
+    ev.preventDefault()
+    setZoom(1)
+  }
+}
+
+onMounted(() => {
+  exposeUiZoomBridge({ getZoom: () => zoom.value, setZoom })
+  const api = window.__ACW_DESKTOP_API__
+  api?.onZoomMenu?.((payload) => {
+    if (payload?.reset) setZoom(1)
+    else if (payload?.step) stepZoom(Number(payload.step))
+  })
+  window.addEventListener('keydown', onGlobalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onGlobalKeydown)
+})
 
 function goWorkbench() {
   router.push('/workbench')
@@ -261,6 +423,21 @@ function goGrokSettings() {
 </script>
 
 <style scoped>
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: #16161a;
+  color: #fff;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+  font-size: 13px;
+}
+.skip-link:focus {
+  left: 0;
+}
 .top-left {
   display: flex;
   align-items: center;
@@ -454,6 +631,70 @@ function goGrokSettings() {
 
 .nav-item:active {
   transform: scale(0.98);
+}
+
+.nav-item--docs {
+  border: 1px solid rgba(0, 122, 255, 0.35);
+  background: rgba(0, 122, 255, 0.06);
+}
+
+.nav-item--docs.active {
+  background: rgba(0, 122, 255, 0.14);
+  color: var(--ecw-accent, #007aff);
+}
+
+.nav-docs-badge {
+  margin-left: 6px;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  background: #ff3b30;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.nav-docs-preview-title {
+  font-size: var(--ecw-font-xs, 12px);
+  font-weight: 700;
+  color: var(--ecw-text-3, #86868b);
+  margin: 0 0 6px;
+}
+
+.nav-docs-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-docs-preview-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nav-docs-preview-name {
+  font-size: var(--ecw-font-sm, 13px);
+  font-weight: 600;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.nav-docs-preview-sub {
+  font-size: var(--ecw-font-xs, 12px);
+  color: var(--ecw-text-3, #86868b);
+}
+
+.nav-docs-preview-empty {
+  margin: 0;
+  font-size: var(--ecw-font-xs, 12px);
+  color: var(--ecw-text-3, #86868b);
 }
 
 .nav-item.active {

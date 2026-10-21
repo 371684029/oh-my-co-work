@@ -3,13 +3,18 @@ import test from 'node:test'
 
 // 4.0.0 文档中心渲染测试：XSS 转义、三类链接行为、路径识别（含反斜杠/空格/误判防护）。
 
-const { createDocsMarkdown, findPathsInText } = await import(
-  '../src/views/docs/markdownRenderer.js'
-)
+const { createDocsMarkdown, findPathsInText, isAllowedLinkHref, DOCS_PATH_SCAN_MAX } =
+  await import('../src/views/docs/markdownRenderer.js')
 
 function render(text, opts = {}) {
   return createDocsMarkdown(opts).render(text)
 }
+
+test('isAllowedLinkHref blocks javascript and data URLs', () => {
+  assert.equal(isAllowedLinkHref('javascript:alert(1)'), false)
+  assert.equal(isAllowedLinkHref('data:text/html,x'), false)
+  assert.equal(isAllowedLinkHref('https://ok.example'), true)
+})
 
 test('raw HTML in markdown is escaped, never executable', () => {
   const out = render('<script>alert(1)</script>\n\n<img src=x onerror="alert(1)">')
@@ -81,6 +86,30 @@ test('trailing punctuation is not part of the path', () => {
   const out = render('目录：C:\\tools\\x，然后别的。')
   assert.ok(out.includes('data-docs-path="C:\\tools\\x"'))
   assert.equal(out.includes('C:\\tools\\x，'), false)
+})
+
+test('fenced code blocks include toolbar, highlight, and copy affordance', () => {
+  const out = render('```javascript\nconst x = 1\nconsole.log(x)\n```')
+  assert.ok(out.includes('docs-code-block'))
+  assert.ok(out.includes('docs-code-copy'))
+  assert.ok(out.includes('docs-code-lang'))
+  assert.ok(out.includes('hljs'))
+  assert.ok(out.includes('hljs-keyword') || out.includes('hljs'))
+})
+
+test('path scan ignores text beyond DOCS_PATH_SCAN_MAX', () => {
+  const pad = 'x'.repeat(DOCS_PATH_SCAN_MAX + 500)
+  const tail = 'C:\\\\should-not-scan'
+  const hits = findPathsInText(`${pad}${tail}`)
+  assert.equal(hits.length, 0)
+})
+
+test('headings get stable id anchors for TOC', () => {
+  const out = render('# 标题一\n\n## 小节\n\n### 重复\n\n### 重复\n')
+  assert.ok(out.includes('id="标题一"'))
+  assert.ok(out.includes('id="小节"'))
+  assert.ok(out.includes('id="重复"'))
+  assert.ok(out.includes('id="重复-2"'))
 })
 
 test('paths inside existing markdown links are not double-linked', () => {

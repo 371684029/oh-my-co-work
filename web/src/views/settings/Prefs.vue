@@ -24,6 +24,23 @@
       </div>
     </section>
 
+    <section v-if="isDesktop" class="prefs-card">
+      <div class="prefs-title">数据目录</div>
+      <p class="prefs-hint">
+        桌面版默认把数据库与日志放在系统用户目录（DSK-05），避免覆盖安装包时丢数据。
+      </p>
+      <pre v-if="dataDirInfo" class="usage-pre">{{ dataDirSummary }}</pre>
+      <el-button
+        v-if="dataDirInfo?.hasLegacy && !dataDirInfo?.migrated"
+        size="small"
+        type="warning"
+        :loading="migratingData"
+        @click="migrateData"
+      >
+        从安装目录迁移数据
+      </el-button>
+    </section>
+
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
@@ -60,6 +77,58 @@
           @change="onToggleStartupUpdate"
         />
       </div>
+    </section>
+
+    <section v-if="isDesktop" class="prefs-card">
+      <div class="prefs-title">系统通知</div>
+      <p class="prefs-hint">
+        窗口在后台或失焦时，用系统通知提醒你处理闸门等事件。不会上传任何内容到云端。
+      </p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="启用系统通知">
+          <el-switch v-model="notifyPrefs.enabled" />
+        </el-form-item>
+        <el-form-item label="仅窗口不在前台时通知">
+          <el-switch v-model="notifyPrefs.onlyWhenUnfocused" :disabled="!notifyPrefs.enabled" />
+        </el-form-item>
+        <el-form-item label="通知类型">
+          <el-checkbox v-model="notifyPrefs.levels.action" :disabled="!notifyPrefs.enabled">
+            需要你（闸门待确认等）
+          </el-checkbox>
+          <el-checkbox v-model="notifyPrefs.levels.error" :disabled="!notifyPrefs.enabled">
+            出错了
+          </el-checkbox>
+          <el-checkbox v-model="notifyPrefs.levels.done" :disabled="!notifyPrefs.enabled">
+            完成了（默认仅应用内）
+          </el-checkbox>
+        </el-form-item>
+      </el-form>
+      <el-alert
+        v-if="notifyPlatform.hint"
+        class="notify-platform-hint"
+        type="info"
+        :closable="false"
+        show-icon
+        :title="notifyPlatform.hint"
+      />
+      <div class="prefs-actions">
+        <el-button type="primary" plain size="small" :loading="savingNotify" @click="saveNotify">
+          保存通知设置
+        </el-button>
+        <el-button size="small" :disabled="!notifyPrefs.enabled" @click="sendTestNotify">
+          发送测试通知
+        </el-button>
+      </div>
+      <p class="prefs-hint" style="margin-top: 8px">
+        系统通知上的快捷按钮与内联回复（NTF-18）默认关闭，避免误触；当前版本仅支持点击通知进入应用。
+      </p>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-title">本机用量统计</div>
+      <p class="prefs-hint">不上传数据，仅汇总本库内节点耗时、失败率与日志占用（TRC-05）。</p>
+      <el-button size="small" :loading="usageLoading" @click="loadUsageStats">刷新统计</el-button>
+      <pre v-if="usageStats" class="usage-pre">{{ usageSummaryText }}</pre>
     </section>
 
     <section class="prefs-card">
@@ -213,8 +282,25 @@
     </section>
 
     <section class="prefs-card">
+      <div class="prefs-title">界面性能</div>
+      <p class="prefs-hint">远程桌面或集显卡顿时可关闭毛玻璃模糊（5.2.0 UI-04）。</p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="降低特效（关闭 backdrop-filter）">
+          <el-switch v-model="ui.reduceEffects" @change="saveUi" />
+        </el-form-item>
+        <el-form-item label="外观（浅色 / 深色 / 跟随系统）">
+          <el-segmented
+            v-model="ui.colorScheme"
+            :options="colorSchemeOptions"
+            @change="saveUi"
+          />
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section class="prefs-card">
       <div class="prefs-title">终端偏好</div>
-      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、粘贴确认、退出后是否自动回到对话。</p>
+      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、字体、行距、渲染器与粘贴策略。</p>
       <el-form label-position="top" class="admin-form">
         <el-form-item label="主题">
           <el-select v-model="terminal.theme" style="width: 100%">
@@ -225,6 +311,21 @@
         </el-form-item>
         <el-form-item label="字号">
           <el-input-number v-model="terminal.fontSize" :min="10" :max="22" />
+        </el-form-item>
+        <el-form-item label="字体栈">
+          <el-input v-model="terminal.fontFamily" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item label="行高">
+          <el-input-number v-model="terminal.lineHeight" :min="1" :max="2" :step="0.05" />
+        </el-form-item>
+        <el-form-item label="字距">
+          <el-input-number v-model="terminal.letterSpacing" :min="-1" :max="4" :step="0.1" />
+        </el-form-item>
+        <el-form-item label="渲染器">
+          <el-select v-model="terminal.renderer" style="width: 100%">
+            <el-option label="WebGL（默认）" value="webgl" />
+            <el-option label="DOM（兼容）" value="dom" />
+          </el-select>
         </el-form-item>
         <el-form-item label="光标闪烁">
           <el-switch v-model="terminal.cursorBlink" />
@@ -352,8 +453,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
+import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
+import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
 
-const { isDesktop, desktopEnv, initDesktopBridge } = useDesktopBridge()
+const { isDesktop, desktopEnv, initDesktopBridge, notify: desktopNotify } = useDesktopBridge()
 initDesktopBridge()
 
 const showDemo = ref(true)
@@ -373,9 +476,14 @@ const loadingResources = ref(false)
 const terminal = ref({
   theme: 'project-dark',
   fontSize: 13,
+  fontFamily: '',
+  lineHeight: 1.35,
+  letterSpacing: 0.2,
+  renderer: 'webgl',
   cursorBlink: true,
   pastePolicy: 'confirm',
   autoCollapseOnExit: false,
+  scrollback: 5000,
 })
 const quota = ref({
   maxConcurrentTerminals: 8,
@@ -383,6 +491,13 @@ const quota = ref({
   maxReplayKiB: 256,
 })
 const redact = ref({ enabled: true, patternsText: '' })
+const colorSchemeOptions = [
+  { label: '跟随系统', value: 'system' },
+  { label: '浅色', value: 'light' },
+  { label: '深色', value: 'dark' },
+]
+const ui = ref({ reduceEffects: false, colorScheme: 'system' })
+const savingUi = ref(false)
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const importing = ref(false)
@@ -395,6 +510,44 @@ const adaptBackup = ref(true)
 const savingGrok = ref(false)
 const startupUpdateCheck = ref(true)
 const savingStartupUpdate = ref(false)
+const notifyPrefs = ref({
+  enabled: true,
+  onlyWhenUnfocused: true,
+  levels: { action: true, error: true, done: false },
+})
+const savingNotify = ref(false)
+const notifyPlatform = ref({ supported: true, platform: 'web', hint: '' })
+const dataDirInfo = ref(null)
+const migratingData = ref(false)
+const dataDirSummary = computed(() => {
+  const d = dataDirInfo.value
+  if (!d) return ''
+  return [
+    `当前：${d.current}`,
+    `推荐：${d.recommended}`,
+    d.hasLegacy ? `检测到旧目录：${d.legacy}` : '无安装目录旧库',
+    d.migrated ? '已迁移' : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+})
+
+const usageLoading = ref(false)
+const usageStats = ref(null)
+const usageSummaryText = computed(() => {
+  const u = usageStats.value
+  if (!u) return ''
+  const lines = [
+    `会话：共 ${u.sessions?.total ?? 0}（活跃 ${u.sessions?.active ?? 0}）`,
+    `节点累计：${u.nodes?.totalHours ?? 0} 小时，失败 ${u.nodes?.failed ?? 0}`,
+    `终端累计：${u.terminals?.totalHours ?? 0} 小时`,
+    `日志磁盘：约 ${u.storage?.logMiB ?? 0} MiB`,
+  ]
+  for (const m of (u.byMember || []).slice(0, 5)) {
+    lines.push(`· ${m.name}：${m.runs} 次，均 ${Math.round(m.avgMs / 1000)}s，失败率 ${m.failRate}%`)
+  }
+  return lines.join('\n')
+})
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -418,13 +571,25 @@ async function load() {
     if (f.auto !== false) keys.push('auto')
     if (f.human !== false) keys.push('human')
     defaultFlowKeys.value = keys.length ? keys : ['auto']
+    if (s.ui) {
+      ui.value = {
+        reduceEffects: !!s.ui.reduceEffects,
+        colorScheme: normalizeColorScheme(s.ui.colorScheme),
+      }
+      applyColorScheme(ui.value.colorScheme)
+    }
     if (s.terminal) {
       terminal.value = {
         theme: s.terminal.theme || 'project-dark',
         fontSize: s.terminal.fontSize || 13,
+        fontFamily: s.terminal.fontFamily || '',
+        lineHeight: s.terminal.lineHeight ?? 1.35,
+        letterSpacing: s.terminal.letterSpacing ?? 0.2,
+        renderer: s.terminal.renderer === 'dom' ? 'dom' : 'webgl',
         cursorBlink: s.terminal.cursorBlink !== false,
         pastePolicy: s.terminal.pastePolicy || 'confirm',
         autoCollapseOnExit: !!s.terminal.autoCollapseOnExit,
+        scrollback: s.terminal.scrollback || 5000,
       }
     }
     if (s.grok) {
@@ -437,6 +602,18 @@ async function load() {
     }
     adaptBackup.value = s.adapt?.backup !== false
     startupUpdateCheck.value = s.updateCheck?.startup !== false
+    if (s.notifications) {
+      const n = s.notifications
+      notifyPrefs.value = {
+        enabled: n.enabled !== false,
+        onlyWhenUnfocused: n.onlyWhenUnfocused !== false,
+        levels: {
+          action: n.levels?.action !== false,
+          error: n.levels?.error !== false,
+          done: n.levels?.done === true,
+        },
+      }
+    }
     if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
@@ -545,6 +722,20 @@ async function onToggleScriptPopup(val) {
     ElMessage.error(e.message)
   } finally {
     savingPopup.value = false
+  }
+}
+
+async function saveUi() {
+  savingUi.value = true
+  try {
+    ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
+    await api.appSettings.update({ ui: { ...ui.value } })
+    applyColorScheme(ui.value.colorScheme)
+    ElMessage.success('已保存界面设置')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingUi.value = false
   }
 }
 
@@ -676,6 +867,63 @@ async function saveGrok() {
   }
 }
 
+async function saveNotify() {
+  savingNotify.value = true
+  try {
+    await api.appSettings.update({ notifications: notifyPrefs.value })
+    await loadNotificationPrefs(true)
+    ElMessage.success('已保存通知设置')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingNotify.value = false
+  }
+}
+
+async function loadDataDir() {
+  if (!isDesktop.value) return
+  try {
+    dataDirInfo.value = await api.system.dataDir()
+  } catch {
+    dataDirInfo.value = null
+  }
+}
+
+async function migrateData() {
+  migratingData.value = true
+  try {
+    const r = await api.system.migrateDataDir()
+    if (r.ok) {
+      ElMessage.success('迁移完成，请重启应用以使用新目录')
+      await loadDataDir()
+    } else ElMessage.warning(r.error || '无法迁移')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    migratingData.value = false
+  }
+}
+
+async function loadUsageStats() {
+  usageLoading.value = true
+  try {
+    usageStats.value = await api.usageStats()
+  } catch (e) {
+    ElMessage.error(e.message || '加载失败')
+  } finally {
+    usageLoading.value = false
+  }
+}
+
+async function sendTestNotify() {
+  const ok = await desktopNotify('oh-my-co-work 测试通知', {
+    body: '若能看到这条消息，说明系统通知通道可用。',
+    id: 'test:notify',
+  })
+  if (ok) ElMessage.success('已发送测试通知')
+  else ElMessage.warning('通知未发出（可能被系统禁用或不支持）')
+}
+
 async function onToggleStartupUpdate(val) {
   savingStartupUpdate.value = true
   try {
@@ -721,21 +969,45 @@ function onResourcePageVisible() {
   if (document.visibilityState === 'visible') loadResources({ quiet: true })
 }
 
+let resetResourcePoll = null
+
 onMounted(() => {
   load()
-  resourcePoll = window.setInterval(() => loadResources({ quiet: true }), 3000)
+  void loadDataDir()
+  window.__ACW_DESKTOP_API__?.getNotificationPlatform?.().then((p) => {
+    if (p && typeof p === 'object') notifyPlatform.value = p
+  }).catch(() => {})
+  const pollMs = () => (typeof document !== 'undefined' && document.hidden ? 15_000 : 3000)
+  const tickResources = () => loadResources({ quiet: true })
+  resetResourcePoll = () => {
+    window.clearInterval(resourcePoll)
+    resourcePoll = window.setInterval(tickResources, pollMs())
+  }
+  resetResourcePoll()
+  document.addEventListener('visibilitychange', resetResourcePoll)
   document.addEventListener('visibilitychange', onResourcePageVisible)
   window.addEventListener('focus', onResourcePageVisible)
 })
 
 onUnmounted(() => {
   window.clearInterval(resourcePoll)
+  if (resetResourcePoll) document.removeEventListener('visibilitychange', resetResourcePoll)
   document.removeEventListener('visibilitychange', onResourcePageVisible)
   window.removeEventListener('focus', onResourcePageVisible)
 })
 </script>
 
 <style scoped>
+.usage-pre {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  background: var(--ecw-surface-2, #f4f4f5);
+  padding: 10px;
+  border-radius: 8px;
+}
+
 .prefs-page {
   max-width: 640px;
 }

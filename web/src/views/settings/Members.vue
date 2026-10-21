@@ -7,7 +7,11 @@
           脚本成员支持 bat / PowerShell / Python / Node / Shell 等。默认走<strong>内嵌终端</strong>。支持<strong>编辑</strong>与<strong>克隆</strong>。
         </p>
       </div>
-      <el-button type="primary" @click="openCreate()">新建成员</el-button>
+      <div class="page-head-actions">
+        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <el-button type="primary" @click="openCreate()">新建成员</el-button>
+      </div>
     </div>
 
     <el-input
@@ -37,10 +41,11 @@
           {{ runSummary(row) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260">
+      <el-table-column label="操作" width="320">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openClone(row)">克隆</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
           <el-button link type="info" @click="view(row)">查看</el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
         </template>
@@ -78,6 +83,17 @@
             <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
           </el-tooltip>
           <div class="field-hint">勾上并保存后会马上改源文件（如 newBranch.bat），不是等群聊跑完才改。跑完仍会把产出整理进文档中心。</div>
+          <el-button
+            v-if="form._editId"
+            size="small"
+            type="warning"
+            plain
+            class="refine-restore-btn"
+            :loading="restoringRefine"
+            @click="onRestoreRefine"
+          >
+            还原到炼化前
+          </el-button>
         </el-form-item>
         <el-form-item v-if="form.refine" label="炼化 skills（第三方 Agent 调起指令）">
           <div class="refine-skill-box">
@@ -289,7 +305,58 @@ const scriptExts = [
 
 const list = ref([])
 const searchQ = ref('')
+const importFileRef = ref(null)
 const SearchIcon = Search
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+async function exportTemplate(row) {
+  try {
+    const pack = await api.members.exportTemplate(row.id)
+    const safe = String(row.display_name || row.name || 'member').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
+    downloadJson(`${safe}.acw.json`, pack)
+    ElMessage.success('已导出配置模板')
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+function triggerImportTemplate() {
+  importFileRef.value?.click()
+}
+
+async function onImportFile(ev) {
+  const file = ev.target?.files?.[0]
+  ev.target.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const pack = JSON.parse(text)
+    let vars = null
+    try {
+      const { value } = await ElMessageBox.prompt(
+        '工作目录（替换模板中的 {{WORKSPACE}}，留空则用服务端当前目录）',
+        '导入模板',
+        { inputPlaceholder: '例如 D:\\projects\\app 或 /home/user/proj' },
+      )
+      if (value && String(value).trim()) vars = { workspace: String(value).trim() }
+    } catch {
+      return
+    }
+    await api.templates.import(pack, { onConflict: 'rename', vars })
+    await load()
+    ElMessage.success('模板已导入')
+  } catch (e) {
+    ElMessage.error(e.message || '导入失败')
+  }
+}
 // 成员模糊搜索（拼音/首字母/大小写/子序列），多字段取最优
 const filteredList = computed(() => {
   const q = searchQ.value
@@ -310,6 +377,7 @@ const form = ref(emptyForm())
 const refineSkillPrompt = ref(
   '请在完成本次代码修改后，调用 agent-refine-skill：POST /api/docs/refine，JSON 含 sessionId、input、output、conclusion。',
 )
+const restoringRefine = ref(false)
 
 async function refreshRefineSkillPrompt() {
   try {
@@ -327,6 +395,49 @@ function refineSavedHint(saved, refineOn) {
   if (names.length) return `已保存，并按炼化契约改写 ${names.join('、')}`
   if (prep?.fallback) return '已保存炼化规格；没有可改的源文件时，跑完仍会整理进文档中心'
   return '已保存；源文件已按炼化契约处理'
+}
+
+async function onRestoreRefine() {
+  const id = form.value._editId
+  if (!id) return
+  try {
+    await ElMessageBox.confirm(
+      '将把炼化改动的源文件还原到保存炼化前的备份（若无备份则尝试移除契约块）。继续？',
+      '还原炼化',
+      { type: 'warning', confirmButtonText: '还原', cancelButtonText: '取消' },
+    )
+  } catch {
+    return
+  }
+  restoringRefine.value = true
+  try {
+    let r
+    try {
+      r = await api.members.restoreRefine(id)
+    } catch (e) {
+      if (e?.code !== 'RESTORE_CONFLICT' && !String(e?.message || '').includes('炼化后有改动')) {
+        throw e
+      }
+      const list = (e.conflicts || []).map((c) => c.path).join('\n')
+      await ElMessageBox.confirm(
+        `以下文件在炼化保存后又有改动，强制还原会覆盖当前内容：\n${list || e.message}\n\n仍要还原到炼化前备份吗？`,
+        '检测到后续编辑',
+        { type: 'warning', confirmButtonText: '强制还原', cancelButtonText: '取消' },
+      )
+      r = await api.members.restoreRefine(id, { force: true })
+    }
+    ElMessage.success(`已还原 ${(r.restored || []).length} 个文件`)
+    form.value.refine = false
+    await load()
+    if (viewRow.value?.id === id) {
+      const row = list.value.find((m) => m.id === id)
+      if (row) viewRow.value = row
+    }
+  } catch (e) {
+    ElMessage.error(e?.message || '还原失败')
+  } finally {
+    restoringRefine.value = false
+  }
 }
 
 async function copyRefineSkillPrompt() {
@@ -644,6 +755,35 @@ async function save() {
             }
           : { ...baseConfig },
     }
+    if (form.value.refine) {
+      const plan = await api.members.refinePlan({
+        memberId: form.value._editId || undefined,
+        displayName: body.displayName,
+        kind: body.kind,
+        config: body.config,
+      })
+      if (plan?.reason === 'will_patch' && plan.files?.length) {
+        const lines = plan.files
+          .filter((f) => f.willPatch)
+          .map(
+            (f) =>
+              `· ${f.path}\n  ${String(f.snippet || '')
+                .split('\n')
+                .slice(0, 4)
+                .join('\n  ')}`,
+          )
+          .join('\n\n')
+        await ElMessageBox.confirm(
+          `保存后将修改 ${plan.fileCount} 个源文件并插入炼化契约（已有备份机制）。\n\n${lines}`,
+          '炼化改源确认',
+          {
+            type: 'warning',
+            confirmButtonText: '确认保存并改源',
+            cancelButtonText: '取消',
+          },
+        )
+      }
+    }
     let saved
     if (form.value._editId) {
       saved = await api.members.update(form.value._editId, body)
@@ -747,5 +887,15 @@ onMounted(() => {
   margin-top: 16px;
   display: flex;
   gap: 10px;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 </style>

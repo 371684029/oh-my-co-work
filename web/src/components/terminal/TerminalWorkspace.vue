@@ -39,7 +39,7 @@
           :title="isPagefill ? '退出满屏，回到中栏' : '满屏：铺满整个页面，不调用系统全屏'"
           @click="togglePagefill"
         >
-          <span aria-hidden="true">{{ isPagefill ? '↙' : '▣' }}</span>
+          <AcwIcon :name="isPagefill ? 'fullscreen-exit' : 'grid'" :size="14" />
           {{ isPagefill ? '退出满屏' : '满屏' }}
         </button>
         <button
@@ -49,8 +49,41 @@
           :title="isFullscreen ? '退出终端全屏' : '全屏：交给浏览器，铺满显示器'"
           @click="toggleTerminalFullscreen"
         >
-          <span aria-hidden="true">{{ isFullscreen ? '↙' : '⛶' }}</span>
+          <AcwIcon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" :size="14" />
           {{ isFullscreen ? '退出全屏' : '全屏' }}
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="复制当前可见区域"
+          @click="terminalViewRef?.copyVisible?.()"
+        >
+          复制可见
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="Ctrl+F 终端内搜索"
+          @click="terminalViewRef?.findInTerminal?.()"
+        >
+          查找
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          title="滚到最新输出"
+          @click="terminalViewRef?.scrollToBottom?.()"
+        >
+          到底部
+        </button>
+        <button
+          type="button"
+          class="terminal-toolbar-button"
+          :class="{ active: terminalViewRef?.forceSelection?.value }"
+          title="TUI 鼠标模式下按住 Shift 拖选；点此显示提示"
+          @click="terminalViewRef?.toggleForceSelection?.()"
+        >
+          选择提示
         </button>
         <button
           type="button"
@@ -73,6 +106,7 @@
 
     <div class="terminal-stage">
       <TerminalView
+        ref="terminalViewRef"
         :key="terminal.id"
         :terminal="terminal"
         :prefs="prefs"
@@ -102,6 +136,7 @@ import {
   connectionStatusText,
 } from '../../composables/terminalStatus'
 import { usePagefill } from '../../composables/pagefill'
+import AcwIcon from '../icons/AcwIcon.vue'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -114,6 +149,7 @@ const props = defineProps({
 defineEmits(['close', 'kill', 'input', 'resize', 'select', 'download-log', 'gap'])
 
 const workspaceRoot = ref(null)
+const terminalViewRef = ref(null)
 
 const {
   isFullscreen,
@@ -135,7 +171,9 @@ const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 const footerHint = computed(() => {
   if (!isRunning.value) return '进程已结束，键盘输入不再生效 · 返回对话保留记录'
   if (props.connectionStatus !== 'open') return '连接中断，PTY 仍在跑 · 重连后会补回放'
-  if (focused.value) return '终端输入中 · Esc 退出焦点，聊天快捷键不会进终端'
+  if (focused.value) {
+    return '终端输入中 · Shift+拖选复制（macOS 用 Option）· Esc 退出焦点'
+  }
   if (isPagefill.value) return '已退出终端焦点 · 再按 Esc 退出满屏'
   return '已退出终端焦点 · 点画面继续输入'
 })

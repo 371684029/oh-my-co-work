@@ -4,7 +4,8 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
+import { cp, mkdir, rm } from 'node:fs/promises'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -49,6 +50,31 @@ function resolveLiveDbPath() {
   if (fs.existsSync(preferred)) return preferred
   if (fs.existsSync(legacy)) return legacy
   return preferred
+}
+
+function tarCreateArchive(archivePath, workDir, entries, { async = false } = {}) {
+  const args = ['-czf', archivePath, '-C', workDir, ...entries]
+  if (!async) {
+    execFileSync('tar', args, { stdio: 'pipe' })
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn('tar', args, { stdio: 'pipe' })
+    let err = ''
+    child.stderr?.on('data', (c) => {
+      err += String(c)
+    })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(err.trim() || `tar exited ${code}`))
+    })
+  })
+}
+
+async function copyTreeAsync(src, dst) {
+  if (!fs.existsSync(src)) return
+  await cp(src, dst, { recursive: true })
 }
 
 /**
@@ -124,6 +150,97 @@ export function createBackup(opts = {}) {
   try {
     const entries = fs.readdirSync(work)
     execFileSync('tar', ['-czf', archivePath, '-C', work, ...entries], { stdio: 'pipe' })
+  } catch (e) {
+    const dirBackup = path.join(outDir, name)
+    if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
+    fs.renameSync(work, dirBackup)
+    return {
+      ok: true,
+      path: dirBackup,
+      format: 'dir',
+      integrity: integrity.detail,
+      warning: `tar 不可用（${e.message}），已输出目录备份`,
+    }
+  }
+
+  fs.rmSync(work, { recursive: true, force: true })
+  const size = fs.statSync(archivePath).size
+  return {
+    ok: true,
+    path: archivePath,
+    format: 'tar.gz',
+    bytes: size,
+    integrity: integrity.detail,
+  }
+}
+
+/** SRV-01: non-blocking backup for HTTP handlers (async tar + cp). */
+export async function createBackupAsync(opts = {}) {
+  let integrity = { ok: true, detail: 'skipped' }
+  if (!opts.skipIntegrity) {
+    integrity = runIntegrityCheck()
+    if (!integrity.ok) {
+      throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
+        code: 'INTEGRITY_FAIL',
+        detail: integrity.detail,
+      })
+    }
+  }
+
+  try {
+    getDb().pragma('wal_checkpoint(TRUNCATE)')
+  } catch (e) {
+    console.warn('[acw] wal_checkpoint', e?.message || e)
+  }
+
+  const outDir = opts.outDir || path.join(DATA_ROOT, 'backups')
+  fs.mkdirSync(outDir, { recursive: true })
+  const name = `acw-backup-${stamp()}`
+  const work = path.join(outDir, `.${name}-work`)
+  if (fs.existsSync(work)) fs.rmSync(work, { recursive: true, force: true })
+  fs.mkdirSync(work, { recursive: true })
+
+  const liveDb = resolveLiveDbPath()
+  const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(liveDb)) {
+    throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
+  }
+  await cp(liveDb, dbCopy)
+  for (const suf of ['-wal', '-shm']) {
+    const side = liveDb + suf
+    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
+      await cp(side, dbCopy + suf)
+    }
+  }
+
+  const journalsSrc = path.join(DATA_ROOT, 'journals')
+  const journalsDst = path.join(work, 'journals')
+  if (fs.existsSync(journalsSrc)) {
+    await copyTreeAsync(journalsSrc, journalsDst)
+  } else {
+    fs.mkdirSync(journalsDst, { recursive: true })
+  }
+
+  if (opts.includeUploads !== false) {
+    const upSrc = path.join(DATA_ROOT, 'uploads')
+    const upDst = path.join(work, 'uploads')
+    await copyTreeAsync(upSrc, upDst)
+  }
+
+  const meta = {
+    createdAt: new Date().toISOString(),
+    product: 'oh-my-co-work',
+    dataRoot: DATA_ROOT,
+    repoRoot: ROOT,
+    integrity: integrity.detail,
+    sourceDb: liveDb,
+  }
+  fs.writeFileSync(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
+
+  const archivePath = path.join(outDir, `${name}.tar.gz`)
+  try {
+    const entries = fs.readdirSync(work)
+    await tarCreateArchive(archivePath, work, entries, { async: true })
   } catch (e) {
     const dirBackup = path.join(outDir, name)
     if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
@@ -271,6 +388,25 @@ function applyStagedToLive(work) {
   }
 }
 
+async function applyStagedToLiveAsync(work) {
+  assertTreeNoSymlinks(work)
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  await cp(stagedDb, path.join(DATA_ROOT, 'oh-my-co-work.sqlite'))
+  for (const suf of ['-wal', '-shm']) {
+    if (fs.existsSync(stagedDb + suf)) {
+      await cp(stagedDb + suf, path.join(DATA_ROOT, 'oh-my-co-work.sqlite' + suf))
+    }
+  }
+  const stagedJournals = path.join(work, 'journals')
+  if (fs.existsSync(stagedJournals)) {
+    await copyTreeAsync(stagedJournals, path.join(DATA_ROOT, 'journals'))
+  }
+  const stagedUploads = path.join(work, 'uploads')
+  if (fs.existsSync(stagedUploads)) {
+    await copyTreeAsync(stagedUploads, path.join(DATA_ROOT, 'uploads'))
+  }
+}
+
 function restoreFromAside(aside) {
   for (const rel of LIVE_RELS) {
     const live = path.join(DATA_ROOT, rel)
@@ -304,7 +440,40 @@ export function restoreBackup(filename, deps = {}) {
   }
 }
 
-function restoreBackupUnlocked(filename, deps = {}) {
+function tarExtractArchive(archivePath, destDir, { async = false } = {}) {
+  const args = ['-xzf', archivePath, '-C', destDir]
+  if (!async) {
+    execFileSync('tar', args, { stdio: 'pipe' })
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn('tar', args, { stdio: 'pipe' })
+    let err = ''
+    child.stderr?.on('data', (c) => {
+      err += String(c)
+    })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(err.trim() || `tar exited ${code}`))
+    })
+  })
+}
+
+/** SRV-01: async restore for HTTP (non-blocking tar extract). */
+export async function restoreBackupAsync(filename, deps = {}) {
+  if (restoreInFlight) {
+    throw Object.assign(new Error('已有恢复进行中'), { code: 'RESTORE_BUSY' })
+  }
+  restoreInFlight = true
+  try {
+    return await restoreBackupUnlockedAsync(filename, deps)
+  } finally {
+    restoreInFlight = false
+  }
+}
+
+async function restoreBackupUnlockedAsync(filename, deps = {}) {
   const name = path.basename(String(filename || ''))
   if (!BACKUP_NAME_RE.test(name)) {
     throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
@@ -316,11 +485,11 @@ function restoreBackupUnlocked(filename, deps = {}) {
 
   const initDbFn = deps.initDb || initDb
   const checkSqlite = deps.checkSqliteFile || checkSqliteFile
-  const applyLive = deps.applyLive || applyStagedToLive
+  const applyLive = deps.applyLive || applyStagedToLiveAsync
 
   let pre = null
   try {
-    pre = createBackup()
+    pre = await createBackupAsync()
   } catch (e) {
     if (e.code === 'INTEGRITY_FAIL' || e.code === 'NO_DB') {
       pre = { path: null, skipped: true, reason: e.message }
@@ -335,7 +504,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
-      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+      await tarExtractArchive(entry.path, work, { async: true })
     } catch (e) {
       fs.rmSync(work, { recursive: true, force: true })
       throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
@@ -344,6 +513,18 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = entry.path
   }
 
+  return applyRestoreWorkAsync({
+    work,
+    ownWork,
+    entry,
+    pre,
+    initDbFn,
+    checkSqlite,
+    applyLive,
+  })
+}
+
+function applyRestoreWorkSync({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
   try {
     assertTreeNoSymlinks(work)
   } catch (e) {
@@ -417,6 +598,133 @@ function restoreBackupUnlocked(filename, deps = {}) {
       }
     }
   }
+}
+
+async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
+  try {
+    assertTreeNoSymlinks(work)
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
+  }
+
+  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(stagedDb)) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
+  }
+  try {
+    assertRegularFile(stagedDb, '备份库')
+  } catch (e) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw e
+  }
+  const check = checkSqlite(stagedDb)
+  if (!check.ok) {
+    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
+      code: 'INTEGRITY_FAIL',
+    })
+  }
+
+  closeDb()
+
+  const d = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const aside = path.join(
+    DATA_ROOT,
+    'backups',
+    `pre-restore-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}-${String(d.getMilliseconds()).padStart(3, '0')}`,
+  )
+  await mkdir(aside, { recursive: true })
+  const moveAsideAsync = async (rel) => {
+    const src = path.join(DATA_ROOT, rel)
+    if (fs.existsSync(src)) {
+      await cp(src, path.join(aside, rel), { recursive: true })
+      await rm(src, { recursive: true, force: true })
+    }
+  }
+
+  try {
+    for (const rel of LIVE_RELS) await moveAsideAsync(rel)
+    await applyLive(work)
+    initDbFn()
+    return { ok: true, restoredFrom: entry.id, preRestore: { path: pre.path, skipped: !!pre.skipped }, aside }
+  } catch (err) {
+    try {
+      restoreFromAside(aside)
+    } catch (rb) {
+      console.warn('[acw] restore rollback', rb?.message || rb)
+      err.rollbackError = rb
+    }
+    try {
+      initDbFn()
+    } catch (reopen) {
+      console.error('[acw] restore reinit', reopen?.message || reopen)
+      err.dbReopenFailed = true
+      err.dbReopenError = reopen
+    }
+    throw err
+  } finally {
+    if (ownWork && work) {
+      try {
+        fs.rmSync(work, { recursive: true, force: true })
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+function restoreBackupUnlocked(filename, deps = {}) {
+  const name = path.basename(String(filename || ''))
+  if (!BACKUP_NAME_RE.test(name)) {
+    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+  }
+  const entry = resolveBackupEntry(name)
+  if (!entry) {
+    throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
+  }
+
+  const initDbFn = deps.initDb || initDb
+  const checkSqlite = deps.checkSqliteFile || checkSqliteFile
+  const applyLive = deps.applyLive || applyStagedToLive
+
+  let pre = null
+  try {
+    pre = createBackup()
+  } catch (e) {
+    if (e.code === 'INTEGRITY_FAIL' || e.code === 'NO_DB') {
+      pre = { path: null, skipped: true, reason: e.message }
+    } else {
+      throw e
+    }
+  }
+
+  let work = null
+  let ownWork = false
+  if (entry.kind === 'tar') {
+    work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+    ownWork = true
+    try {
+      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+    } catch (e) {
+      fs.rmSync(work, { recursive: true, force: true })
+      throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
+    }
+  } else {
+    work = entry.path
+  }
+
+  return applyRestoreWorkSync({
+    work,
+    ownWork,
+    entry,
+    pre,
+    initDbFn,
+    checkSqlite,
+    applyLive,
+  })
 }
 
 /**

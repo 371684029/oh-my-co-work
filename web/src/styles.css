@@ -1,6 +1,12 @@
 /* oh-my-co-work — macOS / glass shell
    灵感：macOS 系统控件 + 毛玻璃窗口 + 柔和壁纸氛围（参考 macos27 气质） */
 
+.ecw-layout.reduce-effects,
+.ecw-layout.reduce-effects * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 :root {
   /* layout */
   --ecw-sidebar-w: 300px;
@@ -23,7 +29,7 @@
   /* ink — SF / 系统灰 */
   --ecw-text-1: #1d1d1f;
   --ecw-text-2: #6e6e73;
-  --ecw-text-3: #86868b;
+  --ecw-text-3: #75757a;
 
   /* line & depth — soft macOS elevation */
   --ecw-border: rgba(0, 0, 0, 0.06);
@@ -50,6 +56,64 @@
   /* motion */
   --ecw-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ecw-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+
+  /* typography ladder (5.2.0 UI-01 / UI-02) */
+  --ecw-font-xs: 12px;
+  --ecw-font-sm: 13px;
+  --ecw-font-md: 14px;
+  --ecw-font-lg: 16px;
+  --ecw-font-xl: 18px;
+  --ecw-space-1: 4px;
+  --ecw-space-2: 8px;
+  --ecw-space-3: 12px;
+  --ecw-space-4: 16px;
+  --ecw-space-5: 24px;
+
+  /* layout breakpoints (5.2.0 UI-03) */
+  --ecw-bp-compact: 1099px;
+  --ecw-bp-mid: 1439px;
+}
+
+html.ecw-theme-dark {
+  color-scheme: dark;
+  --ecw-canvas: #1c1c1e;
+  --ecw-surface: rgba(44, 44, 46, 0.82);
+  --ecw-surface-solid: #2c2c2e;
+  --ecw-surface-muted: rgba(44, 44, 46, 0.55);
+  --ecw-surface-hover: rgba(255, 255, 255, 0.06);
+  --ecw-surface-active: rgba(10, 132, 255, 0.18);
+  --ecw-glass: rgba(44, 44, 46, 0.72);
+  --ecw-glass-strong: rgba(58, 58, 60, 0.92);
+  --ecw-text-1: #f5f5f7;
+  --ecw-text-2: #aeaeb2;
+  --ecw-text-3: #98989d;
+  --ecw-border: rgba(255, 255, 255, 0.08);
+  --ecw-border-strong: rgba(255, 255, 255, 0.14);
+  --ecw-accent: #0a84ff;
+  --ecw-accent-soft: rgba(10, 132, 255, 0.16);
+  --ecw-accent-mid: rgba(10, 132, 255, 0.28);
+  --ecw-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --ecw-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --ecw-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+html.ecw-theme-dark .wb-center {
+  background: rgba(44, 44, 46, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.ecw-theme-dark .wb-left,
+html.ecw-theme-dark .wb-right {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.ecw-theme-dark .ecw-topbar {
+  background: rgba(44, 44, 46, 0.88);
+  border-bottom-color: var(--ecw-border);
+}
+
+.ecw-text-min {
+  font-size: var(--ecw-font-xs);
 }
 
 html,
@@ -276,7 +340,7 @@ html.acw-terminal-pagefill body {
 }
 
 .wb-left-head .head-title {
-  font-size: 11px;
+  font-size: var(--ecw-font-xs);
   font-weight: 600;
   color: var(--ecw-text-3);
   margin-bottom: 10px;
@@ -734,6 +798,39 @@ html.acw-terminal-pagefill body {
     box-shadow:
       0 0 0 3px var(--ecw-surface-muted),
       0 0 0 7px rgba(245, 108, 108, 0.28);
+  }
+}
+
+@media (max-width: 1439px) {
+  :root {
+    --ecw-rail-w: 272px;
+  }
+}
+
+@media (max-width: 1099px) {
+  :root {
+    --ecw-sidebar-w: 248px;
+    --ecw-rail-w: min(100%, 280px);
+  }
+
+  .workbench {
+    gap: 8px;
+    padding: 0;
+  }
+
+  .ecw-main {
+    padding: 8px 10px 10px;
+  }
+
+  .wb-left {
+    min-width: 220px;
+    width: var(--ecw-sidebar-w);
+  }
+
+  .wb-right {
+    min-width: 220px;
+    width: var(--ecw-rail-w);
+    padding: 14px 12px 18px;
   }
 }
 

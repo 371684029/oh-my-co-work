@@ -25,7 +25,7 @@ import { archiveOffsiteOnReturnToMain } from './offsite.js'
 import { unarchiveSession, skipArchiveNode } from './archive.js'
 import { advance } from './advance.js'
 
-export function createSessionFromGroup(groupId, { title } = {}) {
+export function createSessionFromGroup(groupId, { title, dryRun } = {}) {
   const group = getGroup(groupId)
   if (!group || !group.enabled) throw new Error('群模板不存在或未启用')
   const steps = parseJson(group.steps_json, [])
@@ -85,6 +85,9 @@ export function createSessionFromGroup(groupId, { title } = {}) {
       memberId: adminResolved.memberId,
       memberName: adminResolved.member?.display_name || null,
     },
+  }
+  if (dryRun === true) {
+    ctx.dryRun = true
   }
   if (!isAdhoc) {
     ctx.pendingStart = {
@@ -242,7 +245,7 @@ function resumeAdhocIfStillPendingStart(sessionId) {
  * 从单个成员开聊：已有一对一会话则打开它（不新建）。
  * 新会话生成临时「单聊」群模板（config.adhoc），无启动确认闸门。
  */
-export function createSessionFromMember(memberId, { title } = {}) {
+export function createSessionFromMember(memberId, { title, dryRun } = {}) {
   const raw = getMember(memberId)
   if (!raw || !raw.enabled) throw new Error('成员不存在或未启用')
 
@@ -290,7 +293,10 @@ export function createSessionFromMember(memberId, { title } = {}) {
       t,
       t,
     )
-  return createSessionFromGroup(groupId, title ? { title } : {})
+  return createSessionFromGroup(groupId, {
+    ...(title ? { title } : {}),
+    ...(dryRun === true ? { dryRun: true } : {}),
+  })
 }
 
 /**

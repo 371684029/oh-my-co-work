@@ -60,6 +60,16 @@ test('listDocs groups by group template with whitelisted files only', () => {
   assert.equal(names.includes('secret.md'), false)
 })
 
+test('getSessionDocsSummary returns one session without full rescan list', () => {
+  const session = seedSession('单会话摘要')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '# 单拉')
+  docsHub.invalidateDocsCache()
+  const summary = docsHub.getSessionDocsSummary(session.id)
+  assert.ok(summary)
+  assert.equal(summary.sessionId, session.id)
+  assert.equal(summary.files[0].name, 'ANNOUNCEMENT.md')
+})
+
 test('listDocs time sort returns flat items newest first', async () => {
   const a = seedSession('时间组')
   writeDoc(a.id, 'ANNOUNCEMENT.md', '旧文件')
@@ -195,6 +205,18 @@ test('exportAllDocsZip packages all documents across sessions', () => {
   assert.ok(fs.existsSync(out.path))
   assert.ok(fs.statSync(out.path).size > 0)
   fs.rmSync(out.path, { force: true })
+})
+
+test('openSessionAsset resolves relative image beside markdown', () => {
+  const session = seedSession('图片资源')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '![x](./assets/x.png)')
+  const assetsDir = path.join(dataRoot, 'journals', 'sessions', session.id, 'assets')
+  fs.mkdirSync(assetsDir, { recursive: true })
+  const png = path.join(assetsDir, 'x.png')
+  fs.writeFileSync(png, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  const out = docsHub.openSessionAsset(session.id, './assets/x.png', 'ANNOUNCEMENT.md')
+  assert.equal(out.mime, 'image/png')
+  assert.ok(fs.existsSync(out.abs))
 })
 
 test('empty docs zip placeholder is a valid zip entry', async () => {

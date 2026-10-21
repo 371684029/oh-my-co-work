@@ -6,6 +6,8 @@
         <el-menu-item index="/settings/members">成员管理</el-menu-item>
         <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
         <el-menu-item index="/settings/shortcuts">斜杠 / 快捷键</el-menu-item>
+        <el-menu-item index="/settings/snippets">提示词片段</el-menu-item>
+        <el-menu-item index="/settings/wizard">首次向导</el-menu-item>
       </el-menu>
 
       <div class="settings-side-divider" aria-hidden="true" />
@@ -14,6 +16,9 @@
       <el-menu :default-active="route.path" router class="settings-menu settings-menu--meta">
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
           设置
+        </el-menu-item>
+        <el-menu-item index="/settings/restore" class="menu-item-meta">
+          还原中心
         </el-menu-item>
         <el-menu-item index="/settings/grok" class="menu-item-meta">
           Grok Build 教程

@@ -23,45 +23,17 @@ import { resolveShowScriptPopup } from './appSettings.js'
 import { decodeConsoleBytes, consoleChildEnv } from './consoleEncoding.js'
 import { runTerminal } from './terminal/terminalService.js'
 import { applyFurnaceGrokRuntime } from './furnaceSituation.js'
+import { composeMemberPrompt } from './promptSnippets.js'
+import { getAppSettings } from './appSettings.js'
+import { listAgentDefinitions } from './agentRegistry.js'
 
-/**
- * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
- * 不含「脚本所在目录」——那是文件定位成功后的运行 cwd
- */
-export function resolveWorkFolderCandidates({ member, group, sessionContext, scriptCfg }) {
-  const list = []
-  const push = (p) => {
-    if (p && typeof p === 'string' && p.trim() && !list.includes(p)) list.push(p)
-  }
-  push(scriptCfg?.cwd)
-  push(member?.work_folder)
-  push(sessionContext?.primaryWorkFolder)
-  push(sessionContext?.workFolders?.[0])
-  push(group?.work_folder)
-  push(process.cwd())
-  return list
-}
+import {
+  resolveWorkFolderCandidates,
+  getScriptWorkDir,
+  assertScriptWorkDirConfigured,
+} from './runners/scriptWorkDir.js'
 
-/**
- * 脚本工作目录（与成员/会话「工作文件夹」无关）
- * 兼容旧字段 scriptDir
- */
-export function getScriptWorkDir(script) {
-  if (!script || typeof script !== 'object') return ''
-  const w = script.scriptWorkDir || script.scriptDir || ''
-  return String(w).trim()
-}
-
-/** 保存成员/指令时校验 */
-export function assertScriptWorkDirConfigured(script) {
-  const w = getScriptWorkDir(script)
-  if (!w) {
-    const err = new Error('请填写脚本工作目录')
-    err.code = 'NO_SCRIPT_WORK_DIR'
-    throw err
-  }
-  return w
-}
+export { resolveWorkFolderCandidates, getScriptWorkDir, assertScriptWorkDirConfigured }
 
 function mirrorScriptWorkDirFields(script) {
   if (!script || typeof script !== 'object') return script
@@ -422,7 +394,12 @@ export async function runMember(
   }
 
   if (kind === 'echo') {
-    const tpl = config.defaultText || humanInput || 'echo: ok'
+    const snippets = getAppSettings().promptSnippets || []
+    const tpl = composeMemberPrompt(
+      config.defaultText || humanInput || 'echo: ok',
+      config,
+      snippets,
+    )
     const text = applyParamPlaceholders(tpl, paramsMap, {
       ...phExtra,
       input: humanInput != null ? humanInput : tpl,
@@ -590,6 +567,14 @@ export async function runMember(
     )
 
     if (usesTerminalExecution(script)) {
+      let adapter = script.adapter || script.terminal?.adapter || null
+      if (!adapter && furnaceAgent) {
+        const def = listAgentDefinitions().find((d) => d.id === furnaceAgent)
+        if (def?.structuredAdapter === 'jsonl') adapter = 'jsonl'
+      }
+      if (script.sandbox?.readOnly === true) {
+        env.ACW_SANDBOX_READONLY = '1'
+      }
       return runTerminal({
         launch,
         cwd,
@@ -603,7 +588,7 @@ export async function runMember(
         stdinText: passStdin && humanInput != null ? String(humanInput) : script.stdinText || null,
         cols: isFurnaceMember(member) ? 120 : script.terminal?.cols,
         rows: isFurnaceMember(member) ? 40 : script.terminal?.rows,
-        adapter: script.adapter || script.terminal?.adapter || null,
+        adapter,
         furnaceAgent,
       })
     }

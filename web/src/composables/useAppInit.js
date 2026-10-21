@@ -9,15 +9,41 @@ import {
 } from './furnaceUi.js'
 import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
+import { loadNotificationPrefs } from './useNotificationPrefs.js'
+import { syncTrayStatus } from './syncTrayStatus.js'
+import { markInboxHandled } from './notificationInbox.js'
+import {
+  applyColorScheme,
+  normalizeColorScheme,
+  readStoredColorScheme,
+  watchSystemColorScheme,
+  writeStoredColorScheme,
+} from './uiColorScheme.js'
 
 export function useAppInit() {
   const desktop = useDesktopBridge()
   const isFullscreen = ref(false)
   const grokGuideOpen = ref(false)
+  const firstRunGuideOpen = ref(false)
   const grokGuideStatus = ref({})
   const grokExampleToml = ref('')
 
   const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
+  const reduceEffects = ref(false)
+  const colorSchemePref = ref(readStoredColorScheme())
+  let stopSystemThemeWatch = null
+
+  function applyUiSettings(settings) {
+    reduceEffects.value = !!settings?.ui?.reduceEffects
+    const scheme = normalizeColorScheme(settings?.ui?.colorScheme || readStoredColorScheme())
+    colorSchemePref.value = scheme
+    writeStoredColorScheme(scheme)
+    applyColorScheme(scheme)
+    stopSystemThemeWatch?.()
+    stopSystemThemeWatch = watchSystemColorScheme(() => {
+      if (colorSchemePref.value === 'system') applyColorScheme('system')
+    })
+  }
 
   function syncFullscreenState() {
     isFullscreen.value = !!fullscreenElement()
@@ -29,6 +55,10 @@ export function useAppInit() {
       grokGuideStatus.value = probe
       grokExampleToml.value = probe.exampleToml || ''
       setFurnaceGrokGate({ probe })
+      applyUiSettings(s)
+      if (s && !s.onboarding?.firstRunGuideDismissed) {
+        firstRunGuideOpen.value = true
+      }
       return { s, probe }
     } catch {
       setGrokConfigured(false)
@@ -89,25 +119,52 @@ export function useAppInit() {
     }
   }
 
+  const clearTrayOnFocus = () => syncTrayStatus({ pending: 0, status: 'idle' })
+
   onMounted(() => {
     desktop.initDesktopBridge()
+    window.__ACW_DESKTOP_API__?.onNotificationAction?.(({ id, action }) => {
+      if (id) markInboxHandled(id, action || 'click')
+    })
+    applyColorScheme(colorSchemePref.value)
+    stopSystemThemeWatch = watchSystemColorScheme(() => {
+      if (colorSchemePref.value === 'system') applyColorScheme('system')
+    })
     document.addEventListener('fullscreenchange', syncFullscreenState)
+    window.addEventListener('focus', clearTrayOnFocus)
     syncFullscreenState()
+    void loadNotificationPrefs()
     refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
   })
 
   onUnmounted(() => {
+    stopSystemThemeWatch?.()
+    stopSystemThemeWatch = null
     document.removeEventListener('fullscreenchange', syncFullscreenState)
+    window.removeEventListener('focus', clearTrayOnFocus)
   })
+
+  async function dismissFirstRunGuide() {
+    firstRunGuideOpen.value = false
+    try {
+      await api.appSettings.update({ onboarding: { firstRunGuideDismissed: true } })
+    } catch {
+      /* ignore */
+    }
+  }
 
   return {
     isFullscreen,
     grokGuideOpen,
+    firstRunGuideOpen,
+    dismissFirstRunGuide,
     grokGuideStatus,
     grokExampleToml,
     grokCanContinue,
     refreshGrokGate,
     ensureFurnaceGrokWired,
+    reduceEffects,
+    colorSchemePref,
     isDesktop: desktop.isDesktop,
     desktopEnv: desktop.desktopEnv,
   }

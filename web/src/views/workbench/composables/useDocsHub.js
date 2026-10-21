@@ -2,6 +2,30 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { getCachedDocHtml, setCachedDocHtml } from '../../../composables/docsRenderCache.js'
+import { outlineWithUniqueSlugs } from '../../docs/docOutline.js'
+import {
+  readDocsCodeLineNumbers,
+  writeDocsCodeLineNumbers,
+} from '../../docs/docsCodeFence.js'
+import {
+  getDocsList,
+  subscribeDocsList,
+  refreshDocsForSession,
+  invalidateDocsListCache,
+} from '../../docs/docsListStore.js'
+import {
+  readDocsReadingPrefs,
+  writeDocsReadingPrefs,
+  docsReadingClassNames,
+  docsReadingStyle,
+} from '../../docs/docsReadingPrefs.js'
+import {
+  readDocsReadingHistory,
+  recordDocsOpen,
+  toggleDocsPin,
+  isDocsPinned,
+} from '../../docs/docsReadingHistory.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -13,6 +37,7 @@ import { createDocsMarkdown } from '../../docs/markdownRenderer'
 let _router = null
 let _route = null
 let _stopWatchers = []
+let _stopDocsListSub = null
 
 // ===== 排序 =====
 const SORT_KEY = 'acw.docsHubSort'
@@ -49,7 +74,93 @@ let searchDebounceTimer = null
 let searchReqId = 0
 let fileReqId = 0
 
+const codeLineNumbers = ref(readDocsCodeLineNumbers())
+
+function toggleCodeLineNumbers() {
+  codeLineNumbers.value = !codeLineNumbers.value
+  writeDocsCodeLineNumbers(codeLineNumbers.value)
+}
+
+const readingPrefs = ref(readDocsReadingPrefs())
+const readingClasses = computed(() => docsReadingClassNames(readingPrefs.value))
+const readingStyle = computed(() => docsReadingStyle(readingPrefs.value))
+
+const readingWidthOptions = [
+  { label: '窄', value: 'narrow' },
+  { label: '标准', value: 'standard' },
+  { label: '宽', value: 'wide' },
+]
+
+const readingFontOptions = [
+  { label: '小', value: 0.9 },
+  { label: '标准', value: 1 },
+  { label: '大', value: 1.12 },
+  { label: '特大', value: 1.25 },
+]
+
+function persistReadingPrefs() {
+  writeDocsReadingPrefs(readingPrefs.value)
+}
+
+function setReadingWidth(width) {
+  readingPrefs.value = { ...readingPrefs.value, width }
+  persistReadingPrefs()
+}
+
+function setReadingFontScale(fontScale) {
+  readingPrefs.value = { ...readingPrefs.value, fontScale }
+  persistReadingPrefs()
+}
+
+function toggleReadingTheme() {
+  readingPrefs.value = {
+    ...readingPrefs.value,
+    theme: readingPrefs.value.theme === 'dark' ? 'light' : 'dark',
+  }
+  persistReadingPrefs()
+}
+
+function toggleReadingFocus() {
+  readingPrefs.value = { ...readingPrefs.value, focus: !readingPrefs.value.focus }
+  persistReadingPrefs()
+}
+
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
+
+// ===== 正文内搜索（DOC-06）=====
+const inDocSearch = ref(null)
+const inDocMarkTotal = ref(0)
+
+function activateInDocSearch(query, lineHint = 1) {
+  const q = String(query || '').trim()
+  if (!q) {
+    inDocSearch.value = null
+    inDocMarkTotal.value = 0
+    return
+  }
+  inDocSearch.value = { query: q, lineHint: Number(lineHint) || 1, markIndex: 0 }
+}
+
+function clearInDocSearch() {
+  inDocSearch.value = null
+  inDocMarkTotal.value = 0
+}
+
+function setInDocMarkTotal(n) {
+  inDocMarkTotal.value = Math.max(0, Number(n) || 0)
+}
+
+function stepInDocSearchMark(delta) {
+  if (!inDocSearch.value || !inDocMarkTotal.value) return
+  const n = inDocMarkTotal.value
+  const next = (inDocSearch.value.markIndex + delta + n) % n
+  inDocSearch.value = { ...inDocSearch.value, markIndex: next }
+}
+
+const inDocSearchLabel = computed(() => {
+  if (!inDocSearch.value || !inDocMarkTotal.value) return ''
+  return `${inDocSearch.value.markIndex + 1} / ${inDocMarkTotal.value}`
+})
 
 async function doSearch(q) {
   const trimmed = (q || '').trim()
@@ -117,13 +228,71 @@ const dirty = computed(
   () => editing.value && file.value != null && draft.value !== (file.value.content || ''),
 )
 
+/** 当前文档大纲（h1～h3，与正文锚点 slug 一致） */
+const docOutline = computed(() => {
+  if (!file.value?.content || editing.value) return []
+  return outlineWithUniqueSlugs(file.value.content, { maxLevel: 3 })
+})
+
 /** 当前内容渲染 HTML（workFolder 变化时重建实例） */
 const renderedHtml = computed(() => {
   if (!file.value || file.value.content == null) return ''
+  const workFolder = currentSession.value?.workFolder || null
+  const cacheKey = {
+    sessionId: current.value?.sessionId,
+    name: current.value?.name,
+    content: file.value.content,
+    lineNumbers: codeLineNumbers.value,
+    workFolder,
+  }
+  const hit = getCachedDocHtml(cacheKey)
+  if (hit != null) return hit
+  const md = createDocsMarkdown({
+    workFolders: [workFolder].filter(Boolean),
+  })
+  const html = md.render(file.value.content, {
+    docCodeLineNumbers: codeLineNumbers.value,
+    docSessionId: current.value?.sessionId,
+    docRelName: current.value?.name,
+  })
+  setCachedDocHtml(cacheKey, html)
+  return html
+})
+
+const docsHistory = ref(readDocsReadingHistory())
+const docsPinned = computed(() => docsHistory.value.pinned || [])
+const docsRecent = computed(() => docsHistory.value.recent || [])
+
+function refreshDocsHistory() {
+  docsHistory.value = readDocsReadingHistory()
+}
+
+function pinCurrentDoc() {
+  if (!current.value) return
+  docsHistory.value = toggleDocsPin({
+    sessionId: current.value.sessionId,
+    name: current.value.name,
+    label: fileLabel(file.value || { name: current.value.name }),
+    sessionTitle: currentSession.value?.sessionTitle || '',
+  })
+}
+
+function isCurrentPinned() {
+  if (!current.value) return false
+  return isDocsPinned(current.value.sessionId, current.value.name, docsPinned.value)
+}
+
+/** Live preview while editing announcement (DOC-07). */
+const draftPreviewHtml = computed(() => {
+  if (!editing.value || !canEdit.value) return ''
   const md = createDocsMarkdown({
     workFolders: [currentSession.value?.workFolder].filter(Boolean),
   })
-  return md.render(file.value.content)
+  return md.render(draft.value || '', {
+    docCodeLineNumbers: codeLineNumbers.value,
+    docSessionId: current.value?.sessionId,
+    docRelName: current.value?.name,
+  })
 })
 
 // ===== 工具函数 =====
@@ -195,7 +364,7 @@ function statusClass(s) {
 async function ensureWorkFolders() {
   if (workFoldersReady) return
   try {
-    const g = await api.docs.list('group')
+    const g = await getDocsList('group')
     for (const group of g.groups || []) {
       for (const s of group.sessions || []) {
         if (s.workFolder) workFolderBySession.value[s.sessionId] = s.workFolder
@@ -207,11 +376,11 @@ async function ensureWorkFolders() {
   }
 }
 
-async function loadList() {
+async function loadList({ force = false } = {}) {
   listLoading.value = true
   listError.value = ''
   try {
-    const data = await api.docs.list(sort.value)
+    const data = await getDocsList(sort.value, { force })
     listData.value = data
     if (data.sort === 'group') {
       for (const group of data.groups || []) {
@@ -281,6 +450,14 @@ async function selectFile(sessionId, name, { force = false } = {}) {
   current.value = { sessionId, name }
   syncQuery()
   await loadFile(sessionId, name)
+  if (file.value) {
+    docsHistory.value = recordDocsOpen({
+      sessionId,
+      name,
+      label: fileLabel(file.value),
+      sessionTitle: currentSession.value?.sessionTitle || '',
+    })
+  }
 }
 
 // ===== 编辑 =====
@@ -304,7 +481,9 @@ async function save() {
     await api.docs.saveAnnouncement(sessionId, draft.value)
     if (current.value?.sessionId !== sessionId || current.value?.name !== name) return
     editing.value = false
-    await loadList()
+    invalidateDocsListCache()
+    await refreshDocsForSession(sessionId)
+    listData.value = await getDocsList(sort.value)
     await loadFile(sessionId, name)
     ElMessage.success('群报告已保存')
   } catch (e) {
@@ -357,6 +536,12 @@ function initDocsHub({ route, router }) {
   _route = route
   _router = router
   window.addEventListener('beforeunload', onBeforeUnload)
+  _stopDocsListSub = subscribeDocsList(async (sessionId) => {
+    if (!sessionId || sessionId !== current.value?.sessionId) return
+    await refreshDocsForSession(sessionId)
+    listData.value = await getDocsList(sort.value)
+    if (current.value?.name) await loadFile(sessionId, current.value.name)
+  })
   _stopWatchers.push(
     watch(sort, (v) => {
       try {
@@ -371,6 +556,7 @@ function initDocsHub({ route, router }) {
       const q = (v || '').trim()
       if (!q) {
         searchResults.value = []
+        clearInDocSearch()
         return
       }
       searchDebounceTimer = setTimeout(() => doSearch(q), 300)
@@ -380,6 +566,10 @@ function initDocsHub({ route, router }) {
 
 function disposeDocsHub() {
   window.removeEventListener('beforeunload', onBeforeUnload)
+  if (_stopDocsListSub) {
+    _stopDocsListSub()
+    _stopDocsListSub = null
+  }
   _stopWatchers.forEach((stop) => stop())
   _stopWatchers = []
   _router = null
@@ -420,12 +610,31 @@ export {
   canEdit,
   dirty,
   renderedHtml,
+  docOutline,
+  codeLineNumbers,
+  toggleCodeLineNumbers,
+  readingPrefs,
+  readingClasses,
+  readingStyle,
+  readingWidthOptions,
+  readingFontOptions,
+  setReadingWidth,
+  setReadingFontScale,
+  toggleReadingTheme,
+  toggleReadingFocus,
   // 4.1.0 搜索
   searchQuery,
   searchResults,
   searchLoading,
   isSearching,
   doSearch,
+  inDocSearch,
+  inDocMarkTotal,
+  inDocSearchLabel,
+  activateInDocSearch,
+  clearInDocSearch,
+  setInDocMarkTotal,
+  stepInDocSearchMark,
   relativeTime,
   formatSize,
   formatTime,
@@ -445,4 +654,10 @@ export {
   openPath,
   initDocsHub,
   disposeDocsHub,
+  docsPinned,
+  docsRecent,
+  refreshDocsHistory,
+  pinCurrentDoc,
+  isCurrentPinned,
+  draftPreviewHtml,
 }

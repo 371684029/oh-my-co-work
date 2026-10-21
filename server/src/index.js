@@ -33,6 +33,11 @@ import {
   requireLocalAccess,
 } from './localAccess.js'
 
+import { applyAugmentedPath } from './pathEnv.js'
+import { startLocalScheduler } from './localScheduler.js'
+
+applyAugmentedPath()
+
 const PORT = Number(process.env.ACW_PORT || process.env.ECW_PORT || 3780)
 
 initDb()
@@ -147,6 +152,15 @@ app.use(
   }),
 )
 app.use(express.json({ limit: '2mb' }))
+
+const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/ws')) {
+    res.setHeader('Content-Security-Policy', CSP)
+  }
+  next()
+})
 app.get('/api/bootstrap', bootstrapLocalAccess)
 app.post('/api/bootstrap', bootstrapLocalAccess)
 app.use('/api', requireLocalAccess)
@@ -193,6 +207,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`[acw] groups ${listGroups({ includeDemo: true }).length}, members ${listMembers({ includeDemo: true }).length}`)
   console.log(`[acw] lifecycle ${JSON.stringify(getLifecycleStatus())}`)
   startLifecycleWatch()
+  startLocalScheduler()
 })
 
 setExitHandler((reason) => {

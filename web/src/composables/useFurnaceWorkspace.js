@@ -1,11 +1,31 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable, inferFurnaceAgent, takeFurnaceAssistantDelta } from '@acw/shared'
+import {
+  buildFurnacePtyAttachText,
+  furnaceGuiTranscript,
+  furnaceGuiReadable,
+  inferFurnaceAgent,
+  inferFurnaceCliBanner,
+  takeFurnaceAssistantDelta,
+} from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import { PET_CREDIT_SHORT } from './furnacePetAtlas.js'
 import { furnaceWorkspaceOpen } from './furnaceUi.js'
 import { isTerminalRunning, terminalStatusText, connectionStatusText } from './terminalStatus'
 import { useLocalUploads } from './localUploads'
+import { buildFurnaceSubmitSequence } from './bracketedPaste.js'
+import {
+  furnaceScopeKey,
+  loadInputDraft,
+  pushInputHistory,
+  saveInputDraft,
+  stepInputHistory,
+} from './inputDraftHistory.js'
+import {
+  historyNavigationDelta,
+  isHistoryNavigationKey,
+  shouldSubmitOnEnter,
+} from './inputIntent.js'
 
 /**
  * 熔炉干活面（GUI/TUI 同一条 grok 进程）的状态与逻辑。
@@ -21,6 +41,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
   /** 首次进 TUI 再挂 xterm；之后用 v-show，避免每次切皮拆掉终端 */
   const tuiEverShown = ref(surface.value === 'tui')
   const draft = ref('')
+  let furnaceHistIndex = -1
   const sent = ref([])
   const chatTurns = ref([])
   const pendingFiles = ref([])
@@ -54,11 +75,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
   const isStopped = computed(() =>
     ['exited', 'failed', 'killed', 'timed_out'].includes(props.terminal.status),
   )
+  const furnaceAgentKind = computed(() => inferFurnaceAgent(props.terminal))
+
   const liveText = computed(() =>
     furnaceGuiTranscript(props.terminal.replay || '', {
       cols: props.terminal.cols || 120,
       rows: props.terminal.rows || 40,
       maxLines: 2000,
+      profile: furnaceAgentKind.value === 'cursor' ? 'cursor' : 'grok',
     }),
   )
   const showBody = computed(() => furnaceGuiReadable(liveText.value) || chatTurns.value.length > 0)
@@ -88,6 +112,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
       (!!draft.value.trim() || pendingFiles.value.length > 0),
   )
 
+  const cliBanner = computed(() =>
+    inferFurnaceCliBanner(props.terminal.replay || '', {
+      status: props.terminal.status,
+      exitCode: props.terminal.exitCode,
+      lastError: props.terminal.lastError || props.terminal.error?.message,
+    }),
+  )
+
   /** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
   const buddyMood = computed(() => {
     const st = String(props.terminal.status || '')
@@ -109,16 +141,34 @@ export function useFurnaceWorkspace(props, emit, refs) {
     return `${base} · ${PET_CREDIT_SHORT}`
   })
 
+  const agentBrand = computed(() =>
+    furnaceAgentKind.value === 'cursor' ? 'Cursor CLI' : 'Grok',
+  )
+
+  const welcomeTitle = computed(() =>
+    furnaceAgentKind.value === 'cursor'
+      ? '本机 Cursor CLI 已接进协同台'
+      : '本机 Grok 已接进协同台',
+  )
+
   const buddyLine = computed(() => {
     if (!isRunning.value) return '这轮停了。记录还在，可上翻。'
-    if (!showBody.value) return '她准备好后会先介绍，再等你。'
-    return '同一条 Grok。问当前格即可。可上翻看更早的话。'
+    if (!showBody.value) {
+      return furnaceAgentKind.value === 'cursor'
+        ? 'CLI 就绪后会先显示界面，再等你输入。'
+        : '她准备好后会先介绍，再等你。'
+    }
+    return `同一条 ${agentBrand.value}。问当前格即可。可上翻看更早的话。`
   })
 
   const welcomeKicker = computed(() => {
     if (props.connectionStatus === 'connecting') return '正在连工作台…'
-    if (props.terminal.status === 'starting') return '正在启动本机 grok…'
-    if (isRunning.value) return '已就绪 · 短规则在 AGENTS.md'
+    if (props.terminal.status === 'starting') return `正在启动本机 ${agentBrand.value}…`
+    if (isRunning.value) {
+      return furnaceAgentKind.value === 'cursor'
+        ? '已就绪 · 建议用 TUI 复制粘贴'
+        : '已就绪 · 短规则在 AGENTS.md'
+    }
     return '进程未在跑'
   })
 
@@ -203,12 +253,29 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function sendChat() {
-    const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
+    let payload
+    try {
+      payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value, {
+        agent: furnaceAgentKind.value,
+      })
+    } catch (e) {
+      ElMessage.warning(e?.message || '附件无效')
+      return
+    }
     if (!payload || !isRunning.value || uploading.value) return
+    pushInputHistory(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), payload)
+    furnaceHistIndex = -1
     sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
     chatTurns.value.push({ id: nextTurnId(), role: 'user', text: payload })
-    emit('input', `${payload}\r`)
+    const { payload: ptyPayload, submit } = buildFurnaceSubmitSequence(payload)
+    emit('input', ptyPayload)
+    if (submit) {
+      window.setTimeout(() => {
+        if (isRunning.value) emit('input', submit)
+      }, 50)
+    }
     draft.value = ''
+    saveInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), '')
     pendingFiles.value = []
     stickBottom.value = true
     nextTick(scrollLog)
@@ -249,11 +316,40 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function onComposerKey(ev) {
-    if (ev.key !== 'Enter' || ev.shiftKey) return
-    if (ev.isComposing || ev.keyCode === 229) return
+    if (isHistoryNavigationKey(ev) && !String(draft.value || '').trim() && props.sessionId) {
+      const step = stepInputHistory(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), {
+        index: furnaceHistIndex,
+        delta: historyNavigationDelta(ev),
+      })
+      if (step) {
+        ev.preventDefault()
+        furnaceHistIndex = step.index
+        draft.value = step.text
+        return
+      }
+    }
+    if (!shouldSubmitOnEnter(ev)) return
     ev.preventDefault()
     sendChat()
   }
+
+  watch(draft, (v) => {
+    if (!props.sessionId) return
+    saveInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value), v)
+  })
+
+  watch(
+    () => [props.sessionId, furnaceAgentKind.value],
+    () => {
+      furnaceHistIndex = -1
+      if (!props.sessionId) {
+        draft.value = ''
+        return
+      }
+      draft.value = loadInputDraft(furnaceScopeKey(props.sessionId, furnaceAgentKind.value))
+    },
+    { immediate: true },
+  )
 
   watch(liveText, () => {
     syncAssistantFromTranscript()
@@ -272,9 +368,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
   watch(surface, (mode) => {
     if (mode === 'tui') tuiEverShown.value = true
     if (mode === 'chat') {
-      emit('resize', { cols: 120, rows: 40 })
       nextTick(() => composerEl.value?.focus?.())
     }
+    // FUR-02: switching GUI/TUI must not resize the live PTY; fit on next frame only.
     nextTick(() => window.dispatchEvent(new Event('resize')))
   })
 
@@ -284,9 +380,23 @@ export function useFurnaceWorkspace(props, emit, refs) {
     }
   })
 
+  const showInputTips = ref(false)
+  function dismissFurnaceTips() {
+    showInputTips.value = false
+    try {
+      localStorage.setItem('acw.furnace.tips.v1', '1')
+    } catch {
+      /* ignore */
+    }
+  }
+
   onMounted(() => {
     furnaceWorkspaceOpen.value = true
-    if (surface.value === 'chat') emit('resize', { cols: 120, rows: 40 })
+    try {
+      showInputTips.value = localStorage.getItem('acw.furnace.tips.v1') !== '1'
+    } catch {
+      showInputTips.value = true
+    }
     syncAssistantFromTranscript()
     nextTick(scrollLog)
   })
@@ -311,6 +421,8 @@ export function useFurnaceWorkspace(props, emit, refs) {
     buddyTitle,
     buddyLine,
     welcomeKicker,
+    welcomeTitle,
+    agentBrand,
     failHint,
     showBody,
     showFail,
@@ -329,5 +441,8 @@ export function useFurnaceWorkspace(props, emit, refs) {
     onPaste,
     onComposerKey,
     pickFiles,
+    showInputTips,
+    dismissFurnaceTips,
+    cliBanner,
   }
 }

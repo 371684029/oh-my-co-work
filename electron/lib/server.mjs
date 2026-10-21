@@ -118,13 +118,14 @@ export function stdioForChildLog(logFd) {
   return ['ignore', logFd, logFd]
 }
 
-export function spawnAppServer({ appRoot, port, nodeBin, entry, logFd, instanceId }) {
+export function spawnAppServer({ appRoot, port, nodeBin, entry, logFd, instanceId, dataRoot }) {
   const env = {
     ...process.env,
     ACW_PORT: String(port),
     ACW_AUTO_EXIT: '0',
   }
   if (instanceId) env.ACW_INSTANCE_ID = String(instanceId)
+  if (dataRoot) env.ACW_DATA_ROOT = dataRoot
   return spawn(nodeBin, [entry], {
     cwd: appRoot,
     env,

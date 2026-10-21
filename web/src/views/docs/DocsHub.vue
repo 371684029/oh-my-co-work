@@ -26,7 +26,7 @@
             :class="{ active: selectedGroupId === 'all' }"
             @click="selectedGroupId = 'all'"
           >
-            <span class="dh-group-item-icon">📁</span>
+            <AcwIcon class="dh-group-item-icon" name="folder" :size="16" />
             <span class="dh-group-item-name">全部群模板</span>
             <span class="dh-group-item-count">{{ totalSessionsCount }}</span>
           </button>
@@ -43,7 +43,7 @@
               :class="{ active: selectedGroupId === groupKey(g) }"
               @click="selectedGroupId = groupKey(g)"
             >
-              <span class="dh-group-item-icon">👥</span>
+              <AcwIcon class="dh-group-item-icon" name="users" :size="16" />
               <span class="dh-group-item-name">{{ g.groupTitle }}</span>
               <span class="dh-group-item-count">{{ sessionCount(g) }}</span>
             </button>
@@ -101,6 +101,46 @@
           >
             刷新
           </el-button>
+        </div>
+
+        <div v-if="docsPinned.length || docsRecent.length" class="dh-quick-docs">
+          <div v-if="docsPinned.length" class="dh-quick-section">
+            <div class="dh-quick-title">已固定</div>
+            <button
+              v-for="item in docsPinned"
+              :key="`p:${item.sessionId}:${item.name}`"
+              type="button"
+              class="dh-quick-item"
+              :class="{ active: isActiveFile(item.sessionId, item.name) }"
+              @click="onQuickOpen(item)"
+            >
+              <span class="dh-quick-name">{{ item.label || item.name }}</span>
+              <span
+                class="dh-quick-pin"
+                title="取消固定"
+                @click.stop="onTogglePin(item)"
+              >★</span>
+            </button>
+          </div>
+          <div v-if="docsRecent.length" class="dh-quick-section">
+            <div class="dh-quick-title">最近打开</div>
+            <button
+              v-for="item in docsRecent.slice(0, 8)"
+              :key="`r:${item.sessionId}:${item.name}`"
+              type="button"
+              class="dh-quick-item"
+              :class="{ active: isActiveFile(item.sessionId, item.name) }"
+              @click="onQuickOpen(item)"
+            >
+              <span class="dh-quick-name">{{ item.label || item.name }}</span>
+              <span
+                v-if="!isPinnedItem(item)"
+                class="dh-quick-pin is-off"
+                title="固定"
+                @click.stop="onTogglePin(item)"
+              >☆</span>
+            </button>
+          </div>
         </div>
 
         <div class="dh-sessions-menu">
@@ -213,7 +253,7 @@
       </aside>
 
       <!-- 栏 3：文档中心核心正文区（文档中心在第三栏） -->
-      <main class="dh-col dh-col-content">
+      <main class="dh-col dh-col-content" :class="readingClasses" :style="readingStyle">
         <!-- 未选中提示 -->
         <div v-if="!current" class="dh-welcome-pane">
           <div class="dh-welcome-hero">
@@ -225,6 +265,12 @@
                   : '工作流跑完产生的群报告与节点审计台账将自动汇总于此'
               }}
             </p>
+            <div v-if="!hasDocs" class="dh-welcome-actions">
+              <el-button type="primary" @click="goWorkbench">去工作台开聊</el-button>
+              <p class="dh-welcome-tip">
+                跑完一个群流程后，群报告与节点台账会自动出现在左侧列表。
+              </p>
+            </div>
           </div>
         </div>
 
@@ -248,6 +294,39 @@
             <p v-if="file.truncated" class="dh-truncated-warn">文件超过 1MB，已截断显示</p>
           </div>
 
+          <div v-if="inDocSearch && inDocMarkTotal && !editing" class="dh-in-doc-search">
+            <span class="dh-in-doc-search-label">正文「{{ inDocSearch.query }}」· {{ inDocSearchLabel }}</span>
+            <el-button size="small" @click="stepInDocSearchMark(-1)">上一个</el-button>
+            <el-button size="small" @click="stepInDocSearchMark(1)">下一个</el-button>
+            <el-button size="small" link type="info" @click="clearInDocSearch">关闭</el-button>
+          </div>
+
+          <div v-if="!editing" class="dh-reading-bar">
+            <el-segmented
+              :model-value="readingPrefs.width"
+              :options="readingWidthOptions"
+              size="small"
+              @change="setReadingWidth"
+            />
+            <el-segmented
+              :model-value="readingPrefs.fontScale"
+              :options="readingFontOptions"
+              size="small"
+              @change="setReadingFontScale"
+            />
+            <el-button size="small" plain @click="toggleReadingTheme">
+              {{ readingPrefs.theme === 'dark' ? '浅色' : '深色' }}
+            </el-button>
+            <el-button
+              size="small"
+              :type="readingPrefs.focus ? 'primary' : 'default'"
+              plain
+              @click="toggleReadingFocus"
+            >
+              {{ readingPrefs.focus ? '退出专注' : '专注' }}
+            </el-button>
+          </div>
+
           <div class="dh-content-actions">
             <template v-if="canEdit">
               <el-button v-if="!editing" size="small" type="primary" @click="startEdit">
@@ -261,19 +340,74 @@
               </template>
             </template>
             <span v-else class="dh-readonly-hint">台账为只读（审计留痕）</span>
+            <el-button
+              v-if="!editing && file"
+              size="small"
+              :type="codeLineNumbers ? 'primary' : 'default'"
+              plain
+              @click="toggleCodeLineNumbers"
+            >
+              代码行号
+            </el-button>
+            <el-button
+              v-if="current && file && !editing"
+              size="small"
+              plain
+              :type="isCurrentPinned() ? 'primary' : 'default'"
+              @click="pinCurrentDoc"
+            >
+              {{ isCurrentPinned() ? '取消固定' : '固定' }}
+            </el-button>
+            <el-button v-if="file && !editing" size="small" plain @click="onExportHtml">
+              导出 HTML
+            </el-button>
+            <el-button v-if="file && !editing" size="small" plain @click="onExportPrint">
+              导出 PDF
+            </el-button>
           </div>
 
           <!-- 渲染（只读） -->
-          <div v-if="!editing" class="dh-content doc-prose" @click="onContentClick" v-html="renderedHtml" />
-          <!-- 编辑（仅公告） -->
-          <el-input
-            v-else
-            v-model="draft"
-            type="textarea"
-            class="dh-editor"
-            :autosize="{ minRows: 12, maxRows: 42 }"
-            placeholder="在此编辑群报告 Markdown"
+          <div
+            v-if="!editing"
+            ref="contentScrollRef"
+            class="dh-content doc-prose"
+            @click="onContentClick"
+            v-html="renderedHtml"
           />
+
+          <nav
+            v-if="docOutline.length && !editing"
+            class="dh-outline"
+            aria-label="文档目录"
+          >
+            <div class="dh-outline-title">目录</div>
+            <button
+              v-for="item in docOutline"
+              :key="item.slug"
+              type="button"
+              class="dh-outline-item"
+              :class="{ active: activeOutlineSlug === item.slug, [`level-${item.level}`]: true }"
+              @click="scrollToHeading(item.slug)"
+            >
+              {{ item.text }}
+            </button>
+          </nav>
+          <!-- 编辑（仅公告）：分栏预览 (DOC-07) -->
+          <div v-else class="dh-editor-split">
+            <el-input
+              v-model="draft"
+              type="textarea"
+              class="dh-editor"
+              :autosize="{ minRows: 12, maxRows: 42 }"
+              placeholder="在此编辑群报告 Markdown"
+            />
+            <div
+              class="dh-editor-preview doc-prose"
+              :class="readingClasses"
+              :style="readingStyle"
+              v-html="draftPreviewHtml"
+            />
+          </div>
         </template>
       </main>
     </div>
@@ -281,11 +415,17 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
 import './docProse.css'
+import { handleDocsProseClick } from './docsCodeFence.js'
+import {
+  applyInDocSearchMarks,
+  clearInDocSearchMarks,
+  scrollToInDocSearchMark,
+} from './docsInDocSearch.js'
 import {
   sort,
   sortOptions,
@@ -303,10 +443,29 @@ import {
   currentSession,
   canEdit,
   renderedHtml,
+  docOutline,
+  codeLineNumbers,
+  toggleCodeLineNumbers,
+  readingPrefs,
+  readingClasses,
+  readingStyle,
+  readingWidthOptions,
+  readingFontOptions,
+  setReadingWidth,
+  setReadingFontScale,
+  toggleReadingTheme,
+  toggleReadingFocus,
   searchQuery,
   searchResults,
   searchLoading,
   isSearching,
+  inDocSearch,
+  inDocMarkTotal,
+  inDocSearchLabel,
+  activateInDocSearch,
+  clearInDocSearch,
+  setInDocMarkTotal,
+  stepInDocSearchMark,
   relativeTime,
   formatSize,
   formatTime,
@@ -325,10 +484,63 @@ import {
   openPath,
   initDocsHub,
   disposeDocsHub,
+  docsPinned,
+  docsRecent,
+  refreshDocsHistory,
+  pinCurrentDoc,
+  isCurrentPinned,
+  draftPreviewHtml,
 } from '../workbench/composables/useDocsHub'
+import {
+  buildDocExportHtml,
+  downloadTextFile,
+  openDocPrintWindow,
+} from './docsExport.js'
+import proseCss from './docProse.css?raw'
+import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
+import AcwIcon from '../../components/icons/AcwIcon.vue'
 
 const route = useRoute()
 const router = useRouter()
+
+function goWorkbench() {
+  void router.push('/workbench')
+}
+
+function isPinnedItem(item) {
+  return isDocsPinned(item.sessionId, item.name, docsPinned.value)
+}
+
+function onTogglePin(item) {
+  toggleDocsPin(item)
+  refreshDocsHistory()
+}
+
+async function onQuickOpen(item) {
+  expandFor(item.sessionId)
+  await selectFile(item.sessionId, item.name)
+}
+
+function onExportHtml() {
+  if (!file.value) return
+  const html = buildDocExportHtml({
+    title: fileLabel(file.value),
+    bodyHtml: renderedHtml.value,
+    proseCss,
+  })
+  const base = (file.value.name || 'doc').replace(/[^\w.-]+/g, '_')
+  downloadTextFile(`${base}.html`, html)
+}
+
+function onExportPrint() {
+  if (!file.value) return
+  const html = buildDocExportHtml({
+    title: fileLabel(file.value),
+    bodyHtml: renderedHtml.value,
+    proseCss,
+  })
+  if (!openDocPrintWindow(html)) ElMessage.warning('请允许弹出窗口以打印/保存 PDF')
+}
 
 const selectedGroupId = ref('all')
 const selectedTimeRange = ref('all')
@@ -421,9 +633,48 @@ function isActiveFile(sessionId, name) {
 }
 
 function onSearchHit(hit) {
+  activateInDocSearch(searchQuery.value, hit.line || 1)
   expandFor(hit.sessionId)
   selectFile(hit.sessionId, hit.name)
 }
+
+function syncInDocSearchHighlights() {
+  const root = contentScrollRef.value
+  if (!root || editing.value || !inDocSearch.value) {
+    clearInDocSearchMarks(root)
+    setInDocMarkTotal(0)
+    return
+  }
+  const total = applyInDocSearchMarks(root, inDocSearch.value.query)
+  setInDocMarkTotal(total)
+  if (!total) return
+  scrollToInDocSearchMark(root, {
+    markIndex: inDocSearch.value.markIndex,
+    lineHint: inDocSearch.value.lineHint,
+    content: file.value?.content,
+    query: inDocSearch.value.query,
+  })
+}
+
+watch([renderedHtml, file, inDocSearch, editing], () => {
+  nextTick(() => syncInDocSearchHighlights())
+})
+
+watch(
+  () => inDocSearch.value?.markIndex,
+  () => {
+    nextTick(() => {
+      const root = contentScrollRef.value
+      if (!root || !inDocSearch.value) return
+      scrollToInDocSearchMark(root, {
+        markIndex: inDocSearch.value.markIndex,
+        lineHint: inDocSearch.value.lineHint,
+        content: file.value?.content,
+        query: inDocSearch.value.query,
+      })
+    })
+  },
+)
 
 function highlightSnippet(snippet, query) {
   if (!snippet || !query) return snippet || ''
@@ -458,11 +709,80 @@ async function onExportAll() {
 
 async function refresh() {
   if (!(await confirmDiscardIfDirty())) return
-  await loadList()
+  await loadList({ force: true })
   if (current.value) await loadFile(current.value.sessionId, current.value.name)
 }
 
-function onContentClick(e) {
+const contentScrollRef = ref(null)
+const activeOutlineSlug = ref('')
+let outlineObserver = null
+
+function scrollToHeading(slug) {
+  const root = contentScrollRef.value
+  if (!root || !slug) return
+  const el = root.querySelector(`#${CSS.escape(slug)}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    activeOutlineSlug.value = slug
+  }
+}
+
+async function copyHeadingAnchor(slug) {
+  if (!slug) return
+  const hash = `#${slug}`
+  try {
+    await navigator.clipboard.writeText(hash)
+    ElMessage.success('已复制锚点链接')
+  } catch {
+    ElMessage.success(`锚点 ${hash}`)
+  }
+}
+
+function teardownOutlineObserver() {
+  if (outlineObserver) {
+    outlineObserver.disconnect()
+    outlineObserver = null
+  }
+  activeOutlineSlug.value = ''
+}
+
+function setupOutlineObserver() {
+  teardownOutlineObserver()
+  const root = contentScrollRef.value
+  if (!root || !docOutline.value.length) return
+  const headings = [...root.querySelectorAll('h1[id], h2[id], h3[id]')]
+  if (!headings.length) return
+  outlineObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+      if (visible[0]?.target?.id) activeOutlineSlug.value = visible[0].target.id
+    },
+    { root, rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] },
+  )
+  for (const h of headings) outlineObserver.observe(h)
+  if (!activeOutlineSlug.value && headings[0]?.id) activeOutlineSlug.value = headings[0].id
+}
+
+watch([file, editing, renderedHtml], () => {
+  if (editing.value || !file.value) {
+    teardownOutlineObserver()
+    return
+  }
+  nextTick(() => setupOutlineObserver())
+})
+
+async function onContentClick(e) {
+  const handled = await handleDocsProseClick(e, {
+    onCopied: () => ElMessage.success('已复制代码'),
+    onCopyFailed: () => ElMessage.warning('复制失败'),
+  })
+  if (handled) return
+
+  const headingEl = e.target.closest('.docs-heading-anchor')
+  if (headingEl?.id) {
+    copyHeadingAnchor(headingEl.id)
+    return
+  }
   const pathEl = e.target.closest('.docs-path-link')
   if (pathEl) {
     e.preventDefault()
@@ -499,6 +819,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  teardownOutlineObserver()
+  clearInDocSearchMarks(contentScrollRef.value)
   disposeDocsHub()
 })
 </script>
@@ -661,6 +983,61 @@ onUnmounted(() => {
 
 .dh-refresh-btn {
   flex-shrink: 0;
+}
+
+.dh-quick-docs {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.06));
+}
+
+.dh-quick-section + .dh-quick-section {
+  margin-top: 8px;
+}
+
+.dh-quick-title {
+  font-size: var(--ecw-font-xs, 12px);
+  font-weight: 700;
+  color: var(--ecw-text-3, #86868b);
+  margin-bottom: 4px;
+}
+
+.dh-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--ecw-font-sm, 13px);
+}
+
+.dh-quick-item:hover,
+.dh-quick-item.active {
+  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.dh-quick-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-quick-pin {
+  font-size: 12px;
+  color: var(--ecw-accent, #007aff);
+  opacity: 0.9;
+}
+
+.dh-quick-pin.is-off {
+  color: var(--ecw-text-3, #86868b);
+  opacity: 0.5;
 }
 
 .dh-sessions-menu {
@@ -908,6 +1285,153 @@ onUnmounted(() => {
   min-width: 0;
   padding: 20px 24px 28px;
   background: rgba(255, 255, 255, 0.88);
+  position: relative;
+}
+
+.dh-outline {
+  position: absolute;
+  top: 24px;
+  right: 12px;
+  width: 168px;
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  font-size: 11.5px;
+  line-height: 1.35;
+  z-index: 2;
+}
+
+.dh-outline-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ecw-text-3, #86868b);
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.dh-outline-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--ecw-text-2, #6e6e73);
+  cursor: pointer;
+}
+
+.dh-outline-item.level-2 {
+  padding-left: 14px;
+}
+
+.dh-outline-item.level-3 {
+  padding-left: 22px;
+  font-size: 11px;
+}
+
+.dh-outline-item:hover,
+.dh-outline-item.active {
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.doc-prose :deep(.docs-heading-anchor) {
+  scroll-margin-top: 12px;
+  cursor: pointer;
+}
+
+.dh-in-doc-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 200, 0, 0.12);
+  border: 1px solid rgba(255, 180, 0, 0.35);
+  font-size: 12px;
+}
+
+.dh-in-doc-search-label {
+  flex: 1;
+  min-width: 120px;
+  color: var(--ecw-text-2, #6e6e73);
+}
+
+.doc-prose :deep(mark.docs-search-hit) {
+  background: rgba(255, 200, 0, 0.45);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.doc-prose :deep(mark.docs-search-hit-active) {
+  background: rgba(255, 140, 0, 0.55);
+  outline: 1px solid rgba(255, 120, 0, 0.8);
+}
+
+.dh-reading-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto 10px;
+  padding: 0 8px;
+}
+
+.dh-col-content.docs-read-width-narrow .dh-content-head,
+.dh-col-content.docs-read-width-narrow .dh-content,
+.dh-col-content.docs-read-width-narrow .dh-content-actions,
+.dh-col-content.docs-read-width-narrow .dh-reading-bar,
+.dh-col-content.docs-read-width-narrow .dh-outline {
+  max-width: 640px;
+}
+
+.dh-col-content.docs-read-width-wide .dh-content-head,
+.dh-col-content.docs-read-width-wide .dh-content,
+.dh-col-content.docs-read-width-wide .dh-content-actions,
+.dh-col-content.docs-read-width-wide .dh-reading-bar {
+  max-width: 1080px;
+}
+
+.dh-col-content.docs-read-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  overflow: auto;
+  padding: 28px 32px;
+}
+
+.dh-col-content.docs-read-theme-dark {
+  background: #1a1b1e;
+}
+
+.dh-col-content.docs-read-theme-dark .dh-file-title,
+.dh-col-content.docs-read-theme-dark .doc-prose {
+  color: #e8eaed;
+}
+
+.dh-col-content.docs-read-theme-dark .doc-prose code {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dh-col-content.docs-read-theme-dark .doc-prose .docs-code-block {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dh-col-content .doc-prose {
+  font-size: calc(16px * var(--docs-font-scale, 1));
 }
 
 .dh-welcome-pane {
@@ -935,6 +1459,20 @@ onUnmounted(() => {
   font-size: 13px;
   line-height: 1.6;
   color: var(--ecw-text-2, #6e6e73);
+}
+
+.dh-welcome-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dh-welcome-tip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ecw-text-3, #86868b);
 }
 
 .dh-content-head {
@@ -1004,6 +1542,31 @@ onUnmounted(() => {
   width: 100%;
   margin: 0 auto;
   padding: 4px 8px 32px;
+}
+
+.dh-editor-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 8px 16px;
+  min-height: 320px;
+}
+
+.dh-editor-preview {
+  border: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.06));
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow: auto;
+  max-height: 70vh;
+  background: var(--ecw-surface-solid, #fff);
+}
+
+@media (max-width: 960px) {
+  .dh-editor-split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dh-editor :deep(.el-textarea__inner) {

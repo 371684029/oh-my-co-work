@@ -14,10 +14,23 @@
     @pointermove="onPointerLook"
   >
     <div v-if="!minimized" class="furnace-pet-stage">
-      <div v-show="showBubble" class="furnace-bubble" role="status">
+      <div v-show="showBubble" class="furnace-bubble" role="status" :style="bubbleStyle">
         <p>{{ bubbleText }}</p>
         <div class="furnace-actions">
-          <button type="button" class="furnace-act furnace-act--primary" @click.stop="$emit('click')">
+          <button
+            v-if="docsNotifyActive"
+            type="button"
+            class="furnace-act furnace-act--primary"
+            @click.stop="$emit('open-docs')"
+          >
+            看报告
+          </button>
+          <button
+            v-else
+            type="button"
+            class="furnace-act furnace-act--primary"
+            @click.stop="$emit('click')"
+          >
             开熔炉
           </button>
           <button type="button" class="furnace-act" @click.stop="poke">戳一下</button>
@@ -61,7 +74,6 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
 import {
   PET_CLIPS,
   PET_COPYRIGHT,
@@ -72,6 +84,7 @@ import {
   lookCell,
   lookIndexFromPointer,
 } from '../composables/furnacePetAtlas.js'
+import { t } from '../i18n/zh-CN.js'
 
 const POS_KEY = 'acw.furnacePet.pos'
 const MIN_KEY = 'acw.furnacePet.min'
@@ -83,8 +96,10 @@ const props = defineProps({
     validator: (v) => ['idle', 'working', 'waiting'].includes(v),
   },
   title: { type: String, default: '熔炉' },
+  /** Increment to show "报告好了" bubble (5.2.0 DOC-18). */
+  docsNotifySeq: { type: Number, default: 0 },
 })
-defineEmits(['click'])
+defineEmits(['click', 'open-docs'])
 
 const creditTitle = computed(() => PET_COPYRIGHT)
 const hitTitle = computed(() => `${props.title} · ${PET_CREDIT_SHORT}`)
@@ -108,13 +123,31 @@ const frame = ref(0)
 const minimized = ref(false)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
+const docsNotifyActive = ref(false)
+/** PET-02: default贴右下缘半收起，避开右侧流程/待确认栏（约 360px） */
 function defaultPos() {
-  const h = typeof window !== 'undefined' ? window.innerHeight : 720
   return {
-    right: 18,
-    bottom: Math.round(h / 3),
+    right: 6,
+    bottom: 72,
     left: null,
     top: null,
+  }
+}
+
+const RIGHT_RAIL_RESERVE_PX = 360
+
+function nudgeAwayFromRightRail(el) {
+  if (!el || typeof window === 'undefined') return
+  const rect = el.getBoundingClientRect()
+  const maxLeft = window.innerWidth - RIGHT_RAIL_RESERVE_PX - rect.width - 8
+  if (rect.left > maxLeft && pos.value.left == null) {
+    pos.value = {
+      right: Math.max(6, window.innerWidth - maxLeft - rect.width),
+      bottom: pos.value.bottom ?? 72,
+      left: null,
+      top: null,
+    }
+    persist()
   }
 }
 
@@ -130,6 +163,19 @@ const pos = ref(defaultPos())
 const dragging = ref(false)
 const reduceMotion = ref(false)
 const rootEl = ref(null)
+const sheetUrl = ref('')
+
+const bubbleStyle = computed(() => {
+  if (typeof window === 'undefined' || !rootEl.value) return {}
+  const rect = rootEl.value.getBoundingClientRect()
+  const pad = 8
+  let shift = 0
+  if (rect.right + pad > window.innerWidth) {
+    shift = window.innerWidth - pad - rect.right
+  }
+  if (rect.left + shift < pad) shift = pad - rect.left
+  return shift ? { transform: `translateX(${Math.round(shift)}px)` } : {}
+})
 
 // PET-01: only animate when the sprite is actually on screen. `docVisible`
 // (tab/window visibility) and `intersecting` (IntersectionObserver) gate both the
@@ -156,10 +202,20 @@ const cell = computed(() => {
 })
 
 const displayCellStyles = computed(() =>
-  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: DISPLAY_W, sheetUrl }),
+  croppedCellStyles({
+    row: cell.value.row,
+    col: cell.value.col,
+    viewWidth: DISPLAY_W,
+    sheetUrl: sheetUrl.value,
+  }),
 )
 const peekCellStyles = computed(() =>
-  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: PEEK_W, sheetUrl }),
+  croppedCellStyles({
+    row: cell.value.row,
+    col: cell.value.col,
+    viewWidth: PEEK_W,
+    sheetUrl: sheetUrl.value,
+  }),
 )
 const sheetWrapStyle = computed(() => displayCellStyles.value.wrap)
 const peekWrapStyle = computed(() => peekCellStyles.value.wrap)
@@ -167,9 +223,9 @@ const sheetStyle = computed(() => displayCellStyles.value.sheet)
 const peekSheetStyle = computed(() => peekCellStyles.value.sheet)
 
 const stateLabel = computed(() => {
-  if (props.state === 'working') return '工作中'
-  if (props.state === 'waiting') return '等人'
-  return '闲置'
+  if (props.state === 'working') return t('furnace.working')
+  if (props.state === 'waiting') return t('furnace.waiting')
+  return t('furnace.idle')
 })
 
 const petStyle = computed(() => {
@@ -191,6 +247,7 @@ let dragOff = { x: 0, y: 0 }
 let lastDragX = 0
 let visibilityHandler = null
 let intersectionObserver = null
+let resizeHandler = null
 
 function scheduleFrame() {
   window.clearTimeout(animTimer)
@@ -339,9 +396,25 @@ watch(
   },
 )
 
-onMounted(() => {
+watch(
+  () => props.docsNotifySeq,
+  (n, prev) => {
+    if (n > 0 && n !== prev) {
+      docsNotifyActive.value = true
+      say('报告好了，点我看', 8000)
+    }
+  },
+)
+
+onMounted(async () => {
   try {
     reduceMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    /* ignore */
+  }
+  try {
+    const mod = await import('../assets/pets/li-muwan/spritesheet.webp')
+    sheetUrl.value = mod.default
   } catch {
     /* ignore */
   }
@@ -353,11 +426,24 @@ onMounted(() => {
     } else {
       pos.value = defaultPos()
     }
-    minimized.value = localStorage.getItem(MIN_KEY) === '1'
+    const minRaw = localStorage.getItem(MIN_KEY)
+    minimized.value = minRaw === null ? true : minRaw === '1'
   } catch {
     pos.value = defaultPos()
+    minimized.value = true
   }
   scheduleFrame()
+  requestAnimationFrame(() => nudgeAwayFromRightRail(rootEl.value))
+  resizeHandler = () => {
+    if (dragging.value) return
+    if (pos.value.left != null && rootEl.value) {
+      pos.value = clampPos(pos.value.left, pos.value.top, rootEl.value)
+      persist()
+    } else {
+      nudgeAwayFromRightRail(rootEl.value)
+    }
+  }
+  window.addEventListener('resize', resizeHandler)
 
   // PET-01: pause when the tab is hidden or the sprite leaves the viewport.
   try {
@@ -390,6 +476,8 @@ onUnmounted(() => {
   window.clearTimeout(hideTimer)
   window.clearTimeout(pokeTimer)
   window.clearTimeout(animTimer)
+  if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+  resizeHandler = null
   if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
   visibilityHandler = null
   intersectionObserver?.disconnect()

@@ -18,6 +18,9 @@ import {
   normalizeStepFlow,
   injectCallArgsParam,
   SYSTEM_PARAM_KEYS,
+  evalStepSkipWhen,
+  validateAndFillSessionParams,
+  resolveGroupParamSpecs,
 } from '@acw/shared'
 import { getAppSettings } from '../appSettings.js'
 import { prepareAdaptForMember, adaptStatusText } from '../adaptBackup.js'
@@ -29,6 +32,14 @@ import { syncFurnaceSessionContext, touchFurnaceWorkflow } from '../furnaceSitua
 import { formatFurnaceRoleNotice } from '../furnaceGrokInject.js'
 import { getMember, getGroup, getSession, resolveStepForNode, templateStepIndexOf, memberNeedsProjectParams, hasProjectParam1, resolveParamsMap, parseMemberConfig,  } from './store.js'
 import { skipArchiveNode, dismissPendingArchiveIfAny, archiveSession, refreshSessionAnnouncement } from './archive.js'
+import { captureStepSnapshot, summarizeStepChange } from '../stepSnapshot.js'
+import { dryRunMemberStep } from '../stepDryRun.js'
+import {
+  resolveStepRunPolicy,
+  runWithTimeout,
+  sleep,
+  killMemberOnTimeout,
+} from '../stepRunPolicy.js'
 
 export async function advance(sessionId) {
   const session = getSession(sessionId)
@@ -148,6 +159,32 @@ export async function advance(sessionId) {
 
     const { step } = resolveStepForNode(node, steps)
     const ctx = parseJson(session.context_json, {})
+    const prevRow =
+      idx > 0
+        ? getDb()
+            .prepare(
+              `SELECT output_json FROM node_instances WHERE session_id = ? AND step_index = ?`,
+            )
+            .get(sessionId, idx - 1)
+        : null
+    const prevOutput = prevRow ? parseJson(prevRow.output_json, {}) : null
+    if (evalStepSkipWhen(step, ctx, prevOutput)) {
+      engineEmit('persist_node_io', sessionId, node.id, {
+        input: parseJson(node.input_json, {}),
+        output: { skipped: true, skipWhen: step.skipWhen || true },
+        status: NODE_STATUS.SKIPPED,
+        finished: true,
+      })
+      engineEmit('add_message', sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: { text: `「${node.title}」按条件跳过（skipWhen）。` },
+      })
+      idx += 1
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
+      continue
+    }
     const cloneMeta = (() => {
       const out = parseJson(node.output_json, {})
       const input = parseJson(node.input_json, {})
@@ -281,10 +318,38 @@ export async function advance(sessionId) {
       return
     }
 
-    const paramsMap = injectCallArgsParam(
-      resolveParamsMap(ctx, group),
-      ctx.lastHumanInput,
-    )
+    let paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), ctx.lastHumanInput)
+    const paramSpecs = resolveGroupParamSpecs(group)
+    if (paramSpecs.length) {
+      const validated = validateAndFillSessionParams(paramSpecs, paramsMap)
+      if (!validated.ok) {
+        engineEmit('persist_node_io', sessionId, node.id, {
+          input: { memberId: member.id, paramErrors: validated.errors },
+          output: {
+            error: 'param_invalid',
+            errors: validated.errors,
+            summary: validated.errors.map((e) => e.message).join('；'),
+          },
+          status: NODE_STATUS.FAILED,
+          finished: true,
+        })
+        engineEmit('add_message', sessionId, {
+          role: 'system',
+          type: 'text',
+          node_instance_id: node.id,
+          content: {
+            text: `参数校验失败：${validated.errors.map((e) => e.message).join('；')}`,
+          },
+        })
+        dismissPendingArchiveIfAny(sessionId, 'failed')
+        return
+      }
+      paramsMap = validated.params
+      if (JSON.stringify(validated.params) !== JSON.stringify(ctx.params || {})) {
+        ctx.params = { ...(ctx.params || {}), ...validated.params }
+        engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+      }
+    }
     const wantAdapt = !!(
       step?.adapt ||
       parseJson(node.input_json, {}).adapt ||
@@ -358,21 +423,32 @@ export async function advance(sessionId) {
           }
         : {}),
     }
+    const stepWorkFolder = memberInput.workFolder
+    const stepSnapBefore = captureStepSnapshot(stepWorkFolder)
+
     engineEmit('persist_node_io', sessionId, node.id, {
       input: memberInput,
       output: { running: true },
       status: NODE_STATUS.RUNNING,
     })
 
+    const isDryRun = ctx.dryRun === true
     engineEmit('add_message', sessionId, {
       role: 'member',
       member_id: member.id,
       type: 'text',
       node_instance_id: node.id,
-      content: { text: `▶ ${member.display_name} 开始执行…` },
+      content: {
+        text: isDryRun
+          ? `▶ ${member.display_name} 试运行（不执行）…`
+          : `▶ ${member.display_name} 开始执行…`,
+      },
     })
 
-    const result = await runMember(runMemberAs, {
+    const runPolicy = resolveStepRunPolicy(step)
+    let attempt = 0
+    let result = { ok: false, summary: '未执行' }
+    const runOpts = {
       group,
       sessionContext: {
         ...ctx,
@@ -383,7 +459,51 @@ export async function advance(sessionId) {
       nodeInstanceId: node.id,
       humanInput: ctx.lastHumanInput || paramsMap[SYSTEM_PARAM_KEYS.CALL_ARGS] || null,
       params: paramsMap,
-    })
+    }
+    const maxAttempts = 1 + runPolicy.maxRetries
+    while (attempt < maxAttempts) {
+      attempt += 1
+      if (attempt > 1) {
+        engineEmit('add_message', sessionId, {
+          role: 'system',
+          type: 'status',
+          node_instance_id: node.id,
+          content: {
+            text: `步骤重试 ${attempt - 1}/${runPolicy.maxRetries}（${runPolicy.retryIntervalMs}ms 后）…`,
+          },
+        })
+        await sleep(runPolicy.retryIntervalMs)
+      }
+      try {
+        const runner = isDryRun
+          ? () => dryRunMemberStep(runMemberAs, runOpts)
+          : () => runMember(runMemberAs, runOpts)
+        result = await runWithTimeout(runner(), runPolicy.timeoutMs, {
+          onTimeout: () => killMemberOnTimeout(sessionId, member.id),
+        })
+      } catch (e) {
+        if (e?.code === 'STEP_TIMEOUT') {
+          result = {
+            ok: false,
+            summary: `步骤超时（${Math.round(runPolicy.timeoutMs / 1000)}s）`,
+            error: { code: 'STEP_TIMEOUT' },
+          }
+        } else {
+          throw e
+        }
+      }
+      if (result.ok) break
+      if (attempt >= maxAttempts) break
+    }
+    const runTrace = {
+      attempts: attempt,
+      dryRun: isDryRun,
+      policy: {
+        timeoutMs: runPolicy.timeoutMs,
+        maxRetries: runPolicy.maxRetries,
+        onFailure: runPolicy.onFailure,
+      },
+    }
     // 运行中用户点「归档并关闭进程」时会话可能已归档，勿再推进
     const afterRun = getSession(sessionId)
     if (!afterRun || afterRun.status === SESSION_STATUS.ARCHIVED) {
@@ -419,9 +539,10 @@ export async function advance(sessionId) {
             refineFormatted: refineOut.formatted,
           }
         : memberInput
+    const changeSnapshot = summarizeStepChange(stepSnapBefore, stepWorkFolder)
     engineEmit('persist_node_io', sessionId, node.id, {
       input: refineInput,
-      output: result,
+      output: { ...result, changeSnapshot, runTrace },
       status: result.ok ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
       finished: true,
     })
@@ -441,7 +562,7 @@ export async function advance(sessionId) {
     }
 
     // 节点完成：弹窗脚本默认保留黑窗；detach 同理。下一成员步开始时会统一释放。
-    if (!result?.detached && !result?.preserveConsole) {
+    if (!isDryRun && !result?.detached && !result?.preserveConsole) {
       try {
         const killed = killMemberProcesses(sessionId, member.id)
         if (killed.killed > 0) {
@@ -475,11 +596,31 @@ export async function advance(sessionId) {
     refreshSessionAnnouncement(sessionId)
 
     if (!result.ok) {
+      if (runPolicy.onFailure === 'skip') {
+        engineEmit('update_node', node.id, {
+          status: NODE_STATUS.SKIPPED,
+          finished_at: nowIso(),
+        })
+        engineEmit('add_message', sessionId, {
+          role: 'system',
+          type: 'status',
+          node_instance_id: node.id,
+          content: { text: `「${node.title}」失败，已按策略跳过。` },
+        })
+        idx += 1
+        engineEmit('persist_session', sessionId, { current_step_index: idx })
+        continue
+      }
+      if (runPolicy.onFailure === 'stop') {
+        dismissPendingArchiveIfAny(sessionId, 'failed')
+        return
+      }
       // 失败：有人工/管理员通道则等人决断；否则会话自动归档（与成功终局一样释放资源）
       if (flow.human || flow.admin) {
         openFlowGate(sessionId, node, {
           flow,
           failed: true,
+          changeSnapshot,
           text: [
             `「${node.title}」执行失败。拒绝=不通过；同意可视为放行或重试意图。`,
             result.summary
@@ -495,6 +636,18 @@ export async function advance(sessionId) {
       }
       dismissPendingArchiveIfAny(sessionId, 'failed')
       return
+    }
+
+    if (isDryRun) {
+      engineEmit('add_message', sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: { text: '试运行完成，已自动进入下一步（不经过审核闸门）。' },
+      })
+      idx += 1
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
+      continue
     }
 
     // —— 成功后的流转策略 ——
@@ -517,6 +670,7 @@ export async function advance(sessionId) {
         flow,
         failed: false,
         lastNodeComplete: last,
+        changeSnapshot,
         text: last
           ? `「${node.title}」已产出，这是最后一步。同意即完成群聊并归档（释放本会话进程与目录占用）。${bits.join('；')}。`
           : `「${node.title}」已产出，审核中（pending）。${bits.join('；')}。输入或再跑脚本不会自动通过/拒绝。`,
@@ -570,14 +724,29 @@ function finishMainlineIfComplete(sessionId) {
 }
 
 /** 打开流转闸门（人工/管理员）；审核态先置 pending */
+function gateRiskHints(changeSnapshot) {
+  const cs = changeSnapshot
+  if (!cs?.filesChanged) return []
+  const hints = [`本步改动 ${cs.filesChanged} 个文件`]
+  const patch = String(cs.patch || '')
+  if (/\.env|secret|credential|password|api[_-]?key/i.test(patch)) {
+    hints.push('风险提示：diff 中可能出现配置/密钥类路径，请仔细核对')
+  }
+  if (cs.journalPath) hints.push(`关联台账：${cs.journalPath}`)
+  return hints
+}
+
 export function openFlowGate(sessionId, node, payload) {
   engineEmit('persist_session', sessionId, { status: SESSION_STATUS.WAITING_HUMAN })
+  const changeSnapshot = payload.changeSnapshot || parseJson(node.output_json, {}).changeSnapshot
+  const riskHints = gateRiskHints(changeSnapshot)
   // 把 flow/votes 记在节点 output，便于同意时合并
   const prev = parseJson(node.output_json, {})
   engineEmit('update_node', node.id, {
     status: NODE_STATUS.WAITING_HUMAN,
     output_json: JSON.stringify({
       ...prev,
+      changeSnapshot: changeSnapshot || prev.changeSnapshot,
       flow: payload.flow,
       votes: payload.votes || {},
       requireHuman: !!payload.requireHuman,
@@ -585,16 +754,21 @@ export function openFlowGate(sessionId, node, payload) {
       failed: !!payload.failed,
       lastNodeComplete: !!payload.lastNodeComplete,
       summary: payload.summary,
+      riskHints,
       /** pending | approve | reject；脚本/输入不改此态，仅同意/拒绝按钮改 */
       humanAction: 'pending',
     }),
   })
+  const gateText =
+    riskHints.length > 0
+      ? `${payload.text}\n\n${riskHints.map((h) => `· ${h}`).join('\n')}`
+      : payload.text
   engineEmit('add_message', sessionId, {
     role: 'system',
     type: 'gate',
     node_instance_id: node.id,
     content: {
-      text: payload.text,
+      text: gateText,
       mode: 'gate',
       actions: ['approve', 'reject'],
       flow: payload.flow,
@@ -603,9 +777,11 @@ export function openFlowGate(sessionId, node, payload) {
       failed: !!payload.failed,
       lastNodeComplete: !!payload.lastNodeComplete,
       summary: payload.summary,
+      changeSnapshot,
+      riskHints,
       humanAction: 'pending',
       policy:
-        '审核三态：pending（待定）/ 通过 / 拒绝。输入框发消息或执行脚本保持 pending；须点「同意」才通过、「拒绝」才不通过。',
+        '审核三态：pending（待定）/ 通过 / 拒绝。拒绝时可附原因；输入框发消息或执行脚本保持 pending；须点「同意」才通过。',
     },
   })
   // 管理员总结与流转：闸门打开后刷新群报告 MD

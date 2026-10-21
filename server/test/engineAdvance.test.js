@@ -254,3 +254,27 @@ test('chat message during review keeps humanAction pending and records a note', 
   // 会话仍在等待，未被聊天推进
   assert.equal(d2.session.status, SESSION_STATUS.WAITING_HUMAN)
 })
+
+test('dry run completes echo step without review gate', async () => {
+  const member = createMember({
+    name: `echo-dry-adv-${Date.now()}`,
+    displayName: 'Dry Echo',
+    kind: MEMBER_KIND.ECHO,
+    workFolder: process.cwd(),
+    config: { defaultText: 'dry ok' },
+  })
+  const group = createGroup({
+    title: 'Dry group',
+    workFolder: process.cwd(),
+    steps: [{ title: '回声', type: 'member', memberId: member.id, gate: false, flow: FLOW_OFF }],
+  })
+  const session = createSessionFromGroup(group.id, { dryRun: true })
+  await handleGateAction(session.id, { action: 'approve_start', text: '开始' })
+  const d = await poll(async () => {
+    const detail = getSessionDetail(session.id)
+    return detail.session.status === SESSION_STATUS.ARCHIVED ? detail : null
+  })
+  assert.equal(d.nodes[0].status, 'succeeded')
+  assert.equal(d.nodes[0].output?.data?.dryRun, true)
+  assert.equal(d.nodes[0].output?.runTrace?.dryRun, true)
+})

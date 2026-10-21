@@ -7,6 +7,42 @@ import { saveSessionAnnouncement } from './engine.js'
 import { invalidateDocsCache } from './docsHub.js'
 
 const MAX_FIELD = 80_000
+const MAX_TOTAL_BODY = 240_000
+const RATE_WINDOW_MS = 60_000
+const RATE_MAX_PER_SESSION = 12
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000
+
+/** @type {Map<string, { at: number, result: object }>} */
+const idempotencyCache = new Map()
+/** @type {Map<string, { start: number, count: number }>} */
+const rateBySession = new Map()
+
+function pruneIdempotency() {
+  const now = Date.now()
+  for (const [k, v] of idempotencyCache) {
+    if (now - v.at > IDEMPOTENCY_TTL_MS) idempotencyCache.delete(k)
+  }
+}
+
+function assertRateLimit(sessionId) {
+  const now = Date.now()
+  let bucket = rateBySession.get(sessionId)
+  if (!bucket || now - bucket.start > RATE_WINDOW_MS) {
+    bucket = { start: now, count: 0 }
+  }
+  bucket.count += 1
+  rateBySession.set(sessionId, bucket)
+  if (bucket.count > RATE_MAX_PER_SESSION) {
+    throw Object.assign(new Error('炼化请求过于频繁，请稍后再试'), { code: 'RATE_LIMIT' })
+  }
+}
+
+function assertPayloadSize({ input, output, conclusion }) {
+  const total = String(input ?? '').length + String(output ?? '').length + String(conclusion ?? '').length
+  if (total > MAX_TOTAL_BODY) {
+    throw Object.assign(new Error('炼化内容过大'), { code: 'PAYLOAD_TOO_LARGE' })
+  }
+}
 
 function clip(value) {
   const text = String(value ?? '').trim()
@@ -54,10 +90,19 @@ export function appendAgentRefine({
   output,
   conclusion,
   source,
+  requestId,
 } = {}) {
   const id = String(sessionId || '').trim()
   if (!id) throw Object.assign(new Error('缺少 sessionId'), { code: 'BAD_SESSION' })
   if (!getSessionDetail(id)) throw Object.assign(new Error('会话不存在'), { code: 'NO_SESSION' })
+  assertPayloadSize({ input, output, conclusion })
+  const rid = String(requestId || '').trim()
+  if (rid) {
+    pruneIdempotency()
+    const cached = idempotencyCache.get(rid)
+    if (cached) return { ...cached.result, deduped: true }
+  }
+  assertRateLimit(id)
   const section = formatRefineSection({ input, output, conclusion, source })
   const existing = readSessionAnnouncement(id)
   const body = existing?.markdown
@@ -65,12 +110,14 @@ export function appendAgentRefine({
     : `# 群报告\n\n${section}`
   const saved = saveSessionAnnouncement(id, body)
   invalidateDocsCache()
-  return {
+  const result = {
     ok: true,
     sessionId: id,
     path: saved.rel,
     markdown: saved.markdown,
   }
+  if (rid) idempotencyCache.set(rid, { at: Date.now(), result })
+  return result
 }
 
 /** 测试或不走引擎事件时的纯文件追加 */

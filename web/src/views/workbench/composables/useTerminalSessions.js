@@ -1,14 +1,42 @@
 import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { inferFurnaceAgent, isFurnaceMember } from '@acw/shared'
+import { ElMessage } from 'element-plus'
+import {
+  inferFurnaceAgent,
+  inferFurnaceCliBanner,
+  isFurnaceMember,
+  estimateFurnaceContext,
+  formatFurnaceContextHint,
+  canDeliverDesktopNotification,
+  shouldDedupeNotification,
+} from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
 import {
   chunkTerminalInput,
   shouldChunkTerminalInput,
   DEFAULT_CHUNK_INTERVAL_MS,
 } from '../../../composables/terminalInput'
+import { chunkBracketedPaste, BRACKET_START } from '../../../composables/bracketedPaste.js'
+import {
+  terminalOutputAppend,
+  terminalOutputReset,
+  terminalOutputGetReplay,
+} from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
+import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
+import { syncTrayStatus } from '../../../composables/syncTrayStatus.js'
+import { refreshDocsForSession } from '../../docs/docsListStore.js'
+import {
+  buildFurnaceReopenConfirmCopy,
+  estimateFromTerminalReplay,
+  pickLiveFurnaceTerminal,
+} from '../../../composables/furnaceReopen.js'
+import { acwConfirm } from '../../../composables/acwConfirm.js'
+import { createCoalescedAsync } from '../../../composables/coalescedReload.js'
+import {
+  recordNotificationInbox,
+  getInboxEntry,
+} from '../../../composables/notificationInbox.js'
 import {
   terminalBridge,
   activeId,
@@ -30,6 +58,114 @@ const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
+const furnaceCliNotifyKind = new Map()
+const furnaceContextWarned = new Set()
+const notifyLastSentAt = new Map()
+const notifyRemindCount = new Map()
+
+const scheduleDetailReload = createCoalescedAsync(async (sessionId) => {
+  await loadDetail(sessionId)
+}, 48)
+
+function pushDesktopNotification(title, body, { id, deepLink, level = 'action', sessionId } = {}) {
+  const t = String(title || '').trim()
+  const b = String(body || '').trim()
+  if (!t) return
+  const link = String(deepLink || '')
+  const sid =
+    sessionId ||
+    link.match(/^session:([A-Za-z0-9_-]+)/)?.[1] ||
+    link.match(/^docs:([A-Za-z0-9_-]+):/)?.[1] ||
+    null
+  recordNotificationInbox({ id, title: t, body: b, deepLink, level, sessionId: sid })
+  const prefs = notificationPrefsRef().value
+  const viewingSameSession =
+    sid && activeId.value === sid && !document.hidden && document.hasFocus()
+  if (level === 'action' && viewingSameSession) {
+    useFlowStore().bumpActionUnread()
+  }
+  const now = Date.now()
+  const notifyId = String(id || `${t}\0${b}`)
+  const inboxHit = getInboxEntry(notifyId)
+  const delivery = canDeliverDesktopNotification({
+    enabled: prefs.enabled && shouldNotifyLevel(level),
+    levelAllowed: shouldNotifyLevel(level),
+    now,
+    quiet: prefs.quietHours,
+    foreground: {
+      onlyWhenUnfocused: prefs.onlyWhenUnfocused,
+      documentHidden: document.hidden,
+      documentHasFocus: document.hasFocus(),
+      viewingSameSession,
+      level,
+    },
+    throttleMs: Number(prefs.remindIntervalMs) || 30_000,
+    lastSentAt: notifyLastSentAt.get(notifyId) || 0,
+    remind: {
+      sentCount: notifyRemindCount.get(notifyId) || 0,
+      maxReminders: Number(prefs.maxReminders) || 3,
+      readAt: inboxHit?.read ? inboxHit.handledAt || inboxHit.at : null,
+      dismissedAt: inboxHit?.handledAt || null,
+    },
+    dedupe: shouldDedupeNotification(notifyId, now),
+  })
+  if (!delivery.ok) return
+  notifyLastSentAt.set(notifyId, now)
+  notifyRemindCount.set(notifyId, (notifyRemindCount.get(notifyId) || 0) + 1)
+  const desktop = window.__ACW_DESKTOP_API__
+  if (desktop?.notify) {
+    desktop.notify(t, {
+      body: b,
+      id,
+      deepLink,
+      level,
+      sound: prefs.sound !== false,
+    })
+    return
+  }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    try {
+      new Notification(t, { body: b })
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function maybeNotifyFurnaceCliState(terminal, sessionId) {
+  if (!terminal || !isFurnaceTuiContext(terminal)) return
+  const banner = inferFurnaceCliBanner(terminal.replay || '', {
+    status: terminal.status,
+    exitCode: terminal.exitCode,
+    lastError: terminal.lastError || terminal.error?.message,
+  })
+  const notifyKinds = new Set(['auth', 'approval', 'quota', 'error', 'network'])
+  if (banner && notifyKinds.has(banner.kind)) {
+    if (furnaceCliNotifyKind.get(terminal.id) === banner.kind) return
+    furnaceCliNotifyKind.set(terminal.id, banner.kind)
+    const title = detail.value?.session?.title || '熔炉'
+    pushDesktopNotification(`[${title}] ${banner.title}`, banner.hint, {
+      id: `furnace-cli:${terminal.id}:${banner.kind}`,
+      deepLink: `session:${sessionId}`,
+      level: banner.kind === 'error' || banner.kind === 'quota' ? 'error' : 'action',
+      sessionId,
+    })
+  }
+  const est = estimateFurnaceContext(terminal.replay || '', {
+    profile: terminal.furnaceAgent === 'cursor' ? 'cursor' : 'grok',
+  })
+  if (est.percent >= 85 && !furnaceContextWarned.has(terminal.id)) {
+    furnaceContextWarned.add(terminal.id)
+    const title = detail.value?.session?.title || '熔炉'
+    pushDesktopNotification(`[${title}] 上下文接近上限`, formatFurnaceContextHint(est), {
+      id: `furnace-ctx:${terminal.id}`,
+      deepLink: `session:${sessionId}`,
+      level: 'action',
+      sessionId,
+    })
+  }
+}
+
 // CLI-13: collapse duplicate seq-gap re-attaches into one silent retry, only
 // notifying the user when gaps keep happening.
 let lastGapAt = 0
@@ -52,9 +188,8 @@ function isFurnaceTuiContext(terminal) {
     const mem = members.value.find((x) => x.id === fromId)
     if (isFurnaceMember(mem)) return true
   }
-  const cmd = `${terminal?.command || ''} ${terminal?.label || ''} ${terminal?.runtime || ''}`
   if (terminal?.furnaceAgent === 'cursor' || terminal?.furnaceAgent === 'grok') return true
-  return /(^|[\s/\\])(grok|cursor-agent|cursor)(\.exe)?(\s|$)/i.test(cmd)
+  return false
 }
 
 const furnaceTuiPagefill = computed(() => isFurnaceTuiContext(activeTerminal.value))
@@ -108,12 +243,14 @@ async function sendTerminalInput(data) {
   // CLI-07: small input (typing) goes straight through; a large paste is split
   // into ≤4KiB pieces with a small gap so neither the server limit nor ConPTY's
   // one-shot write handling is hit.
-  if (!shouldChunkTerminalInput(text)) {
+  const multiline = text.includes('\n') || text.includes(BRACKET_START)
+  if (!multiline && !shouldChunkTerminalInput(text)) {
     sendTerminalMessage({ type: 'terminal.input', terminalId, data: text })
     return
   }
+  const chunks = multiline ? chunkBracketedPaste(text) : chunkTerminalInput(text)
   let warned = false
-  for (const chunk of chunkTerminalInput(text)) {
+  for (const chunk of chunks) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (!warned) {
         ElMessage.warning('终端连接已断开，粘贴中断')
@@ -151,15 +288,13 @@ async function killTerminal(terminalId) {
 
 async function closeFurnaceProcess() {
   if (!activeId.value) return
-  try {
-    await ElMessageBox.confirm('结束 Grok 进程，这一轮对话会丢掉。工作台会话还在。', '关闭熔炉', {
-      type: 'warning',
-      confirmButtonText: '关闭',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
+  const ok = await acwConfirm('furnace.close', {
+    title: '关闭熔炉',
+    message: '结束 Grok 进程，这一轮对话会丢掉。工作台会话还在。',
+    confirmButtonText: '关闭',
+    type: 'warning',
+  })
+  if (!ok) return
   try {
     await api.sessions.closeFurnace(activeId.value)
     await loadTerminals(activeId.value)
@@ -172,38 +307,40 @@ async function closeFurnaceProcess() {
 async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent } = {}) {
   if (!activeId.value) return
   const furnaceAgent = inferFurnaceAgent({ furnaceAgent: agent })
-  const liveSame = (terminalSessions.value || []).some(
-    (t) =>
-      isFurnaceTuiContext(t) &&
-      isTerminalRunning(t.status) &&
-      inferFurnaceAgent(t) === furnaceAgent,
-  )
+  const liveTerminal = pickLiveFurnaceTerminal(terminalSessions.value, {
+    agent: furnaceAgent,
+    isFurnaceTuiContext,
+    isTerminalRunning,
+  })
+  const liveSame = !!liveTerminal
+  const estimate = liveTerminal ? estimateFromTerminalReplay(liveTerminal, furnaceAgent) : null
   if (liveSame && !skipConfirm) {
-    try {
-      await ElMessageBox.confirm(
-        furnaceAgent === 'cursor'
-          ? '会结束当前 Cursor CLI，再开一条空对话。Grok 进程还在。'
-          : '会结束当前 Grok，再开一条空对话。Cursor CLI 若在跑会留下。工作台会话还在。',
-        '新开熔炉',
-        {
-          type: 'warning',
-          confirmButtonText: '新开',
-          cancelButtonText: '取消',
-        },
-      )
-    } catch {
-      return
-    }
+    const ok = await acwConfirm('furnace.reopen', {
+      title: '新开熔炉',
+      message: buildFurnaceReopenConfirmCopy({ furnaceAgent, estimate }),
+      confirmButtonText: '新开并归档',
+      type: 'warning',
+    })
+    if (!ok) return
   }
   try {
-    const r = await api.sessions.reopenFurnace(activeId.value, { agent: furnaceAgent })
+    const r = await api.sessions.reopenFurnace(activeId.value, {
+      agent: furnaceAgent,
+      archiveTranscript: liveSame && !!liveTerminal?.id,
+      terminalId: liveTerminal?.id || null,
+    })
     await loadTerminals(activeId.value)
+    if (r?.archived?.rel) {
+      refreshDocsForSession(activeId.value)
+    }
     const tid = r?.terminalId
     if (tid) revealFurnaceTui(tid)
     if (quiet) return
     if (r?.ok) {
+      const archivedNote = r?.archived?.name ? '，旧对话已写入文档中心' : ''
       ElMessage.success(
-        furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空',
+        (furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空') +
+          archivedNote,
       )
     } else ElMessage.warning(r?.summary || '新开熔炉未成功')
   } catch (e) {
@@ -290,6 +427,15 @@ function bindWs(sessionId) {
   ws = connectSessionWs(
     sessionId,
     async (ev) => {
+      if (ev.type === 'external.notify') {
+        const p = ev.payload || {}
+        pushDesktopNotification(p.title, p.body, {
+          id: p.id,
+          deepLink: p.deepLink,
+          level: p.level || 'action',
+        })
+        return
+      }
       if (activeId.value !== sessionId) return
       if (ev.type === 'terminal.opened') {
         const terminal = ev.payload?.terminal
@@ -298,6 +444,11 @@ function bindWs(sessionId) {
           previewReplay: String(terminal?.replay || '').slice(-12_000),
         })
         revealFurnaceTui(terminal?.id)
+        return
+      }
+      if (ev.type === 'terminal.backpressure') {
+        const terminalId = ev.payload?.terminalId || activeTerminalId.value
+        if (terminalId) reattachForGap(terminalId)
         return
       }
       if (ev.type === 'terminal.output') {
@@ -310,14 +461,17 @@ function bindWs(sessionId) {
             reattachForGap(terminalId)
           }
           const data = ev.payload.data || ''
-          const replay = `${current.replay || ''}${data}`.slice(-256_000)
-          upsertTerminal({
+          terminalOutputAppend(terminalId, { seq: nextSeq, data })
+          const replay = terminalOutputGetReplay(terminalId)
+          const next = {
             ...current,
             seq: ev.payload.seq,
             replay,
-            previewReplay: `${current.previewReplay || ''}${data}`.slice(-12_000),
+            previewReplay: replay.slice(-12_000),
             lastChunk: data,
-          })
+          }
+          upsertTerminal(next)
+          maybeNotifyFurnaceCliState(next, sessionId)
         }
         return
       }
@@ -326,6 +480,11 @@ function bindWs(sessionId) {
           ElMessage.info('回放已截断，仅显示最近输出')
         }
         gapStreak = 0
+        terminalOutputReset(
+          ev.payload?.terminalId,
+          ev.payload?.data || '',
+          ev.payload?.seq || 0,
+        )
         upsertTerminal({
           ...(ev.payload?.terminal || {}),
           id: ev.payload?.terminalId,
@@ -336,18 +495,92 @@ function bindWs(sessionId) {
           lastChunk: '',
           replayTruncated: !!ev.payload?.truncated,
         })
+        if (
+          ev.payload?.truncated &&
+          ev.payload?.terminalId === activeTerminalId.value &&
+          lastTerminalSize.value
+        ) {
+          const { cols, rows } = lastTerminalSize.value
+          sendTerminalMessage({
+            type: 'terminal.resize',
+            terminalId: ev.payload.terminalId,
+            cols,
+            rows,
+          })
+        }
         return
       }
       if (ev.type === 'terminal.exited') {
-        upsertTerminal(ev.payload?.terminal)
-        if (terminalPrefs.value.autoCollapseOnExit && activeTerminalId.value === ev.payload?.terminal?.id) {
+        const term = ev.payload?.terminal
+        upsertTerminal(term)
+        const code = Number(term?.exitCode)
+        if (Number.isFinite(code) && code !== 0) {
+          const title = detail.value?.session?.title || '工作台'
+          pushDesktopNotification(
+            `[${title}] 终端异常退出`,
+            `${term?.label || '终端'} · exit ${code}`,
+            {
+              id: `term-exit:${term?.id}:${code}`,
+              deepLink: `session:${sessionId}`,
+              level: 'error',
+            },
+          )
+        }
+        if (terminalPrefs.value.autoCollapseOnExit && activeTerminalId.value === term?.id) {
           activeTerminalId.value = null
         }
         return
       }
       if (ev.type === 'terminal.error' || ev.type === 'terminal.adapter_error') {
         ElMessage.warning(ev.payload?.message || '终端连接异常')
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 终端异常`, ev.payload?.message || '连接异常', {
+          id: `term-err:${sessionId}:${Date.now()}`,
+          deepLink: `session:${sessionId}`,
+          level: 'error',
+        })
         return
+      }
+      if (ev.type === 'session.interrupted') {
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 会话已中断`, '后台服务重启或异常，请检查流程状态', {
+          id: `session-interrupted:${sessionId}`,
+          deepLink: `session:${sessionId}`,
+          level: 'error',
+        })
+      }
+      if (ev.type === 'announcement.updated') {
+        useFlowStore().bumpDocsUnread()
+        refreshDocsForSession(sessionId).catch(() => {})
+        ElMessage.info({ message: '群报告已更新 · 可在文档中心查看', duration: 5000, showClose: true })
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 报告已更新`, '群报告或台账已刷新 · 点击查看', {
+          id: `docs-updated:${sessionId}`,
+          deepLink: `docs:${sessionId}:ANNOUNCEMENT.md`,
+          level: 'done',
+          sessionId,
+        })
+      }
+      if (ev.type === 'gate.request') {
+        syncTrayStatus({ pending: 1, status: 'action' })
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 等你确认`, '流程需要你处理，点击返回应用', {
+          id: `gate:${sessionId}:${ev.payload?.gateId || ev.payload?.id || 'x'}`,
+          deepLink: `session:${sessionId}`,
+          level: 'action',
+        })
+      }
+      if (ev.type === 'node.status') {
+        const st = ev.payload?.status || ev.payload?.node?.status
+        if (st === 'failed') {
+          const title = detail.value?.session?.title || '工作台'
+          const nodeTitle = ev.payload?.node?.title || ev.payload?.title || '步骤'
+          pushDesktopNotification(`[${title}] 步骤失败`, nodeTitle, {
+            id: `node-fail:${sessionId}:${ev.payload?.node?.id || ev.payload?.nodeId || 'x'}`,
+            deepLink: `session:${sessionId}`,
+            level: 'error',
+          })
+        }
       }
       if (
         [
@@ -356,14 +589,18 @@ function bindWs(sessionId) {
           'session.archived',
           'session.restart',
           'session.status',
+          'session.interrupted',
           'gate.request',
           'announcement.updated',
         ].includes(ev.type)
       ) {
-        await loadDetail(sessionId)
+        await scheduleDetailReload(sessionId)
         // 默认保持「流程」Tab，不自动跳群报告
         // 群报告由节点 detail / # 参数驱动；备注在 context.notes
-        if (ev.type === 'session.archived' || ev.type === 'session.restart') {
+        if (ev.type === 'session.archived') {
+          useFlowStore().rightTab = 'docs'
+          useFlowStore().bumpDocsUnread()
+        } else if (ev.type === 'session.restart') {
           useFlowStore().rightTab = 'flow'
         }
         sessions.value = await api.sessions.list()
