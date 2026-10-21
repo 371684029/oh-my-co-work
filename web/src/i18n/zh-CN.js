@@ -43,6 +43,17 @@ export const strings = {
     tui: 'TUI',
   },
   workbench: {
+    start: {
+      needTarget: '请选择群模板或成员',
+      group: '已开聊',
+      memberNew: '已与成员开聊',
+      memberReused: '已回到与该成员的会话',
+      failed: '开聊失败，请稍后重试',
+    },
+    demo: {
+      missingGroup: '未找到「演示流」。请到设置打开「显示演示示例」。',
+      loadFailed: '加载群模板失败，请稍后重试',
+    },
     gate: {
       approveStart: '已通过，开始执行',
       cancelStart: '已取消，任务关闭',
