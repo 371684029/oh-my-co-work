@@ -5,7 +5,7 @@ import { DATA_ROOT } from '../db.js'
 import * as updateCheck from '../updateCheck.js'
 import {
   createBackupAsync,
-  restoreBackup,
+  restoreBackupAsync,
   listBackups,
   isGzipFile,
 } from '../backup.js'
@@ -81,14 +81,14 @@ router.post('/backup/import', (req, res) => {
       fail(413, { error: '备份包过大（上限 2GB）' })
     }
   })
-  out.on('finish', () => {
+  out.on('finish', async () => {
     if (settled) return
     if (!isGzipFile(target)) {
       fail(400, { error: '请选择 .tar.gz 备份包' })
       return
     }
     try {
-      const result = restoreBackup(name)
+      const result = await restoreBackupAsync(name)
       settled = true
       importInFlight = false
       if (!res.headersSent) res.json(result)
@@ -104,9 +104,9 @@ router.post('/backup/import', (req, res) => {
   req.pipe(out)
 })
 
-router.post('/update/restore', (req, res) => {
+router.post('/update/restore', async (req, res) => {
   try {
-    res.json(restoreBackup(String(req.body?.filename || '')))
+    res.json(await restoreBackupAsync(String(req.body?.filename || '')))
   } catch (e) {
     const status = e.code === 'RESTORE_BUSY' ? 409 : 400
     res.status(status).json({

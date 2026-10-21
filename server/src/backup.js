@@ -421,7 +421,40 @@ export function restoreBackup(filename, deps = {}) {
   }
 }
 
-function restoreBackupUnlocked(filename, deps = {}) {
+function tarExtractArchive(archivePath, destDir, { async = false } = {}) {
+  const args = ['-xzf', archivePath, '-C', destDir]
+  if (!async) {
+    execFileSync('tar', args, { stdio: 'pipe' })
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn('tar', args, { stdio: 'pipe' })
+    let err = ''
+    child.stderr?.on('data', (c) => {
+      err += String(c)
+    })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(err.trim() || `tar exited ${code}`))
+    })
+  })
+}
+
+/** SRV-01: async restore for HTTP (non-blocking tar extract). */
+export async function restoreBackupAsync(filename, deps = {}) {
+  if (restoreInFlight) {
+    throw Object.assign(new Error('已有恢复进行中'), { code: 'RESTORE_BUSY' })
+  }
+  restoreInFlight = true
+  try {
+    return await restoreBackupUnlockedAsync(filename, deps)
+  } finally {
+    restoreInFlight = false
+  }
+}
+
+async function restoreBackupUnlockedAsync(filename, deps = {}) {
   const name = path.basename(String(filename || ''))
   if (!BACKUP_NAME_RE.test(name)) {
     throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
@@ -437,7 +470,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
 
   let pre = null
   try {
-    pre = createBackup()
+    pre = await createBackupAsync()
   } catch (e) {
     if (e.code === 'INTEGRITY_FAIL' || e.code === 'NO_DB') {
       pre = { path: null, skipped: true, reason: e.message }
@@ -452,7 +485,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
-      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+      await tarExtractArchive(entry.path, work, { async: true })
     } catch (e) {
       fs.rmSync(work, { recursive: true, force: true })
       throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
@@ -461,6 +494,18 @@ function restoreBackupUnlocked(filename, deps = {}) {
     work = entry.path
   }
 
+  return applyRestoreWork({
+    work,
+    ownWork,
+    entry,
+    pre,
+    initDbFn,
+    checkSqlite,
+    applyLive,
+  })
+}
+
+function applyRestoreWork({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
   try {
     assertTreeNoSymlinks(work)
   } catch (e) {
@@ -534,6 +579,57 @@ function restoreBackupUnlocked(filename, deps = {}) {
       }
     }
   }
+}
+
+function restoreBackupUnlocked(filename, deps = {}) {
+  const name = path.basename(String(filename || ''))
+  if (!BACKUP_NAME_RE.test(name)) {
+    throw Object.assign(new Error('非法备份文件名'), { code: 'BAD_NAME' })
+  }
+  const entry = resolveBackupEntry(name)
+  if (!entry) {
+    throw Object.assign(new Error('备份不存在'), { code: 'NO_BACKUP' })
+  }
+
+  const initDbFn = deps.initDb || initDb
+  const checkSqlite = deps.checkSqliteFile || checkSqliteFile
+  const applyLive = deps.applyLive || applyStagedToLive
+
+  let pre = null
+  try {
+    pre = createBackup()
+  } catch (e) {
+    if (e.code === 'INTEGRITY_FAIL' || e.code === 'NO_DB') {
+      pre = { path: null, skipped: true, reason: e.message }
+    } else {
+      throw e
+    }
+  }
+
+  let work = null
+  let ownWork = false
+  if (entry.kind === 'tar') {
+    work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+    ownWork = true
+    try {
+      execFileSync('tar', ['-xzf', entry.path, '-C', work], { stdio: 'pipe' })
+    } catch (e) {
+      fs.rmSync(work, { recursive: true, force: true })
+      throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
+    }
+  } else {
+    work = entry.path
+  }
+
+  return applyRestoreWork({
+    work,
+    ownWork,
+    entry,
+    pre,
+    initDbFn,
+    checkSqlite,
+    applyLive,
+  })
 }
 
 /**

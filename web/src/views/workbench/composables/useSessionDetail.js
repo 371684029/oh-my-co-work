@@ -31,6 +31,7 @@ import {
   fileIcon,
   adapterChoices,
 } from './sessionMessageUtils.js'
+import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 
 
 /**
@@ -887,21 +888,7 @@ const composerFooterHint = computed(() => {
   return '# 插入正文（群聊/文件夹/参数/输出）· @成员协助 · 发送会写入 # 与群报告'
 })
 
-function statusLabel(s) {
-  if (s === 'pending' || s === 'not_run') return '待跑'
-  if (s === 'waiting_human') return '待确认'
-  const m = {
-    active: '进行中',
-    interrupted: '待恢复',
-    archived: '已归档',
-    failed: '失败',
-    paused: '暂停',
-    running: '执行中',
-    succeeded: '完成',
-    skipped: '已绕过',
-  }
-  return m[s] || nodeStatusLabel(s) || s
-}
+const statusLabel = sessionStatusLabel
 
 function nodeBypassed(n) {
   return !!(n?.output?.bypassed || n?.input?.bypassed)
@@ -911,15 +898,7 @@ function stepTypeLabel(t) {
   return sharedStepTypeLabel(t) || t
 }
 
-function statusType(s) {
-  // 已归档用中性 info，成功/失败另用 archiveOutcomeTag
-  if (s === 'archived') return 'info'
-  // 运行时等人：用危险色，强制注意
-  if (s === 'waiting_human') return 'danger'
-  if (s === 'interrupted') return 'warning'
-  if (s === 'failed') return 'danger'
-  return 'success'
-}
+const statusType = sessionStatusType
 
 function formatTime(iso) {
   if (!iso) return ''

@@ -1,5 +1,6 @@
 <template>
   <div ref="appRoot" class="ecw-layout" :class="{ 'reduce-effects': reduceEffects }">
+    <a class="skip-link" href="#main-content">跳到主内容</a>
     <header class="ecw-topbar" :class="{ 'is-docs-topbar': isDocsRoute }">
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
@@ -131,7 +132,7 @@
         </div>
       </template>
     </header>
-    <main class="ecw-main">
+    <main id="main-content" class="ecw-main" tabindex="-1">
       <router-view />
     </main>
     <FurnaceSprite
@@ -422,6 +423,21 @@ function goGrokSettings() {
 </script>
 
 <style scoped>
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 12px;
+  background: #16161a;
+  color: #fff;
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+  font-size: 13px;
+}
+.skip-link:focus {
+  left: 0;
+}
 .top-left {
   display: flex;
   align-items: center;

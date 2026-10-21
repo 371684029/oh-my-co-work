@@ -20,17 +20,18 @@ import {
   registerProcess,
   unregisterProcess,
 } from '../processRegistry.js'
+import {
+  MAX_INPUT_CHARS,
+  MAX_INPUT_BYTES_PER_SECOND,
+  MAX_INPUT_MESSAGES_PER_SECOND,
+  clampTerminalSize,
+} from './inputLimits.js'
 
 const terminals = new Map()
-// 64KiB per message: the client chunks large pastes (≤4KiB pieces), so a single
-// legitimate message is far smaller; this headroom avoids rejecting a paste that
-// slipped through as one message. (5.1.0 CLI-07)
-const MAX_INPUT_CHARS = 65_536
+
 const OUTPUT_BATCH_MS = 24
 const RETAIN_FINISHED = 20
 const RETAIN_FINISHED_GLOBAL = 200
-const MAX_INPUT_BYTES_PER_SECOND = 256 * 1024
-const MAX_INPUT_MESSAGES_PER_SECOND = 500
 
 let adapterEventHandler = null
 
@@ -66,11 +67,7 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-function clampSize(value, fallback, min, max) {
-  const n = Number(value)
-  if (!Number.isFinite(n)) return fallback
-  return Math.max(min, Math.min(max, Math.floor(n)))
-}
+const clampSize = clampTerminalSize
 
 function persistTerminal(entry) {
   try {

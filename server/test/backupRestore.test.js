@@ -197,3 +197,10 @@ test('createBackupAsync produces tar.gz like sync createBackup', async () => {
   assert.ok(asyncResult.path)
 })
 
+test('restoreBackupAsync roundtrip', async () => {
+  const created = await backup.createBackupAsync()
+  const name = path.basename(created.path)
+  const r = await backup.restoreBackupAsync(name)
+  assert.equal(r.ok, true)
+})
+
