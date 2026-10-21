@@ -33,3 +33,19 @@ export function furnaceGuiLabel() {
 export function furnaceTuiLabel() {
   return t('furnace.tui')
 }
+
+export function furnaceTurnCopyEmptyMessage() {
+  return t('furnace.turnCopy.empty')
+}
+
+export function furnaceTurnCopySuccessMessage() {
+  return t('furnace.turnCopy.success')
+}
+
+export function furnaceTurnCopyFailedMessage() {
+  return t('furnace.turnCopy.failed')
+}
+
+export function furnaceRoleYouLabel() {
+  return t('furnace.roleYou')
+}
