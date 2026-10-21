@@ -124,7 +124,16 @@ export function defaultTerminalSettings() {
 }
 
 export function defaultUiSettings() {
-  return { reduceEffects: false, colorScheme: 'system' }
+  return {
+    reduceEffects: false,
+    colorScheme: 'system',
+    furnacePet: {
+      showOnWorkbench: true,
+      showOnSettings: false,
+      showOnDocs: false,
+      hideWhenTerminalFullscreen: true,
+    },
+  }
 }
 
 function normalizeUi(raw) {
@@ -132,7 +141,17 @@ function normalizeUi(raw) {
   if (!raw || typeof raw !== 'object') return d
   const scheme = String(raw.colorScheme || d.colorScheme).toLowerCase()
   const colorScheme = ['system', 'light', 'dark'].includes(scheme) ? scheme : d.colorScheme
-  return { reduceEffects: raw.reduceEffects === true, colorScheme }
+  const fp = raw.furnacePet && typeof raw.furnacePet === 'object' ? raw.furnacePet : {}
+  return {
+    reduceEffects: raw.reduceEffects === true,
+    colorScheme,
+    furnacePet: {
+      showOnWorkbench: fp.showOnWorkbench !== false,
+      showOnSettings: fp.showOnSettings === true,
+      showOnDocs: fp.showOnDocs === true,
+      hideWhenTerminalFullscreen: fp.hideWhenTerminalFullscreen !== false,
+    },
+  }
 }
 
 export function defaultQuotaSettings() {

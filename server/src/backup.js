@@ -4,7 +4,8 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
+import { cp } from 'node:fs/promises'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 
 /**
@@ -49,6 +50,31 @@ function resolveLiveDbPath() {
   if (fs.existsSync(preferred)) return preferred
   if (fs.existsSync(legacy)) return legacy
   return preferred
+}
+
+function tarCreateArchive(archivePath, workDir, entries, { async = false } = {}) {
+  const args = ['-czf', archivePath, '-C', workDir, ...entries]
+  if (!async) {
+    execFileSync('tar', args, { stdio: 'pipe' })
+    return Promise.resolve()
+  }
+  return new Promise((resolve, reject) => {
+    const child = spawn('tar', args, { stdio: 'pipe' })
+    let err = ''
+    child.stderr?.on('data', (c) => {
+      err += String(c)
+    })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(err.trim() || `tar exited ${code}`))
+    })
+  })
+}
+
+async function copyTreeAsync(src, dst) {
+  if (!fs.existsSync(src)) return
+  await cp(src, dst, { recursive: true })
 }
 
 /**
@@ -124,6 +150,97 @@ export function createBackup(opts = {}) {
   try {
     const entries = fs.readdirSync(work)
     execFileSync('tar', ['-czf', archivePath, '-C', work, ...entries], { stdio: 'pipe' })
+  } catch (e) {
+    const dirBackup = path.join(outDir, name)
+    if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
+    fs.renameSync(work, dirBackup)
+    return {
+      ok: true,
+      path: dirBackup,
+      format: 'dir',
+      integrity: integrity.detail,
+      warning: `tar 不可用（${e.message}），已输出目录备份`,
+    }
+  }
+
+  fs.rmSync(work, { recursive: true, force: true })
+  const size = fs.statSync(archivePath).size
+  return {
+    ok: true,
+    path: archivePath,
+    format: 'tar.gz',
+    bytes: size,
+    integrity: integrity.detail,
+  }
+}
+
+/** SRV-01: non-blocking backup for HTTP handlers (async tar + cp). */
+export async function createBackupAsync(opts = {}) {
+  let integrity = { ok: true, detail: 'skipped' }
+  if (!opts.skipIntegrity) {
+    integrity = runIntegrityCheck()
+    if (!integrity.ok) {
+      throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
+        code: 'INTEGRITY_FAIL',
+        detail: integrity.detail,
+      })
+    }
+  }
+
+  try {
+    getDb().pragma('wal_checkpoint(TRUNCATE)')
+  } catch (e) {
+    console.warn('[acw] wal_checkpoint', e?.message || e)
+  }
+
+  const outDir = opts.outDir || path.join(DATA_ROOT, 'backups')
+  fs.mkdirSync(outDir, { recursive: true })
+  const name = `acw-backup-${stamp()}`
+  const work = path.join(outDir, `.${name}-work`)
+  if (fs.existsSync(work)) fs.rmSync(work, { recursive: true, force: true })
+  fs.mkdirSync(work, { recursive: true })
+
+  const liveDb = resolveLiveDbPath()
+  const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
+  if (!fs.existsSync(liveDb)) {
+    throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
+  }
+  await cp(liveDb, dbCopy)
+  for (const suf of ['-wal', '-shm']) {
+    const side = liveDb + suf
+    if (fs.existsSync(side) && fs.statSync(side).size > 0) {
+      await cp(side, dbCopy + suf)
+    }
+  }
+
+  const journalsSrc = path.join(DATA_ROOT, 'journals')
+  const journalsDst = path.join(work, 'journals')
+  if (fs.existsSync(journalsSrc)) {
+    await copyTreeAsync(journalsSrc, journalsDst)
+  } else {
+    fs.mkdirSync(journalsDst, { recursive: true })
+  }
+
+  if (opts.includeUploads !== false) {
+    const upSrc = path.join(DATA_ROOT, 'uploads')
+    const upDst = path.join(work, 'uploads')
+    await copyTreeAsync(upSrc, upDst)
+  }
+
+  const meta = {
+    createdAt: new Date().toISOString(),
+    product: 'oh-my-co-work',
+    dataRoot: DATA_ROOT,
+    repoRoot: ROOT,
+    integrity: integrity.detail,
+    sourceDb: liveDb,
+  }
+  fs.writeFileSync(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
+
+  const archivePath = path.join(outDir, `${name}.tar.gz`)
+  try {
+    const entries = fs.readdirSync(work)
+    await tarCreateArchive(archivePath, work, entries, { async: true })
   } catch (e) {
     const dirBackup = path.join(outDir, name)
     if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })

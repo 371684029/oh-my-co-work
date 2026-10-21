@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { getCachedDocHtml, setCachedDocHtml } from '../../../composables/docsRenderCache.js'
 import { outlineWithUniqueSlugs } from '../../docs/docOutline.js'
 import {
   readDocsCodeLineNumbers,
@@ -236,14 +237,26 @@ const docOutline = computed(() => {
 /** 当前内容渲染 HTML（workFolder 变化时重建实例） */
 const renderedHtml = computed(() => {
   if (!file.value || file.value.content == null) return ''
+  const workFolder = currentSession.value?.workFolder || null
+  const cacheKey = {
+    sessionId: current.value?.sessionId,
+    name: current.value?.name,
+    content: file.value.content,
+    lineNumbers: codeLineNumbers.value,
+    workFolder,
+  }
+  const hit = getCachedDocHtml(cacheKey)
+  if (hit != null) return hit
   const md = createDocsMarkdown({
-    workFolders: [currentSession.value?.workFolder].filter(Boolean),
+    workFolders: [workFolder].filter(Boolean),
   })
-  return md.render(file.value.content, {
+  const html = md.render(file.value.content, {
     docCodeLineNumbers: codeLineNumbers.value,
     docSessionId: current.value?.sessionId,
     docRelName: current.value?.name,
   })
+  setCachedDocHtml(cacheKey, html)
+  return html
 })
 
 const docsHistory = ref(readDocsReadingHistory())

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { DATA_ROOT } from '../db.js'
 import * as updateCheck from '../updateCheck.js'
 import {
-  createBackup,
+  createBackupAsync,
   restoreBackup,
   listBackups,
   isGzipFile,
@@ -28,9 +28,9 @@ router.get('/update/backups', (req, res) => {
   }
 })
 
-router.post('/update/backup', (req, res) => {
+router.post('/update/backup', async (req, res) => {
   try {
-    res.json(createBackup())
+    res.json(await createBackupAsync())
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

@@ -43,7 +43,13 @@
               popper-class="chat-search-popper"
             >
               <template #reference>
-                <el-button size="default" text bg @click="chatSearchOpen = !chatSearchOpen">
+                <el-button
+                  size="default"
+                  text
+                  bg
+                  aria-label="搜索本会话聊天"
+                  @click="chatSearchOpen = !chatSearchOpen"
+                >
                   搜索聊天
                 </el-button>
               </template>

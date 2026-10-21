@@ -14,7 +14,7 @@
     @pointermove="onPointerLook"
   >
     <div v-if="!minimized" class="furnace-pet-stage">
-      <div v-show="showBubble" class="furnace-bubble" role="status">
+      <div v-show="showBubble" class="furnace-bubble" role="status" :style="bubbleStyle">
         <p>{{ bubbleText }}</p>
         <div class="furnace-actions">
           <button
@@ -74,7 +74,6 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import sheetUrl from '../assets/pets/li-muwan/spritesheet.webp'
 import {
   PET_CLIPS,
   PET_COPYRIGHT,
@@ -164,6 +163,20 @@ const pos = ref(defaultPos())
 const dragging = ref(false)
 const reduceMotion = ref(false)
 const rootEl = ref(null)
+const sheetUrl = ref('')
+
+const bubbleStyle = computed(() => {
+  if (typeof window === 'undefined' || !rootEl.value) return {}
+  const rect = rootEl.value.getBoundingClientRect()
+  const bubbleW = 128
+  const pad = 8
+  let shift = 0
+  if (rect.right + pad > window.innerWidth) {
+    shift = window.innerWidth - pad - rect.right
+  }
+  if (rect.left + shift < pad) shift = pad - rect.left
+  return shift ? { transform: `translateX(${Math.round(shift)}px)` } : {}
+})
 
 // PET-01: only animate when the sprite is actually on screen. `docVisible`
 // (tab/window visibility) and `intersecting` (IntersectionObserver) gate both the
@@ -190,10 +203,20 @@ const cell = computed(() => {
 })
 
 const displayCellStyles = computed(() =>
-  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: DISPLAY_W, sheetUrl }),
+  croppedCellStyles({
+    row: cell.value.row,
+    col: cell.value.col,
+    viewWidth: DISPLAY_W,
+    sheetUrl: sheetUrl.value,
+  }),
 )
 const peekCellStyles = computed(() =>
-  croppedCellStyles({ row: cell.value.row, col: cell.value.col, viewWidth: PEEK_W, sheetUrl }),
+  croppedCellStyles({
+    row: cell.value.row,
+    col: cell.value.col,
+    viewWidth: PEEK_W,
+    sheetUrl: sheetUrl.value,
+  }),
 )
 const sheetWrapStyle = computed(() => displayCellStyles.value.wrap)
 const peekWrapStyle = computed(() => peekCellStyles.value.wrap)
@@ -384,9 +407,15 @@ watch(
   },
 )
 
-onMounted(() => {
+onMounted(async () => {
   try {
     reduceMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    /* ignore */
+  }
+  try {
+    const mod = await import('../assets/pets/li-muwan/spritesheet.webp')
+    sheetUrl.value = mod.default
   } catch {
     /* ignore */
   }

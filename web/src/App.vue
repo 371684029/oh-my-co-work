@@ -135,7 +135,7 @@
       <router-view />
     </main>
     <FurnaceSprite
-      v-show="!furnaceWorkspaceOpen && !isDocsRoute"
+      v-show="showFurnaceSprite"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
       :docs-notify-seq="flowStore.docsNotifySeq"
@@ -189,7 +189,6 @@ import CommandPalette from './components/CommandPalette.vue'
 import { useCommandPalette } from './composables/useCommandPalette.js'
 import {
   furnaceSpriteState,
-  furnaceWorkspaceOpen,
   grokProbe,
   grokCanRun,
   grokSetupNeeded,
@@ -212,6 +211,10 @@ import {
   stepUiZoom,
   exposeUiZoomBridge,
 } from './composables/uiZoom.js'
+import {
+  normalizeFurnacePetPolicy,
+  shouldShowFurnacePet,
+} from './composables/furnacePetPolicy.js'
 
 const route = useRoute()
 const { paletteOpen, showPalette, hidePalette } = useCommandPalette()
@@ -268,6 +271,24 @@ function stepZoom(dir) {
 if (zoom.value !== 1) applyUiZoom(zoom.value)
 
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
+
+const furnacePetPolicy = ref(normalizeFurnacePetPolicy())
+onMounted(async () => {
+  try {
+    const s = await api.appSettings.get()
+    furnacePetPolicy.value = normalizeFurnacePetPolicy(s?.ui?.furnacePet)
+  } catch {
+    /* defaults */
+  }
+})
+
+const showFurnaceSprite = computed(() =>
+  shouldShowFurnacePet({
+    routePath: route.path,
+    policy: furnacePetPolicy.value,
+    terminalFullscreen: isFullscreen.value,
+  }),
+)
 
 async function toggleWorkbenchFullscreen() {
   const ok = fullscreenElement()

@@ -27,44 +27,13 @@ import { composeMemberPrompt } from './promptSnippets.js'
 import { getAppSettings } from './appSettings.js'
 import { listAgentDefinitions } from './agentRegistry.js'
 
-/**
- * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
- * 不含「脚本所在目录」——那是文件定位成功后的运行 cwd
- */
-export function resolveWorkFolderCandidates({ member, group, sessionContext, scriptCfg }) {
-  const list = []
-  const push = (p) => {
-    if (p && typeof p === 'string' && p.trim() && !list.includes(p)) list.push(p)
-  }
-  push(scriptCfg?.cwd)
-  push(member?.work_folder)
-  push(sessionContext?.primaryWorkFolder)
-  push(sessionContext?.workFolders?.[0])
-  push(group?.work_folder)
-  push(process.cwd())
-  return list
-}
+import {
+  resolveWorkFolderCandidates,
+  getScriptWorkDir,
+  assertScriptWorkDirConfigured,
+} from './runners/scriptWorkDir.js'
 
-/**
- * 脚本工作目录（与成员/会话「工作文件夹」无关）
- * 兼容旧字段 scriptDir
- */
-export function getScriptWorkDir(script) {
-  if (!script || typeof script !== 'object') return ''
-  const w = script.scriptWorkDir || script.scriptDir || ''
-  return String(w).trim()
-}
-
-/** 保存成员/指令时校验 */
-export function assertScriptWorkDirConfigured(script) {
-  const w = getScriptWorkDir(script)
-  if (!w) {
-    const err = new Error('请填写脚本工作目录')
-    err.code = 'NO_SCRIPT_WORK_DIR'
-    throw err
-  }
-  return w
-}
+export { resolveWorkFolderCandidates, getScriptWorkDir, assertScriptWorkDirConfigured }
 
 function mirrorScriptWorkDirFields(script) {
   if (!script || typeof script !== 'object') return script

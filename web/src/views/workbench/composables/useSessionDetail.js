@@ -25,6 +25,12 @@ import {
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
+import {
+  messageText,
+  formatSize,
+  fileIcon,
+  adapterChoices,
+} from './sessionMessageUtils.js'
 
 
 /**
@@ -966,35 +972,6 @@ function shortSender(m, fullName) {
   return full.length <= 6 ? full : full.slice(0, 4)
 }
 
-function messageText(m) {
-  const t = m.content?.text
-  if (t != null && String(t).length) return String(t)
-  if (m.content?.attachments?.length) return ''
-  if (m.content && typeof m.content === 'object' && !m.content.text) {
-    return JSON.stringify(m.content)
-  }
-  return ''
-}
-
-function formatSize(n) {
-  const b = Number(n) || 0
-  if (b < 1024) return `${b} B`
-  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
-  return `${(b / 1024 / 1024).toFixed(1)} MB`
-}
-
-function fileIcon(f) {
-  const mime = String(f.mime || '')
-  const name = String(f.name || '')
-  if (mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return '🖼'
-  if (mime.includes('pdf') || /\.pdf$/i.test(name)) return '📄'
-  if (/\.(zip|rar|7z|tar|gz)$/i.test(name)) return '📦'
-  if (/\.(xlsx?|csv)$/i.test(name)) return '📊'
-  if (/\.(docx?|txt|md)$/i.test(name)) return '📝'
-  if (/\.(js|ts|py|json|vue|java|go)$/i.test(name)) return '💻'
-  return '📎'
-}
-
 function isPendingGate(m) {
   if (m.type !== 'gate' || !detail.value) return false
   if (m.content?.mode === 'archive_confirm') return false
@@ -1303,10 +1280,6 @@ async function saveSessionNotes() {
   } finally {
     notesSaving.value = false
   }
-}
-
-function adapterChoices(m) {
-  return Array.isArray(m?.content?.choices) ? m.content.choices.filter(Boolean) : []
 }
 
 async function answerAdapterQuestion(m, choice, action = 'adapter_answer') {
