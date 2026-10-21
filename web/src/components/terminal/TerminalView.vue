@@ -42,6 +42,7 @@ import { createInputSequencer } from '../../composables/terminalInput'
 import {
   shouldCopyInsteadOfInterrupt,
   shouldHandlePasteShortcut,
+  getTerminalCopyText,
 } from '../../composables/terminalClipboard.js'
 import {
   terminalOutputSubscribe,
@@ -106,7 +107,7 @@ async function copyText(text, okMsg) {
 
 function ctxCopy() {
   closeCtxMenu()
-  void copyText(xterm?.getSelection(), '已复制选区')
+  void copyText(getTerminalCopyText(xterm), '已复制选区')
 }
 
 async function ctxPaste() {
@@ -294,7 +295,7 @@ onMounted(async () => {
     }
     if (shouldCopyInsteadOfInterrupt(xterm, ev)) {
       ev.preventDefault()
-      const sel = xterm.getSelection()
+      const sel = getTerminalCopyText(xterm)
       if (sel) void copyText(sel, `已复制 ${sel.length} 字符`)
       xterm.clearSelection()
       return false

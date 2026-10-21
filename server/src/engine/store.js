@@ -284,9 +284,10 @@ export function persistNodeIo(sessionId, nodeId, { input, output, status, finish
   const n = getDb().prepare('SELECT * FROM node_instances WHERE id = ?').get(nodeId)
   if (!n || !session) return
   let memberName = ''
+  let memberRow = null
   if (n.member_id) {
-    const m = getMember(n.member_id)
-    memberName = m?.display_name || m?.name || ''
+    memberRow = getMember(n.member_id)
+    memberName = memberRow?.display_name || memberRow?.name || ''
   }
   const prevIn = parseJson(n.input_json, {})
   const prevOut = parseJson(n.output_json, {})
@@ -310,6 +311,7 @@ export function persistNodeIo(sessionId, nodeId, { input, output, status, finish
       input: nextInput !== undefined ? nextInput : prevIn,
       output: nextOutput !== undefined ? nextOutput : prevOut,
       memberName,
+      member: memberRow ? { ...memberRow, config: parseMemberConfig(memberRow) } : null,
     })
   } catch (e) {
     console.warn('[acw] journal write failed', e.message)

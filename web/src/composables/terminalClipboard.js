@@ -43,3 +43,26 @@ export function shouldCopyInsteadOfInterrupt(xterm, ev, platform) {
 export function shouldHandlePasteShortcut(ev, platform) {
   return isPasteShortcut(ev, platform)
 }
+
+// eslint-disable-next-line no-control-regex -- strip terminal escape sequences from copied text
+const ANSI_RE = /\u001b(?:[@-_][0-?]*[ -/]*[@-~]|\[[0-?]*[ -/]*[@-~])/g
+// eslint-disable-next-line no-control-regex -- OSC sequences
+const OSC_RE = /\u001b\][^\u0007]*(?:\u0007|\u001b\\)/g
+
+/** 复制后清理：去 ANSI、行尾空白、多余空行（5.2.0 CP-05）。 */
+export function formatTerminalCopyText(text) {
+  return String(text || '')
+    .replace(OSC_RE, '')
+    .replace(ANSI_RE, '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+$/u, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s+$/u, '')
+}
+
+/** 优先选区，否则空；统一走 formatTerminalCopyText。 */
+export function getTerminalCopyText(xterm) {
+  if (!xterm?.hasSelection?.()) return ''
+  return formatTerminalCopyText(xterm.getSelection())
+}

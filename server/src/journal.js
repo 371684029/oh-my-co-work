@@ -38,6 +38,40 @@ export function refinedDocText(obj) {
  * 写入/更新单节点 markdown
  * @returns {string} 相对 dataRoot 的路径
  */
+function refineProvenance(input, output, member) {
+  const cfgRefine = member?.config?.refine
+  const inRef = input && typeof input === 'object' ? input.refine : null
+  if (!cfgRefine && !inRef) return null
+  return {
+    memberId: member?.id || '',
+    memberName: member?.display_name || member?.displayName || member?.name || '',
+    refineSource: inRef?.source || null,
+    refined: inRef?.refined ?? null,
+    formatTitle:
+      cfgRefine?.format && typeof cfgRefine.format === 'object'
+        ? cfgRefine.format.title || null
+        : null,
+    refinedAt: cfgRefine?.refinedAt || null,
+    refineBackup: cfgRefine?.refineBackup || null,
+    refineBackupManifest: cfgRefine?.refineBackupManifest || null,
+  }
+}
+
+function refineTraceBlock(meta) {
+  if (!meta || (!meta.refineSource && !meta.refineBackup && !meta.formatTitle)) return ''
+  const lines = ['> **炼化追溯**']
+  if (meta.memberName) lines.push(`> - 成员：${meta.memberName}`)
+  if (meta.memberId) lines.push(`> - 成员 ID：\`${meta.memberId}\``)
+  if (meta.formatTitle) lines.push(`> - 炼化规格：${meta.formatTitle}`)
+  if (meta.refineSource) lines.push(`> - 本轮来源：${meta.refineSource}`)
+  if (meta.refinedAt) lines.push(`> - 规格时间：${meta.refinedAt}`)
+  if (meta.refineBackup) lines.push(`> - 炼化前备份：\`${meta.refineBackup}\``)
+  if (meta.refineBackupManifest) lines.push(`> - 备份清单：\`${meta.refineBackupManifest}\``)
+  lines.push('> - 还原源码：设置 → 成员管理 → 该成员 →「还原到炼化前」')
+  lines.push('')
+  return `${lines.join('\n')}\n`
+}
+
 export function writeNodeJournal({
   sessionId,
   sessionTitle,
@@ -45,6 +79,7 @@ export function writeNodeJournal({
   input,
   output,
   memberName,
+  member = null,
 }) {
   const dir = path.join(DATA_ROOT, 'journals', 'sessions', sessionId, 'nodes')
   ensureDir(dir)
@@ -57,6 +92,17 @@ export function writeNodeJournal({
   const status = node.status || ''
   const refinedOut = refinedDocText(input) || refinedDocText(output)
   const outBlock = refinedOut ? `${refinedOut}\n` : toMdBlock(output)
+  const prov = refineProvenance(input, output, member)
+  const provYaml = prov
+    ? `
+member_id: "${yamlEscape(prov.memberId)}"
+refine_source: "${yamlEscape(prov.refineSource || '')}"
+refine_format_title: "${yamlEscape(prov.formatTitle || '')}"
+refine_backup: "${yamlEscape(prov.refineBackup || '')}"
+refine_backup_manifest: "${yamlEscape(prov.refineBackupManifest || '')}"
+refine_spec_at: "${yamlEscape(prov.refinedAt || '')}"`
+    : ''
+  const trace = refineTraceBlock(prov)
   const body = `---
 session_id: "${yamlEscape(sessionId)}"
 session_title: "${yamlEscape(sessionTitle || '')}"
@@ -68,10 +114,10 @@ step_type: "${yamlEscape(node.step_type || '')}"
 member: "${yamlEscape(memberName || '')}"
 status: "${yamlEscape(status)}"
 started_at: "${yamlEscape(node.started_at || '')}"
-finished_at: "${yamlEscape(node.finished_at || '')}"
+finished_at: "${yamlEscape(node.finished_at || '')}"${provYaml}
 ---
 
-# ${Number(node.step_index) + 1}. ${node.title || '节点'}
+${trace}# ${Number(node.step_index) + 1}. ${node.title || '节点'}
 
 ## 输入
 

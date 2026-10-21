@@ -22,6 +22,7 @@ YYYY-MM-DD | A/M/D/R | 文件路径 | 一句话说明（改了什么、为什么
 
 ## 变更记录
 
+2026-10-21 | M | web/src/composables/{terminalClipboard,terminalBufferUtils}.js web/src/components/terminal/TerminalView.vue server/src/{journal,engine/store}.js server/test/journalRefine.test.js web/test/terminalClipboard.test.mjs docs/5.2.0-plan.md | CP-05 终端复制清理；REF-06 炼化台账追溯元数据
 2026-10-21 | M | server/src/{adaptBackup,refineSource,refineRestore,routes}.js web/src/{api.js,views/settings/Members.vue} server/test/refineBackupManifest.test.js docs/5.2.0-plan.md | REF-04 炼化备份 manifest+sha256+保留/冲突；REF-05 UTF-8/BOM
 2026-10-21 | A/M | web/src/views/docs/docsInDocSearch.js shared/ptyPlain.js web/src/components/terminal/FurnaceWorkspace.vue web/src/views/docs/DocsHub.vue web/src/views/workbench/composables/useDocsHub.js web/test/docsInDocSearch.test.mjs server/test/ptyPlain.test.js docs/5.2.0-plan.md | DOC-06 正文搜索导航；CP-04 熔炉气泡复制
 2026-10-21 | A/M | web/src/views/docs/{docsListStore,docsListPatch,docsReadingPrefs}.js server/src/{docsHub,routes}.js web/src/views/{docs/DocsHub,workbench/components/FlowRail}.vue web/src/views/workbench/composables/{useDocsHub,useTerminalSessions}.js web/test/{docsListStore,docsReadingPrefs}.test.mjs server/test/docsHub.test.js docs/5.2.0-plan.md | DOC-04 列表缓存与增量刷新；DOC-05 阅读控件
