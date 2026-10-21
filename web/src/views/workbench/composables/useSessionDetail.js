@@ -45,6 +45,14 @@ import {
   sessionListParts,
 } from './sessionListUi.js'
 import { mapAnnounceProgressNode } from './sessionAnnounceUi.js'
+import {
+  computeOffsiteActive,
+  findActiveOffsiteNode,
+  computeOffsiteMode,
+  isCurrentOffsiteSegment as isCurrentOffsiteSegmentNode,
+  offsiteEntryLabel as offsiteEntryLabelForNode,
+  offsiteInvokedLabel as offsiteInvokedLabelForNode,
+} from './sessionOffsiteUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -711,101 +719,36 @@ function isWaitingHuman(n) {
   return n.status === 'waiting_human' || (isCurrent(n) && n.step_type === 'human')
 }
 
-/** 是否正处在场外协助（已归档则不算活跃） */
-const offsiteActive = computed(() => {
-  const s = detail.value?.session
-  if (!s || s.status === 'archived') return false
-  const ctx = s.context && typeof s.context === 'object' ? s.context : {}
-  if (ctx.offsiteAssist?.archived && ctx.offsiteAssist?.active === false) return false
-  if (ctx.offsiteAssist?.active) return true
-  return (detail.value?.nodes || []).some(
-    (n) =>
-      n.step_type === 'offsite' &&
-      !n.output?.archived &&
-      (n.status === 'running' || n.status === 'waiting_human'),
-  )
-})
+const offsiteActive = computed(() =>
+  computeOffsiteActive(detail.value?.session, detail.value?.nodes),
+)
+
+const activeOffsiteNode = computed(() =>
+  findActiveOffsiteNode(detail.value?.nodes, detail.value?.session?.context),
+)
 
 /** planned | interrupt */
-const offsiteMode = computed(() => {
-  const ctx = detail.value?.session?.context
-  if (ctx?.offsiteAssist?.mode === 'planned' || ctx?.offsiteAssist?.planned) return 'planned'
-  const n = activeOffsiteNode.value
-  if (n?.output?.mode === 'planned' || n?.output?.plannedPause) return 'planned'
-  if (offsiteActive.value) return 'interrupt'
-  return null
-})
+const offsiteMode = computed(() =>
+  computeOffsiteMode(
+    detail.value?.session?.context,
+    activeOffsiteNode.value,
+    offsiteActive.value,
+  ),
+)
 
-const activeOffsiteNode = computed(() => {
-  const nodes = detail.value?.nodes || []
-  const ctx = detail.value?.session?.context
-  const pinned = ctx?.offsiteAssist?.active ? ctx.offsiteAssist?.nodeInstanceId : null
-  if (pinned) {
-    const hit = nodes.find(
-      (n) =>
-        n.id === pinned &&
-        n.step_type === 'offsite' &&
-        !n.output?.archived,
-    )
-    if (hit) return hit
-  }
-  return (
-    nodes.find(
-      (n) =>
-        n.step_type === 'offsite' &&
-        !n.output?.archived &&
-        (n.status === 'running' || n.status === 'waiting_human'),
-    ) || null
-  )
-})
-
-/** 多段场外并存时，仅高亮当前活跃段落 */
 function isCurrentOffsiteSegment(n) {
-  if (!n || n.step_type !== 'offsite' || n.output?.archived) return false
-  if (n.status !== 'running' && n.status !== 'waiting_human') return false
-  return activeOffsiteNode.value?.id === n.id
+  return isCurrentOffsiteSegmentNode(n, activeOffsiteNode.value?.id)
 }
 
 function offsiteEntryLabel(n) {
-  if (!n || n.step_type !== 'offsite') return ''
-  if (!isCurrentOffsiteSegment(n)) return ''
-  const mode =
-    n.output?.mode ||
-    (n.output?.plannedPause ? 'planned' : null) ||
-    offsiteMode.value
-  if (mode === 'planned') return '计划'
-  return '插队'
-}
-
-/**
- * 临时协助实际 @ 到的成员——从结构化的 output.lastInvoked / output.assists[].invoked
- * 里取真实成员名，不去猜 input.text 里的 "@xxx" 文字。可能有多轮、多个成员，去重后
- * 按出现顺序返回，供展开前的标题/meta 行直接标出「用了哪个工具」。
- */
-function offsiteInvokedMembers(n) {
-  if (!n || n.step_type !== 'offsite') return []
-  const out = n.output || {}
-  const names = []
-  const seen = new Set()
-  const collect = (list) => {
-    for (const item of Array.isArray(list) ? list : []) {
-      const name = String(item?.memberName || '').trim()
-      if (name && !seen.has(name)) {
-        seen.add(name)
-        names.push(name)
-      }
-    }
-  }
-  for (const assist of Array.isArray(out.assists) ? out.assists : []) {
-    collect(assist?.invoked)
-  }
-  collect(out.lastInvoked)
-  return names
+  return offsiteEntryLabelForNode(n, {
+    activeOffsiteNodeId: activeOffsiteNode.value?.id,
+    mode: offsiteMode.value,
+  })
 }
 
 function offsiteInvokedLabel(n) {
-  const names = offsiteInvokedMembers(n)
-  return names.length ? names.map((name) => `@${name}`).join('、') : ''
+  return offsiteInvokedLabelForNode(n)
 }
 
 /** 审核三态：pending | approve | reject */

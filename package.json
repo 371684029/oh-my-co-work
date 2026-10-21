@@ -28,6 +28,7 @@
     "test": "npm run test -w server",
     "test:web": "node --test web/test/*.test.mjs",
     "test:electron": "node --test electron/test/*.test.mjs",
+    "test:e2e-smoke": "node scripts/ci-e2e-smoke.mjs",
     "test:perf": "node scripts/perf-baseline.mjs"
   },
   "engines": {

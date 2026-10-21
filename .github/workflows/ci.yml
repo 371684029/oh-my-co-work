@@ -44,6 +44,12 @@ jobs:
       - name: Build web (sanity)
         run: npm run build -w web
 
+      - name: Install Playwright Chromium (E2E smoke)
+        run: npx playwright install chromium --with-deps
+
+      - name: E2E smoke (built web + server)
+        run: node scripts/ci-e2e-smoke.mjs
+
       # 合并前就抓「打不出可用包」：dry-run 打 linux-x64 包，验证结构 + 真机起服务，
       # 不 commit（本 job 的 packages/ 改动只存在于这次 runner 的临时工作区）。
       - name: Pack + smoke test (dry run, not committed)

@@ -11,6 +11,7 @@
   },
   "grok": {
     "command": "grok",
+    "cursorCommand": "cursor-agent",
     "configured": false,
     "surface": "tui",
     "workspaceDir": "",
@@ -25,10 +26,14 @@
   "terminal": {
     "theme": "project-dark",
     "fontSize": 13,
+    "fontFamily": "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace",
+    "lineHeight": 1.35,
+    "letterSpacing": 0.2,
     "cursorBlink": true,
     "pastePolicy": "confirm",
     "autoCollapseOnExit": false,
-    "scrollback": 5000
+    "scrollback": 5000,
+    "renderer": "webgl"
   },
   "quota": {
     "maxConcurrentTerminals": 8,
@@ -38,5 +43,43 @@
   "redact": {
     "enabled": true,
     "patternsText": ""
-  }
+  },
+  "updateCheck": {
+    "startup": true
+  },
+  "notifications": {
+    "enabled": true,
+    "levels": {
+      "action": true,
+      "error": true,
+      "done": false
+    },
+    "sound": true,
+    "onlyWhenUnfocused": true,
+    "quietHours": {
+      "enabled": false,
+      "start": "22:00",
+      "end": "07:00"
+    },
+    "remindIntervalMs": 30000,
+    "maxReminders": 3,
+    "allowActionButtons": false
+  },
+  "ui": {
+    "reduceEffects": false,
+    "colorScheme": "system",
+    "furnacePet": {
+      "showOnWorkbench": true,
+      "showOnSettings": false,
+      "showOnDocs": false,
+      "hideWhenTerminalFullscreen": true
+    }
+  },
+  "customAgents": [],
+  "promptSnippets": [],
+  "onboarding": {
+    "firstRunGuideDismissed": false
+  },
+  "scheduledJobs": [],
+  "mcpConnections": []
 }
