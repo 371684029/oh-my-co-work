@@ -24,6 +24,31 @@ export function isCurrentStepNode(n, session) {
   )
 }
 
+export function isWaitingHumanStep(n, session) {
+  if (n.step_type === 'offsite') return n.status === 'waiting_human' || n.status === 'running'
+  return n.status === 'waiting_human' || (isCurrentStepNode(n, session) && n.step_type === 'human')
+}
+
+/** CSS class for one flow-rail node row. */
+export function flowNodeClass(n, session) {
+  if (n.step_type === 'offsite') {
+    if (n.status === 'running' || n.status === 'waiting_human') return 'offsite-active'
+    return 'offsite-idle'
+  }
+  if (n.step_type === 'archive') {
+    if (n.status === 'waiting_human') return 'human-wait'
+    if (n.status === 'succeeded') return 'done'
+    return 'pending'
+  }
+  if (n.status === 'succeeded' || n.status === 'skipped') return 'done'
+  if (n.status === 'failed') return 'failed'
+  if (isWaitingHumanStep(n, session) || n.status === 'waiting_human') return 'human-wait'
+  if (n.status === 'running') return 'running'
+  if (isCurrentStepNode(n, session)) return 'current'
+  if (n.step_type === 'human' || n.gate) return 'human-config'
+  return 'pending'
+}
+
 export function computeFlowHistorySplitIndex(nodes, session) {
   const list = nodes || []
   if (!list.length) return 0
