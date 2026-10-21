@@ -3,7 +3,7 @@
     <header class="terminal-card-head">
       <div class="terminal-card-title">
         <span class="terminal-status-dot" aria-hidden="true" />
-        <span class="terminal-label">{{ terminal.label || '内嵌终端' }}</span>
+        <span class="terminal-label">{{ terminal.label || terminalCardDefaultLabel() }}</span>
         <span class="terminal-runtime">{{ terminal.runtime || 'terminal' }}</span>
       </div>
       <span class="terminal-status">{{ statusText }}</span>
@@ -12,19 +12,19 @@
     <section v-if="showFailure" class="terminal-failure" role="alert">
       <div class="terminal-failure-head">
         <span class="terminal-failure-icon" aria-hidden="true">⚠</span>
-        <span class="terminal-failure-title">启动失败</span>
+        <span class="terminal-failure-title">{{ terminalCardFailureTitle() }}</span>
         <button type="button" class="terminal-failure-copy" @click="copyDiagnostics">
-          复制诊断
+          {{ terminalCardCopyDiagnostics() }}
         </button>
       </div>
-      <p class="terminal-failure-msg">{{ failureReason || '终端未能启动。' }}</p>
+      <p class="terminal-failure-msg">{{ failureReason || terminalCardFailureFallback() }}</p>
       <dl class="terminal-failure-meta">
         <div v-if="terminal.command" class="terminal-failure-row">
-          <dt>命令</dt>
+          <dt>{{ terminalCardMetaCommand() }}</dt>
           <dd>{{ terminal.command }}</dd>
         </div>
         <div v-if="terminal.cwd" class="terminal-failure-row">
-          <dt>目录</dt>
+          <dt>{{ terminalCardMetaCwd() }}</dt>
           <dd>{{ terminal.cwd }}</dd>
         </div>
       </dl>
@@ -47,7 +47,7 @@
       </span>
       <div class="terminal-actions">
         <button type="button" class="terminal-action primary" @click="$emit('open', terminal.id)">
-          {{ isRunning ? '进入终端' : '查看终端' }}
+          {{ isRunning ? terminalCardEnterTerminal() : terminalCardViewTerminal() }}
         </button>
         <button
           v-if="isRunning"
@@ -55,7 +55,7 @@
           class="terminal-action danger"
           @click="$emit('kill', terminal.id)"
         >
-          停止
+          {{ terminalCardStop() }}
         </button>
       </div>
     </footer>
@@ -67,6 +67,23 @@ import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { stripAnsi } from '@acw/shared'
 import { isTerminalRunning, terminalStatusText } from '../../composables/terminalStatus'
+import {
+  terminalCardCopyDiagnostics,
+  terminalCardCopyFailed,
+  terminalCardDefaultLabel,
+  terminalCardDiagnosticsCopied,
+  terminalCardElapsedMinutes,
+  terminalCardElapsedSeconds,
+  terminalCardEnterTerminal,
+  terminalCardFailureFallback,
+  terminalCardFailureTitle,
+  terminalCardMetaCommand,
+  terminalCardMetaCwd,
+  terminalCardPreviewIdle,
+  terminalCardStatusUnknown,
+  terminalCardStop,
+  terminalCardViewTerminal,
+} from '../../composables/terminalSessionCardCopy.js'
 import AcwIcon from '../icons/AcwIcon.vue'
 
 const props = defineProps({
@@ -80,7 +97,9 @@ const PREVIEW_LINES = 40
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 
-const statusText = computed(() => terminalStatusText(props.terminal.status, 'card') || '未知')
+const statusText = computed(
+  () => terminalStatusText(props.terminal.status, 'card') || terminalCardStatusUnknown(),
+)
 
 // CLI-05: surface the real failure reason + command/cwd instead of leaving it
 // buried in the replay, plus a copyable diagnostic blob.
@@ -110,7 +129,7 @@ async function copyDiagnostics() {
   try {
     if (typeof navigator !== 'undefined' && navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text)
-      ElMessage.success('诊断信息已复制')
+      ElMessage.success(terminalCardDiagnosticsCopied())
       return
     }
   } catch {
@@ -125,9 +144,9 @@ async function copyDiagnostics() {
     ta.select()
     document.execCommand('copy')
     document.body.removeChild(ta)
-    ElMessage.success('诊断信息已复制')
+    ElMessage.success(terminalCardDiagnosticsCopied())
   } catch {
-    ElMessage.error('复制失败')
+    ElMessage.error(terminalCardCopyFailed())
   }
 }
 
@@ -140,7 +159,7 @@ const previewLines = computed(() =>
 const hasOutput = computed(() => previewLines.value.length > 0)
 
 const preview = computed(
-  () => previewLines.value.slice(-PREVIEW_LINES).join('\n') || '终端已就绪，等待输出…',
+  () => previewLines.value.slice(-PREVIEW_LINES).join('\n') || terminalCardPreviewIdle(),
 )
 
 const elapsedText = computed(() => {
@@ -149,9 +168,9 @@ const elapsedText = computed(() => {
   // 底栏已单独渲染 cwd，这里缺开始时间时直接留空，避免目录被打印两次
   if (!Number.isFinite(start)) return ''
   const seconds = Math.max(0, Math.round((end - start) / 1000))
-  if (seconds < 60) return `${seconds} 秒`
+  if (seconds < 60) return terminalCardElapsedSeconds(seconds)
   const minutes = Math.floor(seconds / 60)
-  return `${minutes} 分 ${seconds % 60} 秒`
+  return terminalCardElapsedMinutes(minutes, seconds % 60)
 })
 </script>
 

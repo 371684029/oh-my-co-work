@@ -205,6 +205,25 @@ export const strings = {
       tuiIdle: 'Click TUI to type',
     },
   },
+  terminal: {
+    card: {
+      defaultLabel: 'Embedded terminal',
+      failureTitle: 'Start failed',
+      copyDiagnostics: 'Copy diagnostics',
+      failureFallback: 'Terminal did not start.',
+      metaCommand: 'Command',
+      metaCwd: 'Directory',
+      enterTerminal: 'Enter terminal',
+      viewTerminal: 'View terminal',
+      stop: 'Stop',
+      statusUnknown: 'Unknown',
+      diagnosticsCopied: 'Diagnostics copied',
+      copyFailed: 'Copy failed',
+      previewIdle: 'Terminal ready, waiting for output…',
+      elapsedSeconds: '{seconds}s',
+      elapsedMinutes: '{minutes}m {seconds}s',
+    },
+  },
   workbench: {
     chrome: {
       titlePlaceholder: 'Untitled task',

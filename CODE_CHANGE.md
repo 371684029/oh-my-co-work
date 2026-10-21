@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/{composables/terminalSessionCardCopy,components/terminal/TerminalSessionCard.vue,views/workbench/composables/{sessionNotesActions,useSessionDetail}} web/test/{terminalSessionCardCopy,sessionNotesActions}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | DSK-08 TerminalSessionCard i18n、FE-01 sessionNotesActions
 2026-10-21 | A/M | web/src/views/workbench/{composables/{flowRailCopy,flowRailFeedbackUi,flowRailTimelineUi,sessionConvActions,sessionStartChatActions,useSessionDetail},components/FlowRail.vue} server/src/routes/sessionsRoutes.js scripts/ci-e2e-smoke.mjs web/test/{flowRailCopy,flowRailTimelineUi,sessionConvActions}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | DSK-08 FlowRail 全栏 i18n、FE-01 conv/startChat 模块、QA-01 PTY 输入回显
 2026-10-21 | A/M | web/src/views/workbench/{composables/{sessionMessageSendActions,sessionMentionAssistUi,flowRailCopy,useSessionDetail},components/FlowRail.vue} server/src/routes/sessionsRoutes.js scripts/ci-e2e-smoke.mjs web/test/{flowRailCopy,sessionMentionAssistUi}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | FE-01 message send 模块、DSK-08 flow 角标、QA-01 PTY READY 回显
 2026-10-21 | A/M | server/src/routes/sessionsRoutes.js server/test/e2eSmokeSpawnRoute.test.js scripts/ci-e2e-smoke.mjs web/src/views/workbench/composables/{sessionSlashActions,useSessionDetail}.js docs/5.1.0-plan.md | QA-01 浏览器 PTY echo smoke、FE-01 sessionSlashActions

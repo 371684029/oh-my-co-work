@@ -205,6 +205,25 @@ export const strings = {
       tuiIdle: '点 TUI 继续输入',
     },
   },
+  terminal: {
+    card: {
+      defaultLabel: '内嵌终端',
+      failureTitle: '启动失败',
+      copyDiagnostics: '复制诊断',
+      failureFallback: '终端未能启动。',
+      metaCommand: '命令',
+      metaCwd: '目录',
+      enterTerminal: '进入终端',
+      viewTerminal: '查看终端',
+      stop: '停止',
+      statusUnknown: '未知',
+      diagnosticsCopied: '诊断信息已复制',
+      copyFailed: '复制失败',
+      previewIdle: '终端已就绪，等待输出…',
+      elapsedSeconds: '{seconds} 秒',
+      elapsedMinutes: '{minutes} 分 {seconds} 秒',
+    },
+  },
   workbench: {
     chrome: {
       titlePlaceholder: '未命名任务',

@@ -20,6 +20,7 @@ import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
 import { resolveSessionId } from './sessionActionUi.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
+import { createSessionNotesActions } from './sessionNotesActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   restartArchiveBlockedMessage,
@@ -40,8 +41,6 @@ import {
   deleteNoSessionMessage,
   deleteSuccessMessage,
   hashItemEmptyInsertMessage,
-  sessionNotesSaveFailedMessage,
-  sessionNotesSavedMessage,
 } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
@@ -641,26 +640,6 @@ async function rebuildAnnouncement() {
   }
 }
 
-async function saveSessionNotes() {
-  if (!activeId.value) return
-  notesSaving.value = true
-  try {
-    const r = await api.sessions.saveNotes(activeId.value, sessionNotesDraft.value)
-    sessionNotesDraft.value = r.notes ?? sessionNotesDraft.value
-    if (detail.value?.session) {
-      detail.value.session.context = {
-        ...(detail.value.session.context || {}),
-        notes: sessionNotesDraft.value,
-      }
-    }
-    ElMessage.success(sessionNotesSavedMessage())
-  } catch (e) {
-    ElMessage.error(sessionNotesSaveFailedMessage(e))
-  } finally {
-    notesSaving.value = false
-  }
-}
-
 function onConvChange(item) {
   const id = item?.uniqueKey || item?.id
   if (id) selectSession(id)
@@ -684,6 +663,14 @@ const { startChat, startDemoChat } = createSessionStartChatActions({
   groups,
   loadLists,
   selectSession,
+  api,
+})
+
+const { saveSessionNotes } = createSessionNotesActions({
+  activeId,
+  sessionNotesDraft,
+  detail,
+  notesSaving,
   api,
 })
 

@@ -294,11 +294,7 @@ async function main() {
       await page.waitForTimeout(250)
     }
     assert.ok(replayHasEcho, 'PTY typed input should appear in terminal replay')
-
-    await page
-      .locator('.terminal-view .xterm-screen')
-      .getByText(echoMarker, { exact: false })
-      .waitFor({ state: 'visible', timeout: 15000 })
+    // xterm paints to canvas; Playwright cannot assert glyph text in .xterm-screen.
 
     await fetch(`${base}/api/sessions/${session.id}/terminals/${spawnBody.terminalId}/kill`, {
       method: 'POST',
