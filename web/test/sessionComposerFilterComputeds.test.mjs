@@ -6,6 +6,8 @@ test('createSessionComposerFilterComputeds exposes filter lists', () => {
   const { filteredSlashCmds, filteredAtMembers } = createSessionComposerFilterComputeds({
     slashCommands: { value: [{ slash: '/x', name: 'X', enabled: true }] },
     members: { value: [] },
+    getSlashQuery: () => '',
+    getAtQuery: () => '',
   })
   assert.equal(filteredSlashCmds.value.length, 1)
   assert.equal(filteredAtMembers.value.length, 0)

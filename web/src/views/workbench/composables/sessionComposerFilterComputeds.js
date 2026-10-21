@@ -2,9 +2,14 @@
 import { computed } from 'vue'
 import { useComposerStore } from '../../../stores/composer.js'
 
-export function createSessionComposerFilterComputeds({ slashCommands, members }) {
+export function createSessionComposerFilterComputeds({
+  slashCommands,
+  members,
+  getSlashQuery = () => useComposerStore().slashQuery,
+  getAtQuery = () => useComposerStore().atQuery,
+}) {
   const filteredSlashCmds = computed(() => {
-    const q = (useComposerStore().slashQuery || '').toLowerCase()
+    const q = (getSlashQuery() || '').toLowerCase()
     const list = slashCommands.value.filter((c) => c.enabled !== false)
     if (!q) return list
     return list.filter(
@@ -16,7 +21,7 @@ export function createSessionComposerFilterComputeds({ slashCommands, members })
   })
 
   const filteredAtMembers = computed(() => {
-    const q = (useComposerStore().atQuery || '').toLowerCase().trim()
+    const q = (getAtQuery() || '').toLowerCase().trim()
     const list = members.value || []
     if (!q) return list
     return list.filter(
