@@ -3,8 +3,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   formatBusinessIo,
   wholeOutputText,
-  abbrGroupTag,
-  formatSessionAutoTitle,
   extractCallArgsFromSlash,
   isMentionAssistOnly,
   stepTypeLabel as sharedStepTypeLabel,
@@ -41,6 +39,11 @@ import {
   nodeHasRefine,
   pickFlowAnchorNodeId,
 } from './sessionFlowUi.js'
+import {
+  archiveOutcomeOf,
+  relativeSessionTime,
+  sessionListParts,
+} from './sessionListUi.js'
 
 
 /**
@@ -308,72 +311,6 @@ const filteredSessions = computed(() => {
   })
 })
 
-/** 会话列表：#1 正文 + 群模板缩写标签；hover 气泡展示全文（前缀 + 群全称） */
-function sessionListParts(s) {
-  const ctx = s?.context && typeof s.context === 'object' ? s.context : {}
-  const groupTitle = String(s.groupTitle || ctx.groupTitle || '').trim()
-  const abbr = s.groupTitleAbbr || ctx.groupTitleAbbr || abbrGroupTag(groupTitle)
-
-  // 手改过：整段标题，不用缩写标签
-  if (ctx.titleAuto === false && s.title) {
-    const full = String(s.title).trim()
-    return {
-      label: full,
-      labelPrefix: full,
-      groupAbbr: '',
-      hoverTitle: full,
-    }
-  }
-
-  const p1 = String(
-    (Array.isArray(ctx.paramsList) && ctx.paramsList[0]) ||
-      ctx.params?.['#1'] ||
-      '',
-  ).trim()
-  const groupAbbr = abbr || ''
-  const labelPrefix = p1
-  const label =
-    formatSessionAutoTitle({
-      param1: p1,
-      groupTitle,
-      groupTitleAbbr: groupAbbr,
-    }) ||
-    s.title ||
-    groupTitle ||
-    '未命名'
-
-  // 全文：优先「#1 · 群全称」，否则群全称 / 会话标题
-  let hoverTitle = ''
-  if (p1 && groupTitle) hoverTitle = `${p1} · ${groupTitle}`
-  else if (groupTitle) hoverTitle = groupTitle
-  else if (p1) hoverTitle = p1
-  else hoverTitle = String(s.title || label || '').trim()
-
-  return {
-    label,
-    labelPrefix,
-    groupAbbr,
-    hoverTitle,
-  }
-}
-
-/** 相对时间：最小 h，最大 w；已归档返回空 */
-function relativeTime(isoOrTs) {
-  if (!isoOrTs) return ''
-  const t = new Date(isoOrTs).getTime()
-  if (!t || Number.isNaN(t)) return ''
-  const diffMs = Date.now() - t
-  if (diffMs < 0) return ''
-  const mins = Math.floor(diffMs / 60000)
-  const hours = Math.floor(mins / 60)
-  const days = Math.floor(hours / 24)
-  const weeks = Math.floor(days / 7)
-  if (hours < 1) return '刚刚'
-  if (hours < 24) return `${hours}h`
-  if (days < 7) return `${days}d`
-  return `${weeks}w`
-}
-
 /** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
 const conversationItems = computed(() =>
   filteredSessions.value.map((s) => {
@@ -392,7 +329,7 @@ const conversationItems = computed(() =>
       pinned: !!s.pinned,
       archiveOutcome: outcome,
       adhoc: !!s.adhoc,
-      timeLabel: ['archived'].includes(s.status) ? '' : relativeTime(s.updated_at),
+      timeLabel: ['archived'].includes(s.status) ? '' : relativeSessionTime(s.updated_at),
     }
   }),
 )
@@ -694,19 +631,6 @@ const needsHuman = computed(() => {
   if (detail.value.session.status === 'interrupted') return true
   return !!pendingGate.value
 })
-
-/**
- * 归档结果：success | failed | null
- * 依据 archive_reason；详情页可结合节点失败态
- */
-function archiveOutcomeOf(session, nodes) {
-  if (!session || session.status !== 'archived') return null
-  const r = String(session.archive_reason || '').toLowerCase()
-  if (['failed', 'rejected', 'error', 'fail'].includes(r)) return 'failed'
-  if (Array.isArray(nodes) && nodes.some((n) => n.status === 'failed')) return 'failed'
-  // auto_completed / completed / manual / timeout / 其它 → 成功归档
-  return 'success'
-}
 
 const archiveOutcomeTag = computed(() => {
   if (!detail.value?.session) return null

@@ -12,12 +12,13 @@
       ref="inputRef"
       v-model="query"
       placeholder="搜索会话、文档或输入命令…"
+      aria-label="命令面板搜索"
       clearable
       @keydown.down.prevent="move(1)"
       @keydown.up.prevent="move(-1)"
       @keydown.enter.prevent="runSelected"
     />
-    <ul class="cp-list" role="listbox">
+    <ul class="cp-list" role="listbox" aria-label="命令列表">
       <li
         v-for="(item, i) in filtered"
         :key="item.id"
