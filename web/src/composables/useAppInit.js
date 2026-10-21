@@ -20,6 +20,11 @@ export function useAppInit() {
   const grokExampleToml = ref('')
 
   const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
+  const reduceEffects = ref(false)
+
+  function applyUiSettings(settings) {
+    reduceEffects.value = !!settings?.ui?.reduceEffects
+  }
 
   function syncFullscreenState() {
     isFullscreen.value = !!fullscreenElement()
@@ -31,6 +36,7 @@ export function useAppInit() {
       grokGuideStatus.value = probe
       grokExampleToml.value = probe.exampleToml || ''
       setFurnaceGrokGate({ probe })
+      applyUiSettings(s)
       return { s, probe }
     } catch {
       setGrokConfigured(false)
@@ -115,6 +121,7 @@ export function useAppInit() {
     grokCanContinue,
     refreshGrokGate,
     ensureFurnaceGrokWired,
+    reduceEffects,
     isDesktop: desktop.isDesktop,
     desktopEnv: desktop.desktopEnv,
   }

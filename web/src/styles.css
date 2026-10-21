@@ -1,6 +1,12 @@
 /* oh-my-co-work — macOS / glass shell
    灵感：macOS 系统控件 + 毛玻璃窗口 + 柔和壁纸氛围（参考 macos27 气质） */
 
+.ecw-layout.reduce-effects,
+.ecw-layout.reduce-effects * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 :root {
   /* layout */
   --ecw-sidebar-w: 300px;

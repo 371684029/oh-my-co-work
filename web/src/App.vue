@@ -1,5 +1,5 @@
 <template>
-  <div ref="appRoot" class="ecw-layout">
+  <div ref="appRoot" class="ecw-layout" :class="{ 'reduce-effects': reduceEffects }">
     <header class="ecw-topbar" :class="{ 'is-docs-topbar': isDocsRoute }">
       <!-- 文档中心独立顶栏：脱离原项目结构，只留 logo + 文档中心标题 -->
       <template v-if="isDocsRoute">
@@ -159,6 +159,7 @@ const {
   grokCanContinue,
   refreshGrokGate,
   ensureFurnaceGrokWired,
+  reduceEffects,
 } = useAppInit()
 
 const furnaceTitle = computed(() => {

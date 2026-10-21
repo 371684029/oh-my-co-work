@@ -247,8 +247,18 @@
     </section>
 
     <section class="prefs-card">
+      <div class="prefs-title">界面性能</div>
+      <p class="prefs-hint">远程桌面或集显卡顿时可关闭毛玻璃模糊（5.2.0 UI-04）。</p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="降低特效（关闭 backdrop-filter）">
+          <el-switch v-model="ui.reduceEffects" @change="saveUi" />
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section class="prefs-card">
       <div class="prefs-title">终端偏好</div>
-      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、粘贴确认、退出后是否自动回到对话。</p>
+      <p class="prefs-hint">作用于内嵌 TUI：主题、字号、字体、行距、渲染器与粘贴策略。</p>
       <el-form label-position="top" class="admin-form">
         <el-form-item label="主题">
           <el-select v-model="terminal.theme" style="width: 100%">
@@ -259,6 +269,21 @@
         </el-form-item>
         <el-form-item label="字号">
           <el-input-number v-model="terminal.fontSize" :min="10" :max="22" />
+        </el-form-item>
+        <el-form-item label="字体栈">
+          <el-input v-model="terminal.fontFamily" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item label="行高">
+          <el-input-number v-model="terminal.lineHeight" :min="1" :max="2" :step="0.05" />
+        </el-form-item>
+        <el-form-item label="字距">
+          <el-input-number v-model="terminal.letterSpacing" :min="-1" :max="4" :step="0.1" />
+        </el-form-item>
+        <el-form-item label="渲染器">
+          <el-select v-model="terminal.renderer" style="width: 100%">
+            <el-option label="WebGL（默认）" value="webgl" />
+            <el-option label="DOM（兼容）" value="dom" />
+          </el-select>
         </el-form-item>
         <el-form-item label="光标闪烁">
           <el-switch v-model="terminal.cursorBlink" />
@@ -408,9 +433,14 @@ const loadingResources = ref(false)
 const terminal = ref({
   theme: 'project-dark',
   fontSize: 13,
+  fontFamily: '',
+  lineHeight: 1.35,
+  letterSpacing: 0.2,
+  renderer: 'webgl',
   cursorBlink: true,
   pastePolicy: 'confirm',
   autoCollapseOnExit: false,
+  scrollback: 5000,
 })
 const quota = ref({
   maxConcurrentTerminals: 8,
@@ -418,6 +448,8 @@ const quota = ref({
   maxReplayKiB: 256,
 })
 const redact = ref({ enabled: true, patternsText: '' })
+const ui = ref({ reduceEffects: false })
+const savingUi = ref(false)
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const importing = ref(false)
@@ -459,13 +491,19 @@ async function load() {
     if (f.auto !== false) keys.push('auto')
     if (f.human !== false) keys.push('human')
     defaultFlowKeys.value = keys.length ? keys : ['auto']
+    if (s.ui) ui.value = { reduceEffects: !!s.ui.reduceEffects }
     if (s.terminal) {
       terminal.value = {
         theme: s.terminal.theme || 'project-dark',
         fontSize: s.terminal.fontSize || 13,
+        fontFamily: s.terminal.fontFamily || '',
+        lineHeight: s.terminal.lineHeight ?? 1.35,
+        letterSpacing: s.terminal.letterSpacing ?? 0.2,
+        renderer: s.terminal.renderer === 'dom' ? 'dom' : 'webgl',
         cursorBlink: s.terminal.cursorBlink !== false,
         pastePolicy: s.terminal.pastePolicy || 'confirm',
         autoCollapseOnExit: !!s.terminal.autoCollapseOnExit,
+        scrollback: s.terminal.scrollback || 5000,
       }
     }
     if (s.grok) {
@@ -598,6 +636,18 @@ async function onToggleScriptPopup(val) {
     ElMessage.error(e.message)
   } finally {
     savingPopup.value = false
+  }
+}
+
+async function saveUi() {
+  savingUi.value = true
+  try {
+    await api.appSettings.update({ ui: { ...ui.value } })
+    ElMessage.success('已保存界面设置（刷新页面后全局生效）')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingUi.value = false
   }
 }
 

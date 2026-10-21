@@ -347,6 +347,11 @@ function bindWs(sessionId) {
         revealFurnaceTui(terminal?.id)
         return
       }
+      if (ev.type === 'terminal.backpressure') {
+        const terminalId = ev.payload?.terminalId || activeTerminalId.value
+        if (terminalId) reattachForGap(terminalId)
+        return
+      }
       if (ev.type === 'terminal.output') {
         const terminalId = ev.payload?.terminalId
         const current = terminalSessions.value.find((item) => item.id === terminalId)
@@ -389,6 +394,19 @@ function bindWs(sessionId) {
           lastChunk: '',
           replayTruncated: !!ev.payload?.truncated,
         })
+        if (
+          ev.payload?.truncated &&
+          ev.payload?.terminalId === activeTerminalId.value &&
+          lastTerminalSize.value
+        ) {
+          const { cols, rows } = lastTerminalSize.value
+          sendTerminalMessage({
+            type: 'terminal.resize',
+            terminalId: ev.payload.terminalId,
+            cols,
+            rows,
+          })
+        }
         return
       }
       if (ev.type === 'terminal.exited') {

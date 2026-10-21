@@ -48,9 +48,14 @@ export function defaultTerminalPrefs() {
   return {
     theme: 'project-dark',
     fontSize: 13,
+    fontFamily:
+      "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace",
+    lineHeight: 1.35,
+    letterSpacing: 0.2,
     cursorBlink: true,
     pastePolicy: 'confirm',
     autoCollapseOnExit: false,
     scrollback: 5000,
+    renderer: 'webgl',
   }
 }

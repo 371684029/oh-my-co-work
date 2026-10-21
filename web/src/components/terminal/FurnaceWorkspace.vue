@@ -100,6 +100,15 @@
           </details>
         </div>
       </header>
+      <div
+        v-if="cliBanner"
+        class="furnace-cli-banner"
+        :class="`is-${cliBanner.kind}`"
+        role="status"
+      >
+        <strong>{{ cliBanner.title }}</strong>
+        <span>{{ cliBanner.hint }}</span>
+      </div>
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
@@ -387,18 +396,11 @@ import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
-import { parseFurnaceTurnText, inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
+import { inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
+import { getFurnaceTurnMeta } from '../../composables/furnaceTurnMeta.js'
 import { writeClipboardText } from '../../composables/terminalClipboardBridge.js'
 
-const turnMetaCache = new Map()
-function getTurnMeta(text) {
-  const key = String(text || '')
-  if (turnMetaCache.has(key)) return turnMetaCache.get(key)
-  const meta = parseFurnaceTurnText(key)
-  if (turnMetaCache.size > 200) turnMetaCache.clear()
-  turnMetaCache.set(key, meta)
-  return meta
-}
+const getTurnMeta = getFurnaceTurnMeta
 
 async function copyTurn(turn) {
   const text = furnaceTurnCopyPlain(turn?.role, turn?.text)
@@ -503,6 +505,7 @@ const {
   pickFiles,
   showInputTips,
   dismissFurnaceTips,
+  cliBanner,
 } = useFurnaceWorkspace(props, emit, {
   surface,
   focused,
@@ -624,6 +627,32 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
+}
+
+.furnace-cli-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  background: rgba(64, 158, 255, 0.1);
+  border: 1px solid rgba(64, 158, 255, 0.25);
+}
+.furnace-cli-banner.is-error {
+  background: rgba(245, 108, 108, 0.12);
+  border-color: rgba(245, 108, 108, 0.35);
+}
+.furnace-cli-banner.is-auth,
+.furnace-cli-banner.is-approval {
+  background: rgba(230, 162, 60, 0.12);
+  border-color: rgba(230, 162, 60, 0.35);
+}
+.furnace-cli-banner strong {
+  font-size: 12px;
 }
 
 .furnace-head {

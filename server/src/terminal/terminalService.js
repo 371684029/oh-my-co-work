@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import * as pty from 'node-pty'
 import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
-import { emitSession } from '../bus.js'
+import { emitSession, emitTerminalOutput, setWsTerminalAttach } from '../bus.js'
 import { getAppSettings } from '../appSettings.js'
 import { pickWindowsMatch } from '../commandResolver.js'
 import { redactText } from './redact.js'
@@ -169,13 +169,23 @@ function emitTerminal(entry, type, payload = {}) {
   })
 }
 
+function emitTerminalStream(entry, payload = {}) {
+  emitTerminalOutput(entry.sessionId, entry.id, {
+    type: 'terminal.output',
+    payload: {
+      terminalId: entry.id,
+      ...payload,
+    },
+  })
+}
+
 function flushOutput(entry) {
   entry.flushTimer = null
   if (!entry.pendingOutput) return
   const data = entry.pendingOutput
   entry.pendingOutput = ''
   entry.seq += 1
-  emitTerminal(entry, 'terminal.output', { seq: entry.seq, data })
+  emitTerminalStream(entry, { seq: entry.seq, data })
 }
 
 function queueOutput(entry, data) {
@@ -714,6 +724,7 @@ export function handleTerminalClientMessage(ws, sessionId, raw) {
   }
 
   if (message.type === 'terminal.attach') {
+    setWsTerminalAttach(ws, terminalId)
     if (entry.pendingOutput) {
       if (entry.flushTimer) clearTimeout(entry.flushTimer)
       flushOutput(entry)

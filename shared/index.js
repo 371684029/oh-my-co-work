@@ -172,6 +172,7 @@ export {
 } from './ptyPlain.js'
 
 export { estimateFurnaceContext, formatFurnaceContextHint } from './furnaceContextEstimate.js'
+export { inferFurnaceCliBanner } from './furnaceCliState.js'
 
 /** 去 CSI / OSC，给卡片预览用；GUI 请用 furnaceGuiTranscript */
 export function stripAnsi(value) {

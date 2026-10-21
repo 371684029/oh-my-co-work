@@ -1,5 +1,12 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { buildFurnacePtyAttachText, furnaceGuiTranscript, furnaceGuiReadable, inferFurnaceAgent, takeFurnaceAssistantDelta } from '@acw/shared'
+import {
+  buildFurnacePtyAttachText,
+  furnaceGuiTranscript,
+  furnaceGuiReadable,
+  inferFurnaceAgent,
+  inferFurnaceCliBanner,
+  takeFurnaceAssistantDelta,
+} from '@acw/shared'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import { PET_CREDIT_SHORT } from './furnacePetAtlas.js'
@@ -103,6 +110,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
       isRunning.value &&
       !uploading.value &&
       (!!draft.value.trim() || pendingFiles.value.length > 0),
+  )
+
+  const cliBanner = computed(() =>
+    inferFurnaceCliBanner(props.terminal.replay || '', {
+      status: props.terminal.status,
+      exitCode: props.terminal.exitCode,
+      lastError: props.terminal.lastError || props.terminal.error?.message,
+    }),
   )
 
   /** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
@@ -428,5 +443,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
     pickFiles,
     showInputTips,
     dismissFurnaceTips,
+    cliBanner,
   }
 }

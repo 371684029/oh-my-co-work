@@ -110,11 +110,26 @@ export function defaultTerminalSettings() {
   return {
     theme: 'project-dark',
     fontSize: 13,
+    fontFamily:
+      "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace",
+    lineHeight: 1.35,
+    letterSpacing: 0.2,
     cursorBlink: true,
     pastePolicy: 'confirm',
     autoCollapseOnExit: false,
     scrollback: 5000,
+    renderer: 'webgl',
   }
+}
+
+export function defaultUiSettings() {
+  return { reduceEffects: false }
+}
+
+function normalizeUi(raw) {
+  const d = defaultUiSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return { reduceEffects: raw.reduceEffects === true }
 }
 
 export function defaultQuotaSettings() {
@@ -145,14 +160,28 @@ function normalizeTerminal(raw) {
     ? raw.theme
     : d.theme
   const pastePolicy = raw.pastePolicy === 'allow' ? 'allow' : 'confirm'
+  const renderer = raw.renderer === 'dom' ? 'dom' : 'webgl'
   return {
     theme,
     fontSize: clampInt(raw.fontSize, d.fontSize, 10, 22),
+    fontFamily:
+      typeof raw.fontFamily === 'string' && raw.fontFamily.trim()
+        ? raw.fontFamily.trim()
+        : d.fontFamily,
+    lineHeight: clampNum(raw.lineHeight, d.lineHeight, 1, 2),
+    letterSpacing: clampNum(raw.letterSpacing, d.letterSpacing, -1, 4),
     cursorBlink: raw.cursorBlink !== false,
     pastePolicy,
     autoCollapseOnExit: !!raw.autoCollapseOnExit,
     scrollback: clampInt(raw.scrollback, d.scrollback, 200, 20000),
+    renderer,
   }
+}
+
+function clampNum(value, fallback, min, max) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, n))
 }
 
 function normalizeQuota(raw) {
@@ -265,6 +294,7 @@ export function getAppSettings() {
       redact: normalizeRedact(raw.redact),
       updateCheck: normalizeUpdateCheck(raw.updateCheck),
       notifications: normalizeNotifications(raw.notifications),
+      ui: normalizeUi(raw.ui),
     }
   } catch {
     return {
@@ -279,6 +309,7 @@ export function getAppSettings() {
       redact: defaultRedactSettings(),
       updateCheck: defaultUpdateCheckSettings(),
       notifications: defaultNotificationSettings(),
+      ui: defaultUiSettings(),
     }
   }
 }
@@ -348,6 +379,7 @@ export function updateAppSettings(patch = {}) {
       patch.notifications !== undefined
         ? normalizeNotifications({ ...cur.notifications, ...patch.notifications })
         : cur.notifications,
+    ui: patch.ui !== undefined ? normalizeUi({ ...cur.ui, ...patch.ui }) : cur.ui,
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')
