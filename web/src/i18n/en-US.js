@@ -41,6 +41,17 @@ export const strings = {
     tui: 'TUI',
   },
   workbench: {
+    start: {
+      needTarget: 'Choose a group template or member',
+      group: 'Chat started',
+      memberNew: 'Started chat with member',
+      memberReused: 'Returned to member chat',
+      failed: 'Could not start chat; try again',
+    },
+    demo: {
+      missingGroup: 'Demo flow group not found. Enable demo examples in Settings.',
+      loadFailed: 'Could not load group templates',
+    },
     gate: {
       approveStart: 'Approved; starting run',
       cancelStart: 'Cancelled; task closed',

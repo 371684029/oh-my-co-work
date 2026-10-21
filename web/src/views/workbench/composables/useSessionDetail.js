@@ -33,6 +33,19 @@ import {
 } from './sessionConvMenuUi.js'
 import { resolveSessionId } from './sessionActionUi.js'
 import { gateActionToast } from './sessionGateFeedbackUi.js'
+import {
+  parseStartTarget,
+  startChatFailedMessage,
+  startChatNeedTargetMessage,
+  startChatSuccessMessage,
+} from './sessionStartChatUi.js'
+import {
+  DEMO_FLOW_GROUP_TITLE,
+  demoFlowLoadFailedMessage,
+  demoFlowMissingMessage,
+  findGroupByTitle,
+} from './sessionDemoFlowUi.js'
+import { t } from '../../../i18n/index.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -735,13 +748,12 @@ async function onConvMenu(command, item) {
 
 async function startChat(opts = {}) {
   const quiet = !!(opts && typeof opts === 'object' && !(opts instanceof Event) && opts.quiet)
-  const raw = String(startTarget.value || '')
-  const kind = raw.slice(0, 2)
-  const id = raw.slice(2)
-  if (!id || (kind !== 'g:' && kind !== 'm:')) {
-    ElMessage.warning('请选择群模板或成员')
+  const parsed = parseStartTarget(startTarget.value)
+  if (!parsed) {
+    ElMessage.warning(startChatNeedTargetMessage())
     return
   }
+  const { kind, id } = parsed
   if (startingChat.value) return
   startingChat.value = true
   try {
@@ -752,18 +764,12 @@ async function startChat(opts = {}) {
     await loadLists()
     await selectSession(s.id)
     if (!quiet) {
-      ElMessage.success(
-        kind === 'm:'
-          ? s.reused
-            ? '已回到与该成员的会话'
-            : '已与成员开聊'
-          : '已开聊',
-      )
+      ElMessage.success(startChatSuccessMessage(kind, s.reused))
     }
     return s
   } catch (e) {
     // 业务异常不 toast Error；无 message 时仍给反馈，避免像「点了没反应」
-    ElMessage.warning(e?.message || '开聊失败，请稍后重试')
+    ElMessage.warning(startChatFailedMessage(e))
   } finally {
     startingChat.value = false
   }
@@ -772,18 +778,18 @@ async function startChat(opts = {}) {
 /** 欢迎页：一键开聊演示流 */
 async function startDemoChat() {
   if (startingChat.value) return
-  let demo = groups.value.find((g) => g.title === '演示流')
+  let demo = findGroupByTitle(groups.value, DEMO_FLOW_GROUP_TITLE)
   if (!demo) {
     try {
       await loadLists()
     } catch (e) {
-      ElMessage.warning(e?.message || '加载群模板失败，请稍后重试')
+      ElMessage.warning(demoFlowLoadFailedMessage(e, t))
       return
     }
-    demo = groups.value.find((g) => g.title === '演示流')
+    demo = findGroupByTitle(groups.value, DEMO_FLOW_GROUP_TITLE)
   }
   if (!demo) {
-    ElMessage.warning('未找到「演示流」。请到设置打开「显示演示示例」。')
+    ElMessage.warning(demoFlowMissingMessage(t))
     return
   }
   startTarget.value = `g:${demo.id}`
