@@ -1,5 +1,4 @@
 import { ref, computed, watch, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
 import {
   formatBusinessIo,
   wholeOutputText,
@@ -9,12 +8,6 @@ import {
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
-import {
-  composerScopeKey,
-  stepInputHistory,
-} from '../../../composables/inputDraftHistory.js'
-import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
-import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
 import { createSessionNotesActions } from './sessionNotesActions.js'
@@ -26,10 +19,7 @@ import { createSessionComposerCopyActions } from './sessionComposerCopyActions.j
 import { createFlowScrollToAnchor } from './sessionFlowScrollUi.js'
 import { createSessionRestartActions } from './sessionRestartActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
-import {
-  announceMdHintLabel,
-  hashItemEmptyInsertMessage,
-} from './sessionWorkbenchFeedbackUi.js'
+import { announceMdHintLabel } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -89,6 +79,8 @@ import { createSessionGateActions } from './sessionGateActions.js'
 import { createSessionLoadActions } from './sessionLoadActions.js'
 import { createSessionComposerPanelSyncActions } from './sessionComposerPanelSyncActions.js'
 import { createSessionComposerPanelToggleActions } from './sessionComposerPanelToggleActions.js'
+import { createSessionComposerInsertActions } from './sessionComposerInsertActions.js'
+import { createSessionComposerKeydownActions } from './sessionComposerKeydownActions.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -99,7 +91,7 @@ import {
   announceKickoffFromContext,
   announceUserNotesFromContext,
 } from './sessionAttentionUi.js'
-import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
+import { textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
   composerPlaceholderForGate,
@@ -609,151 +601,11 @@ const { toggleSlashPanel, closeComposerPanel, toggleAtPanel, toggleHashPanel } =
     syncHashFromInput,
   })
 
-function onComposerKeydown(e) {
-  const pickerOpen =
-    useComposerStore().hashOpen || useComposerStore().atOpen || useComposerStore().slashOpen
-  if (
-    !pickerOpen &&
-    isHistoryNavigationKey(e) &&
-    activeId.value &&
-    !readSenderTextRaw().trim()
-  ) {
-    const delta = historyNavigationDelta(e)
-    const step = stepInputHistory(composerScopeKey(activeId.value), {
-      index: composerHistIndex,
-      delta,
-    })
-    if (step) {
-      e.preventDefault()
-      composerHistIndex = step.index
-      void replaceSenderText(step.text)
-      return
-    }
-  }
-
-  const store = useComposerStore()
-
-  // # 面板：群聊 / 文件夹 / #1…
-  if (store.hashOpen) {
-    const list = filteredHashItems.value
-    if (
-      handleComposerPickerListKeydown(e, {
-        listLength: list.length,
-        index: store.hashIndex,
-        setIndex: (i) => {
-          store.hashIndex = i
-        },
-        onPick: () => insertHashItem(list[store.hashIndex] || list[0]),
-        onClose: () => {
-          store.hashOpen = false
-        },
-      })
-    ) {
-      return
-    }
-    if (e.key === 'Backspace' || e.key === 'Delete') {
-      setTimeout(() => {
-        syncHashFromInput()
-        syncAtFromInput()
-        syncSlashFromInput()
-      }, 0)
-    }
-  }
-
-  // @ 面板：仅成员协助（节点重跑已从面板移除，避免误触重头跑）
-  if (store.atOpen) {
-    const members = filteredAtMembers.value
-    if (
-      handleComposerPickerListKeydown(e, {
-        listLength: members.length,
-        index: store.atIndex,
-        setIndex: (i) => {
-          store.atIndex = i
-        },
-        onPick: () => insertAtMember(members[store.atIndex] || members[0]),
-        onClose: () => {
-          store.atOpen = false
-        },
-      })
-    ) {
-      return
-    }
-  }
-
-  if (!store.slashOpen) {
-    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      setTimeout(syncSlashFromInput, 0)
-    }
-    if (e.key === '@' && !e.ctrlKey && !e.metaKey) {
-      setTimeout(syncAtFromInput, 0)
-    }
-    if (e.key === '#' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      setTimeout(syncHashFromInput, 0)
-    }
-    return
-  }
-  // Backspace/Delete 删掉 / 后立刻收起（不依赖 change 是否及时）
-  if (e.key === 'Backspace' || e.key === 'Delete') {
-    setTimeout(() => {
-      syncSlashFromInput()
-      syncAtFromInput()
-      syncHashFromInput()
-    }, 0)
-  }
-  const list = filteredSlashCmds.value
-  if (
-    handleComposerPickerListKeydown(e, {
-      listLength: list.length,
-      index: store.slashIndex,
-      setIndex: (i) => {
-        store.slashIndex = i
-      },
-      onPick: () => runSlash(list[store.slashIndex] || list[0]),
-      onClose: () => {
-        store.slashOpen = false
-      },
-      selectOnTab: false,
-      enterRequiresSlashPrefix: true,
-      readSenderText,
-    })
-  ) {
-    return
-  }
-}
-
-/** 把当前 @query 替换为 @显示名  */
-async function insertAtMember(m) {
-  if (!m) return
-  const name = m.display_name || m.name
-  const text = readSenderText()
-  const replaced = text.replace(/(^|[\s])@([^\s@]*)$/, `$1@${name} `)
-  const next = replaced === text ? `${text}@${name} ` : replaced
-  useComposerStore().atOpen = false
-  useComposerStore().atQuery = ''
-  await replaceSenderText(next)
-}
-
-/**
- * 选中项：去掉 # 唤起段，只插入正文（不含 #）。
- */
-async function insertHashItem(h) {
-  if (!h) return
-  const insert = String(h.value || '').trim()
-  const raw = readSenderTextRaw()
-  let stripped = stripTrailingHashTrigger(raw)
-  // 面板已开但 model 尚未带上 #：仍按触发态剥离
-  if (useComposerStore().hashOpen && stripped === raw.replace(/[ \t]+$/u, '')) {
-    stripped = stripTrailingHashTrigger(`${stripped}#`)
-  }
-  useComposerStore().hashOpen = false
-  useComposerStore().hashQuery = ''
-  if (!insert) {
-    await replaceSenderText(stripped)
-    ElMessage.warning(hashItemEmptyInsertMessage(h.name || h.label))
-    return
-  }
-  await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
-}
+const { insertAtMember, insertHashItem } = createSessionComposerInsertActions({
+  readSenderText,
+  readSenderTextRaw,
+  replaceSenderText,
+})
 
 /**
  * 将相邻的「未跑过且已废弃」节点归为一段并默认收起。
@@ -814,6 +666,23 @@ const { runSlash } = createSessionSlashActions({
   clearSender,
   replaceSenderText,
   api,
+})
+
+const { onComposerKeydown } = createSessionComposerKeydownActions({
+  activeId,
+  readSenderText,
+  readSenderTextRaw,
+  replaceSenderText,
+  composerHistIndexRef,
+  filteredHashItems,
+  filteredAtMembers,
+  filteredSlashCmds,
+  syncSlashFromInput,
+  syncAtFromInput,
+  syncHashFromInput,
+  insertAtMember,
+  insertHashItem,
+  runSlash,
 })
 
 const gateActionsRef = {}
