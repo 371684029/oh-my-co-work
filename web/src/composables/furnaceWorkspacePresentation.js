@@ -1,22 +1,26 @@
 /** Furnace workspace copy and mood (FE-01 pure helpers). */
 
-export const FURNACE_QUICK_CHIPS = [
-  '现在做到哪了？只看当前格。',
-  '当前格缺什么？',
-  '过闸的话只说通过或拒绝，先告诉我卡在哪。',
-]
+import { t } from '../i18n/index.js'
+
+export function furnaceQuickChips() {
+  return [
+    t('furnace.chips.current'),
+    t('furnace.chips.missing'),
+    t('furnace.chips.gate'),
+  ]
+}
 
 export function furnaceFailHint(terminal, agentKind) {
   const err = String(terminal?.lastError || terminal?.error?.message || '').trim()
   if (err) return err
   if (terminal?.status === 'failed') {
     const cmd = agentKind === 'cursor' ? 'cursor-agent' : 'grok'
-    return `本机没有把 ${cmd} 跑起来。常见原因：没装、没进 PATH、或还没登录。`
+    return t('furnace.fail.cliNotRunning').replace('{cmd}', cmd)
   }
   if (terminal?.exitCode != null && Number(terminal.exitCode) !== 0) {
-    return `进程已退出（exit ${terminal.exitCode}）。`
+    return t('furnace.fail.exitCode').replace('{code}', String(terminal.exitCode))
   }
-  return '这轮已经停了，所以没有新画面，也不能往进程里打字。'
+  return t('furnace.fail.stopped')
 }
 
 export function furnaceBuddyMood(terminalStatus, connectionStatus) {
@@ -35,13 +39,11 @@ export function furnaceFooterHint({
   isPagefill,
   focused,
 }) {
-  if (!isRunning) return '进程已结束 · 点「新开熔炉」开空对话；返回群聊只关皮'
+  if (!isRunning) return t('furnace.footer.stopped')
   if (surface === 'chat') {
-    return isPagefill
-      ? '对话框可上翻 · 长合同在文件里 · 模型菜单切 TUI 用键盘'
-      : '已在三栏中栏 · 可再满屏或全屏'
+    return isPagefill ? t('furnace.footer.chatPagefill') : t('furnace.footer.chatInline')
   }
-  if (focused) return 'TUI 输入中 · Esc 退出焦点 · 右侧箭头展开记录 · 菜单用键盘'
-  if (isPagefill) return '再按 Esc 缩小回工作台'
-  return '点 TUI 继续输入'
+  if (focused) return t('furnace.footer.tuiFocused')
+  if (isPagefill) return t('furnace.footer.tuiPagefillEsc')
+  return t('furnace.footer.tuiIdle')
 }

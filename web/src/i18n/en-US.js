@@ -13,6 +13,8 @@ export const strings = {
     docsTab: 'Docs hub',
     workbenchMain: 'Session main area',
     composer: 'Message composer',
+    composerExpand: 'Expand composer',
+    composerCollapse: 'Collapse composer',
     commandPaletteSearch: 'Command palette search',
     commandPaletteList: 'Command list',
     shortcutsPage: 'Slash commands and hotkeys',
@@ -39,6 +41,24 @@ export const strings = {
     closeFurnace: 'Close furnace',
     gui: 'GUI',
     tui: 'TUI',
+    chips: {
+      current: 'Where are we on the current step?',
+      missing: 'What is missing for this step?',
+      gate: 'For gates, say pass or reject and what is blocking.',
+    },
+    fail: {
+      cliNotRunning: '{cmd} is not running locally. Install it, fix PATH, or sign in.',
+      exitCode: 'Process exited (code {code}).',
+      stopped: 'This run stopped — no live output and no typing into the process.',
+    },
+    footer: {
+      stopped: 'Process ended · open a new furnace or go back to chat',
+      chatPagefill: 'Scroll chat · long docs in files · switch to TUI for model menu',
+      chatInline: 'Inline in workbench · page fill or fullscreen available',
+      tuiFocused: 'TUI focused · Esc to blur · arrow for history · keyboard menus',
+      tuiPagefillEsc: 'Press Esc to leave page fill',
+      tuiIdle: 'Click TUI to type',
+    },
   },
   workbench: {
     start: {
@@ -63,6 +83,11 @@ export const strings = {
       mentionOffsite: 'Offsite assist started',
       mainGateWaiting: 'Main flow still waiting; offsite assist does not submit the gate',
       newTask: 'New task created',
+    },
+    pin: {
+      pinned: 'Pinned',
+      unpinned: 'Unpinned',
+      failed: 'Action failed',
     },
     gate: {
       approveStart: 'Approved; starting run',

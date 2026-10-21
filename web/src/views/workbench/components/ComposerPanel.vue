@@ -13,7 +13,8 @@
           type="button"
           class="footer-toggle"
           :class="{ 'is-collapsed': composerStore.footerCollapsed }"
-          :title="composerStore.footerCollapsed ? '展开输入区' : '折叠输入区'"
+          :title="composerStore.footerCollapsed ? t('a11y.composerExpand') : t('a11y.composerCollapse')"
+          :aria-label="composerStore.footerCollapsed ? t('a11y.composerExpand') : t('a11y.composerCollapse')"
           :aria-expanded="!composerStore.footerCollapsed"
           @click="composerStore.footerCollapsed = !composerStore.footerCollapsed"
         >

@@ -4,11 +4,13 @@ import {
   furnaceBuddyMood,
   furnaceFailHint,
   furnaceFooterHint,
-  FURNACE_QUICK_CHIPS,
+  furnaceQuickChips,
 } from '../src/composables/furnaceWorkspacePresentation.js'
+import { setLocale } from '../src/i18n/index.js'
 
-test('FURNACE_QUICK_CHIPS is non-empty', () => {
-  assert.ok(FURNACE_QUICK_CHIPS.length >= 3)
+test('furnaceQuickChips is non-empty', () => {
+  setLocale('zh-CN')
+  assert.ok(furnaceQuickChips().length >= 3)
 })
 
 test('furnaceFailHint prefers lastError', () => {
@@ -21,5 +23,6 @@ test('furnaceBuddyMood running vs waiting', () => {
 })
 
 test('furnaceFooterHint when stopped', () => {
+  setLocale('zh-CN')
   assert.match(furnaceFooterHint({ isRunning: false }), /进程已结束/)
 })
