@@ -31,6 +31,7 @@ import {
   normalizeMenuCommand,
   sessionIdFromConvItem,
 } from './sessionConvMenuUi.js'
+import { resolveSessionId } from './sessionActionUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -1341,14 +1342,9 @@ async function rename() {
   }
 }
 
-/** 只接受字符串会话 id。Vue 把 @click="doDelete" 的 MouseEvent 当第一参时必须忽略，否则会 DELETE /sessions/[object PointerEvent] */
-function resolveSessionId(targetId) {
-  return typeof targetId === 'string' && targetId ? targetId : activeId.value
-}
-
 /** @param {string} [targetId] 侧栏菜单可传指定会话 id；顶栏按钮不传则删当前 */
 async function doDelete(targetId) {
-  const id = resolveSessionId(targetId)
+  const id = resolveSessionId(targetId, activeId.value)
   if (!id) {
     ElMessage.warning('没有可删除的会话')
     return

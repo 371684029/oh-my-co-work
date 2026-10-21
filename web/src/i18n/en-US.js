@@ -97,6 +97,19 @@ export const strings = {
       next: 'Next',
       close: 'Close',
     },
+    list: {
+      searching: 'Searching…',
+      noHits: 'No matches',
+      hitLine: 'Line {line}',
+      loading: 'Loading…',
+    },
+    pinQuickTitle: 'Pin',
+    badges: {
+      adapt: 'Adapt',
+      cloned: 'Clone',
+    },
+    truncatedWarn: 'File exceeds 1MB; display truncated',
+    editPlaceholder: 'Edit group report Markdown here',
     sortByGroup: 'By group template',
     sortByTime: 'By time',
     timeRange: {
