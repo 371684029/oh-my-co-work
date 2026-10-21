@@ -25,12 +25,9 @@ import { createSessionDeleteActions } from './sessionDeleteActions.js'
 import { createSessionRenameActions } from './sessionRenameActions.js'
 import { createSessionDocsHubActions } from './sessionDocsHubActions.js'
 import { createSessionComposerCopyActions } from './sessionComposerCopyActions.js'
+import { createFlowScrollToAnchor } from './sessionFlowScrollUi.js'
+import { createSessionRestartActions } from './sessionRestartActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
-import {
-  restartArchiveBlockedMessage,
-  restartFromNodeSuccessMessage,
-  restartOffsiteBlockedMessage,
-} from './sessionFlowRestartUi.js'
 import {
   announceMdHintLabel,
   hashItemEmptyInsertMessage,
@@ -134,7 +131,7 @@ export const terminalBridge = {}
 let _router = null
 let _route = null
 let _stopWatchers = []
-let flowScrollTimer = 0
+const flowScrollTimerRef = { id: 0 }
 
 // ===== 列表 =====
 const sessions = ref([])
@@ -894,64 +891,22 @@ const flowAnchorNodeId = computed(() =>
   }),
 )
 
-function scrollFlowToAnchor() {
-  if (useFlowStore().rightTab !== 'flow') return
-  const id = flowAnchorNodeId.value
-  if (!id) return
-  window.clearTimeout(flowScrollTimer)
-  flowScrollTimer = window.setTimeout(async () => {
-    await nextTick()
-    const el = document.querySelector(
-      `[data-flow-node-id="${typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id}"]`,
-    )
-    if (!el) return
-    el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
-  }, 40)
-}
+const { scrollFlowToAnchor, clearFlowScrollTimer } = createFlowScrollToAnchor({
+  getAnchorNodeId: () => flowAnchorNodeId.value,
+  isFlowTabActive: () => useFlowStore().rightTab === 'flow',
+  timerRef: flowScrollTimerRef,
+})
 
-/** 离开场外 / 从这里继续：往前跳直达；往回/再跑追加克隆；已归档亦可 */
-async function restartFromNode(n) {
-  if (!n || !activeId.value) return
-  if (n.step_type === 'offsite') {
-    ElMessage.warning(restartOffsiteBlockedMessage())
-    return
-  }
-  if (n.step_type === 'archive') {
-    ElMessage.warning(restartArchiveBlockedMessage())
-    return
-  }
-  if (gating.value) return
-  const wasOffsite = offsiteActive.value
-  const wasArchived = detail.value?.session?.status === 'archived'
-  gating.value = true
-  try {
-    const r = await api.sessions.restartFromNode(activeId.value, {
-      nodeInstanceId: n.id,
-      stepIndex: n.step_index,
-    })
-    useFlowStore().rightTab = 'flow'
-    useComposerStore().footerCollapsed = false
-    await loadDetail(activeId.value)
-    sessions.value = await api.sessions.list()
-    const focusId = r.nodeInstanceId || n.id
-    useFlowStore().expandedNodeId = focusId
-    scrollFlowToAnchor()
-    const title = r.title || n.title || `步骤 ${n.step_index + 1}`
-    ElMessage.success(
-      restartFromNodeSuccessMessage({
-        title,
-        forwardJump: r.forwardJump,
-        wasArchived,
-        wasOffsite,
-        offsiteArchived: r.offsiteArchived,
-      }),
-    )
-  } catch (e) {
-    // 业务异常由接口呈现，不再 toast Error
-  } finally {
-    gating.value = false
-  }
-}
+const { restartFromNode } = createSessionRestartActions({
+  activeId,
+  detail,
+  gating,
+  sessions,
+  offsiteActive,
+  loadDetail,
+  api,
+  scrollFlowToAnchor,
+})
 
 function goShortcuts() {
   _router.push('/settings/shortcuts')
@@ -1093,7 +1048,7 @@ export function initSessionDetail({ route, router }) {
 }
 
 export function disposeSessionDetail() {
-  window.clearTimeout(flowScrollTimer)
+  clearFlowScrollTimer()
   _stopWatchers.forEach((stop) => stop())
   _stopWatchers = []
 }
