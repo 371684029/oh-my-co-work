@@ -335,7 +335,7 @@ import {
 import { useFlowStore } from '../stores/flow.js'
 import { journalPathToDocFile } from '../composables/messageDocLinks.js'
 import { useDesktopBridge } from '../composables/useDesktopBridge.js'
-import { t } from '../i18n/zh-CN.js'
+import { t } from '../i18n/index.js'
 
 const { isDesktop, openDetachedWindow } = useDesktopBridge()
 const detachWindowLabel = computed(() => t('desktop.openDetachedWindow'))

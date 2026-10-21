@@ -155,7 +155,7 @@
 
 <script setup>
 import { abbrGroupTag } from '@acw/shared'
-import { t } from '../../../i18n/zh-CN.js'
+import { t } from '../../../i18n/index.js'
 import {
   startTarget,
   groups,

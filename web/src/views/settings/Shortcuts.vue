@@ -240,7 +240,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-import { t } from '../../i18n/zh-CN.js'
+import { t } from '../../i18n/index.js'
 
 const commands = ref([])
 const members = ref([])

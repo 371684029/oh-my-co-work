@@ -328,7 +328,7 @@ import { ElMessage } from 'element-plus'
 import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
 import { useComposerStore } from '../../../stores/composer.js'
-import { t } from '../../../i18n/zh-CN.js'
+import { t } from '../../../i18n/index.js'
 
 const composerStore = useComposerStore()
 

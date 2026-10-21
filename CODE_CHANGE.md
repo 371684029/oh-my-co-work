@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/i18n/index.js web/src/{main,App}.vue web/src/views/settings/Prefs.vue scripts/ci-e2e-smoke.mjs web/test/i18n.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08 locale 切换、QA-01 terminals API smoke
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionListUi,sessionBubbleListUi,useSessionDetail} web/src/views/settings/Shortcuts.vue scripts/ci-e2e-smoke.mjs server/test/backupRestore.test.js web/test/{sessionListUi,sessionBubbleListUi}.test.mjs docs/5.1.0-plan.md | FE-01 列表/气泡、SRV-01 async 往返测、QA-01 sessions smoke、UX-03 Shortcuts
 2026-10-21 | A/M | web/src/{components/terminal/{furnaceWorkspaceUi,FurnaceWorkspace.vue},views/workbench/{composables/{sessionGateIdempotency,useSessionDetail},components/ComposerPanel.vue},components/CommandPalette.vue,i18n/{zh-CN,en-US}} web/test/furnaceWorkspaceUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 furnace/gate、UX-03/DSK-08 composer+命令面板、SRV-04 勾选
 2026-10-21 | A/M | web/src/views/docs/{docsHubFilterUi,docsHubSearchUi,DocsHub.vue} scripts/ci-e2e-smoke.mjs web/test/docsHubFilterUi.test.mjs docs/5.1.0-plan.md | FE-01 DocsHub 筛选/搜索纯逻辑、QA-01 restore e2e

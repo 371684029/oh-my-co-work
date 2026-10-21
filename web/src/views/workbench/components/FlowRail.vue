@@ -518,7 +518,7 @@
 </template>
 
 <script setup>
-import { t } from '../../../i18n/zh-CN.js'
+import { t } from '../../../i18n/index.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   detail,

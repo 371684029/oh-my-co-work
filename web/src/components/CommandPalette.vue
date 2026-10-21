@@ -50,7 +50,7 @@ import {
   readStoredZoom,
 } from '../composables/uiZoom.js'
 import { applyColorScheme, normalizeColorScheme } from '../composables/uiColorScheme.js'
-import { t } from '../i18n/zh-CN.js'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },

@@ -3,6 +3,8 @@ import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import en from 'element-plus/es/locale/lang/en'
+import { getLocale } from './i18n/index.js'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import ElementPlusX from 'vue-element-plus-x'
 import 'vue-element-plus-x/styles/index.css'
@@ -19,7 +21,7 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 }
 // 基础 UI：Element Plus；AI 对话等：优先 Element-Plus-X
 app.use(pinia)
-app.use(ElementPlus, { locale: zhCn })
+app.use(ElementPlus, { locale: getLocale() === 'en-US' ? en : zhCn })
 app.use(ElementPlusX)
 app.use(router)
 app.mount('#app')

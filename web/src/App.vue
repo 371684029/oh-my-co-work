@@ -196,7 +196,7 @@ import {
 } from './composables/furnaceUi.js'
 import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
-import { t } from './i18n/zh-CN.js'
+import { t } from './i18n/index.js'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'
