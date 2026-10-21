@@ -90,6 +90,7 @@
           <el-input
             v-model="searchQuery"
             :placeholder="docsHubSearchPlaceholder()"
+            :aria-label="docsHubSearchPlaceholder()"
             clearable
             size="small"
           />

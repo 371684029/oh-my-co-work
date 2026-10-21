@@ -32,6 +32,7 @@ import {
   sessionIdFromConvItem,
 } from './sessionConvMenuUi.js'
 import { resolveSessionId } from './sessionActionUi.js'
+import { gateActionToast } from './sessionGateFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -1293,7 +1294,8 @@ async function approveSessionStart(m) {
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
-    ElMessage.success('已通过，开始执行')
+    const toast = gateActionToast('approve_start', text)
+    if (toast?.level === 'success') ElMessage.success(toast.message)
   } catch (e) {
     ElMessage.error(e.message)
   } finally {
@@ -1316,15 +1318,11 @@ async function gate(m, action) {
     clearSender()
     await loadDetail(activeId.value)
     sessions.value = await api.sessions.list()
-    if (action === 'approve_start') ElMessage.success('已通过，开始执行')
-    else if (action === 'cancel_start') ElMessage.info('已取消，任务关闭')
-    else if (action === 'resume_interrupted') ElMessage.success('已继续')
-    else if (action === 'discard_interrupted' || action === 'archive_interrupted')
-      ElMessage.info('已放弃；进程请到设置里释放')
-    else if (action === 'approve' || action === 'admin_approve')
-      ElMessage.success(text?.trim() ? '已同意并记录附言' : '已同意')
-    else if (action === 'reject' || action === 'admin_reject')
-      ElMessage.info(text?.trim() ? '已拒绝并记录附言' : '已拒绝')
+    const toast = gateActionToast(action, text)
+    if (toast) {
+      if (toast.level === 'success') ElMessage.success(toast.message)
+      else ElMessage.info(toast.message)
+    }
   } catch (e) {
     ElMessage.error(e.message)
   } finally {

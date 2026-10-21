@@ -13,7 +13,7 @@
             title="关掉这层皮，回到群聊。Agent 进程后台常驻；要清上下文请关熔炉或新开。"
             @click="$emit('close')"
           >
-            返回群聊
+            {{ furnaceBackToChatLabel() }}
           </button>
           <span class="furnace-divider" />
           <div class="furnace-agent-tabs">
@@ -51,7 +51,7 @@
             title="GUI：可读正文 + 底部输入；模型菜单请用 TUI"
             @click="surface = 'chat'"
           >
-            GUI
+            {{ furnaceGuiLabel() }}
           </button>
           <button
             v-if="guiEnabled"
@@ -61,7 +61,7 @@
             title="TUI：原 Grok 终端；右侧箭头展开对话记录"
             @click="surface = 'tui'"
           >
-            TUI
+            {{ furnaceTuiLabel() }}
           </button>
           <button
             type="button"
@@ -73,7 +73,7 @@
             "
             @click="togglePagefill"
           >
-            {{ isPagefill ? '退出满屏' : '满屏' }}
+            {{ furnacePagefillLabel(isPagefill) }}
           </button>
           <button
             type="button"
@@ -82,19 +82,19 @@
             :title="isFullscreen ? '退出系统全屏' : '浏览器全屏'"
             @click="toggleTerminalFullscreen"
           >
-            {{ isFullscreen ? '退出全屏' : '全屏' }}
+            {{ furnaceFullscreenLabel(isFullscreen) }}
           </button>
           <details class="furnace-more">
-            <summary class="furnace-btn" title="关掉或新开 Grok 进程；返回群聊只关皮">进程</summary>
+            <summary class="furnace-btn" title="关掉或新开 Grok 进程；返回群聊只关皮">{{ furnaceProcessMenuSummary() }}</summary>
             <div class="furnace-more-menu">
-              <button type="button" class="furnace-more-item" @click="emit('reopen', { agent: activeAgent })">新开熔炉</button>
+              <button type="button" class="furnace-more-item" @click="emit('reopen', { agent: activeAgent })">{{ furnaceReopenLabel() }}</button>
               <button
                 v-if="isRunning"
                 type="button"
                 class="furnace-more-item danger"
                 @click="$emit('close-furnace')"
               >
-                关闭熔炉
+                {{ furnaceCloseFurnaceLabel() }}
               </button>
             </div>
           </details>
@@ -405,6 +405,16 @@ import {
   isEventWithinFurnaceRoot,
   shouldIgnoreFurnaceHotkeyTarget,
 } from './furnaceWorkspaceUi.js'
+import {
+  furnaceBackToChatLabel,
+  furnaceCloseFurnaceLabel,
+  furnaceFullscreenLabel,
+  furnaceGuiLabel,
+  furnacePagefillLabel,
+  furnaceProcessMenuSummary,
+  furnaceReopenLabel,
+  furnaceTuiLabel,
+} from '../../composables/furnaceWorkspaceCopy.js'
 
 const getTurnMeta = getFurnaceTurnMeta
 
