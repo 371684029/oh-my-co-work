@@ -310,8 +310,6 @@ import {
   furnaceTuiDrawerEmpty,
   furnaceTuiDrawerHead,
   furnaceTuiHistoryTitle,
-  furnaceTuiLabel,
-  furnaceTuiModeTitle,
 } from '../../composables/furnaceWorkspaceCopy.js'
 
 const getTurnMeta = getFurnaceTurnMeta
