@@ -63,3 +63,54 @@ test('createNotifier click focuses window and routes deepLink (NTF-T2)', () => {
   assert.equal(focused, true)
   assert.equal(deepLink, 'session:s1')
 })
+
+test('createNotifier reports click/dismiss to onNotificationAction (NTF-14)', () => {
+  const actions = []
+  const instances = []
+  class FakeNotification {
+    constructor() {}
+    on(evt, fn) {
+      if (evt === 'click') this._click = fn
+      if (evt === 'close') this._close = fn
+    }
+    show() {
+      instances.push(this)
+    }
+  }
+  FakeNotification.isSupported = () => true
+  const notifier = createNotifier({
+    Notification: FakeNotification,
+    getMainWindow: () => null,
+    onNotificationAction: (p) => actions.push(p),
+  })
+  notifier.notify({ id: 'n1', title: 'T', body: 'B', deepLink: 'session:x' })
+  assert.equal(instances.length, 1)
+  instances[0]._click()
+  instances[0]._close()
+  assert.deepEqual(actions, [
+    { id: 'n1', deepLink: 'session:x', action: 'click' },
+    { id: 'n1', action: 'dismiss' },
+  ])
+})
+
+test('createNotifier silent follows level and sound (NTF-13)', () => {
+  let lastSilent
+  class FakeNotification {
+    constructor(opts) {
+      lastSilent = opts?.silent
+    }
+    on() {}
+    show() {}
+  }
+  FakeNotification.isSupported = () => true
+  const notifier = createNotifier({
+    Notification: FakeNotification,
+    getMainWindow: () => null,
+  })
+  notifier.notify({ title: 'A', level: 'action', sound: true })
+  assert.equal(lastSilent, false)
+  notifier.notify({ title: 'D', level: 'done', sound: true })
+  assert.equal(lastSilent, true)
+  notifier.notify({ title: 'E', level: 'error', sound: false })
+  assert.equal(lastSilent, true)
+})

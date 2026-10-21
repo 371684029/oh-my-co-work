@@ -79,7 +79,7 @@ function showTrayHintOnce() {
     if (Notification.isSupported()) {
       new Notification({
         title: 'oh-my-co-work',
-        body: '已最小化到托盘，退出请用托盘菜单 → 退出。',
+        body: '已最小化到托盘，通知仍会送达；退出请用托盘菜单 → 退出。',
       }).show()
     }
   } catch {
@@ -163,6 +163,10 @@ function ensureNotifier() {
             : workbenchUrl(appOrigin(), parsed.sessionId)
         mainWindow.loadURL(url).catch(() => {})
       },
+      onNotificationAction(payload) {
+        if (!mainWindow || mainWindow.isDestroyed()) return
+        mainWindow.webContents.send('acw:notification-action', payload || {})
+      },
     })
   }
   return notifier
@@ -214,7 +218,18 @@ function createTray() {
         { type: 'separator' },
         {
           label: '退出',
-          click: () => {
+          click: async () => {
+            if (trayPendingCount > 0) {
+              const { response } = await dialog.showMessageBox({
+                type: 'warning',
+                title: '仍有待处理事项',
+                message: `当前有 ${trayPendingCount} 项待处理通知/闸门，确定要退出吗？`,
+                buttons: ['取消', '仍要退出'],
+                defaultId: 0,
+                cancelId: 0,
+              })
+              if (response !== 1) return
+            }
             isQuitting = true
             app.quit()
           },
@@ -306,7 +321,9 @@ function registerIpc() {
     const body = String(payload?.options?.body || '')
     const id = payload?.options?.id
     const deepLink = payload?.options?.deepLink
-    const shown = ensureNotifier().notify({ id, title, body, deepLink })
+    const level = payload?.options?.level
+    const sound = payload?.options?.sound
+    const shown = ensureNotifier().notify({ id, title, body, deepLink, level, sound })
     if (shown && mainWindow && !mainWindow.isDestroyed()) {
       if (!mainWindow.isFocused() || !mainWindow.isVisible()) {
         mainWindow.flashFrame(true)

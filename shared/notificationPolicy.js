@@ -78,6 +78,14 @@ export function shouldStopReminding({ readAt, dismissedAt, sentCount, maxReminde
   return Number(sentCount || 0) >= maxReminders
 }
 
+/** Electron `Notification` silent flag (5.4.0 NTF-13). */
+export function notificationShouldBeSilent({ level, sound } = {}) {
+  if (sound === false) return true
+  const lv = String(level || 'action').toLowerCase()
+  if (lv === 'done' || lv === 'info') return true
+  return false
+}
+
 export function canDeliverDesktopNotification(ctx) {
   if (!ctx?.enabled) return { ok: false, reason: 'disabled' }
   if (!ctx.levelAllowed) return { ok: false, reason: 'level' }

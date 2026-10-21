@@ -7,6 +7,7 @@ import {
   mergeGateNotificationBodies,
   shouldStopReminding,
   canDeliverDesktopNotification,
+  notificationShouldBeSilent,
 } from '@acw/shared'
 
 test('isWithinQuietHours handles wrap-around', () => {
@@ -77,4 +78,11 @@ test('canDeliverDesktopNotification combines policy', () => {
     canDeliverDesktopNotification({ ...base, dedupe: true }).reason,
     'dedupe',
   )
+})
+
+test('notificationShouldBeSilent respects level and user sound pref', () => {
+  assert.equal(notificationShouldBeSilent({ level: 'action', sound: true }), false)
+  assert.equal(notificationShouldBeSilent({ level: 'error', sound: true }), false)
+  assert.equal(notificationShouldBeSilent({ level: 'done', sound: true }), true)
+  assert.equal(notificationShouldBeSilent({ level: 'action', sound: false }), true)
 })

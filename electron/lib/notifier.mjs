@@ -3,7 +3,7 @@
  * Dedupe, click-to-focus, optional deepLink for session routing.
  */
 
-import { shouldDedupeNotification } from '@acw/shared'
+import { shouldDedupeNotification, notificationShouldBeSilent } from '@acw/shared'
 
 export { shouldDedupeNotification }
 
@@ -11,11 +11,12 @@ export { shouldDedupeNotification }
  * @param {object} deps
  * @param {() => import('electron').BrowserWindow | null} deps.getMainWindow
  * @param {(deepLink: string) => void} [deps.onDeepLink]
+ * @param {(payload: { id: string, deepLink?: string, action: string }) => void} [deps.onNotificationAction]
  * @param {typeof import('electron').Notification} deps.Notification
  */
-export function createNotifier({ getMainWindow, onDeepLink, Notification }) {
+export function createNotifier({ getMainWindow, onDeepLink, onNotificationAction, Notification }) {
   /**
-   * @param {{ id?: string, title: string, body?: string, deepLink?: string, skipDedupe?: boolean }} payload
+   * @param {{ id?: string, title: string, body?: string, deepLink?: string, skipDedupe?: boolean, level?: string, sound?: boolean }} payload
    */
   function notify(payload) {
     const title = String(payload?.title || '').trim()
@@ -24,7 +25,11 @@ export function createNotifier({ getMainWindow, onDeepLink, Notification }) {
     const id = String(payload?.id || `${title}\0${body}`).trim()
     if (!payload?.skipDedupe && shouldDedupeNotification(id)) return false
     if (!Notification.isSupported()) return false
-    const n = new Notification({ title, body })
+    const silent = notificationShouldBeSilent({
+      level: payload?.level,
+      sound: payload?.sound,
+    })
+    const n = new Notification({ title, body, silent })
     n.on('click', () => {
       const win = getMainWindow()
       if (win && !win.isDestroyed()) {
@@ -32,7 +37,15 @@ export function createNotifier({ getMainWindow, onDeepLink, Notification }) {
         win.focus()
       }
       const link = String(payload?.deepLink || '').trim()
+      if (onNotificationAction) {
+        onNotificationAction({ id, deepLink: link || undefined, action: 'click' })
+      }
       if (link && onDeepLink) onDeepLink(link)
+    })
+    n.on('close', () => {
+      if (onNotificationAction) {
+        onNotificationAction({ id, action: 'dismiss' })
+      }
     })
     n.show()
     return true

@@ -32,7 +32,10 @@ import {
   pickLiveFurnaceTerminal,
 } from '../../../composables/furnaceReopen.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
-import { recordNotificationInbox } from '../../../composables/notificationInbox.js'
+import {
+  recordNotificationInbox,
+  getInboxEntry,
+} from '../../../composables/notificationInbox.js'
 import {
   terminalBridge,
   activeId,
@@ -78,6 +81,7 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
   }
   const now = Date.now()
   const notifyId = String(id || `${t}\0${b}`)
+  const inboxHit = getInboxEntry(notifyId)
   const delivery = canDeliverDesktopNotification({
     enabled: prefs.enabled && shouldNotifyLevel(level),
     levelAllowed: shouldNotifyLevel(level),
@@ -95,6 +99,8 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
     remind: {
       sentCount: notifyRemindCount.get(notifyId) || 0,
       maxReminders: Number(prefs.maxReminders) || 3,
+      readAt: inboxHit?.read ? inboxHit.handledAt || inboxHit.at : null,
+      dismissedAt: inboxHit?.handledAt || null,
     },
     dedupe: shouldDedupeNotification(notifyId, now),
   })
@@ -103,7 +109,13 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
   notifyRemindCount.set(notifyId, (notifyRemindCount.get(notifyId) || 0) + 1)
   const desktop = window.__ACW_DESKTOP_API__
   if (desktop?.notify) {
-    desktop.notify(t, { body: b, id, deepLink })
+    desktop.notify(t, {
+      body: b,
+      id,
+      deepLink,
+      level,
+      sound: prefs.sound !== false,
+    })
     return
   }
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {

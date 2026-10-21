@@ -11,6 +11,7 @@ import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
 import { loadNotificationPrefs } from './useNotificationPrefs.js'
 import { syncTrayStatus } from './syncTrayStatus.js'
+import { markInboxHandled } from './notificationInbox.js'
 import {
   applyColorScheme,
   normalizeColorScheme,
@@ -118,6 +119,9 @@ export function useAppInit() {
 
   onMounted(() => {
     desktop.initDesktopBridge()
+    window.__ACW_DESKTOP_API__?.onNotificationAction?.(({ id, action }) => {
+      if (id) markInboxHandled(id, action || 'click')
+    })
     applyColorScheme(colorSchemePref.value)
     stopSystemThemeWatch = watchSystemColorScheme(() => {
       if (colorSchemePref.value === 'system') applyColorScheme('system')

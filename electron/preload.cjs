@@ -25,4 +25,8 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
     if (typeof handler !== 'function') return
     ipcRenderer.on('acw:zoom-menu', (_event, payload) => handler(payload || {}))
   },
+  onNotificationAction: (handler) => {
+    if (typeof handler !== 'function') return
+    ipcRenderer.on('acw:notification-action', (_event, payload) => handler(payload || {}))
+  },
 })

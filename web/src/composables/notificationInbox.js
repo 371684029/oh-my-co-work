@@ -47,6 +47,8 @@ export function recordNotificationInbox(entry) {
     sessionId: entry.sessionId || null,
     deepLink: entry.deepLink || null,
     read: false,
+    handledAt: null,
+    handleAction: null,
   }
   if (!row.title) return
   const dup = items.value.find((x) => x.id === id)
@@ -62,6 +64,20 @@ export function recordNotificationInbox(entry) {
 export function markInboxRead(id) {
   const hit = items.value.find((x) => x.id === id)
   if (hit) hit.read = true
+  persist()
+}
+
+export function getInboxEntry(id) {
+  return items.value.find((x) => x.id === id) || null
+}
+
+/** Click/dismiss on system notification (5.4.0 NTF-14). */
+export function markInboxHandled(id, action = 'click') {
+  const hit = items.value.find((x) => x.id === id)
+  if (!hit) return
+  hit.read = true
+  hit.handledAt = new Date().toISOString()
+  hit.handleAction = String(action || 'click')
   persist()
 }
 
