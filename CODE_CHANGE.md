@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | server/src/{usageStats,auditExport,agentRegistry,builtinTemplates,templatePack,terminal/terminalService,appSettings,routes}.js web/{src/api,views/settings/{Groups,Members,Prefs},views/workbench/components/FlowRail}.vue server/test/{usageStats,agentRegistry,templatePack}.test.js docs/{5.3.0,5.4.0}-plan.md | TRC-04~06、REU-02/03、EXT-01、NTF-18、DSK-04 文档
 2026-10-21 | A/M | server/src/{sessionTimeline,diagnostics,index,routes}.js electron/main.js web/{src/views/workbench/components/FlowRail,views/settings/About,stores/flow,api}.js electron/test/smoke-chain.test.mjs server/test/{sessionTimeline,diagnostics}.test.js docs/{5.1.0,5.3.0}-plan.md | TRC-03、ENG-01/05、CSP、诊断导出
 2026-10-21 | A/M | server/src/{stepRevert,routes}.js web/{src/components/CommandPalette.vue,src/views/settings/{RestoreCenter,Prefs,Shortcuts},src/views/workbench/components/FlowRail.vue,src/router.js,src/api.js} electron/{main,preload.cjs} docs/{5.3.0,5.4.0}-plan.md package.json */package.json server/config/about.json | TRC-02、DSK-01、NTF-11/12、版本 5.3.0
 2026-10-21 | A/M | server/src/{stepSnapshot,engine/advance}.js shared/{stepChangeSummary,index}.js web/src/views/workbench/components/FlowRail.vue server/test/stepSnapshot.test.js docs/5.3.0-plan.md | TRC-01 git 步骤快照与流程轨 diff

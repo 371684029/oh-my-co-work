@@ -248,6 +248,8 @@ export function defaultNotificationSettings() {
     quietHours: { enabled: false, start: '22:00', end: '07:00' },
     remindIntervalMs: 30_000,
     maxReminders: 3,
+    /** NTF-18: inline reply / action buttons on OS notifications (default off). */
+    allowActionButtons: false,
   }
 }
 
@@ -273,12 +275,26 @@ function normalizeNotifications(raw) {
     remindIntervalMs:
       Number(raw.remindIntervalMs) > 0 ? Number(raw.remindIntervalMs) : d.remindIntervalMs,
     maxReminders: Number(raw.maxReminders) > 0 ? Number(raw.maxReminders) : d.maxReminders,
+    allowActionButtons: raw.allowActionButtons === true,
   }
 }
 
 function normalizeUpdateCheck(raw) {
   const r = raw && typeof raw === 'object' ? raw : {}
   return { startup: r.startup !== false }
+}
+
+function normalizeCustomAgents(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((a) => a && a.id)
+    .map((a) => ({
+      id: String(a.id).slice(0, 64),
+      displayName: String(a.displayName || a.id).slice(0, 120),
+      command: String(a.command || '').slice(0, 512),
+      pastePolicy: a.pastePolicy === 'bracketed' ? 'bracketed' : 'confirm',
+      structuredAdapter: a.structuredAdapter ? String(a.structuredAdapter) : null,
+    }))
 }
 
 export function normalizeAutoArchiveHours(v) {
@@ -309,6 +325,7 @@ export function getAppSettings() {
       updateCheck: normalizeUpdateCheck(raw.updateCheck),
       notifications: normalizeNotifications(raw.notifications),
       ui: normalizeUi(raw.ui),
+      customAgents: normalizeCustomAgents(raw.customAgents),
     }
   } catch {
     return {
@@ -324,6 +341,7 @@ export function getAppSettings() {
       updateCheck: defaultUpdateCheckSettings(),
       notifications: defaultNotificationSettings(),
       ui: defaultUiSettings(),
+      customAgents: [],
     }
   }
 }
@@ -394,6 +412,10 @@ export function updateAppSettings(patch = {}) {
         ? normalizeNotifications({ ...cur.notifications, ...patch.notifications })
         : cur.notifications,
     ui: patch.ui !== undefined ? normalizeUi({ ...cur.ui, ...patch.ui }) : cur.ui,
+    customAgents:
+      patch.customAgents !== undefined
+        ? normalizeCustomAgents(patch.customAgents)
+        : cur.customAgents || [],
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

@@ -7,6 +7,16 @@
       </div>
       <div class="page-head-actions">
         <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <el-dropdown trigger="click" @command="applyBuiltinTemplate">
+          <el-button>从模板库创建</el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="t in builtinTemplates" :key="t.id" :command="t.id">
+                {{ t.title }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
         <el-button type="primary" @click="openCreate()">新建群模板</el-button>
       </div>
@@ -297,6 +307,26 @@ const showBatch = ref(false)
 const batchMemberIds = ref([])
 const batchRefine = ref(false)
 const importFileRef = ref(null)
+const builtinTemplates = ref([])
+
+async function loadBuiltinTemplates() {
+  try {
+    const r = await api.templates.listBuiltin()
+    builtinTemplates.value = r.templates || []
+  } catch {
+    builtinTemplates.value = []
+  }
+}
+
+async function applyBuiltinTemplate(id) {
+  try {
+    await api.templates.applyBuiltin(id)
+    ElMessage.success('已从模板库创建群模板')
+    await load()
+  } catch (e) {
+    ElMessage.error(e.message || '创建失败')
+  }
+}
 
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -329,7 +359,18 @@ async function onImportFile(ev) {
   try {
     const text = await file.text()
     const pack = JSON.parse(text)
-    await api.templates.import(pack, { onConflict: 'rename' })
+    let vars = null
+    try {
+      const { value } = await ElMessageBox.prompt(
+        '工作目录（替换 {{WORKSPACE}}，留空则用服务端当前目录）',
+        '导入模板',
+        { inputPlaceholder: '可选' },
+      )
+      if (value && String(value).trim()) vars = { workspace: String(value).trim() }
+    } catch {
+      return
+    }
+    await api.templates.import(pack, { onConflict: 'rename', vars })
     await load()
     ElMessage.success('模板已导入')
   } catch (e) {
@@ -662,7 +703,10 @@ async function start(row) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadBuiltinTemplates()
+})
 </script>
 
 <style scoped>

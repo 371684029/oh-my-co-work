@@ -149,12 +149,20 @@ export const api = {
     exportTemplate: (id) => req(`/groups/${id}/export-template`),
   },
   templates: {
-    import: (pack, { onConflict = 'rename' } = {}) =>
+    import: (pack, { onConflict = 'rename', vars = null } = {}) =>
       req('/templates/import', {
         method: 'POST',
-        body: JSON.stringify({ pack, onConflict }),
+        body: JSON.stringify({ pack, onConflict, vars }),
+      }),
+    listBuiltin: () => req('/templates/builtin'),
+    applyBuiltin: (id, body = {}) =>
+      req(`/templates/builtin/${encodeURIComponent(id)}/apply`, {
+        method: 'POST',
+        body: JSON.stringify(body),
       }),
   },
+  usageStats: () => req('/usage-stats'),
+  agentRegistry: () => req('/agent-registry'),
   sessions: {
     list: (status) => req(status ? `/sessions?status=${status}` : '/sessions'),
     get: (id) => req(`/sessions/${id}`),
@@ -204,6 +212,24 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body || {}),
       }),
+    downloadAudit: async (sessionId) => {
+      const token = await accessToken()
+      const res = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}/audit-export`, {
+        headers: { 'X-ACW-Token': token },
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit-${sessionId}.md`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+    terminalLogPreview: (sessionId, terminalId) =>
+      req(
+        `/sessions/${sessionId}/terminals/${terminalId}/log?format=json`,
+      ),
     previewStepRevert: (sessionId, nodeId) =>
       req(`/sessions/${sessionId}/nodes/${nodeId}/step-revert/preview`),
     applyStepRevert: (sessionId, nodeId, { force = false } = {}) =>

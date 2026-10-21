@@ -339,7 +339,18 @@ async function onImportFile(ev) {
   try {
     const text = await file.text()
     const pack = JSON.parse(text)
-    await api.templates.import(pack, { onConflict: 'rename' })
+    let vars = null
+    try {
+      const { value } = await ElMessageBox.prompt(
+        '工作目录（替换模板中的 {{WORKSPACE}}，留空则用服务端当前目录）',
+        '导入模板',
+        { inputPlaceholder: '例如 D:\\projects\\app 或 /home/user/proj' },
+      )
+      if (value && String(value).trim()) vars = { workspace: String(value).trim() }
+    } catch {
+      return
+    }
+    await api.templates.import(pack, { onConflict: 'rename', vars })
     await load()
     ElMessage.success('模板已导入')
   } catch (e) {

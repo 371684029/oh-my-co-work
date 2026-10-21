@@ -42,6 +42,10 @@ import {
 } from './stepRevert.js'
 import { buildSessionTimeline, filterTimelineEvents } from './sessionTimeline.js'
 import { collectDiagnostics } from './diagnostics.js'
+import { collectUsageStats } from './usageStats.js'
+import { buildSessionAuditMarkdown } from './auditExport.js'
+import { listAgentDefinitions } from './agentRegistry.js'
+import { listBuiltinTemplates, BUILTIN_TEMPLATES } from './builtinTemplates.js'
 import {
   exportMemberTemplate,
   exportGroupTemplate,
@@ -100,6 +104,7 @@ import {
   listSessionTerminals,
   deleteTerminalLog,
   readTerminalLogPath,
+  readTerminalLogPreview,
 } from './terminal/terminalService.js'
 import { closeFurnace, reopenFurnace } from './furnaceLifecycle.js'
 import { appendAgentRefine, buildRefineSkillPrompt } from './agentRefine.js'
@@ -397,7 +402,8 @@ router.post('/templates/import', (req, res) => {
     const body = req.body || {}
     const onConflict = body.onConflict || 'rename'
     const pack = body.pack ?? body
-    res.status(201).json(importTemplatePack(pack, { onConflict }))
+    const vars = body.vars && typeof body.vars === 'object' ? body.vars : null
+    res.status(201).json(importTemplatePack(pack, { onConflict, vars }))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }
@@ -487,6 +493,58 @@ router.post('/sessions/:id/nodes/:nodeId/step-revert', (req, res) => {
 
 router.get('/diagnostics', (_req, res) => {
   res.json(collectDiagnostics())
+})
+
+router.get('/usage-stats', (_req, res) => {
+  res.json(collectUsageStats())
+})
+
+router.get('/agent-registry', (_req, res) => {
+  res.json({ agents: listAgentDefinitions() })
+})
+
+router.get('/templates/builtin', (_req, res) => {
+  res.json({ templates: listBuiltinTemplates() })
+})
+
+router.post('/templates/builtin/:id/apply', (req, res) => {
+  try {
+    const tpl = BUILTIN_TEMPLATES.find((t) => t.id === req.params.id)
+    if (!tpl) return res.status(404).json({ error: '模板不存在' })
+    let memberId = String(req.body?.memberId || '').trim()
+    if (!memberId) {
+      const pick = listMembers().find((m) => m.kind === 'script' && m.enabled) ||
+        listMembers().find((m) => m.kind === 'echo' && m.enabled)
+      memberId = pick?.id || ''
+    }
+    if (!memberId) {
+      return res.status(400).json({ error: '请先创建至少一个成员，或指定 memberId' })
+    }
+    const steps = tpl.steps.map((s) => {
+      if (s.type !== 'member') return { ...s }
+      return { ...s, memberId }
+    })
+    const row = createGroup({
+      title: tpl.title,
+      description: tpl.description,
+      steps,
+      config: { builtinTemplate: tpl.id, demo: false },
+    })
+    res.status(201).json(row)
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/sessions/:id/audit-export', (req, res) => {
+  const md = buildSessionAuditMarkdown(req.params.id)
+  if (!md) return res.status(404).json({ error: 'not found' })
+  res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="audit-${req.params.id}.md"`,
+  )
+  res.send(md)
 })
 
 router.get('/sessions/:id/timeline', (req, res) => {
@@ -787,6 +845,11 @@ router.post('/sessions/:id/furnace/reopen', async (req, res) => {
   }
 })
 router.get('/sessions/:id/terminals/:terminalId/log', (req, res) => {
+  if (req.query.format === 'json') {
+    const preview = readTerminalLogPreview(req.params.id, req.params.terminalId)
+    if (!preview) return res.status(404).json({ error: '日志不存在' })
+    return res.json(preview)
+  }
   const file = readTerminalLogPath(req.params.id, req.params.terminalId)
   if (!file) return res.status(404).json({ error: '日志不存在' })
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')

@@ -340,6 +340,9 @@
         <el-button size="small" text :loading="timelineLoading" @click="loadSessionTimeline">
           刷新
         </el-button>
+        <el-button size="small" text :disabled="!activeId" @click="downloadSessionAudit">
+          审计导出
+        </el-button>
       </div>
       <p v-if="!activeId" class="timeline-hint">请先选择会话</p>
       <ul v-else-if="timelineEvents.length" class="timeline-list">
@@ -491,6 +494,13 @@
       <EmptyState v-else title="文档中心" description="选择会话后查看群报告与台账" />
     </div>
 
+    <el-dialog v-model="terminalReplayOpen" title="终端回放（日志尾部）" width="640px" append-to-body>
+      <p v-if="terminalReplayMeta" class="timeline-hint">
+        {{ terminalReplayMeta.truncated ? '（仅显示尾部）' : '' }}
+        {{ terminalReplayMeta.bytes ? `${terminalReplayMeta.bytes} 字节` : '' }}
+      </p>
+      <pre class="flow-io-pre flow-io-pre--diff terminal-replay-pre">{{ terminalReplayText }}</pre>
+    </el-dialog>
   </aside>
 </template>
 
@@ -616,8 +626,37 @@ async function loadSessionTimeline() {
   }
 }
 
+const terminalReplayOpen = ref(false)
+const terminalReplayText = ref('')
+const terminalReplayMeta = ref(null)
+
+async function downloadSessionAudit() {
+  if (!activeId.value) return
+  try {
+    await api.sessions.downloadAudit(activeId.value)
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+async function openTerminalReplay(terminalId) {
+  if (!activeId.value || !terminalId) return
+  try {
+    const preview = await api.sessions.terminalLogPreview(activeId.value, terminalId)
+    terminalReplayText.value = preview.text || ''
+    terminalReplayMeta.value = preview
+    terminalReplayOpen.value = true
+  } catch (e) {
+    ElMessage.error(e.message || '无法读取终端日志')
+  }
+}
+
 function onTimelineEvent(ev) {
   if (!ev) return
+  if (ev.category === 'terminal' && ev.terminalId) {
+    openTerminalReplay(ev.terminalId)
+    return
+  }
   if (ev.nodeId && detail.value?.nodes) {
     const node = detail.value.nodes.find((n) => n.id === ev.nodeId)
     if (node) {
@@ -1307,6 +1346,11 @@ watch(
 }
 .timeline-title {
   word-break: break-word;
+}
+
+.terminal-replay-pre {
+  max-height: 420px;
+  overflow: auto;
 }
 
 .docs-pane {

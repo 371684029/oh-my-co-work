@@ -102,6 +102,16 @@
           发送测试通知
         </el-button>
       </div>
+      <p class="prefs-hint" style="margin-top: 8px">
+        系统通知上的快捷按钮与内联回复（NTF-18）默认关闭，避免误触；当前版本仅支持点击通知进入应用。
+      </p>
+    </section>
+
+    <section class="prefs-card">
+      <div class="prefs-title">本机用量统计</div>
+      <p class="prefs-hint">不上传数据，仅汇总本库内节点耗时、失败率与日志占用（TRC-05）。</p>
+      <el-button size="small" :loading="usageLoading" @click="loadUsageStats">刷新统计</el-button>
+      <pre v-if="usageStats" class="usage-pre">{{ usageSummaryText }}</pre>
     </section>
 
     <section class="prefs-card">
@@ -490,6 +500,22 @@ const notifyPrefs = ref({
 })
 const savingNotify = ref(false)
 const notifyPlatform = ref({ supported: true, platform: 'web', hint: '' })
+const usageLoading = ref(false)
+const usageStats = ref(null)
+const usageSummaryText = computed(() => {
+  const u = usageStats.value
+  if (!u) return ''
+  const lines = [
+    `会话：共 ${u.sessions?.total ?? 0}（活跃 ${u.sessions?.active ?? 0}）`,
+    `节点累计：${u.nodes?.totalHours ?? 0} 小时，失败 ${u.nodes?.failed ?? 0}`,
+    `终端累计：${u.terminals?.totalHours ?? 0} 小时`,
+    `日志磁盘：约 ${u.storage?.logMiB ?? 0} MiB`,
+  ]
+  for (const m of (u.byMember || []).slice(0, 5)) {
+    lines.push(`· ${m.name}：${m.runs} 次，均 ${Math.round(m.avgMs / 1000)}s，失败率 ${m.failRate}%`)
+  }
+  return lines.join('\n')
+})
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -822,6 +848,17 @@ async function saveNotify() {
   }
 }
 
+async function loadUsageStats() {
+  usageLoading.value = true
+  try {
+    usageStats.value = await api.usageStats()
+  } catch (e) {
+    ElMessage.error(e.message || '加载失败')
+  } finally {
+    usageLoading.value = false
+  }
+}
+
 async function sendTestNotify() {
   const ok = await desktopNotify('oh-my-co-work 测试通知', {
     body: '若能看到这条消息，说明系统通知通道可用。',
@@ -894,6 +931,16 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.usage-pre {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  background: var(--ecw-surface-2, #f4f4f5);
+  padding: 10px;
+  border-radius: 8px;
+}
+
 .prefs-page {
   max-width: 640px;
 }

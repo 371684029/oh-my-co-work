@@ -13,10 +13,19 @@ const {
   exportGroupTemplate,
   importTemplatePack,
   parametrizePaths,
+  resolveTemplateVars,
 } = await import('../src/templatePack.js')
 const { createMember, createGroup, getMember, getGroup } = await import('../src/services.js')
 
 initDb()
+
+test('resolveTemplateVars substitutes workspace and home', () => {
+  assert.equal(
+    resolveTemplateVars('{{WORKSPACE}}/x', { workspace: '/tmp/ws' }),
+    '/tmp/ws/x',
+  )
+  assert.equal(resolveTemplateVars('{{home}}/y', { home: '/home/u' }), '/home/u/y')
+})
 
 test('parametrizePaths replaces absolute paths', () => {
   assert.equal(parametrizePaths('D:\\work\\a'), '{{WORKSPACE}}')

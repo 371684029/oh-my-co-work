@@ -1,6 +1,7 @@
 /**
  * 5.3.0 REU-01 — 配置级模板包（单 JSON），区别于整库备份。
  */
+import os from 'node:os'
 import { getMember, getGroup, createMember, createGroup, listMembers, listGroups } from './services.js'
 
 export const TEMPLATE_PACK_VERSION = 1
@@ -11,6 +12,27 @@ const POSIX_ABS = /^\//
 function isAbsPath(p) {
   const s = String(p || '').trim()
   return WIN_ABS.test(s) || POSIX_ABS.test(s)
+}
+
+const TEMPLATE_VAR_RE = /\{\{(WORKSPACE|HOME|workspace|home)\}\}/g
+
+/** Import-time substitution (5.3.0 REU-02). */
+export function resolveTemplateVars(value, vars = {}) {
+  const home = String(vars.home || os.homedir())
+  const workspace = String(vars.workspace || process.cwd())
+  const sub = (_match, key) => {
+    const k = String(key || '').toLowerCase()
+    return k === 'home' ? home : workspace
+  }
+  if (value == null) return value
+  if (typeof value === 'string') return value.replace(TEMPLATE_VAR_RE, sub)
+  if (Array.isArray(value)) return value.map((v) => resolveTemplateVars(v, vars))
+  if (typeof value === 'object') {
+    const out = {}
+    for (const [k, v] of Object.entries(value)) out[k] = resolveTemplateVars(v, vars)
+    return out
+  }
+  return value
 }
 
 /** 导出前将绝对路径替换为占位符，便于跨机器导入。 */
@@ -101,13 +123,16 @@ function findNameConflict(kind, name, title) {
 /**
  * @param {'rename'|'skip'|'overwrite'} onConflict
  */
-export function importTemplatePack(raw, { onConflict = 'rename' } = {}) {
-  const pack =
+export function importTemplatePack(raw, { onConflict = 'rename', vars = null } = {}) {
+  let pack =
     typeof raw === 'string'
       ? JSON.parse(raw)
       : raw
   if (!pack || pack.acwTemplatePack !== TEMPLATE_PACK_VERSION) {
     throw new Error('不支持的模板包版本')
+  }
+  if (vars && typeof vars === 'object') {
+    pack = resolveTemplateVars(pack, vars)
   }
 
   const created = { members: [], groups: [] }
