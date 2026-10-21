@@ -15,7 +15,7 @@ import path from 'node:path'
 import process from 'node:process'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import { desktopUpdateResult, workbenchUrl } from './lib/urls.mjs'
+import { desktopUpdateResult, docsHubUrl, workbenchUrl } from './lib/urls.mjs'
 import { splashDataUrl } from './lib/splash.mjs'
 import { applyDesktopOpenState } from './lib/windowState.mjs'
 import {
@@ -29,7 +29,7 @@ import {
   stopChild,
   waitHealth,
 } from './lib/server.mjs'
-import { createNotifier, parseSessionDeepLink } from './lib/notifier.mjs'
+import { createNotifier, parseNotificationDeepLink } from './lib/notifier.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -121,15 +121,47 @@ function showMainWindow() {
   mainWindow.focus()
 }
 
+function sendZoomToRenderer(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.webContents.send('acw:zoom-menu', payload || {})
+}
+
+function setupApplicationMenu() {
+  const zoomItem = (label, payload, accelerator) => ({
+    label,
+    accelerator,
+    click: () => sendZoomToRenderer(payload),
+  })
+  const template = [
+    ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
+    { role: 'editMenu' },
+    {
+      label: '视图',
+      submenu: [
+        zoomItem('放大', { step: 1 }, 'CmdOrCtrl+='),
+        zoomItem('缩小', { step: -1 }, 'CmdOrCtrl+-'),
+        zoomItem('实际大小', { reset: true }, 'CmdOrCtrl+0'),
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '切换全屏' },
+      ],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
 function ensureNotifier() {
   if (!notifier) {
     notifier = createNotifier({
       getMainWindow: () => mainWindow,
       Notification,
       onDeepLink(deepLink) {
-        const sessionId = parseSessionDeepLink(deepLink)
-        if (!sessionId || !mainWindow) return
-        mainWindow.loadURL(workbenchUrl(appOrigin(), sessionId)).catch(() => {})
+        const parsed = parseNotificationDeepLink(deepLink)
+        if (!parsed || !mainWindow) return
+        const url =
+          parsed.type === 'docs'
+            ? docsHubUrl(appOrigin(), parsed.sessionId, parsed.file)
+            : workbenchUrl(appOrigin(), parsed.sessionId)
+        mainWindow.loadURL(url).catch(() => {})
       },
     })
   }
@@ -397,6 +429,7 @@ if (!gotLock) {
     }
     appendLog(`whenReady appRoot=${appRoot} port=${process.env.ACW_PORT || 3780}`)
     try {
+      setupApplicationMenu()
       createTray()
       await createMainWindow()
       appendLog('splash window shown')

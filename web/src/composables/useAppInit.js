@@ -11,6 +11,13 @@ import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
 import { loadNotificationPrefs } from './useNotificationPrefs.js'
 import { syncTrayStatus } from './syncTrayStatus.js'
+import {
+  applyColorScheme,
+  normalizeColorScheme,
+  readStoredColorScheme,
+  watchSystemColorScheme,
+  writeStoredColorScheme,
+} from './uiColorScheme.js'
 
 export function useAppInit() {
   const desktop = useDesktopBridge()
@@ -21,9 +28,19 @@ export function useAppInit() {
 
   const grokCanContinue = computed(() => grokCanRun(grokGuideStatus.value))
   const reduceEffects = ref(false)
+  const colorSchemePref = ref(readStoredColorScheme())
+  let stopSystemThemeWatch = null
 
   function applyUiSettings(settings) {
     reduceEffects.value = !!settings?.ui?.reduceEffects
+    const scheme = normalizeColorScheme(settings?.ui?.colorScheme || readStoredColorScheme())
+    colorSchemePref.value = scheme
+    writeStoredColorScheme(scheme)
+    applyColorScheme(scheme)
+    stopSystemThemeWatch?.()
+    stopSystemThemeWatch = watchSystemColorScheme(() => {
+      if (colorSchemePref.value === 'system') applyColorScheme('system')
+    })
   }
 
   function syncFullscreenState() {
@@ -101,6 +118,10 @@ export function useAppInit() {
 
   onMounted(() => {
     desktop.initDesktopBridge()
+    applyColorScheme(colorSchemePref.value)
+    stopSystemThemeWatch = watchSystemColorScheme(() => {
+      if (colorSchemePref.value === 'system') applyColorScheme('system')
+    })
     document.addEventListener('fullscreenchange', syncFullscreenState)
     window.addEventListener('focus', clearTrayOnFocus)
     syncFullscreenState()
@@ -109,6 +130,8 @@ export function useAppInit() {
   })
 
   onUnmounted(() => {
+    stopSystemThemeWatch?.()
+    stopSystemThemeWatch = null
     document.removeEventListener('fullscreenchange', syncFullscreenState)
     window.removeEventListener('focus', clearTrayOnFocus)
   })
@@ -122,6 +145,7 @@ export function useAppInit() {
     refreshGrokGate,
     ensureFurnaceGrokWired,
     reduceEffects,
+    colorSchemePref,
     isDesktop: desktop.isDesktop,
     desktopEnv: desktop.desktopEnv,
   }

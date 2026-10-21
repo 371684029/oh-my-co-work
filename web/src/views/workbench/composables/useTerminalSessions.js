@@ -1,7 +1,13 @@
 import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { inferFurnaceAgent, isFurnaceMember } from '@acw/shared'
+import {
+  inferFurnaceAgent,
+  inferFurnaceCliBanner,
+  isFurnaceMember,
+  estimateFurnaceContext,
+  formatFurnaceContextHint,
+} from '@acw/shared'
 import { isTerminalRunning } from '../../../composables/terminalStatus'
 import {
   chunkTerminalInput,
@@ -46,14 +52,19 @@ const activeTerminalId = ref(null)
 const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
+const furnaceCliNotifyKind = new Map()
+const furnaceContextWarned = new Set()
 
 function pushDesktopNotification(title, body, { id, deepLink, level = 'action', sessionId } = {}) {
   const t = String(title || '').trim()
   const b = String(body || '').trim()
   if (!t) return
+  const link = String(deepLink || '')
   const sid =
     sessionId ||
-    (String(deepLink || '').match(/^session:([A-Za-z0-9_-]+)/)?.[1] ?? null)
+    link.match(/^session:([A-Za-z0-9_-]+)/)?.[1] ||
+    link.match(/^docs:([A-Za-z0-9_-]+):/)?.[1] ||
+    null
   recordNotificationInbox({ id, title: t, body: b, deepLink, level, sessionId: sid })
   const prefs = notificationPrefsRef().value
   const viewingSameSession =
@@ -76,6 +87,41 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
     }
   }
 }
+
+function maybeNotifyFurnaceCliState(terminal, sessionId) {
+  if (!terminal || !isFurnaceTuiContext(terminal)) return
+  const banner = inferFurnaceCliBanner(terminal.replay || '', {
+    status: terminal.status,
+    exitCode: terminal.exitCode,
+    lastError: terminal.lastError || terminal.error?.message,
+  })
+  const notifyKinds = new Set(['auth', 'approval', 'quota', 'error', 'network'])
+  if (banner && notifyKinds.has(banner.kind)) {
+    if (furnaceCliNotifyKind.get(terminal.id) === banner.kind) return
+    furnaceCliNotifyKind.set(terminal.id, banner.kind)
+    const title = detail.value?.session?.title || '熔炉'
+    pushDesktopNotification(`[${title}] ${banner.title}`, banner.hint, {
+      id: `furnace-cli:${terminal.id}:${banner.kind}`,
+      deepLink: `session:${sessionId}`,
+      level: banner.kind === 'error' || banner.kind === 'quota' ? 'error' : 'action',
+      sessionId,
+    })
+  }
+  const est = estimateFurnaceContext(terminal.replay || '', {
+    profile: terminal.furnaceAgent === 'cursor' ? 'cursor' : 'grok',
+  })
+  if (est.percent >= 85 && !furnaceContextWarned.has(terminal.id)) {
+    furnaceContextWarned.add(terminal.id)
+    const title = detail.value?.session?.title || '熔炉'
+    pushDesktopNotification(`[${title}] 上下文接近上限`, formatFurnaceContextHint(est), {
+      id: `furnace-ctx:${terminal.id}`,
+      deepLink: `session:${sessionId}`,
+      level: 'action',
+      sessionId,
+    })
+  }
+}
+
 // CLI-13: collapse duplicate seq-gap re-attaches into one silent retry, only
 // notifying the user when gaps keep happening.
 let lastGapAt = 0
@@ -364,13 +410,15 @@ function bindWs(sessionId) {
           const data = ev.payload.data || ''
           terminalOutputAppend(terminalId, { seq: nextSeq, data })
           const replay = terminalOutputGetReplay(terminalId)
-          upsertTerminal({
+          const next = {
             ...current,
             seq: ev.payload.seq,
             replay,
             previewReplay: replay.slice(-12_000),
             lastChunk: data,
-          })
+          }
+          upsertTerminal(next)
+          maybeNotifyFurnaceCliState(next, sessionId)
         }
         return
       }
@@ -452,6 +500,13 @@ function bindWs(sessionId) {
         useFlowStore().bumpDocsUnread()
         refreshDocsForSession(sessionId).catch(() => {})
         ElMessage.info({ message: '群报告已更新 · 可在文档中心查看', duration: 5000, showClose: true })
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 报告已更新`, '群报告或台账已刷新 · 点击查看', {
+          id: `docs-updated:${sessionId}`,
+          deepLink: `docs:${sessionId}:ANNOUNCEMENT.md`,
+          level: 'done',
+          sessionId,
+        })
       }
       if (ev.type === 'gate.request') {
         syncTrayStatus({ pending: 1, status: 'action' })

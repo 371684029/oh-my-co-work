@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   shouldDedupeNotification,
   parseSessionDeepLink,
+  parseNotificationDeepLink,
 } from '../lib/notifier.mjs'
 
 test('shouldDedupeNotification collapses repeats within window', () => {
@@ -16,4 +17,11 @@ test('parseSessionDeepLink accepts session: and acw:// forms', () => {
   assert.equal(parseSessionDeepLink('session:abc-123'), 'abc-123')
   assert.equal(parseSessionDeepLink('acw://session/xyz'), 'xyz')
   assert.equal(parseSessionDeepLink(''), null)
+})
+
+test('parseNotificationDeepLink accepts docs deep links', () => {
+  const d = parseNotificationDeepLink('docs:s1:ANNOUNCEMENT.md')
+  assert.equal(d.type, 'docs')
+  assert.equal(d.sessionId, 's1')
+  assert.equal(d.file, 'ANNOUNCEMENT.md')
 })

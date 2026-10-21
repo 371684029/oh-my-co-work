@@ -9,11 +9,11 @@
         </div>
         <div class="top-right docs-top-right">
           <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
           </div>
           <button type="button" class="dh-back-btn" @click="goWorkbench">
             返回工作台
@@ -104,11 +104,11 @@
         </div>
         <div class="top-right">
           <div class="zoom-ctrl" data-fullscreen-control role="group" aria-label="界面缩放">
-            <button type="button" title="缩小" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
-            <button type="button" class="zoom-val" title="重置为 100%" @click="setZoom(1)">
+            <button type="button" aria-label="缩小界面" title="缩小 (Ctrl+-)" :disabled="zoom <= ZOOM_MIN" @click="stepZoom(-1)">−</button>
+            <button type="button" class="zoom-val" aria-label="重置缩放为 100%" title="重置为 100% (Ctrl+0)" @click="setZoom(1)">
               {{ Math.round(zoom * 100) }}%
             </button>
-            <button type="button" title="放大" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
+            <button type="button" aria-label="放大界面" title="放大 (Ctrl+=)" :disabled="zoom >= ZOOM_MAX" @click="stepZoom(1)">+</button>
           </div>
           <button
             type="button"
@@ -152,7 +152,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AppLogo from './components/AppLogo.vue'
@@ -174,6 +174,15 @@ import {
   readDocsReadingHistory,
   recentDocsPreview,
 } from './views/docs/docsReadingHistory.js'
+import {
+  ZOOM_MIN,
+  ZOOM_MAX,
+  applyUiZoom,
+  readStoredZoom,
+  persistZoom,
+  stepUiZoom,
+  exposeUiZoomBridge,
+} from './composables/uiZoom.js'
 
 const route = useRoute()
 const flowStore = useFlowStore()
@@ -208,38 +217,19 @@ const furnaceTitle = computed(() => {
   return `${FURNACE_DISPLAY_NAME} · 闲置`
 })
 
-const ZOOM_MIN = 0.6
-const ZOOM_MAX = 1.6
-const ZOOM_KEY = 'acw.uiZoom'
-const zoom = ref(1)
-
-function applyZoom(f) {
-  const api = window.__ACW_DESKTOP_API__
-  if (api?.setZoom) api.setZoom(f)
-  else document.documentElement.style.zoom = f === 1 ? '' : String(f)
-}
+const zoom = ref(readStoredZoom())
 
 function setZoom(f) {
-  const v = Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, f)) * 100) / 100
+  const v = applyUiZoom(f)
   zoom.value = v
-  applyZoom(v)
-  try {
-    localStorage.setItem(ZOOM_KEY, String(v))
-  } catch {
-    /* ignore */
-  }
+  persistZoom(v)
 }
 
 function stepZoom(dir) {
-  setZoom(zoom.value + dir * 0.1)
+  setZoom(stepUiZoom(zoom.value, dir))
 }
 
-try {
-  const saved = Number(localStorage.getItem(ZOOM_KEY))
-  if (saved >= ZOOM_MIN && saved <= ZOOM_MAX && saved !== 1) setZoom(saved)
-} catch {
-  /* ignore */
-}
+if (zoom.value !== 1) applyUiZoom(zoom.value)
 
 const isDocsRoute = computed(() => route.path.startsWith('/docs'))
 
@@ -297,12 +287,32 @@ function onGlobalKeydown(ev) {
   if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'd') {
     ev.preventDefault()
     goDocs()
+    return
+  }
+  if (mod && (ev.key === '=' || ev.key === '+' || ev.key === '-')) {
+    ev.preventDefault()
+    stepZoom(ev.key === '-' ? -1 : 1)
+    return
+  }
+  if (mod && (ev.key === '0' || ev.code === 'Digit0')) {
+    ev.preventDefault()
+    setZoom(1)
   }
 }
 
-if (typeof window !== 'undefined') {
+onMounted(() => {
+  exposeUiZoomBridge({ getZoom: () => zoom.value, setZoom })
+  const api = window.__ACW_DESKTOP_API__
+  api?.onZoomMenu?.((payload) => {
+    if (payload?.reset) setZoom(1)
+    else if (payload?.step) stepZoom(Number(payload.step))
+  })
   window.addEventListener('keydown', onGlobalKeydown)
-}
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onGlobalKeydown)
+})
 
 function goWorkbench() {
   router.push('/workbench')

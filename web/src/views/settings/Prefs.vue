@@ -253,6 +253,13 @@
         <el-form-item label="降低特效（关闭 backdrop-filter）">
           <el-switch v-model="ui.reduceEffects" @change="saveUi" />
         </el-form-item>
+        <el-form-item label="外观（浅色 / 深色 / 跟随系统）">
+          <el-segmented
+            v-model="ui.colorScheme"
+            :options="colorSchemeOptions"
+            @change="saveUi"
+          />
+        </el-form-item>
       </el-form>
     </section>
 
@@ -412,6 +419,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
+import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
 
 const { isDesktop, desktopEnv, initDesktopBridge, notify: desktopNotify } = useDesktopBridge()
 initDesktopBridge()
@@ -448,7 +456,12 @@ const quota = ref({
   maxReplayKiB: 256,
 })
 const redact = ref({ enabled: true, patternsText: '' })
-const ui = ref({ reduceEffects: false })
+const colorSchemeOptions = [
+  { label: '跟随系统', value: 'system' },
+  { label: '浅色', value: 'light' },
+  { label: '深色', value: 'dark' },
+]
+const ui = ref({ reduceEffects: false, colorScheme: 'system' })
 const savingUi = ref(false)
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
@@ -491,7 +504,13 @@ async function load() {
     if (f.auto !== false) keys.push('auto')
     if (f.human !== false) keys.push('human')
     defaultFlowKeys.value = keys.length ? keys : ['auto']
-    if (s.ui) ui.value = { reduceEffects: !!s.ui.reduceEffects }
+    if (s.ui) {
+      ui.value = {
+        reduceEffects: !!s.ui.reduceEffects,
+        colorScheme: normalizeColorScheme(s.ui.colorScheme),
+      }
+      applyColorScheme(ui.value.colorScheme)
+    }
     if (s.terminal) {
       terminal.value = {
         theme: s.terminal.theme || 'project-dark',
@@ -642,8 +661,10 @@ async function onToggleScriptPopup(val) {
 async function saveUi() {
   savingUi.value = true
   try {
+    ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
     await api.appSettings.update({ ui: { ...ui.value } })
-    ElMessage.success('已保存界面设置（刷新页面后全局生效）')
+    applyColorScheme(ui.value.colorScheme)
+    ElMessage.success('已保存界面设置')
   } catch (e) {
     ElMessage.error(e.message)
   } finally {

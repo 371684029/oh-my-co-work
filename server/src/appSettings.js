@@ -123,13 +123,15 @@ export function defaultTerminalSettings() {
 }
 
 export function defaultUiSettings() {
-  return { reduceEffects: false }
+  return { reduceEffects: false, colorScheme: 'system' }
 }
 
 function normalizeUi(raw) {
   const d = defaultUiSettings()
   if (!raw || typeof raw !== 'object') return d
-  return { reduceEffects: raw.reduceEffects === true }
+  const scheme = String(raw.colorScheme || d.colorScheme).toLowerCase()
+  const colorScheme = ['system', 'light', 'dark'].includes(scheme) ? scheme : d.colorScheme
+  return { reduceEffects: raw.reduceEffects === true, colorScheme }
 }
 
 export function defaultQuotaSettings() {

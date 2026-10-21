@@ -43,6 +43,7 @@ import {
   clearInbox,
   inboxSummarySince,
 } from '../composables/notificationInbox.js'
+import { parseNotificationDeepLink } from '../composables/notificationDeepLink.js'
 
 const router = useRouter()
 const items = notificationInboxRef()
@@ -80,11 +81,16 @@ function onOpen() {
 
 function openItem(it) {
   markInboxRead(it.id)
-  const link = String(it.deepLink || '')
-  const m = link.match(/^session:([A-Za-z0-9_-]+)/)
-  if (m) {
-    router.push(`/workbench/${m[1]}`)
+  const parsed = parseNotificationDeepLink(it.deepLink)
+  if (!parsed) return
+  if (parsed.type === 'docs') {
+    router.push({
+      path: '/docs',
+      query: { session: parsed.sessionId, file: parsed.file || 'ANNOUNCEMENT.md' },
+    })
+    return
   }
+  router.push(`/workbench/${parsed.sessionId}`)
 }
 </script>
 

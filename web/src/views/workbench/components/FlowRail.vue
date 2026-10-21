@@ -295,9 +295,7 @@
           </strong>
         </div>
       </template>
-      <div v-else class="flow-empty">
-        <p>开聊后显示流程步骤</p>
-      </div>
+      <EmptyState v-else title="暂无流程" description="开聊后显示流程步骤" />
     </div>
 
     <!-- Tab：文档中心（含原群报告 MD，不再单独占一栏） -->
@@ -430,9 +428,7 @@
         </div>
       </div>
 
-      <div v-else class="docs-rail-empty">
-        <p>选择会话后查看文档中心</p>
-      </div>
+      <EmptyState v-else title="文档中心" description="选择会话后查看群报告与台账" />
     </div>
 
   </aside>
@@ -482,6 +478,7 @@ import {
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
+import EmptyState from '../../../components/ui/EmptyState.vue'
 import { api } from '../../../api'
 import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'

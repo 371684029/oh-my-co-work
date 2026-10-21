@@ -67,3 +67,14 @@ export function parseSessionDeepLink(deepLink) {
   if (m) return m[1]
   return null
 }
+
+/** @returns {{ type: 'session'|'docs', sessionId: string, file?: string } | null} */
+export function parseNotificationDeepLink(deepLink) {
+  const raw = String(deepLink || '').trim()
+  if (!raw) return null
+  let m = raw.match(/^docs:([^:]+):(.+)$/i)
+  if (m) return { type: 'docs', sessionId: m[1], file: m[2] }
+  const sid = parseSessionDeepLink(raw)
+  if (sid) return { type: 'session', sessionId: sid }
+  return null
+}

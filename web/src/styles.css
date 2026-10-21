@@ -29,7 +29,7 @@
   /* ink — SF / 系统灰 */
   --ecw-text-1: #1d1d1f;
   --ecw-text-2: #6e6e73;
-  --ecw-text-3: #86868b;
+  --ecw-text-3: #75757a;
 
   /* line & depth — soft macOS elevation */
   --ecw-border: rgba(0, 0, 0, 0.06);
@@ -72,6 +72,44 @@
   /* layout breakpoints (5.2.0 UI-03) */
   --ecw-bp-compact: 1099px;
   --ecw-bp-mid: 1439px;
+}
+
+html.ecw-theme-dark {
+  color-scheme: dark;
+  --ecw-canvas: #1c1c1e;
+  --ecw-surface: rgba(44, 44, 46, 0.82);
+  --ecw-surface-solid: #2c2c2e;
+  --ecw-surface-muted: rgba(44, 44, 46, 0.55);
+  --ecw-surface-hover: rgba(255, 255, 255, 0.06);
+  --ecw-surface-active: rgba(10, 132, 255, 0.18);
+  --ecw-glass: rgba(44, 44, 46, 0.72);
+  --ecw-glass-strong: rgba(58, 58, 60, 0.92);
+  --ecw-text-1: #f5f5f7;
+  --ecw-text-2: #aeaeb2;
+  --ecw-text-3: #98989d;
+  --ecw-border: rgba(255, 255, 255, 0.08);
+  --ecw-border-strong: rgba(255, 255, 255, 0.14);
+  --ecw-accent: #0a84ff;
+  --ecw-accent-soft: rgba(10, 132, 255, 0.16);
+  --ecw-accent-mid: rgba(10, 132, 255, 0.28);
+  --ecw-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --ecw-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --ecw-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+html.ecw-theme-dark .wb-center {
+  background: rgba(44, 44, 46, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.ecw-theme-dark .wb-left,
+html.ecw-theme-dark .wb-right {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.ecw-theme-dark .ecw-topbar {
+  background: rgba(44, 44, 46, 0.88);
+  border-bottom-color: var(--ecw-border);
 }
 
 .ecw-text-min {

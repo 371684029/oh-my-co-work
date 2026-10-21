@@ -21,4 +21,8 @@ contextBridge.exposeInMainWorld('__ACW_DESKTOP_API__', {
   readClipboard: () => ipcRenderer.invoke('acw:clipboard-read'),
   writeClipboard: (text) => ipcRenderer.invoke('acw:clipboard-write', text),
   setTrayStatus: (payload) => ipcRenderer.invoke('acw:tray-status', payload || {}),
+  onZoomMenu: (handler) => {
+    if (typeof handler !== 'function') return
+    ipcRenderer.on('acw:zoom-menu', (_event, payload) => handler(payload || {}))
+  },
 })

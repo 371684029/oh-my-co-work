@@ -21,6 +21,15 @@ export function workbenchUrl(base, sessionId) {
   return `${origin}/workbench/${encodeURIComponent(id)}`
 }
 
+export function docsHubUrl(base, sessionId, file = 'ANNOUNCEMENT.md') {
+  const origin = normalizeAppOrigin(base)
+  const id = String(sessionId || '').trim()
+  const name = String(file || 'ANNOUNCEMENT.md').trim()
+  if (!id) return `${origin}/docs`
+  const q = new URLSearchParams({ session: id, file: name })
+  return `${origin}/docs?${q.toString()}`
+}
+
 /** 桌面静默更新尚未实现：禁止返回成功。 */
 export function desktopUpdateResult(manifest) {
   if (!manifest || typeof manifest !== 'object') {

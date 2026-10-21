@@ -34,6 +34,7 @@ test('preload exposes the desktop env flag and API keys', () => {
     'launchWorkflow',
     'getZoom',
     'setZoom',
+    'onZoomMenu',
     'applyDesktopUpdate',
   ]) {
     assert.ok(src.includes(key), `preload is missing ${key}`)
