@@ -3,7 +3,7 @@
     ref="host"
     class="terminal-view"
     :class="{ 'is-dead': !isRunning, 'force-selection': forceSelection }"
-    aria-label="交互式终端"
+    :aria-label="terminalViewAriaLabel()"
   >
     <div
       v-if="ctxMenu.open"
@@ -12,16 +12,18 @@
       role="menu"
       @mousedown.stop
     >
-      <button type="button" role="menuitem" @click="ctxCopy">复制</button>
-      <button type="button" role="menuitem" @click="ctxPaste">粘贴</button>
-      <button type="button" role="menuitem" @click="ctxSelectAll">全选</button>
-      <button type="button" role="menuitem" @click="ctxCopyVisible">复制可见区域</button>
-      <button type="button" role="menuitem" @click="ctxClear">清屏（仅显示）</button>
+      <button type="button" role="menuitem" @click="ctxCopy">{{ terminalViewCtxCopy() }}</button>
+      <button type="button" role="menuitem" @click="ctxPaste">{{ terminalViewCtxPaste() }}</button>
+      <button type="button" role="menuitem" @click="ctxSelectAll">{{ terminalViewCtxSelectAll() }}</button>
+      <button type="button" role="menuitem" @click="ctxCopyVisible">
+        {{ terminalViewCtxCopyVisible() }}
+      </button>
+      <button type="button" role="menuitem" @click="ctxClear">{{ terminalViewCtxClear() }}</button>
     </div>
     <div v-if="!isRunning" class="terminal-dead-overlay">
       <div class="terminal-dead-text">
         <span class="terminal-dead-icon" aria-hidden="true">⏻</span>
-        进程已结束，无法继续输入
+        {{ terminalViewProcessEnded() }}
       </div>
     </div>
   </div>
@@ -64,6 +66,31 @@ import { api } from '../../api.js'
 import { wrapBracketedPaste, chunkBracketedPaste } from '../../composables/bracketedPaste.js'
 import { pathsToTerminalPaste } from '../../composables/terminalFilePaste.js'
 import { shouldSkipPasteConfirmWhileComposing } from '../../composables/terminalIme.js'
+import {
+  terminalViewAriaLabel,
+  terminalViewCopiedCharsMessage,
+  terminalViewCopiedSelectionMessage,
+  terminalViewCopiedVisibleMessage,
+  terminalViewCopyEmptyMessage,
+  terminalViewCopyFailedMessage,
+  terminalViewCtxClear,
+  terminalViewCtxCopy,
+  terminalViewCtxCopyVisible,
+  terminalViewCtxPaste,
+  terminalViewCtxSelectAll,
+  terminalViewFileIngestFailedMessage,
+  terminalViewForceSelectionOffMessage,
+  terminalViewForceSelectionOnMessage,
+  terminalViewNeedSessionForFilesMessage,
+  terminalViewPathsWrittenMessage,
+  terminalViewProcessEnded,
+  terminalViewSearchCancelButton,
+  terminalViewSearchConfirmButton,
+  terminalViewSearchNotFoundMessage,
+  terminalViewSearchPlaceholder,
+  terminalViewSearchPromptMessage,
+  terminalViewSearchPromptTitle,
+} from '../../composables/terminalViewCopy.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -101,17 +128,17 @@ function closeCtxMenu() {
 async function copyText(text, okMsg) {
   const t = String(text || '')
   if (!t) {
-    ElMessage.info('没有可复制的内容')
+    ElMessage.info(terminalViewCopyEmptyMessage())
     return
   }
   const ok = await writeClipboardText(t)
-  if (ok) ElMessage.success(okMsg || `已复制 ${t.length} 字符`)
-  else ElMessage.warning('复制失败，请检查剪贴板权限')
+  if (ok) ElMessage.success(okMsg || terminalViewCopiedCharsMessage(t.length))
+  else ElMessage.warning(terminalViewCopyFailedMessage())
 }
 
 function ctxCopy() {
   closeCtxMenu()
-  void copyText(getTerminalCopyText(xterm), '已复制选区')
+  void copyText(getTerminalCopyText(xterm), terminalViewCopiedSelectionMessage())
 }
 
 async function ctxPaste() {
@@ -127,7 +154,7 @@ function ctxSelectAll() {
 
 function ctxCopyVisible() {
   closeCtxMenu()
-  void copyText(copyVisibleTerminalText(xterm), '已复制可见区域')
+  void copyText(copyVisibleTerminalText(xterm), terminalViewCopiedVisibleMessage())
 }
 
 function ctxClear() {
@@ -136,7 +163,7 @@ function ctxClear() {
 }
 
 function copyVisible() {
-  void copyText(copyVisibleTerminalText(xterm), '已复制可见区域')
+  void copyText(copyVisibleTerminalText(xterm), terminalViewCopiedVisibleMessage())
 }
 
 function scrollToBottom() {
@@ -147,8 +174,8 @@ function toggleForceSelection() {
   forceSelection.value = !forceSelection.value
   ElMessage.info(
     forceSelection.value
-      ? '强制选择提示：请按住 Shift 拖选（macOS 可用 Option）'
-      : '已关闭强制选择提示',
+      ? terminalViewForceSelectionOnMessage()
+      : terminalViewForceSelectionOffMessage(),
   )
 }
 
@@ -164,7 +191,7 @@ async function emitPathPaste(text) {
 
 async function ingestTerminalFiles(fileList) {
   if (!props.sessionId || !isRunning.value) {
-    ElMessage.warning('需要会话上下文才能落盘文件')
+    ElMessage.warning(terminalViewNeedSessionForFilesMessage())
     return
   }
   const arr = [...fileList].filter(Boolean)
@@ -177,9 +204,9 @@ async function ingestTerminalFiles(fileList) {
       asAtRef: props.pasteContext === 'furnace',
     })
     await emitPathPaste(text)
-    ElMessage.success(`已写入 ${paths.length} 个路径引用`)
+    ElMessage.success(terminalViewPathsWrittenMessage(paths.length))
   } catch (e) {
-    ElMessage.error(e.message || '文件落盘失败')
+    ElMessage.error(terminalViewFileIngestFailedMessage(e))
   }
 }
 
@@ -205,15 +232,19 @@ function onHostPaste(ev) {
 
 async function findInTerminal() {
   try {
-    const { value } = await ElMessageBox.prompt('在终端输出中查找（Enter 查找下一处）', '终端搜索', {
-      confirmButtonText: '查找下一个',
-      cancelButtonText: '取消',
-      inputPlaceholder: '关键词',
-    })
+    const { value } = await ElMessageBox.prompt(
+      terminalViewSearchPromptMessage(),
+      terminalViewSearchPromptTitle(),
+      {
+        confirmButtonText: terminalViewSearchConfirmButton(),
+        cancelButtonText: terminalViewSearchCancelButton(),
+        inputPlaceholder: terminalViewSearchPlaceholder(),
+      },
+    )
     const q = String(value || '').trim()
     if (!q || !searchAddon) return
     const found = searchAddon.findNext(q, { caseSensitive: false })
-    if (!found) ElMessage.info('未找到匹配')
+    if (!found) ElMessage.info(terminalViewSearchNotFoundMessage())
   } catch {
     /* cancelled */
   }
@@ -322,7 +353,7 @@ onMounted(async () => {
     if (shouldCopyInsteadOfInterrupt(xterm, ev)) {
       ev.preventDefault()
       const sel = getTerminalCopyText(xterm)
-      if (sel) void copyText(sel, `已复制 ${sel.length} 字符`)
+      if (sel) void copyText(sel, terminalViewCopiedCharsMessage(sel.length))
       xterm.clearSelection()
       return false
     }

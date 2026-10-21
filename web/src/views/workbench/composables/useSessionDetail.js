@@ -21,6 +21,7 @@ import { resolveSessionId } from './sessionActionUi.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
 import { createSessionNotesActions } from './sessionNotesActions.js'
+import { createSessionAnnounceActions } from './sessionAnnounceActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   restartArchiveBlockedMessage,
@@ -29,10 +30,6 @@ import {
 } from './sessionFlowRestartUi.js'
 import {
   announceMdHintLabel,
-  announceOpenFailedMessage,
-  announceOpenedMessage,
-  announceRefreshFailedMessage,
-  announceRefreshedMessage,
   composerCopyFailedMessage,
   composerCopySuccessMessage,
   composerEmptyMessage,
@@ -582,26 +579,6 @@ const announceMdHint = computed(() =>
   announceMdHintLabel(resolveAnnounceMdRelativePath(detail.value, activeId.value)),
 )
 
-/** 用系统默认程序打开 ANNOUNCEMENT.md */
-async function openAnnouncementMd() {
-  if (!activeId.value) return
-  announceOpenLoading.value = true
-  try {
-    const r = await api.sessions.openAnnouncement(activeId.value)
-    if (r?.path && detail.value) {
-      detail.value.announcement = {
-        ...(detail.value.announcement || {}),
-        path: r.path,
-      }
-    }
-    ElMessage.success(announceOpenedMessage(r?.absolutePath))
-  } catch (e) {
-    ElMessage.warning(announceOpenFailedMessage(e))
-  } finally {
-    announceOpenLoading.value = false
-  }
-}
-
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
 function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   const query = buildDocsHubQuery(activeId.value, file)
@@ -622,21 +599,6 @@ function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   } else {
     const qs = formatDocsHubSearchParams(query)
     window.location.assign(`/docs?${qs}`)
-  }
-}
-
-/** 刷新群报告台账文件（后台 MD）；界面始终跟节点 / # 参数走 */
-async function rebuildAnnouncement() {
-  if (!activeId.value) return
-  announceLoading.value = true
-  try {
-    await api.sessions.refreshAnnouncement(activeId.value, { modes: ['io'] })
-    await loadDetail(activeId.value)
-    ElMessage.success(announceRefreshedMessage())
-  } catch (e) {
-    ElMessage.error(announceRefreshFailedMessage(e))
-  } finally {
-    announceLoading.value = false
   }
 }
 
@@ -671,6 +633,15 @@ const { saveSessionNotes } = createSessionNotesActions({
   sessionNotesDraft,
   detail,
   notesSaving,
+  api,
+})
+
+const { openAnnouncementMd, rebuildAnnouncement } = createSessionAnnounceActions({
+  activeId,
+  detail,
+  announceOpenLoading,
+  announceLoading,
+  loadDetail,
   api,
 })
 
