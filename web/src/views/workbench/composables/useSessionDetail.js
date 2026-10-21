@@ -42,9 +42,15 @@ import {
 } from './sessionFlowUi.js'
 import {
   archiveOutcomeOf,
-  relativeSessionTime,
-  sessionListParts,
+  buildConversationItems,
+  CONVERSATION_MENU,
 } from './sessionListUi.js'
+import {
+  mapMessageToBubbleItem,
+  mapTerminalToBubbleItem,
+  mergeBubbleRowsByTime,
+  shouldHideMessageFromBubbleList,
+} from './sessionBubbleListUi.js'
 import { mapAnnounceProgressNode } from './sessionAnnounceUi.js'
 import {
   computeOffsiteActive,
@@ -300,64 +306,11 @@ async function copyComposerText() {
   }
 }
 
-/** Element-Plus-X Conversations 菜单：必须同时有 key + command，否则 command 为 undefined 导致点击无响应 */
-const convMenu = [
-  { label: '置顶', key: 'pin', command: 'pin' },
-  { label: '取消置顶', key: 'unpin', command: 'unpin' },
-  { label: '重命名', key: 'rename', command: 'rename' },
-  {
-    label: '删除',
-    key: 'delete',
-    command: 'delete',
-    divided: true,
-    menuItemHoverStyle: {
-      color: 'red',
-      backgroundColor: 'rgba(255, 0, 0, 0.1)',
-    },
-  },
-]
-
-const filteredSessions = computed(() => {
-  let list
-  if (listFilter.value === 'all') list = sessions.value.slice()
-  else if (listFilter.value === 'archived') {
-    list = sessions.value.filter((s) => s.status === 'archived')
-  } else {
-    list = sessions.value.filter((s) => s.status !== 'archived')
-  }
-  // 先群模板、后成员；块内置顶优先，再按更新时间
-  return list.sort((a, b) => {
-    const am = a.adhoc ? 1 : 0
-    const bm = b.adhoc ? 1 : 0
-    if (am !== bm) return am - bm
-    const pa = a.pinned ? 1 : 0
-    const pb = b.pinned ? 1 : 0
-    if (pb !== pa) return pb - pa
-    return String(b.updated_at || '').localeCompare(String(a.updated_at || ''))
-  })
-})
+const convMenu = CONVERSATION_MENU
 
 /** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
 const conversationItems = computed(() =>
-  filteredSessions.value.map((s) => {
-    const outcome = archiveOutcomeOf(s)
-    const parts = sessionListParts(s)
-    return {
-      uniqueKey: s.id,
-      label: parts.label,
-      labelPrefix: parts.labelPrefix,
-      groupAbbr: parts.groupAbbr,
-      group: s.adhoc ? '成员' : '群模板',
-      id: s.id,
-      status: s.status,
-      title: s.title,
-      hoverTitle: parts.hoverTitle,
-      pinned: !!s.pinned,
-      archiveOutcome: outcome,
-      adhoc: !!s.adhoc,
-      timeLabel: ['archived'].includes(s.status) ? '' : relativeSessionTime(s.updated_at),
-    }
-  }),
+  buildConversationItems(sessions.value, listFilter.value),
 )
 
 function isArchiveMessage(m) {
@@ -367,63 +320,12 @@ function isArchiveMessage(m) {
 /** Element-Plus-X BubbleList — 大气气泡 + 发送人简称 */
 const bubbleList = computed(() => {
   if (!detail.value?.messages) return []
+  const bubbleDeps = { messageText, roleLabel, shortSender, isArchiveMessage }
   const messages = detail.value.messages
-    .filter((m) => {
-      if (m.type === 'gate' && m.content?.mode === 'archive_confirm') return false
-      if (isArchiveMessage(m)) return false
-      return true
-    })
-    .map((m) => {
-      const isUser = m.role === 'user'
-      const isSystem = m.role === 'system'
-      const isGate = m.type === 'gate'
-      const isArchive = isArchiveMessage(m)
-      const full = roleLabel(m)
-      const short = isArchive ? '系统' : shortSender(m, full)
-      const atts = m.content?.attachments || []
-      const kind = isUser
-        ? 'user'
-        : isArchive
-          ? 'archive'
-          : isSystem
-            ? 'system'
-            : isGate
-              ? 'gate'
-              : 'agent'
-      return {
-        id: m.id,
-        content: messageText(m),
-        attachments: atts,
-        placement: isUser ? 'end' : 'start',
-        /** 去掉组件自带外层壳，只保留我们自己的一层气泡 */
-        noStyle: true,
-        shape: 'round',
-        maxWidth: '78%',
-        avatarGap: 12,
-        senderFull: full,
-        senderShort: short,
-        senderInitial: short.slice(0, 1),
-        _kind: kind,
-        _raw: m,
-        _time: m.created_at || '',
-      }
-    })
-  const terminals = (terminalBridge.terminalSessions?.value || []).map((terminal) => ({
-    id: `terminal:${terminal.id}`,
-    content: '',
-    placement: 'start',
-    noStyle: true,
-    shape: 'round',
-    maxWidth: '90%',
-    avatarGap: 12,
-    senderFull: terminal.label || '内嵌终端',
-    senderShort: '终端',
-    senderInitial: 'T',
-    _kind: 'terminal',
-    terminal,
-    _time: terminal.startedAt || '',
-  }))
-  return [...messages, ...terminals].sort((a, b) => String(a._time).localeCompare(String(b._time)))
+    .filter((m) => !shouldHideMessageFromBubbleList(m, isArchiveMessage))
+    .map((m) => mapMessageToBubbleItem(m, bubbleDeps))
+  const terminals = (terminalBridge.terminalSessions?.value || []).map(mapTerminalToBubbleItem)
+  return mergeBubbleRowsByTime(messages, terminals)
 })
 
 const pendingGate = computed(() => {

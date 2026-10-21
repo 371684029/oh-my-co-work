@@ -67,6 +67,66 @@ export function relativeSessionTime(isoOrTs, nowMs = Date.now()) {
 /**
  * 归档结果：success | failed | null
  */
+/** Element-Plus-X Conversations 菜单（key + command 必填） */
+export const CONVERSATION_MENU = [
+  { label: '置顶', key: 'pin', command: 'pin' },
+  { label: '取消置顶', key: 'unpin', command: 'unpin' },
+  { label: '重命名', key: 'rename', command: 'rename' },
+  {
+    label: '删除',
+    key: 'delete',
+    command: 'delete',
+    divided: true,
+    menuItemHoverStyle: {
+      color: 'red',
+      backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    },
+  },
+]
+
+export function filterSessionsByListFilter(sessions, listFilter) {
+  const list = Array.isArray(sessions) ? sessions : []
+  if (listFilter === 'all') return list.slice()
+  if (listFilter === 'archived') return list.filter((s) => s.status === 'archived')
+  return list.filter((s) => s.status !== 'archived')
+}
+
+/** 群模板块在前、置顶优先、更新时间降序 */
+export function sortSessionsForSidebar(list) {
+  return list.slice().sort((a, b) => {
+    const am = a.adhoc ? 1 : 0
+    const bm = b.adhoc ? 1 : 0
+    if (am !== bm) return am - bm
+    const pa = a.pinned ? 1 : 0
+    const pb = b.pinned ? 1 : 0
+    if (pb !== pa) return pb - pa
+    return String(b.updated_at || '').localeCompare(String(a.updated_at || ''))
+  })
+}
+
+export function buildConversationItems(sessions, listFilter, nowMs = Date.now()) {
+  const filtered = sortSessionsForSidebar(filterSessionsByListFilter(sessions, listFilter))
+  return filtered.map((s) => {
+    const outcome = archiveOutcomeOf(s)
+    const parts = sessionListParts(s)
+    return {
+      uniqueKey: s.id,
+      label: parts.label,
+      labelPrefix: parts.labelPrefix,
+      groupAbbr: parts.groupAbbr,
+      group: s.adhoc ? '成员' : '群模板',
+      id: s.id,
+      status: s.status,
+      title: s.title,
+      hoverTitle: parts.hoverTitle,
+      pinned: !!s.pinned,
+      archiveOutcome: outcome,
+      adhoc: !!s.adhoc,
+      timeLabel: ['archived'].includes(s.status) ? '' : relativeSessionTime(s.updated_at, nowMs),
+    }
+  })
+}
+
 export function archiveOutcomeOf(session, nodes) {
   if (!session || session.status !== 'archived') return null
   const r = String(session.archive_reason || '').toLowerCase()

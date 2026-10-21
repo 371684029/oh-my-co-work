@@ -15,6 +15,8 @@ export const strings = {
     composer: 'Message composer',
     commandPaletteSearch: 'Command palette search',
     commandPaletteList: 'Command list',
+    shortcutsPage: 'Slash commands and hotkeys',
+    shortcutsBuiltinHotkeys: 'Built-in keyboard shortcuts',
   },
   furnace: {
     idle: 'Idle',

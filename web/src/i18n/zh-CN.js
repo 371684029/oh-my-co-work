@@ -17,6 +17,8 @@ export const strings = {
     composer: '消息输入区',
     commandPaletteSearch: '命令面板搜索',
     commandPaletteList: '命令列表',
+    shortcutsPage: '斜杠指令与快捷键',
+    shortcutsBuiltinHotkeys: '内置快捷键说明',
   },
   furnace: {
     idle: '闲置',
