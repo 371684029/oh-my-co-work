@@ -48,91 +48,12 @@
               @close="$emit('close')"
               @send-chip="sendChip"
             />
-            <div
-              v-for="turn in chatTurns"
-              :key="turn.id"
-              class="furnace-turn"
-              :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
-            >
-              <span class="furnace-turn-label">{{ turn.role === 'user' ? furnaceRoleYouLabel() : agentLabel }}</span>
-              <button
-                type="button"
-                class="furnace-turn-copy"
-                :title="furnaceTurnCopyTitle()"
-                @click="copyTurn(turn)"
-              >
-                {{ furnaceTuiCopyTurnLabel() }}
-              </button>
-              <div class="furnace-bubble">
-                <template v-if="turn.role === 'assistant'">
-                  <div
-                    v-if="getTurnMeta(turn.text).time || getTurnMeta(turn.text).thought"
-                    class="furnace-meta-row is-top"
-                  >
-                    <span
-                      v-if="getTurnMeta(turn.text).time"
-                      class="furnace-chip-time"
-                      :title="furnaceTurnTimeTitle()"
-                    >
-                      <svg
-                        class="furnace-chip-icon"
-                        viewBox="0 0 16 16"
-                        width="11"
-                        height="11"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M8 0a8 8 0 1 0 8 8A8 8 0 0 0 8 0zm0 14.5a6.5 6.5 0 1 1 6.5-6.5 6.5 6.5 0 0 1-6.5 6.5zM7.25 4v4.25l3.25 1.95.75-1.23-2.5-1.47V4z"
-                        />
-                      </svg>
-                      {{ getTurnMeta(turn.text).time }}
-                    </span>
-                    <span
-                      v-if="getTurnMeta(turn.text).thought"
-                      class="furnace-chip-thought"
-                      :title="furnaceTurnThinkingTitle()"
-                    >
-                      <span class="furnace-chip-sparkle">✦</span>
-                      {{ getTurnMeta(turn.text).thought }}
-                    </span>
-                  </div>
-
-                  <div v-if="getTurnMeta(turn.text).body" class="furnace-bubble-text">
-                    {{ getTurnMeta(turn.text).body }}
-                  </div>
-
-                  <div
-                    v-if="getTurnMeta(turn.text).worked"
-                    class="furnace-meta-row is-bottom"
-                  >
-                    <span
-                      class="furnace-chip-worked"
-                      :title="furnaceTurnDurationTitle()"
-                    >
-                      <svg
-                        class="furnace-chip-icon"
-                        viewBox="0 0 16 16"
-                        width="11"
-                        height="11"
-                        fill="currentColor"
-                      >
-                        <path
-                          d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
-                        />
-                      </svg>
-                      {{ getTurnMeta(turn.text).worked }}
-                    </span>
-                  </div>
-                </template>
-                <template v-else>
-                  <div class="furnace-bubble-text">{{ turn.text }}</div>
-                </template>
-              </div>
-            </div>
-            <div v-if="awaitingReply" class="furnace-turn is-assistant is-pending">
-              <span class="furnace-turn-label">{{ agentLabel }}</span>
-              <div class="furnace-bubble is-pending">{{ furnaceChatPendingLabel() }}</div>
-            </div>
+            <FurnaceChatTurns
+              :chat-turns="chatTurns"
+              :agent-label="agentLabel"
+              :awaiting-reply="awaitingReply"
+              @copy-turn="copyTurn"
+            />
           </div>
         </div>
         <button
@@ -249,11 +170,11 @@ import TerminalView from './TerminalView.vue'
 import FurnaceChatWelcome from './FurnaceChatWelcome.vue'
 import FurnaceWorkspaceHead from './FurnaceWorkspaceHead.vue'
 import FurnaceTuiDrawer from './FurnaceTuiDrawer.vue'
+import FurnaceChatTurns from './FurnaceChatTurns.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
 import { inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
-import { getFurnaceTurnMeta } from '../../composables/furnaceTurnMeta.js'
 import { writeClipboardText } from '../../composables/terminalClipboardBridge.js'
 import {
   furnaceAgentDisplayLabel,
@@ -269,21 +190,13 @@ import {
   furnaceInputTipsDescription,
   furnaceInputTipsTitle,
   furnaceRemovePendingTitle,
-  furnaceRoleYouLabel,
   furnaceSendLabel,
-  furnaceChatPendingLabel,
   furnaceJumpLatestLabel,
   furnaceStatusBarLine,
   furnaceTurnCopyEmptyMessage,
   furnaceTurnCopyFailedMessage,
   furnaceTurnCopySuccessMessage,
-  furnaceTurnCopyTitle,
-  furnaceTurnDurationTitle,
-  furnaceTurnThinkingTitle,
-  furnaceTurnTimeTitle,
 } from '../../composables/furnaceWorkspaceCopy.js'
-
-const getTurnMeta = getFurnaceTurnMeta
 
 async function copyTurn(turn) {
   const text = furnaceTurnCopyPlain(turn?.role, turn?.text)
