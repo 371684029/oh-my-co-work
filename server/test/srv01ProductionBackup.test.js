@@ -19,3 +19,12 @@ test('SRV-01: main routes use async createBackup', () => {
   assert.match(routes, /createBackupAsync/)
   assert.doesNotMatch(routes, /\brestoreBackup\s*\(/)
 })
+
+test('SRV-01: async restore path pre-backup uses createBackupAsync', () => {
+  const backup = fs.readFileSync(path.join(root, 'src/backup.js'), 'utf8')
+  const start = backup.indexOf('async function restoreBackupUnlockedAsync')
+  const end = backup.indexOf('function restoreBackupUnlocked(', start)
+  const asyncBlock = backup.slice(start, end)
+  assert.match(asyncBlock, /await createBackupAsync\(\)/)
+  assert.doesNotMatch(asyncBlock, /\bcreateBackup\s*\(\)/)
+})

@@ -1,19 +1,24 @@
 import { nodeStatusLabel } from '@acw/shared'
+import { t } from '../../../i18n/index.js'
+
+const STATUS_KEYS = {
+  pending: 'pending',
+  not_run: 'notRun',
+  waiting_human: 'waitingHuman',
+  active: 'active',
+  interrupted: 'interrupted',
+  archived: 'archived',
+  failed: 'failed',
+  paused: 'paused',
+  running: 'running',
+  succeeded: 'succeeded',
+  skipped: 'skipped',
+}
 
 export function sessionStatusLabel(s) {
-  if (s === 'pending' || s === 'not_run') return '待跑'
-  if (s === 'waiting_human') return '待确认'
-  const m = {
-    active: '进行中',
-    interrupted: '待恢复',
-    archived: '已归档',
-    failed: '失败',
-    paused: '暂停',
-    running: '执行中',
-    succeeded: '完成',
-    skipped: '已绕过',
-  }
-  return m[s] || nodeStatusLabel(s) || s
+  const key = STATUS_KEYS[s]
+  if (key) return t(`workbench.sessionStatus.${key}`)
+  return nodeStatusLabel(s) || s
 }
 
 export function sessionStatusType(s) {

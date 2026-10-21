@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/components/terminal/{FurnaceTuiDrawer,FurnaceWorkspace}.vue web/src/views/workbench/composables/{sessionListFilterUi,sessionStatusUi,useSessionDetail} server/test/srv01ProductionBackup.test.js web/test/{sessionListFilterUi,furnaceScroll}.test.mjs web/src/i18n/{zh-CN,en-US}.js docs/{5.1.0,5.3.0}-plan.md | ENG-04 FurnaceTuiDrawer、DSK-08 会话筛选/状态 i18n、SRV-01 async restore 单测
 2026-10-21 | A/M | web/src/{App.vue,composables/appOnboardingCopy.js,views/workbench/composables/{sessionSenderSubmitUi,useSessionDetail},i18n/{zh-CN,en-US}.js} scripts/ci-e2e-smoke.mjs web/test/{appOnboardingCopy,sessionSenderSubmitUi}.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08 首跑/Grok 对话框 i18n、FE-01 composerSubmitRoute
 2026-10-21 | A/M | web/src/{App.vue,composables/appShellCopy.js,i18n/{zh-CN,en-US}.js} web/test/appShellCopy.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08/UX-03 App 顶栏导航/缩放/文档 hub i18n+aria
 2026-10-21 | A/M | web/src/views/{Workbench.vue,workbench/composables/{workbenchChromeCopy,workbenchChatSearchUi,sessionDeleteNavUi,useSessionDetail},i18n/{zh-CN,en-US}.js} scripts/ci-e2e-smoke.mjs web/test/workbenchChatSearchUi.test.mjs docs/5.1.0-plan.md | DSK-08/UX-03 工作台顶栏与欢迎 i18n、QA-01 聊天搜索 aria smoke

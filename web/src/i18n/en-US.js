@@ -226,6 +226,24 @@ export const strings = {
     chatSearch: {
       system: 'System',
     },
+    listFilter: {
+      all: 'All',
+      active: 'Active',
+      archived: 'Archived',
+    },
+    sessionStatus: {
+      pending: 'Pending',
+      notRun: 'Not run',
+      waitingHuman: 'Needs confirmation',
+      active: 'Active',
+      interrupted: 'Interrupted',
+      archived: 'Archived',
+      failed: 'Failed',
+      paused: 'Paused',
+      running: 'Running',
+      succeeded: 'Done',
+      skipped: 'Skipped',
+    },
     welcome: {
       living: 'Nodes are fixed; people are not · detour, cut in, assist, then return',
       demoCta: 'Quick start: demo flow',

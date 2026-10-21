@@ -96,6 +96,7 @@ import {
   adapterChoices,
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
+import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
 import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
@@ -275,11 +276,7 @@ const filteredAtMembers = computed(() => {
   )
 })
 
-const filterOptions = [
-  { label: '全部', value: 'all' },
-  { label: '进行中', value: 'active' },
-  { label: '已归档', value: 'archived' },
-]
+const filterOptions = computed(() => buildSessionListFilterOptions())
 
 /** 开聊可选成员（启用中） */
 const startableMembers = computed(() =>
