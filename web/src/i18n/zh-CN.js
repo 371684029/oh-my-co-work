@@ -226,6 +226,24 @@ export const strings = {
     chatSearch: {
       system: '系统',
     },
+    listFilter: {
+      all: '全部',
+      active: '进行中',
+      archived: '已归档',
+    },
+    sessionStatus: {
+      pending: '待跑',
+      notRun: '待跑',
+      waitingHuman: '待确认',
+      active: '进行中',
+      interrupted: '待恢复',
+      archived: '已归档',
+      failed: '失败',
+      paused: '暂停',
+      running: '执行中',
+      succeeded: '完成',
+      skipped: '已绕过',
+    },
     welcome: {
       living: '节点是死的，人是活的 · 可绕行、插队，临时协助再回来',
       demoCta: '一键开聊：演示流',

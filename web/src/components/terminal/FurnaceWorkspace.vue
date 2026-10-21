@@ -223,38 +223,12 @@
             @focus-change="onFocusChange"
           />
         </div>
-        <aside class="furnace-tui-rail" :class="{ 'is-open': tuiHistoryOpen }">
-          <button
-            type="button"
-            class="furnace-tui-toggle"
-            :aria-expanded="tuiHistoryOpen"
-            aria-controls="furnace-tui-drawer"
-            :title="furnaceTuiHistoryTitle(tuiHistoryOpen)"
-            @click="toggleTuiHistory"
-          >
-            {{ tuiHistoryOpen ? '›' : '‹' }}
-          </button>
-          <div
-            v-show="tuiHistoryOpen"
-            id="furnace-tui-drawer"
-            ref="tuiHistEl"
-            class="furnace-tui-drawer"
-            @scroll.passive="onTuiHistScroll"
-          >
-            <div class="furnace-tui-drawer-head">{{ furnaceTuiDrawerHead() }}</div>
-            <p v-if="!chatTurns.length" class="furnace-tui-drawer-empty">{{ furnaceTuiDrawerEmpty() }}</p>
-            <div
-              v-for="turn in chatTurns"
-              :key="`tui-${turn.id}`"
-              class="furnace-tui-line"
-              :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
-            >
-              <span>{{ turn.role === 'user' ? furnaceRoleYouLabel() : agentLabel }}</span>
-              <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">{{ furnaceTuiCopyTurnLabel() }}</button>
-              <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
-            </div>
-          </div>
-        </aside>
+        <FurnaceTuiDrawer
+          v-model:open="tuiHistoryOpen"
+          :chat-turns="chatTurns"
+          :agent-label="agentLabel"
+          @copy-turn="copyTurn"
+        />
       </div>
 
       <footer class="furnace-foot">
@@ -267,13 +241,14 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue'
+import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import FurnaceChatWelcome from './FurnaceChatWelcome.vue'
 import FurnaceWorkspaceHead from './FurnaceWorkspaceHead.vue'
+import FurnaceTuiDrawer from './FurnaceTuiDrawer.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
@@ -306,10 +281,6 @@ import {
   furnaceTurnDurationTitle,
   furnaceTurnThinkingTitle,
   furnaceTurnTimeTitle,
-  furnaceTuiCopyTurnLabel,
-  furnaceTuiDrawerEmpty,
-  furnaceTuiDrawerHead,
-  furnaceTuiHistoryTitle,
 } from '../../composables/furnaceWorkspaceCopy.js'
 
 const getTurnMeta = getFurnaceTurnMeta
@@ -339,7 +310,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'kill', 'close-furnace', 'reopen', 'ensure-agent', 'input', 'resize', 'select', 'download-log', 'gap'])
 const workspaceRoot = ref(null)
 const logEl = ref(null)
-const tuiHistEl = ref(null)
 const fileInput = ref(null)
 const composerEl = ref(null)
 /** 4.8：默认隐藏 GUI 入口，熔炉只走双 Agent TUI */
@@ -354,7 +324,6 @@ watch(
 )
 const agentLabel = computed(() => furnaceAgentDisplayLabel(activeAgent.value))
 const tuiHistoryOpen = ref(false)
-const tuiHistStick = ref(true)
 
 const {
   isFullscreen,
@@ -426,39 +395,6 @@ const {
   fileInput,
   composerEl,
 })
-
-function toggleTuiHistory() {
-  tuiHistoryOpen.value = !tuiHistoryOpen.value
-}
-
-function onTuiHistScroll() {
-  const el = tuiHistEl.value
-  if (!el) return
-  tuiHistStick.value = el.scrollHeight - el.scrollTop - el.clientHeight < 64
-}
-
-function scrollTuiHist() {
-  const el = tuiHistEl.value
-  if (!el || !tuiHistStick.value) return
-  el.scrollTop = el.scrollHeight
-}
-
-watch(tuiHistoryOpen, (open) => {
-  if (open) tuiHistStick.value = true
-  nextTick(() => {
-    window.dispatchEvent(new Event('resize'))
-    if (open) scrollTuiHist()
-  })
-})
-
-watch(
-  chatTurns,
-  () => {
-    if (!tuiHistoryOpen.value) return
-    nextTick(scrollTuiHist)
-  },
-  { deep: true, flush: 'post' },
-)
 
 function setActiveAgent(kind) {
   const next = kind === 'cursor' ? 'cursor' : 'grok'
