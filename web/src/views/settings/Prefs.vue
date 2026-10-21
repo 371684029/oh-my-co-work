@@ -62,6 +62,40 @@
       </div>
     </section>
 
+    <section v-if="isDesktop" class="prefs-card">
+      <div class="prefs-title">系统通知</div>
+      <p class="prefs-hint">
+        窗口在后台或失焦时，用系统通知提醒你处理闸门等事件。不会上传任何内容到云端。
+      </p>
+      <el-form label-position="top" class="admin-form">
+        <el-form-item label="启用系统通知">
+          <el-switch v-model="notifyPrefs.enabled" />
+        </el-form-item>
+        <el-form-item label="仅窗口不在前台时通知">
+          <el-switch v-model="notifyPrefs.onlyWhenUnfocused" :disabled="!notifyPrefs.enabled" />
+        </el-form-item>
+        <el-form-item label="通知类型">
+          <el-checkbox v-model="notifyPrefs.levels.action" :disabled="!notifyPrefs.enabled">
+            需要你（闸门待确认等）
+          </el-checkbox>
+          <el-checkbox v-model="notifyPrefs.levels.error" :disabled="!notifyPrefs.enabled">
+            出错了
+          </el-checkbox>
+          <el-checkbox v-model="notifyPrefs.levels.done" :disabled="!notifyPrefs.enabled">
+            完成了（默认仅应用内）
+          </el-checkbox>
+        </el-form-item>
+      </el-form>
+      <div class="prefs-actions">
+        <el-button type="primary" plain size="small" :loading="savingNotify" @click="saveNotify">
+          保存通知设置
+        </el-button>
+        <el-button size="small" :disabled="!notifyPrefs.enabled" @click="sendTestNotify">
+          发送测试通知
+        </el-button>
+      </div>
+    </section>
+
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
@@ -352,8 +386,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
+import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
 
-const { isDesktop, desktopEnv, initDesktopBridge } = useDesktopBridge()
+const { isDesktop, desktopEnv, initDesktopBridge, notify: desktopNotify } = useDesktopBridge()
 initDesktopBridge()
 
 const showDemo = ref(true)
@@ -395,6 +430,12 @@ const adaptBackup = ref(true)
 const savingGrok = ref(false)
 const startupUpdateCheck = ref(true)
 const savingStartupUpdate = ref(false)
+const notifyPrefs = ref({
+  enabled: true,
+  onlyWhenUnfocused: true,
+  levels: { action: true, error: true, done: false },
+})
+const savingNotify = ref(false)
 
 const resolvedHint = computed(() => {
   const r = resolvedAdmin.value
@@ -437,6 +478,18 @@ async function load() {
     }
     adaptBackup.value = s.adapt?.backup !== false
     startupUpdateCheck.value = s.updateCheck?.startup !== false
+    if (s.notifications) {
+      const n = s.notifications
+      notifyPrefs.value = {
+        enabled: n.enabled !== false,
+        onlyWhenUnfocused: n.onlyWhenUnfocused !== false,
+        levels: {
+          action: n.levels?.action !== false,
+          error: n.levels?.error !== false,
+          done: n.levels?.done === true,
+        },
+      }
+    }
     if (s.quota) {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
@@ -674,6 +727,28 @@ async function saveGrok() {
   } finally {
     savingGrok.value = false
   }
+}
+
+async function saveNotify() {
+  savingNotify.value = true
+  try {
+    await api.appSettings.update({ notifications: notifyPrefs.value })
+    await loadNotificationPrefs(true)
+    ElMessage.success('已保存通知设置')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    savingNotify.value = false
+  }
+}
+
+async function sendTestNotify() {
+  const ok = await desktopNotify('oh-my-co-work 测试通知', {
+    body: '若能看到这条消息，说明系统通知通道可用。',
+    id: 'test:notify',
+  })
+  if (ok) ElMessage.success('已发送测试通知')
+  else ElMessage.warning('通知未发出（可能被系统禁用或不支持）')
 }
 
 async function onToggleStartupUpdate(val) {

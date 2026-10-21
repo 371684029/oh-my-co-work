@@ -1243,6 +1243,7 @@ function openDocsHub({ newTab = false } = {}) {
     window.open(`/docs?${qs}`, '_blank', 'noopener')
     return
   }
+  useFlowStore().clearDocsUnread()
   if (_router) {
     _router.push({ path: '/docs', query })
   } else {

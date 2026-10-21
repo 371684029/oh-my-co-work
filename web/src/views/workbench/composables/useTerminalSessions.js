@@ -15,6 +15,7 @@ import {
   terminalOutputGetReplay,
 } from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
+import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
 import {
   terminalBridge,
   activeId,
@@ -37,10 +38,13 @@ const terminalConnectionStatus = ref('connecting')
 const lastTerminalSize = ref(null)
 let ws = null
 
-function pushDesktopNotification(title, body, { id, deepLink } = {}) {
+function pushDesktopNotification(title, body, { id, deepLink, level = 'action' } = {}) {
   const t = String(title || '').trim()
   const b = String(body || '').trim()
   if (!t) return
+  const prefs = notificationPrefsRef().value
+  if (!prefs.enabled || !shouldNotifyLevel(level)) return
+  if (prefs.onlyWhenUnfocused && !document.hidden && document.hasFocus()) return
   const desktop = window.__ACW_DESKTOP_API__
   if (desktop?.notify) {
     desktop.notify(t, { body: b, id, deepLink })
@@ -76,9 +80,8 @@ function isFurnaceTuiContext(terminal) {
     const mem = members.value.find((x) => x.id === fromId)
     if (isFurnaceMember(mem)) return true
   }
-  const cmd = `${terminal?.command || ''} ${terminal?.label || ''} ${terminal?.runtime || ''}`
   if (terminal?.furnaceAgent === 'cursor' || terminal?.furnaceAgent === 'grok') return true
-  return /(^|[\s/\\])(grok|cursor-agent|cursor)(\.exe)?(\s|$)/i.test(cmd)
+  return false
 }
 
 const furnaceTuiPagefill = computed(() => isFurnaceTuiContext(activeTerminal.value))
@@ -381,11 +384,16 @@ function bindWs(sessionId) {
         ElMessage.warning(ev.payload?.message || '终端连接异常')
         return
       }
-      if (ev.type === 'gate.request' && (document.hidden || !document.hasFocus())) {
+      if (ev.type === 'announcement.updated') {
+        useFlowStore().bumpDocsUnread()
+        ElMessage.info({ message: '群报告已更新 · 可在文档中心查看', duration: 5000, showClose: true })
+      }
+      if (ev.type === 'gate.request') {
         const title = detail.value?.session?.title || '工作台'
         pushDesktopNotification(`[${title}] 等你确认`, '流程需要你处理，点击返回应用', {
           id: `gate:${sessionId}:${ev.payload?.gateId || ev.payload?.id || 'x'}`,
           deepLink: `session:${sessionId}`,
+          level: 'action',
         })
       }
       if (
@@ -402,7 +410,10 @@ function bindWs(sessionId) {
         await loadDetail(sessionId)
         // 默认保持「流程」Tab，不自动跳群报告
         // 群报告由节点 detail / # 参数驱动；备注在 context.notes
-        if (ev.type === 'session.archived' || ev.type === 'session.restart') {
+        if (ev.type === 'session.archived') {
+          useFlowStore().rightTab = 'docs'
+          useFlowStore().bumpDocsUnread()
+        } else if (ev.type === 'session.restart') {
           useFlowStore().rightTab = 'flow'
         }
         sessions.value = await api.sessions.list()

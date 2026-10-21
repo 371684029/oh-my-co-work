@@ -207,6 +207,32 @@ function defaultUpdateCheckSettings() {
   return { startup: true }
 }
 
+/** 5.4.0 桌面系统通知偏好（本机 settings 文件） */
+export function defaultNotificationSettings() {
+  return {
+    enabled: true,
+    levels: { action: true, error: true, done: false },
+    sound: true,
+    onlyWhenUnfocused: true,
+  }
+}
+
+function normalizeNotifications(raw) {
+  const d = defaultNotificationSettings()
+  if (!raw || typeof raw !== 'object') return d
+  const levels = raw.levels && typeof raw.levels === 'object' ? raw.levels : {}
+  return {
+    enabled: raw.enabled !== false,
+    sound: raw.sound !== false,
+    onlyWhenUnfocused: raw.onlyWhenUnfocused !== false,
+    levels: {
+      action: levels.action !== false,
+      error: levels.error !== false,
+      done: levels.done === true,
+    },
+  }
+}
+
 function normalizeUpdateCheck(raw) {
   const r = raw && typeof raw === 'object' ? raw : {}
   return { startup: r.startup !== false }
@@ -238,6 +264,7 @@ export function getAppSettings() {
       quota: normalizeQuota(raw.quota),
       redact: normalizeRedact(raw.redact),
       updateCheck: normalizeUpdateCheck(raw.updateCheck),
+      notifications: normalizeNotifications(raw.notifications),
     }
   } catch {
     return {
@@ -251,6 +278,7 @@ export function getAppSettings() {
       quota: defaultQuotaSettings(),
       redact: defaultRedactSettings(),
       updateCheck: defaultUpdateCheckSettings(),
+      notifications: defaultNotificationSettings(),
     }
   }
 }
@@ -316,6 +344,10 @@ export function updateAppSettings(patch = {}) {
       patch.updateCheck !== undefined
         ? normalizeUpdateCheck({ ...cur.updateCheck, ...patch.updateCheck })
         : cur.updateCheck,
+    notifications:
+      patch.notifications !== undefined
+        ? normalizeNotifications({ ...cur.notifications, ...patch.notifications })
+        : cur.notifications,
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

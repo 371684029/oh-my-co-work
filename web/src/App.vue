@@ -64,6 +64,9 @@
               @click="goDocs()"
             >
               文档中心
+              <span v-if="flowStore.docsUnread > 0" class="nav-docs-badge">{{
+                flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
+              }}</span>
             </button>
             <button
               type="button"
@@ -140,8 +143,10 @@ import { FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { api } from './api'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
+import { useFlowStore } from './stores/flow.js'
 
 const route = useRoute()
+const flowStore = useFlowStore()
 const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
@@ -230,6 +235,7 @@ function go(v) {
 
 function goDocs() {
   nav.value = 'docs'
+  flowStore.clearDocsUnread()
   router.push('/docs')
 }
 
@@ -493,6 +499,19 @@ function goGrokSettings() {
 .nav-item--docs.active {
   background: rgba(0, 122, 255, 0.14);
   color: var(--ecw-accent, #007aff);
+}
+
+.nav-docs-badge {
+  margin-left: 6px;
+  min-width: 16px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  background: #ff3b30;
+  color: #fff;
+  vertical-align: middle;
 }
 
 .nav-item.active {

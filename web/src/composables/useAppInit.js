@@ -9,6 +9,7 @@ import {
 } from './furnaceUi.js'
 import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
+import { loadNotificationPrefs } from './useNotificationPrefs.js'
 
 export function useAppInit() {
   const desktop = useDesktopBridge()
@@ -93,6 +94,7 @@ export function useAppInit() {
     desktop.initDesktopBridge()
     document.addEventListener('fullscreenchange', syncFullscreenState)
     syncFullscreenState()
+    void loadNotificationPrefs()
     refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
   })
 

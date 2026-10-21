@@ -8,6 +8,7 @@ import {
   dialog,
   nativeImage,
   shell,
+  clipboard,
 } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -246,6 +247,12 @@ async function loadWorkbench() {
 }
 
 function registerIpc() {
+  ipcMain.handle('acw:clipboard-read', () => clipboard.readText())
+  ipcMain.handle('acw:clipboard-write', (_evt, text) => {
+    clipboard.writeText(String(text ?? ''))
+    return true
+  })
+
   ipcMain.handle('acw:notify', (_evt, payload) => {
     const title = String(payload?.title || '')
     const body = String(payload?.options?.body || '')

@@ -1,12 +1,13 @@
 <template>
   <aside class="wb-right">
-    <div class="wb-right-tabs">
+    <div class="wb-right-tabs wb-right-tabs--segmented">
       <button
         type="button"
         class="wb-right-tab"
         :class="{ active: flowStore.rightTab === 'flow' }"
         @click="flowStore.rightTab = 'flow'"
       >
+        <span class="wb-right-tab-icon" aria-hidden="true">⚡</span>
         流程
       </button>
       <button
@@ -15,7 +16,11 @@
         :class="{ active: isDocsHubTab }"
         @click="flowStore.rightTab = 'docs'"
       >
+        <span class="wb-right-tab-icon" aria-hidden="true">📄</span>
         文档中心
+        <span v-if="flowStore.docsUnread > 0" class="wb-right-tab-badge">{{
+          flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
+        }}</span>
       </button>
     </div>
 
@@ -750,9 +755,18 @@ watch(
 
 .wb-right-tab.active {
   background: #fff;
-  color: var(--ecw-text-1, #1d1d1f);
+  color: var(--ecw-accent, #007aff);
   font-weight: 650;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.wb-right-tabs--segmented .wb-right-tab {
+  min-height: 36px;
+  font-size: 13px;
+}
+
+.wb-right-tab-icon {
+  margin-right: 4px;
 }
 
 .wb-right-tab-badge {

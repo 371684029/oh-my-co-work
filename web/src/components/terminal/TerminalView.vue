@@ -1,5 +1,23 @@
 <template>
-  <div ref="host" class="terminal-view" :class="{ 'is-dead': !isRunning }" aria-label="交互式终端">
+  <div
+    ref="host"
+    class="terminal-view"
+    :class="{ 'is-dead': !isRunning, 'force-selection': forceSelection }"
+    aria-label="交互式终端"
+  >
+    <div
+      v-if="ctxMenu.open"
+      class="terminal-ctx-menu"
+      :style="{ top: `${ctxMenu.y}px`, left: `${ctxMenu.x}px` }"
+      role="menu"
+      @mousedown.stop
+    >
+      <button type="button" role="menuitem" @click="ctxCopy">复制</button>
+      <button type="button" role="menuitem" @click="ctxPaste">粘贴</button>
+      <button type="button" role="menuitem" @click="ctxSelectAll">全选</button>
+      <button type="button" role="menuitem" @click="ctxCopyVisible">复制可见区域</button>
+      <button type="button" role="menuitem" @click="ctxClear">清屏（仅显示）</button>
+    </div>
     <div v-if="!isRunning" class="terminal-dead-overlay">
       <div class="terminal-dead-text">
         <span class="terminal-dead-icon" aria-hidden="true">⏻</span>
@@ -15,6 +33,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
+import { SearchAddon } from '@xterm/addon-search'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
 import { isTerminalRunning } from '../../composables/terminalStatus'
@@ -32,6 +52,8 @@ import {
   registerTerminalFocus,
   restoreTerminalFocus,
 } from '../../composables/terminalFocusGuard.js'
+import { writeClipboardText, readClipboardText } from '../../composables/terminalClipboardBridge.js'
+import { copyVisibleTerminalText, scrollTerminalToBottom } from '../../composables/terminalBufferUtils.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -50,8 +72,85 @@ let resizeObserver = null
 let lastSeq = 0
 let fitTimer = 0
 let unsubOutput = null
+let searchAddon = null
+const forceSelection = ref(false)
+const ctxMenu = ref({ open: false, x: 0, y: 0 })
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
 const sequencer = createInputSequencer()
+
+function closeCtxMenu() {
+  ctxMenu.value.open = false
+}
+
+async function copyText(text, okMsg) {
+  const t = String(text || '')
+  if (!t) {
+    ElMessage.info('没有可复制的内容')
+    return
+  }
+  const ok = await writeClipboardText(t)
+  if (ok) ElMessage.success(okMsg || `已复制 ${t.length} 字符`)
+  else ElMessage.warning('复制失败，请检查剪贴板权限')
+}
+
+function ctxCopy() {
+  closeCtxMenu()
+  void copyText(xterm?.getSelection(), '已复制选区')
+}
+
+async function ctxPaste() {
+  closeCtxMenu()
+  const text = await readClipboardText()
+  if (text && isRunning.value) emit('input', text)
+}
+
+function ctxSelectAll() {
+  closeCtxMenu()
+  xterm?.selectAll()
+}
+
+function ctxCopyVisible() {
+  closeCtxMenu()
+  void copyText(copyVisibleTerminalText(xterm), '已复制可见区域')
+}
+
+function ctxClear() {
+  closeCtxMenu()
+  xterm?.clear()
+}
+
+function copyVisible() {
+  void copyText(copyVisibleTerminalText(xterm), '已复制可见区域')
+}
+
+function scrollToBottom() {
+  scrollTerminalToBottom(xterm)
+}
+
+function toggleForceSelection() {
+  forceSelection.value = !forceSelection.value
+  ElMessage.info(
+    forceSelection.value
+      ? '强制选择提示：请按住 Shift 拖选（macOS 可用 Option）'
+      : '已关闭强制选择提示',
+  )
+}
+
+async function findInTerminal() {
+  try {
+    const { value } = await ElMessageBox.prompt('在终端输出中查找（Enter 查找下一处）', '终端搜索', {
+      confirmButtonText: '查找下一个',
+      cancelButtonText: '取消',
+      inputPlaceholder: '关键词',
+    })
+    const q = String(value || '').trim()
+    if (!q || !searchAddon) return
+    const found = searchAddon.findNext(q, { caseSensitive: false })
+    if (!found) ElMessage.info('未找到匹配')
+  } catch {
+    /* cancelled */
+  }
+}
 
 function scheduleFit() {
   window.clearTimeout(fitTimer)
@@ -108,22 +207,38 @@ onMounted(async () => {
   } catch {
     /* addon optional */
   }
+  try {
+    xterm.loadAddon(
+      new WebLinksAddon((_ev, uri) => {
+        if (/^https?:/i.test(uri)) window.open(uri, '_blank', 'noopener')
+      }),
+    )
+  } catch {
+    /* optional */
+  }
+  try {
+    searchAddon = new SearchAddon()
+    xterm.loadAddon(searchAddon)
+  } catch {
+    searchAddon = null
+  }
   xterm.open(host.value)
   xterm.attachCustomKeyEventHandler((ev) => {
     if (ev.type !== 'keydown') return true
+    if ((ev.ctrlKey || ev.metaKey) && String(ev.key || '').toLowerCase() === 'f') {
+      ev.preventDefault()
+      void findInTerminal()
+      return false
+    }
     if (shouldCopyInsteadOfInterrupt(xterm, ev)) {
       ev.preventDefault()
       const sel = xterm.getSelection()
-      if (sel) {
-        void navigator.clipboard?.writeText(sel).then(() => {
-          ElMessage.success(`已复制 ${sel.length} 字符`)
-        })
-      }
+      if (sel) void copyText(sel, `已复制 ${sel.length} 字符`)
       xterm.clearSelection()
       return false
     }
     if (shouldHandlePasteShortcut(ev)) {
-      void navigator.clipboard?.readText().then((text) => {
+      void readClipboardText().then((text) => {
         if (text && isRunning.value) emit('input', text)
       })
       ev.preventDefault()
@@ -133,11 +248,14 @@ onMounted(async () => {
   })
   host.value?.addEventListener('contextmenu', (ev) => {
     ev.preventDefault()
-    const sel = xterm.getSelection()
-    if (sel) {
-      void navigator.clipboard?.writeText(sel).then(() => ElMessage.success('已复制选区'))
+    const rect = host.value.getBoundingClientRect()
+    ctxMenu.value = {
+      open: true,
+      x: ev.clientX - rect.left,
+      y: ev.clientY - rect.top,
     }
   })
+  document.addEventListener('click', closeCtxMenu)
   xterm.onData((data) => {
     if (!isRunning.value) return
     const lineBreaks = (data.match(/[\r\n]/g) || []).length
@@ -219,7 +337,16 @@ watch(
   },
 )
 
+defineExpose({
+  copyVisible,
+  scrollToBottom,
+  findInTerminal,
+  toggleForceSelection,
+  forceSelection,
+})
+
 onBeforeUnmount(() => {
+  document.removeEventListener('click', closeCtxMenu)
   window.clearTimeout(fitTimer)
   unsubOutput?.()
   unsubOutput = null
@@ -234,6 +361,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .terminal-view {
+  position: relative;
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -306,5 +434,45 @@ onBeforeUnmount(() => {
 .terminal-dead-icon {
   font-size: 14px;
   color: #ff9999;
+}
+
+.terminal-ctx-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 140px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #252830;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.terminal-ctx-menu button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: #e7e9ee;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.terminal-ctx-menu button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.terminal-view.force-selection::after {
+  content: 'Shift+拖选复制';
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  color: #9097a5;
+  pointer-events: none;
+  z-index: 5;
 }
 </style>
