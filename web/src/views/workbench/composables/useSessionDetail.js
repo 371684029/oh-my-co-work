@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   formatBusinessIo,
   wholeOutputText,
@@ -36,7 +36,6 @@ import {
   computeFlowHistorySplitIndex,
   isClonedNode,
   isCurrentStepNode,
-  isFlowHistoryNode as isFlowHistoryNodeAt,
   nodeHasAdapt,
   nodeHasRefine,
   pickFlowAnchorNodeId,
@@ -81,17 +80,14 @@ import { createSessionComposerPanelSyncActions } from './sessionComposerPanelSyn
 import { createSessionComposerPanelToggleActions } from './sessionComposerPanelToggleActions.js'
 import { createSessionComposerInsertActions } from './sessionComposerInsertActions.js'
 import { createSessionComposerKeydownActions } from './sessionComposerKeydownActions.js'
-import {
-  isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
-  nextSkippedFlowGroupExpansion,
-} from './sessionFlowNavUi.js'
+import { createSessionSenderInputBridge } from './sessionSenderInputBridge.js'
+import { createSessionFlowRailHandlers } from './sessionFlowRailHandlers.js'
 import { nextGateIdempotencyKey } from './sessionGateIdempotency.js'
 import {
   computeNeedsHuman,
   announceKickoffFromContext,
   announceUserNotesFromContext,
 } from './sessionAttentionUi.js'
-import { textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
   composerPlaceholderForGate,
@@ -155,6 +151,13 @@ const hashInsertLockUntilRef = {
 }
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
+function bumpHashInsertLock() {
+  hashInsertLockUntil = Date.now() + 300
+}
+
+const { readSenderText, readSenderTextRaw, replaceSenderText, appendSenderText, clearSender } =
+  createSessionSenderInputBridge({ senderRef, bumpHashInsertLock })
+
 /** 待发送附件 */
 const pendingFiles = ref([])
 const uploading = ref(false)
@@ -216,80 +219,6 @@ const filterOptions = computed(() => buildSessionListFilterOptions())
 const startableMembers = computed(() =>
   (members.value || []).filter((m) => m.enabled !== false),
 )
-
-function readSenderText() {
-  return readSenderTextRaw().trim()
-}
-
-/** 读输入框原文 */
-function readSenderTextRaw() {
-  const inst = senderRef.value
-  if (!inst) return ''
-  try {
-    if (typeof inst.getModelValue === 'function') {
-      return String(inst.getModelValue()?.text || '')
-    }
-    const sender = typeof inst.getSender === 'function' ? inst.getSender() : null
-    if (sender?.getText) return String(sender.getText() || '')
-  } catch {
-    /* ignore */
-  }
-  return ''
-}
-
-/**
- * 整框覆写输入内容。
- * 注意：组件 setText 是光标插入；clear() 又是未 await 的 async reset，
- * 二者组合会丢字。正确做法是直接 await sender.reset({ chatNode }).
- */
-async function replaceSenderText(text) {
-  const inst = senderRef.value
-  if (!inst) return
-  const next = text == null ? '' : String(text)
-  hashInsertLockUntil = Date.now() + 300
-  try {
-    const sender = typeof inst.getSender === 'function' ? inst.getSender() : null
-    if (sender && typeof sender.reset === 'function') {
-      await sender.reset({
-        clearHistory: true,
-        chatNode: textToChatNode(next),
-      })
-      return
-    }
-  } catch {
-    /* ignore */
-  }
-  // 极端降级：仍尽量写进去
-  try {
-    if (typeof inst.clear === 'function') inst.clear()
-    await nextTick()
-    await new Promise((r) => setTimeout(r, 30))
-    if (next) inst.setText?.(next)
-  } catch {
-    /* ignore */
-  }
-}
-
-/** 仅在光标处追加（真正 insert） */
-function appendSenderText(fragment) {
-  const s = fragment == null ? '' : String(fragment)
-  if (!s) return
-  try {
-    senderRef.value?.setText?.(s)
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearSender() {
-  const inst = senderRef.value
-  if (!inst) return
-  try {
-    if (typeof inst.clear === 'function') inst.clear()
-  } catch {
-    /* ignore */
-  }
-}
 
 const convMenu = CONVERSATION_MENU
 
@@ -615,22 +544,16 @@ const flowEntries = computed(() =>
   buildFlowEntries(detail.value?.nodes, detail.value?.session),
 )
 
-function isSkippedFlowGroupExpanded(entry) {
-  return isSkippedFlowGroupExpandedUi(useFlowStore(), entry)
-}
-
-function toggleSkippedFlowGroup(entry) {
-  useFlowStore().expandedSkippedFlowGroups = nextSkippedFlowGroupExpansion(useFlowStore(), entry)
-}
-
 /** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
 const flowHistorySplitIndex = computed(() =>
   computeFlowHistorySplitIndex(detail.value?.nodes, detail.value?.session),
 )
 
-function isFlowHistoryNode(n) {
-  return isFlowHistoryNodeAt(n, detail.value?.nodes, flowHistorySplitIndex.value)
-}
+const { isSkippedFlowGroupExpanded, toggleSkippedFlowGroup, isFlowHistoryNode } =
+  createSessionFlowRailHandlers({
+    getNodes: () => detail.value?.nodes,
+    getHistorySplitIndex: () => flowHistorySplitIndex.value,
+  })
 
 /** 流程轨应锚定滚动的节点：场外当前段 → 待确认 → 执行中 → 当前步 → 游标步 */
 const flowAnchorNodeId = computed(() =>
