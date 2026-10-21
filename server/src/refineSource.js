@@ -9,7 +9,10 @@ import {
   collectAdaptSourcePaths,
   createAdaptBackup,
   isProbablyBinary,
+  readScriptSource,
   restoreAdaptManifest,
+  stampManifestAfterPatch,
+  writeScriptSource,
 } from './adaptBackup.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
 
@@ -87,19 +90,19 @@ export function computeRefineContractContent(filePath, { title } = {}) {
   const commentable = /\.(mjs|cjs|js|ts|tsx|jsx|py|ps1|bat|cmd|sh)$/i.test(ext)
   if (!commentable) return { ok: false, reason: 'not_commentable' }
   const raw = fs.readFileSync(filePath)
-  if (isProbablyBinary(raw)) return { ok: false, reason: 'binary' }
-  const text = raw.toString('utf8')
-  if (text.includes(REFINE_MARK)) return { ok: false, reason: 'already' }
-  const nl = nlOf(text)
+  const src = readScriptSource(raw)
+  if (!src.ok) return { ok: false, reason: src.reason }
+  if (src.text.includes(REFINE_MARK)) return { ok: false, reason: 'already' }
+  const nl = src.nl || nlOf(src.text)
   const heading = String(title || '产出台账').trim() || '产出台账'
-  const next = insertAfterPreamble(text, refineBlock(filePath, heading, nl), nl)
-  return { ok: true, next, encoding: 'utf8' }
+  const next = insertAfterPreamble(src.text, refineBlock(filePath, heading, nl), nl)
+  return { ok: true, next, hasBom: src.hasBom }
 }
 
 export function applyRefineContract(filePath, opts = {}) {
   const r = computeRefineContractContent(filePath, opts)
   if (!r.ok) return { patched: false, reason: r.reason }
-  fs.writeFileSync(filePath, r.next, r.encoding)
+  writeScriptSource(filePath, r.next, { hasBom: r.hasBom })
   return { patched: true, reason: 'ok' }
 }
 
@@ -181,12 +184,15 @@ export function applyRefineOnMemberSave(member) {
             reason = r.reason === 'already' ? 'already' : 'patch_failed'
             break
           }
-          staged.push({ path: f.path, next: r.next })
+          staged.push({ path: f.path, next: r.next, hasBom: r.hasBom })
         }
         if (reason === 'ok') {
           for (const s of staged) {
-            fs.writeFileSync(s.path, s.next, 'utf8')
+            writeScriptSource(s.path, s.next, { hasBom: s.hasBom })
             patched.push(s.path)
+          }
+          if (backup?.manifestPath && patched.length) {
+            stampManifestAfterPatch(backup.manifestPath, patched)
           }
         }
       } catch {
@@ -210,6 +216,7 @@ export function applyRefineOnMemberSave(member) {
     format: spec,
     refinedAt: prev.refinedAt || new Date().toISOString(),
     refineBackup: backup?.zipPath || prev.refineBackup || null,
+    refineBackupManifest: backup?.manifestPath || prev.refineBackupManifest || null,
     patched: patched.length ? patched : prev.patched || [],
     patchReason: reason,
   }
@@ -238,6 +245,7 @@ export function refineSaveStatusText(prep) {
       backup_failed: '备份失败，未改源文件',
       patch_failed: '写入失败，未继续改源文件',
       unreadable: '源文件无法读取',
+      not_utf8: '源文件不是 UTF-8（请转为 UTF-8 或去掉 GBK 等编码后再炼化）',
     }[prep.reason]
     return `炼化规格已保存；${why || prep.reason}。跑起来仍会按规格整理进文档中心。`
   }

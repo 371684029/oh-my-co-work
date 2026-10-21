@@ -400,7 +400,21 @@ async function onRestoreRefine() {
   }
   restoringRefine.value = true
   try {
-    const r = await api.members.restoreRefine(id)
+    let r
+    try {
+      r = await api.members.restoreRefine(id)
+    } catch (e) {
+      if (e?.code !== 'RESTORE_CONFLICT' && !String(e?.message || '').includes('炼化后有改动')) {
+        throw e
+      }
+      const list = (e.conflicts || []).map((c) => c.path).join('\n')
+      await ElMessageBox.confirm(
+        `以下文件在炼化保存后又有改动，强制还原会覆盖当前内容：\n${list || e.message}\n\n仍要还原到炼化前备份吗？`,
+        '检测到后续编辑',
+        { type: 'warning', confirmButtonText: '强制还原', cancelButtonText: '取消' },
+      )
+      r = await api.members.restoreRefine(id, { force: true })
+    }
     ElMessage.success(`已还原 ${(r.restored || []).length} 个文件`)
     form.value.refine = false
     await load()

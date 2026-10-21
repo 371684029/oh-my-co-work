@@ -2,10 +2,14 @@
  * 3.1 适配备份：只打包即将改动的源文件，落到 data/backups/adapt。
  * 不扫整盘、不自动 git commit。
  */
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import { DATA_ROOT } from './db.js'
+
+export const BACKUP_RETAIN_COUNT = 5
+export const MANIFEST_VERSION = 2
 
 export const ADAPT_MARK = 'ACW-ADAPT'
 const MAX_FILE_BYTES = 1_500_000
@@ -99,6 +103,46 @@ export function isProbablyBinary(buf) {
   return false
 }
 
+export function sha256Buffer(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex')
+}
+
+export function sha256File(abs) {
+  return sha256Buffer(fs.readFileSync(abs))
+}
+
+export function isValidUtf8(buf) {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(buf)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** 读取脚本文本：UTF-8 校验、BOM、换行风格（5.2.0 REF-05）。 */
+export function readScriptSource(raw) {
+  if (isProbablyBinary(raw)) return { ok: false, reason: 'binary' }
+  let offset = 0
+  let hasBom = false
+  if (raw.length >= 3 && raw[0] === 0xef && raw[1] === 0xbb && raw[2] === 0xbf) {
+    hasBom = true
+    offset = 3
+  }
+  const body = offset ? raw.subarray(offset) : raw
+  if (!isValidUtf8(body)) return { ok: false, reason: 'not_utf8' }
+  const text = body.toString('utf8')
+  const nl = text.includes('\r\n') ? '\r\n' : '\n'
+  return { ok: true, text, hasBom, nl }
+}
+
+export function writeScriptSource(abs, text, { hasBom = false } = {}) {
+  const payload = hasBom
+    ? Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(String(text), 'utf8')])
+    : Buffer.from(String(text), 'utf8')
+  fs.writeFileSync(abs, payload)
+}
+
 export function assessAdaptFiles(paths) {
   const files = []
   let total = 0
@@ -128,6 +172,9 @@ export function assessAdaptFiles(paths) {
     }
     if (isProbablyBinary(buf)) {
       return { ok: false, reason: 'binary', files: [], path: abs }
+    }
+    if (!isValidUtf8(buf)) {
+      return { ok: false, reason: 'not_utf8', files: [], path: abs }
     }
     try {
       fs.accessSync(abs, fs.constants.W_OK)
@@ -271,20 +318,89 @@ export function createAdaptBackup({ files, memberId, sessionId, nodeId, kind = '
   }))
   writeZipArchive(zipEntries, zipPath)
   const manifest = {
+    manifestVersion: MANIFEST_VERSION,
     createdAt: new Date().toISOString(),
     memberId: memberId || null,
     sessionId: sessionId || null,
     nodeId: nodeId || null,
     zip: zipPath,
-    files: list.map((f, i) => ({
-      original: f.path,
-      inZip: zipEntries[i].name,
-      bytes: f.bytes || (fs.existsSync(f.path) ? fs.statSync(f.path).size : 0),
-    })),
+    files: list.map((f, i) => {
+      const raw = fs.readFileSync(f.path)
+      const src = readScriptSource(raw)
+      return {
+        original: f.path,
+        inZip: zipEntries[i].name,
+        bytes: f.bytes || raw.length,
+        sha256: sha256Buffer(raw),
+        hasBom: src.ok ? src.hasBom : false,
+      }
+    }),
   }
   const manifestPath = path.join(dir, `${base}.json`)
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
+  pruneMemberBackups(memberId, folder, BACKUP_RETAIN_COUNT)
   return { zipPath, manifestPath, manifest }
+}
+
+export function pruneMemberBackups(memberId, folder, keep = BACKUP_RETAIN_COUNT) {
+  const dir = path.join(DATA_ROOT, 'backups', folder, safeId(memberId))
+  if (!fs.existsSync(dir)) return { removed: 0 }
+  const jsons = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .map((j) => {
+      const jp = path.join(dir, j)
+      const st = fs.statSync(jp)
+      const base = j.replace(/\.json$/i, '')
+      return { json: jp, zip: path.join(dir, `${base}.zip`), mtime: st.mtimeMs }
+    })
+    .sort((a, b) => b.mtime - a.mtime)
+  let removed = 0
+  for (const p of jsons.slice(Math.max(0, keep))) {
+    try {
+      fs.unlinkSync(p.json)
+      removed += 1
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (fs.existsSync(p.zip)) fs.unlinkSync(p.zip)
+    } catch {
+      /* ignore */
+    }
+  }
+  return { removed }
+}
+
+export function stampManifestAfterPatch(manifestPath, patchedPaths) {
+  if (!manifestPath || !fs.existsSync(manifestPath)) return
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  const set = new Set(patchedPaths || [])
+  for (const f of manifest.files || []) {
+    if (set.has(f.original) && fs.existsSync(f.original)) {
+      f.sha256AfterPatch = sha256File(f.original)
+    }
+  }
+  manifest.updatedAt = new Date().toISOString()
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8')
+}
+
+export function checkRestoreConflicts(manifestPath) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  const conflicts = []
+  for (const f of manifest.files || []) {
+    if (!fs.existsSync(f.original)) continue
+    const current = sha256File(f.original)
+    const baseline = f.sha256AfterPatch || f.sha256
+    if (baseline && current !== baseline) {
+      conflicts.push({
+        path: f.original,
+        baselineSha256: baseline,
+        currentSha256: current,
+      })
+    }
+  }
+  return conflicts
 }
 
 function overlayJsonlMember(member) {
@@ -396,11 +512,20 @@ export function readAdaptZipEntries(zipPath) {
   return out
 }
 
-export function restoreAdaptManifest(manifestPath) {
+export function restoreAdaptManifest(manifestPath, { force = false } = {}) {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
   const zipPath = manifest.zip
   if (!zipPath || !fs.existsSync(zipPath)) {
     throw Object.assign(new Error('备份 zip 不存在'), { code: 'NO_ZIP' })
+  }
+  if (!force) {
+    const conflicts = checkRestoreConflicts(manifestPath)
+    if (conflicts.length) {
+      throw Object.assign(new Error('源文件在炼化后有改动，强制还原可能覆盖你的编辑'), {
+        code: 'RESTORE_CONFLICT',
+        conflicts,
+      })
+    }
   }
   const entries = readAdaptZipEntries(zipPath)
   const restored = []
@@ -408,6 +533,9 @@ export function restoreAdaptManifest(manifestPath) {
     const data = entries.get(f.inZip)
     if (!data) {
       throw Object.assign(new Error(`备份内缺少 ${f.inZip}`), { code: 'MISSING_ENTRY' })
+    }
+    if (f.sha256 && sha256Buffer(data) !== f.sha256) {
+      throw Object.assign(new Error(`备份校验失败：${f.original}`), { code: 'HASH_MISMATCH' })
     }
     fs.mkdirSync(path.dirname(f.original), { recursive: true })
     fs.writeFileSync(f.original, data)
@@ -429,6 +557,7 @@ export function adaptStatusText(prep) {
       backup_failed: '备份失败，未改源文件',
       patch_failed: '写入失败，未继续改源文件',
       unreadable: '源文件无法读取',
+      not_utf8: '源文件不是 UTF-8',
     }[prep.reason]
     return `适配：${why || prep.reason}，已打步骤标记（不改气泡种类）。`
   }

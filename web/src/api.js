@@ -34,7 +34,13 @@ async function req(path, options = {}) {
   })
   if (res.status === 204) return null
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || res.statusText)
+  if (!res.ok) {
+    const err = new Error(data.error || res.statusText)
+    if (data.code) err.code = data.code
+    if (data.conflicts) err.conflicts = data.conflicts
+    err.status = res.status
+    throw err
+  }
   return data
 }
 
@@ -115,8 +121,11 @@ export const api = {
       req(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(body || {}) }),
     clone: (id, body) => req(`/members/${id}/clone`, { method: 'POST', body: JSON.stringify(body || {}) }),
     remove: (id) => req(`/members/${id}`, { method: 'DELETE' }),
-    restoreRefine: (id) =>
-      req(`/members/${id}/refine/restore`, { method: 'POST', body: '{}' }),
+    restoreRefine: (id, { force = false } = {}) =>
+      req(`/members/${id}/refine/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ force: !!force }),
+      }),
     refinePlan: (body) =>
       req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     startSession: (id, body) =>

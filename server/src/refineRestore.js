@@ -44,16 +44,17 @@ export function stripRefineContract(filePath) {
   return { ok: true, reason: 'stripped' }
 }
 
-export function restoreMemberRefine(memberId) {
+export function restoreMemberRefine(memberId, { force = false } = {}) {
   const member = getMember(memberId)
   if (!member) throw Object.assign(new Error('成员不存在'), { code: 'NOT_FOUND' })
   const refine = member.config?.refine
   const zipPath = refine?.refineBackup
   let restored = []
   if (zipPath && fs.existsSync(zipPath)) {
-    const manifestPath = manifestPathForZip(zipPath)
+    const manifestPath =
+      refine?.refineBackupManifest || manifestPathForZip(zipPath)
     if (!manifestPath) throw Object.assign(new Error('找不到备份 manifest'), { code: 'NO_MANIFEST' })
-    const r = restoreAdaptManifest(manifestPath)
+    const r = restoreAdaptManifest(manifestPath, { force })
     restored = r.restored
   } else {
     for (const p of collectAdaptSourcePaths(member)) {

@@ -306,9 +306,20 @@ router.post('/members/refine/plan', (req, res) => {
 })
 router.post('/members/:id/refine/restore', (req, res) => {
   try {
-    res.json(restoreMemberRefine(req.params.id))
+    const force = !!(req.body && req.body.force)
+    res.json(restoreMemberRefine(req.params.id, { force }))
   } catch (e) {
-    res.status(e.code === 'NOT_FOUND' ? 404 : 400).json({ error: e.message, code: e.code })
+    const status =
+      e.code === 'NOT_FOUND'
+        ? 404
+        : e.code === 'RESTORE_CONFLICT'
+          ? 409
+          : 400
+    res.status(status).json({
+      error: e.message,
+      code: e.code,
+      conflicts: e.conflicts,
+    })
   }
 })
 router.delete('/members/:id', (req, res) => {
