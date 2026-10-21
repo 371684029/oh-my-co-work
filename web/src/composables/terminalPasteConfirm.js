@@ -1,5 +1,6 @@
 /** Paste confirmation helpers (5.2.0 CP-08). */
 
+// eslint-disable-next-line no-control-regex -- bracketed paste OSC sequences
 const BRACKET_MARKERS = /\x1b\[200~|\x1b\[201~/g
 
 export function stripBracketedPasteMarkers(data) {

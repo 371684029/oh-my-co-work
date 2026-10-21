@@ -7,7 +7,11 @@
           脚本成员支持 bat / PowerShell / Python / Node / Shell 等。默认走<strong>内嵌终端</strong>。支持<strong>编辑</strong>与<strong>克隆</strong>。
         </p>
       </div>
-      <el-button type="primary" @click="openCreate()">新建成员</el-button>
+      <div class="page-head-actions">
+        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <el-button type="primary" @click="openCreate()">新建成员</el-button>
+      </div>
     </div>
 
     <el-input
@@ -37,10 +41,11 @@
           {{ runSummary(row) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260">
+      <el-table-column label="操作" width="320">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openClone(row)">克隆</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
           <el-button link type="info" @click="view(row)">查看</el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
         </template>
@@ -300,7 +305,47 @@ const scriptExts = [
 
 const list = ref([])
 const searchQ = ref('')
+const importFileRef = ref(null)
 const SearchIcon = Search
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+async function exportTemplate(row) {
+  try {
+    const pack = await api.members.exportTemplate(row.id)
+    const safe = String(row.display_name || row.name || 'member').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
+    downloadJson(`${safe}.acw.json`, pack)
+    ElMessage.success('已导出配置模板')
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+function triggerImportTemplate() {
+  importFileRef.value?.click()
+}
+
+async function onImportFile(ev) {
+  const file = ev.target?.files?.[0]
+  ev.target.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const pack = JSON.parse(text)
+    await api.templates.import(pack, { onConflict: 'rename' })
+    await load()
+    ElMessage.success('模板已导入')
+  } catch (e) {
+    ElMessage.error(e.message || '导入失败')
+  }
+}
 // 成员模糊搜索（拼音/首字母/大小写/子序列），多字段取最优
 const filteredList = computed(() => {
   const q = searchQ.value
@@ -817,5 +862,15 @@ onMounted(() => {
   margin-top: 16px;
   display: flex;
   gap: 10px;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 </style>

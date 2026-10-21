@@ -89,6 +89,14 @@ test('trailing punctuation is not part of the path', () => {
   assert.equal(out.includes('C:\\tools\\x，'), false)
 })
 
+test('headings get stable id anchors for TOC', () => {
+  const out = render('# 标题一\n\n## 小节\n\n### 重复\n\n### 重复\n')
+  assert.ok(out.includes('id="标题一"'))
+  assert.ok(out.includes('id="小节"'))
+  assert.ok(out.includes('id="重复"'))
+  assert.ok(out.includes('id="重复-2"'))
+})
+
 test('paths inside existing markdown links are not double-linked', () => {
   const out = render('[前往 D:\\guide\\readme.md](https://example.com/guide)')
   // 外链保持外链行为；链接文本内的路径不再包一层

@@ -199,14 +199,31 @@ export function stripAnsiTail(
   return text.replace(/^\s+/, '').replace(/\s+$/, '')
 }
 
-/** GUI 把附件路径写成一行，一次回车交给 grok */
-export function buildFurnacePtyAttachText(userText, files = []) {
+const FURNACE_INBOX_REL = /^inbox\/[^/]+\//
+
+/** relPath must stay under furnace inbox (CLI cwd-relative). */
+export function furnaceAttachRelPathsAllowed(files = []) {
+  return (Array.isArray(files) ? files : []).every((f) => {
+    const p = String(f?.relPath || '').trim().replace(/\\/g, '/')
+    return p && FURNACE_INBOX_REL.test(p) && !p.includes('..')
+  })
+}
+
+/** GUI 把附件路径写成一行，一次回车交给 grok / Cursor CLI */
+export function buildFurnacePtyAttachText(userText, files = [], { agent = 'grok' } = {}) {
   const text = String(userText || '').trim()
   const list = Array.isArray(files)
     ? files.map((f) => String(f?.relPath || '').trim()).filter(Boolean)
     : []
   if (!text && !list.length) return ''
   if (!list.length) return text
+  if (!furnaceAttachRelPathsAllowed(list.map((relPath) => ({ relPath })))) {
+    throw new Error('附件路径须位于熔炉 inbox 目录内')
+  }
+  if (agent === 'cursor') {
+    const refs = list.map((p) => `@${p.replace(/^\.\/?/, '')}`).join(' ')
+    return text ? `${text} ${refs}` : refs
+  }
   const note = `请阅读工作目录文件 ${list.join(' ')}`
   return text ? `${text} ${note}` : note
 }

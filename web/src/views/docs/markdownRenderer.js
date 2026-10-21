@@ -3,6 +3,7 @@
 // 路径识别基于「原始文本」：markdown 会把 D:\work\a 的 \b 当转义吞掉，
 // 所以必须用 markdown-it 自定义规则在原始 text token 上做，不能渲染后补链接。
 import MarkdownIt from 'markdown-it'
+import { slugifyHeading } from './docOutline.js'
 
 // Windows 盘符路径：到行尾/全角标点为止，允许空格与中文；尾随标点/引号/反斜杠后续修剪
 const WIN_PATH = /[A-Za-z]:\\[^，。！？；、（）《》""''\r\n"]*/g
@@ -169,6 +170,26 @@ export function createDocsMarkdown({ workFolders = [] } = {}) {
   const defaultLinkOpen =
     md.renderer.rules.link_open ||
     ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options))
+  const defaultHeadingOpen =
+    md.renderer.rules.heading_open ||
+    ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options))
+  md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+    const token = tokens[idx]
+    const inline = tokens[idx + 1]
+    if (inline?.type === 'inline') {
+      const base = slugifyHeading(inline.content || '')
+      if (base) {
+        env.docHeadingSlugs = env.docHeadingSlugs || new Map()
+        const n = (env.docHeadingSlugs.get(base) || 0) + 1
+        env.docHeadingSlugs.set(base, n)
+        const id = n > 1 ? `${base}-${n}` : base
+        token.attrSet('id', id)
+        token.attrJoin('class', 'docs-heading-anchor')
+      }
+    }
+    return defaultHeadingOpen(tokens, idx, options, env, self)
+  }
+
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
     const href = token.attrGet('href') || ''

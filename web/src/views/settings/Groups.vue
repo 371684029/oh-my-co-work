@@ -5,7 +5,11 @@
         <h2 class="page-title">群聊模板</h2>
         <p class="page-desc">线性步骤编排。支持<strong>编辑</strong>与<strong>克隆</strong>。</p>
       </div>
-      <el-button type="primary" @click="openCreate()">新建群模板</el-button>
+      <div class="page-head-actions">
+        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <input ref="importFileRef" type="file" accept=".json,.acw.json" class="hidden-file-input" @change="onImportFile" />
+        <el-button type="primary" @click="openCreate()">新建群模板</el-button>
+      </div>
     </div>
 
     <el-input
@@ -22,10 +26,11 @@
       <el-table-column label="步骤数" width="90">
         <template #default="{ row }">{{ row.steps?.length || 0 }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="320">
+      <el-table-column label="操作" width="380">
         <template #default="{ row }">
           <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link type="primary" @click="openClone(row)">克隆</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
           <el-button link type="success" @click="start(row)">开聊</el-button>
           <el-button link type="info" @click="view(row)">查看</el-button>
           <el-button link type="danger" @click="remove(row)">删除</el-button>
@@ -291,6 +296,46 @@ const readonly = ref(false)
 const showBatch = ref(false)
 const batchMemberIds = ref([])
 const batchRefine = ref(false)
+const importFileRef = ref(null)
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+async function exportTemplate(row) {
+  try {
+    const pack = await api.groups.exportTemplate(row.id)
+    const safe = String(row.title || 'group').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
+    downloadJson(`${safe}.acw.json`, pack)
+    ElMessage.success('已导出配置模板')
+  } catch (e) {
+    ElMessage.error(e.message || '导出失败')
+  }
+}
+
+function triggerImportTemplate() {
+  importFileRef.value?.click()
+}
+
+async function onImportFile(ev) {
+  const file = ev.target?.files?.[0]
+  ev.target.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const pack = JSON.parse(text)
+    await api.templates.import(pack, { onConflict: 'rename' })
+    await load()
+    ElMessage.success('模板已导入')
+  } catch (e) {
+    ElMessage.error(e.message || '导入失败')
+  }
+}
 
 const globalAdminLabel = computed(() => {
   const r = appSettings.value?.resolvedAdmin
@@ -817,5 +862,15 @@ onMounted(load)
   margin-top: 16px;
   display: flex;
   gap: 10px;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hidden-file-input {
+  display: none;
 }
 </style>

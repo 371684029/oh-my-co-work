@@ -119,6 +119,7 @@ export const api = {
       req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    exportTemplate: (id) => req(`/members/${id}/export-template`),
   },
   groups: {
     list: () => req('/groups'),
@@ -129,6 +130,14 @@ export const api = {
     remove: (id) => req(`/groups/${id}`, { method: 'DELETE' }),
     startSession: (id, body) =>
       req(`/groups/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    exportTemplate: (id) => req(`/groups/${id}/export-template`),
+  },
+  templates: {
+    import: (pack, { onConflict = 'rename' } = {}) =>
+      req('/templates/import', {
+        method: 'POST',
+        body: JSON.stringify({ pack, onConflict }),
+      }),
   },
   sessions: {
     list: (status) => req(status ? `/sessions?status=${status}` : '/sessions'),

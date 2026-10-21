@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { outlineWithUniqueSlugs } from '../../docs/docOutline.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -117,13 +118,19 @@ const dirty = computed(
   () => editing.value && file.value != null && draft.value !== (file.value.content || ''),
 )
 
+/** 当前文档大纲（h1～h3，与正文锚点 slug 一致） */
+const docOutline = computed(() => {
+  if (!file.value?.content || editing.value) return []
+  return outlineWithUniqueSlugs(file.value.content, { maxLevel: 3 })
+})
+
 /** 当前内容渲染 HTML（workFolder 变化时重建实例） */
 const renderedHtml = computed(() => {
   if (!file.value || file.value.content == null) return ''
   const md = createDocsMarkdown({
     workFolders: [currentSession.value?.workFolder].filter(Boolean),
   })
-  return md.render(file.value.content)
+  return md.render(file.value.content, {})
 })
 
 // ===== 工具函数 =====
@@ -420,6 +427,7 @@ export {
   canEdit,
   dirty,
   renderedHtml,
+  docOutline,
   // 4.1.0 搜索
   searchQuery,
   searchResults,

@@ -225,7 +225,15 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function sendChat() {
-    const payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value)
+    let payload
+    try {
+      payload = buildFurnacePtyAttachText(draft.value, pendingFiles.value, {
+        agent: furnaceAgentKind.value,
+      })
+    } catch (e) {
+      ElMessage.warning(e?.message || '附件无效')
+      return
+    }
     if (!payload || !isRunning.value || uploading.value) return
     sent.value.push({ id: `${Date.now()}-${sent.value.length}`, text: payload })
     chatTurns.value.push({ id: nextTurnId(), role: 'user', text: payload })

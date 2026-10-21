@@ -35,6 +35,11 @@ import {
 import { ROOT, DATA_ROOT, getDbDriver } from './db.js'
 import { runIntegrityCheck } from './backup.js'
 import { restoreMemberRefine } from './refineRestore.js'
+import {
+  exportMemberTemplate,
+  exportGroupTemplate,
+  importTemplatePack,
+} from './templatePack.js'
 import { planRefineOnMemberSave } from './refineSource.js'
 import {
   touchHeartbeat,
@@ -256,6 +261,13 @@ router.post('/members/:id/clone', (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
+router.get('/members/:id/export-template', (req, res) => {
+  try {
+    res.json(exportMemberTemplate(req.params.id))
+  } catch (e) {
+    res.status(e.message === '成员不存在' ? 404 : 400).json({ error: e.message })
+  }
+})
 router.patch('/members/:id', (req, res) => {
   try {
     res.json(updateMember(req.params.id, req.body || {}))
@@ -333,6 +345,23 @@ router.post('/groups', (req, res) => {
 router.post('/groups/:id/clone', (req, res) => {
   try {
     res.status(201).json(cloneGroup(req.params.id, req.body || {}))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.get('/groups/:id/export-template', (req, res) => {
+  try {
+    res.json(exportGroupTemplate(req.params.id))
+  } catch (e) {
+    res.status(e.message === '群模板不存在' ? 404 : 400).json({ error: e.message })
+  }
+})
+router.post('/templates/import', (req, res) => {
+  try {
+    const body = req.body || {}
+    const onConflict = body.onConflict || 'rename'
+    const pack = body.pack ?? body
+    res.status(201).json(importTemplatePack(pack, { onConflict }))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

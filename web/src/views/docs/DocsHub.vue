@@ -264,7 +264,31 @@
           </div>
 
           <!-- 渲染（只读） -->
-          <div v-if="!editing" class="dh-content doc-prose" @click="onContentClick" v-html="renderedHtml" />
+          <div
+            v-if="!editing"
+            ref="contentScrollRef"
+            class="dh-content doc-prose"
+            @click="onContentClick"
+            v-html="renderedHtml"
+          />
+
+          <nav
+            v-if="docOutline.length && !editing"
+            class="dh-outline"
+            aria-label="文档目录"
+          >
+            <div class="dh-outline-title">目录</div>
+            <button
+              v-for="item in docOutline"
+              :key="item.slug"
+              type="button"
+              class="dh-outline-item"
+              :class="{ active: activeOutlineSlug === item.slug, [`level-${item.level}`]: true }"
+              @click="scrollToHeading(item.slug)"
+            >
+              {{ item.text }}
+            </button>
+          </nav>
           <!-- 编辑（仅公告） -->
           <el-input
             v-else
@@ -281,7 +305,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { api } from '../../api'
@@ -303,6 +327,7 @@ import {
   currentSession,
   canEdit,
   renderedHtml,
+  docOutline,
   searchQuery,
   searchResults,
   searchLoading,
@@ -462,7 +487,70 @@ async function refresh() {
   if (current.value) await loadFile(current.value.sessionId, current.value.name)
 }
 
+const contentScrollRef = ref(null)
+const activeOutlineSlug = ref('')
+let outlineObserver = null
+
+function scrollToHeading(slug) {
+  const root = contentScrollRef.value
+  if (!root || !slug) return
+  const el = root.querySelector(`#${CSS.escape(slug)}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    activeOutlineSlug.value = slug
+  }
+}
+
+async function copyHeadingAnchor(slug) {
+  if (!slug) return
+  const hash = `#${slug}`
+  try {
+    await navigator.clipboard.writeText(hash)
+    ElMessage.success('已复制锚点链接')
+  } catch {
+    ElMessage.success(`锚点 ${hash}`)
+  }
+}
+
+function teardownOutlineObserver() {
+  if (outlineObserver) {
+    outlineObserver.disconnect()
+    outlineObserver = null
+  }
+  activeOutlineSlug.value = ''
+}
+
+function setupOutlineObserver() {
+  teardownOutlineObserver()
+  const root = contentScrollRef.value
+  if (!root || !docOutline.value.length) return
+  const headings = [...root.querySelectorAll('h1[id], h2[id], h3[id]')]
+  if (!headings.length) return
+  outlineObserver = new IntersectionObserver(
+    (entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+      if (visible[0]?.target?.id) activeOutlineSlug.value = visible[0].target.id
+    },
+    { root, rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] },
+  )
+  for (const h of headings) outlineObserver.observe(h)
+  if (!activeOutlineSlug.value && headings[0]?.id) activeOutlineSlug.value = headings[0].id
+}
+
+watch([file, editing, renderedHtml], () => {
+  if (editing.value || !file.value) {
+    teardownOutlineObserver()
+    return
+  }
+  nextTick(() => setupOutlineObserver())
+})
+
 function onContentClick(e) {
+  const headingEl = e.target.closest('.docs-heading-anchor')
+  if (headingEl?.id) {
+    copyHeadingAnchor(headingEl.id)
+    return
+  }
   const pathEl = e.target.closest('.docs-path-link')
   if (pathEl) {
     e.preventDefault()
@@ -499,6 +587,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  teardownOutlineObserver()
   disposeDocsHub()
 })
 </script>
@@ -908,6 +997,66 @@ onUnmounted(() => {
   min-width: 0;
   padding: 20px 24px 28px;
   background: rgba(255, 255, 255, 0.88);
+  position: relative;
+}
+
+.dh-outline {
+  position: absolute;
+  top: 24px;
+  right: 12px;
+  width: 168px;
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  padding: 10px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  font-size: 11.5px;
+  line-height: 1.35;
+  z-index: 2;
+}
+
+.dh-outline-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ecw-text-3, #86868b);
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.dh-outline-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--ecw-text-2, #6e6e73);
+  cursor: pointer;
+}
+
+.dh-outline-item.level-2 {
+  padding-left: 14px;
+}
+
+.dh-outline-item.level-3 {
+  padding-left: 22px;
+  font-size: 11px;
+}
+
+.dh-outline-item:hover,
+.dh-outline-item.active {
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+.doc-prose :deep(.docs-heading-anchor) {
+  scroll-margin-top: 12px;
+  cursor: pointer;
 }
 
 .dh-welcome-pane {
