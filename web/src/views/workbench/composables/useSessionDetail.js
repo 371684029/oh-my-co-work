@@ -11,7 +11,6 @@ import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
   composerScopeKey,
-  loadInputDraft,
   saveInputDraft,
   stepInputHistory,
 } from '../../../composables/inputDraftHistory.js'
@@ -88,11 +87,7 @@ import {
 import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
 import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
 import { createSessionGateActions } from './sessionGateActions.js'
-import {
-  pickDefaultStartTarget,
-  shouldSaveComposerDraftOnSessionSwitch,
-  workbenchSessionRoute,
-} from './sessionLoadListsUi.js'
+import { createSessionLoadActions } from './sessionLoadActions.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -157,6 +152,14 @@ const gating = ref(false)
 /** XSender 实例：该组件无可靠 v-model，提交时用 ref 取文 */
 const senderRef = ref(null)
 let composerHistIndex = -1
+const composerHistIndexRef = {
+  get index() {
+    return composerHistIndex
+  },
+  set index(v) {
+    composerHistIndex = v
+  },
+}
 let composerDraftTimer = 0
 /** 刚用 # 快捷覆写输入框后，短暂忽略 sync，避免面板闪回 */
 let hashInsertLockUntil = 0
@@ -486,53 +489,25 @@ function formatIo(val, role = 'auto') {
   return formatSessionIo(val, role)
 }
 
-async function loadLists() {
-  sessions.value = await api.sessions.list()
-  groups.value = await api.groups.list()
-  members.value = await api.members.list()
-  if (!startTarget.value) {
-    const picked = pickDefaultStartTarget(groups.value, members.value)
-    if (picked) startTarget.value = picked
-  }
-  try {
-    const sc = await api.slashCommands.list()
-    slashCommands.value = sc.commands || []
-  } catch {
-    slashCommands.value = []
-  }
-  try {
-    const s = await api.appSettings.get()
-    if (s?.terminal) terminalPrefs.value = { ...terminalPrefs.value, ...s.terminal }
-    furnaceSurface.value = 'tui'
-  } catch {
-    /* keep defaults */
-  }
-}
-
-async function loadDetail(id) {
-  detail.value = await api.sessions.get(id)
-  editTitle.value = detail.value.session.title
-  sessionNotesDraft.value = detail.value.session?.context?.notes || ''
-}
-
-async function selectSession(id) {
-  if (!id) return
-  const prev = activeId.value
-  if (shouldSaveComposerDraftOnSessionSwitch(prev, id)) {
-    saveInputDraft(composerScopeKey(prev), readSenderTextRaw())
-  }
-  composerHistIndex = -1
-  activeId.value = id
-  terminalBridge.resetTerminals?.()
-  _router.replace(workbenchSessionRoute(id))
-  useFlowStore().rightTab = 'flow' // 默认展示流程 Tab
-  useFlowStore().expandedSkippedFlowGroups = {}
-  terminalBridge.bindWs?.(id)
-  await Promise.all([loadDetail(id), terminalBridge.loadTerminals?.(id)])
-  terminalBridge.revealFurnaceTui?.()
-  const savedDraft = loadInputDraft(composerScopeKey(id))
-  if (savedDraft) await replaceSenderText(savedDraft)
-}
+const { loadLists, loadDetail, selectSession } = createSessionLoadActions({
+  sessions,
+  groups,
+  members,
+  slashCommands,
+  startTarget,
+  terminalPrefs,
+  furnaceSurface,
+  detail,
+  editTitle,
+  sessionNotesDraft,
+  activeId,
+  api,
+  terminalBridge,
+  readSenderTextRaw,
+  replaceSenderText,
+  composerHistIndexRef,
+  replaceSessionRoute: (route) => _router?.replace(route),
+})
 
 /** 群报告 MD 路径提示（相对 dataRoot） */
 const announceMdHint = computed(() =>
@@ -921,14 +896,6 @@ const { runSlash } = createSessionSlashActions({
 })
 
 const gateActionsRef = {}
-const composerHistIndexRef = {
-  get index() {
-    return composerHistIndex
-  },
-  set index(v) {
-    composerHistIndex = v
-  },
-}
 
 const { onSenderSubmit } = createSessionMessageSendActions({
   sending,
