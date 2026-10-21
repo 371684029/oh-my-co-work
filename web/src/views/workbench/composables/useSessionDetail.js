@@ -3,11 +3,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   formatBusinessIo,
   wholeOutputText,
-  extractCallArgsFromSlash,
   isMentionAssistOnly,
   stepTypeLabel as sharedStepTypeLabel,
   MAX_PROJECT_PARAMS,
-  FURNACE_DISPLAY_NAME,
 } from '@acw/shared'
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
@@ -44,13 +42,8 @@ import {
   findGroupByTitle,
 } from './sessionDemoFlowUi.js'
 import { t } from '../../../i18n/index.js'
-import {
-  agentInsertTextFromSlashRun,
-  slashCommandNotFoundMessage,
-  slashNeedsUrlPrompt,
-  slashRunSuccessMessage,
-  slashUrlPromptDefault,
-} from './sessionSlashRunUi.js'
+import { slashCommandNotFoundMessage } from './sessionSlashRunUi.js'
+import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   mainGateWaitingInfoMessage,
   mentionPendingSuccessMessage,
@@ -1164,38 +1157,13 @@ function goShortcuts() {
   _router.push('/settings/shortcuts')
 }
 
-async function runSlash(cmd) {
-  if (!cmd) return
-  try {
-    let url
-    if (slashNeedsUrlPrompt(cmd)) {
-      const { value } = await ElMessageBox.prompt(cmd.description || slashUrlPromptDefault(), cmd.name, {
-        inputValue: cmd.url || 'https://',
-      })
-      url = value
-    }
-    const args = extractCallArgsFromSlash(readSenderTextRaw(), cmd.slash)
-    const r = await api.slashCommands.run(cmd.id, {
-      sessionId: activeId.value || undefined,
-      url,
-      args,
-    })
-    useComposerStore().slashOpen = false
-    useComposerStore().slashQuery = ''
-    if (r.kind === 'url' && r.url) {
-      window.open(r.url, '_blank', 'noopener')
-      clearSender()
-    } else if (r.kind === 'agent') {
-      // 熔炉 / 成员 Agent：写入提示语到输入框，用户可补全后发送
-      await replaceSenderText(agentInsertTextFromSlashRun(r, FURNACE_DISPLAY_NAME))
-    } else {
-      clearSender()
-    }
-    ElMessage.success(slashRunSuccessMessage(r, cmd))
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
-}
+const { runSlash } = createSessionSlashActions({
+  activeId,
+  readSenderTextRaw,
+  clearSender,
+  replaceSenderText,
+  api,
+})
 
 async function onSenderSubmit() {
   if (sending.value || uploading.value) return

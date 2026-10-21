@@ -45,6 +45,7 @@ import {
   getTerminal,
   killTerminal,
   listSessionTerminals,
+  runTerminal,
   deleteTerminalLog,
   readTerminalLogPath,
   readTerminalLogPreview,
@@ -517,6 +518,42 @@ router.post('/sessions/:id/gate', async (req, res) => {
     res.json({ ...(detail || {}), gateResult: gateResult || { ok: true } })
   } catch (e) {
     res.status(400).json({ error: e.message })
+  }
+})
+
+/** QA-01: CI browser PTY smoke only (ACW_E2E_SMOKE=1). */
+router.post('/sessions/:id/e2e/spawn-terminal', async (req, res) => {
+  if (process.env.ACW_E2E_SMOKE !== '1') {
+    return res.status(404).json({ error: 'not found' })
+  }
+  const sessionId = req.params.id
+  if (!getSessionDetail(sessionId)) {
+    return res.status(404).json({ error: '会话不存在' })
+  }
+  try {
+    const result = await runTerminal({
+      launch: {
+        cmd: process.env.SHELL || '/bin/sh',
+        args: ['-lc', 'exec sleep 600'],
+        label: 'sh',
+      },
+      cwd: DATA_ROOT,
+      env: { ...process.env },
+      sessionId,
+      memberId: `e2e-${sessionId}`,
+      label: 'e2e-pty',
+      successCodes: [0],
+      keepAlive: true,
+      cols: 80,
+      rows: 24,
+    })
+    if (!result.ok) {
+      return res.status(500).json(result)
+    }
+    const terminal = listSessionTerminals(sessionId).slice(-1)[0]
+    res.json({ ok: true, terminalId: terminal?.id || null, result })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
   }
 })
 

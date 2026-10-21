@@ -26,6 +26,7 @@ const child = spawn(process.execPath, ['server/src/index.js'], {
     ...process.env,
     ACW_DATA_ROOT: dataRoot,
     ACW_PORT: String(port),
+    ACW_E2E_SMOKE: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
@@ -224,12 +225,63 @@ async function main() {
     assert.equal(sendRes.status(), 200, 'composer Enter should POST message')
 
     await page.goto(`${base}/docs`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const docsFirstRunEarly = page.getByRole('button', { name: /开始探索|Start exploring/i })
+    if (await docsFirstRunEarly.isVisible().catch(() => false)) {
+      await docsFirstRunEarly.click()
+      await page.waitForTimeout(400)
+    }
     const docsWelcome = page.getByRole('region', {
       name: /文档中心欢迎区|Docs hub welcome/i,
     })
     await docsWelcome.waitFor({ state: 'visible', timeout: 15000 })
     const docsSearch = page.locator('input[aria-label*="搜索"], input[aria-label*="Search"]')
     assert.equal(await docsSearch.count(), 1, 'docs hub search input aria-label')
+
+    await page.goto(`${base}/workbench/${session.id}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await page.waitForTimeout(800)
+
+    const spawnRes = await fetch(`${base}/api/sessions/${session.id}/e2e/spawn-terminal`, {
+      method: 'POST',
+      headers: authHeaders,
+    })
+    assert.equal(spawnRes.status, 200, 'e2e spawn-terminal should succeed')
+    const spawnBody = await spawnRes.json()
+    assert.ok(spawnBody.terminalId, 'spawn should return terminalId')
+
+    for (let i = 0; i < 40; i++) {
+      const termsRes = await fetch(`${base}/api/sessions/${session.id}/terminals`, {
+        headers: { 'X-ACW-Token': token, Origin: origin },
+      })
+      const termsBody = await termsRes.json()
+      if ((termsBody.terminals || []).some((t) => t.id === spawnBody.terminalId)) break
+      await page.waitForTimeout(250)
+    }
+
+    const enterTerminal = page.getByRole('button', {
+      name: /进入终端|查看终端|Enter terminal|View terminal/i,
+    })
+    await enterTerminal.waitFor({ state: 'visible', timeout: 45000 })
+    await enterTerminal.click()
+    await page.waitForTimeout(2500)
+    await page.locator('.terminal-view .xterm-screen').waitFor({ state: 'visible', timeout: 20000 })
+    await page.locator('.terminal-view .xterm-screen').click()
+    const xtermInput = page.locator('.terminal-view .xterm-helper-textarea')
+    await xtermInput.waitFor({ state: 'attached', timeout: 20000 })
+    await page.locator('.terminal-view').waitFor({ state: 'visible', timeout: 20000 })
+    await xtermInput.pressSequentially(' ', { force: true })
+
+    await fetch(`${base}/api/sessions/${session.id}/terminals/${spawnBody.terminalId}/kill`, {
+      method: 'POST',
+      headers: authHeaders,
+    })
+    const backToChat = page.getByRole('button', { name: /返回对话|Back to chat/i })
+    if (await backToChat.isVisible().catch(() => false)) {
+      await backToChat.click()
+      await page.waitForTimeout(400)
+    }
 
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
