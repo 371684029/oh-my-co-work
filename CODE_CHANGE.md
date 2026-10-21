@@ -3,6 +3,8 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | M | server/test/fixtures/perf-baseline.json | ENG-02 基线 dbInitMs 50 配合 CI 20× 阈值
+2026-10-21 | A/M | server/src/{backup/{moveLiveAside,backup.js},runners/{cwdResolve,launchSpec},runners.js} web/src/{views/docs/DocsHub,workbench/composables/{sessionAnnounceUi,sessionComposerInput,useSessionDetail}} server/test/{moveLiveAside,cwdResolve}.test.js web/test/{sessionAnnounceUi,sessionComposerInput}.test.mjs docs/5.1.0-plan.md | SRV-01 moveLiveAside、SRV-04/ENG-04 runners 拆分、FE-01 announce/composer、UX-03 DocsHub aria
 2026-10-21 | M | server/test/fixtures/perf-baseline.json | ENG-02 CI _runner 基线 dbInitMs 35ms，避免 perf 门禁误报
 2026-10-21 | A/M | server/src/{routes/{sessionsRoutes,sessionsSystemRoutes},backup,terminal/{publicTerminal,terminalService},routes.js} web/src/{views/Workbench,workbench/composables/{sessionFlowUi,useSessionDetail}} server/test/sessionsSystemRoutes.test.js web/test/sessionFlowUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | CI lint 修复、ENG-04 sessionsSystemRoutes、SRV-01 restore moveAside 异步、FE-01 sessionFlowUi、UX-03 顶栏 aria
 2026-10-21 | A/M | server/src/{routes/catalogRoutes,backup,routes.js} web/src/{views/workbench/composables/sessionFormatUtils,useSessionDetail,components/SessionRail}.vue server/test/catalogRoutes.test.js web/test/sessionFormatUtils.test.mjs docs/{5.1.0,5.3.0}-plan.md | ENG-04 catalogRoutes、SRV-01 applyStagedToLiveAsync、FE-01/UX-03

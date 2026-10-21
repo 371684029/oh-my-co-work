@@ -32,8 +32,23 @@ import {
   getScriptWorkDir,
   assertScriptWorkDirConfigured,
 } from './runners/scriptWorkDir.js'
+import {
+  resolveCwd,
+  resolveCwdForScript,
+  resolveScriptFilePath,
+  extractScriptPathFromCommand,
+} from './runners/cwdResolve.js'
+import { resolveLaunchSpec, winBatCallCommand } from './runners/launchSpec.js'
 
 export { resolveWorkFolderCandidates, getScriptWorkDir, assertScriptWorkDirConfigured }
+export {
+  resolveCwd,
+  resolveCwdForScript,
+  resolveScriptFilePath,
+  extractScriptPathFromCommand,
+  resolveLaunchSpec,
+  winBatCallCommand,
+}
 
 function mirrorScriptWorkDirFields(script) {
   if (!script || typeof script !== 'object') return script
@@ -43,96 +58,6 @@ function mirrorScriptWorkDirFields(script) {
     script.scriptDir = w
   }
   return script
-}
-
-/**
- * 解析脚本运行 cwd（不用成员/群/会话工作文件夹）
- */
-export function resolveCwdForScript(scriptCfg, filePath) {
-  if (!scriptCfg || typeof scriptCfg !== 'object') return null
-  if (scriptCfg.cwd) return String(scriptCfg.cwd)
-
-  const sw = getScriptWorkDir(scriptCfg)
-  if (sw && fs.existsSync(sw)) return path.resolve(sw)
-
-  if (filePath) {
-    try {
-      const dir = path.dirname(path.resolve(String(filePath)))
-      if (fs.existsSync(dir)) return dir
-    } catch {
-      /* ignore */
-    }
-  }
-  return null
-}
-
-/**
- * 解析脚本运行 cwd（非 script 场景遗留；script 请用 resolveCwdForScript）
- */
-export function resolveCwd({ member, group, sessionContext, scriptCfg, filePath }) {
-  if (scriptCfg) {
-    const sw = resolveCwdForScript(scriptCfg, filePath)
-    if (sw) return sw
-  }
-  if (scriptCfg?.cwd) return scriptCfg.cwd
-
-  const workCandidates = [
-    member?.work_folder,
-    sessionContext?.primaryWorkFolder,
-    sessionContext?.workFolders?.[0],
-    group?.work_folder,
-  ].filter((p) => p && fs.existsSync(String(p)))
-
-  // 文件脚本：在工作目录内 → cwd=脚本目录；外部工具（Cursor CLI）→ 优先工作目录
-  if (filePath) {
-    try {
-      const abs = path.resolve(String(filePath))
-      const dir = path.dirname(abs)
-      const underWork = workCandidates.some((w) => {
-        const root = path.resolve(String(w))
-        const prefix = root.endsWith(path.sep) ? root : root + path.sep
-        return abs === root || abs.startsWith(prefix) || dir === root || dir.startsWith(prefix)
-      })
-      if (underWork && fs.existsSync(dir)) return dir
-      if (!underWork && workCandidates[0]) return path.resolve(String(workCandidates[0]))
-      if (fs.existsSync(dir)) return dir
-    } catch {
-      /* ignore */
-    }
-  }
-  if (workCandidates[0]) return path.resolve(String(workCandidates[0]))
-  return process.cwd()
-}
-
-/**
- * 将配置中的脚本路径解析为绝对路径
- * 相对路径**仅**相对 scriptWorkDir（与成员/会话工作文件夹无关）
- */
-export function resolveScriptFilePath(rawPath, { scriptWorkDir, scriptDir } = {}) {
-  if (!rawPath || !String(rawPath).trim()) return null
-  const p = String(rawPath).trim()
-  if (path.isAbsolute(p)) return path.resolve(p)
-  const base = getScriptWorkDir({ scriptWorkDir, scriptDir })
-  if (!base) return null
-  return path.resolve(base, p)
-}
-
-/**
- * 从 command 行里抽出「像脚本文件」的片段（如 node index.mjs → index.mjs）
- * @param {string} command
- * @returns {string|null}
- */
-export function extractScriptPathFromCommand(command) {
-  const s = String(command || '').trim()
-  if (!s) return null
-  const parts = s.match(/(?:[^\s"'`]+|"[^"]*"|'[^']*')+/g) || []
-  const extRe = /\.(mjs|cjs|js|ts|tsx|jsx|bat|cmd|ps1|py|sh)$/i
-  for (let i = parts.length - 1; i >= 0; i--) {
-    let t = parts[i].replace(/^["']|["']$/g, '').trim()
-    if (!t || t.startsWith('-')) continue
-    if (extRe.test(t)) return t
-  }
-  return null
 }
 
 export function usesTerminalExecution(script) {
@@ -196,176 +121,6 @@ export function enrichScriptConfig(script) {
     }
   }
   return mirrorScriptWorkDirFields(next)
-}
-
-/**
- * Windows bat/cmd：先 chcp 65001 再 call，避免 UTF-8 中文脚本被 CP936 拆成乱码「不是内部或外部命令」
- * @param {string} absPath
- * @param {string[]} [userArgs]
- */
-export function winBatCallCommand(absPath, userArgs = []) {
-  const bat = `"${String(absPath).replace(/"/g, '')}"`
-  const extra = (userArgs || [])
-    .map((a) => {
-      const s = String(a)
-      if (!s.length) return '""'
-      if (/[\s"&<>|^]/.test(s)) return `"${s.replace(/"/g, '""')}"`
-      return s
-    })
-    .join(' ')
-  // 同一 cmd 会话内先改代码页再 call，批处理中文/括号才能正确解析
-  return extra
-    ? `chcp 65001>nul & call ${bat} ${extra}`
-    : `chcp 65001>nul & call ${bat}`
-}
-
-/**
- * 根据扩展名 / runtime 解析启动方式
- * @returns {{ cmd: string, args: string[], shell?: boolean, label: string }}
- */
-export function resolveLaunchSpec({ filePath, command, shell, runtime, args = [] }) {
-  const isWin = process.platform === 'win32'
-  const extraArgs = Array.isArray(args) ? args.map(String) : []
-
-  // —— 一段命令 ——
-  if (!filePath && command) {
-    let sh = (shell || runtime || 'auto').toLowerCase()
-    // auto：识别 PowerShell 语法，避免 $env: 被 cmd 当字面量执行
-    if (sh === 'auto' && /\$env:|\$PSVersionTable|Set-Location\b|Write-Host\b/i.test(command)) {
-      sh = 'powershell'
-    }
-    if (sh === 'powershell' || sh === 'ps' || sh === 'pwsh') {
-      const exe = sh === 'pwsh' ? 'pwsh' : 'powershell.exe'
-      return {
-        cmd: exe,
-        args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command],
-        label: 'powershell',
-      }
-    }
-    if (sh === 'bash' || sh === 'sh') {
-      const exe = sh === 'sh' ? 'sh' : 'bash'
-      return { cmd: exe, args: ['-lc', command], label: exe }
-    }
-    if (sh === 'cmd' || (sh === 'auto' && isWin)) {
-      return {
-        cmd: process.env.ComSpec || 'cmd.exe',
-        args: ['/d', '/s', '/c', command],
-        label: 'cmd',
-      }
-    }
-    // unix auto / shell
-    return { cmd: command, args: [], shell: true, label: 'shell' }
-  }
-
-  // —— 脚本文件 ——
-  const abs = filePath
-  const ext = path.extname(abs).toLowerCase()
-  const rt = (runtime || 'auto').toLowerCase()
-
-  // 显式 runtime 覆盖
-  if (rt && rt !== 'auto') {
-    if (rt === 'python' || rt === 'python3' || rt === 'py') {
-      const py = isWin ? 'python' : 'python3'
-      return { cmd: py, args: [abs, ...extraArgs], label: 'python' }
-    }
-    if (rt === 'node' || rt === 'nodejs') {
-      return { cmd: 'node', args: [abs, ...extraArgs], label: 'node' }
-    }
-    if (rt === 'powershell' || rt === 'ps1') {
-      return {
-        cmd: 'powershell.exe',
-        args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', abs, ...extraArgs],
-        label: 'powershell',
-      }
-    }
-    if (rt === 'pwsh') {
-      return {
-        cmd: 'pwsh',
-        args: ['-NoProfile', '-File', abs, ...extraArgs],
-        label: 'pwsh',
-      }
-    }
-    if (rt === 'bash' || rt === 'sh') {
-      return { cmd: rt === 'sh' ? 'sh' : 'bash', args: [abs, ...extraArgs], label: rt }
-    }
-    if (rt === 'cmd' || rt === 'bat') {
-      return {
-        cmd: process.env.ComSpec || 'cmd.exe',
-        args: ['/d', '/s', '/c', `"${abs}"${extraArgs.length ? ' ' + extraArgs.map(a => `"${a}"`).join(' ') : ''}`],
-        label: 'cmd',
-      }
-    }
-    // 自定义解释器路径：runtime 即可执行文件
-    return { cmd: runtime, args: [abs, ...extraArgs], label: path.basename(runtime) }
-  }
-
-  // 按扩展名
-  switch (ext) {
-    case '.ps1':
-      return {
-        cmd: 'powershell.exe',
-        args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', abs, ...extraArgs],
-        label: 'powershell',
-      }
-    case '.bat':
-    case '.cmd':
-      // UTF-8 中文 bat：必须先 chcp 65001 再 call（见 screenShot.bat）
-      return {
-        cmd: process.env.ComSpec || 'cmd.exe',
-        args: isWin
-          ? ['/d', '/s', '/c', winBatCallCommand(abs, extraArgs)]
-          : ['/d', '/s', '/c', 'call', abs, ...extraArgs],
-        label: 'bat',
-      }
-    case '.sh':
-    case '.bash':
-      return {
-        cmd: isWin ? 'bash' : ext === '.bash' ? 'bash' : 'bash',
-        args: [abs, ...extraArgs],
-        label: 'bash',
-      }
-    case '.py':
-    case '.pyw':
-      return {
-        cmd: isWin ? 'python' : 'python3',
-        args: [abs, ...extraArgs],
-        label: 'python',
-      }
-    case '.js':
-    case '.mjs':
-    case '.cjs':
-      return { cmd: 'node', args: [abs, ...extraArgs], label: 'node' }
-    case '.ts':
-    case '.tsx':
-      // 优先 tsx / ts-node，失败由 spawn error 暴露
-      return { cmd: 'npx', args: ['--yes', 'tsx', abs, ...extraArgs], label: 'tsx' }
-    case '.rb':
-      return { cmd: 'ruby', args: [abs, ...extraArgs], label: 'ruby' }
-    case '.pl':
-      return { cmd: 'perl', args: [abs, ...extraArgs], label: 'perl' }
-    case '.php':
-      return { cmd: 'php', args: [abs, ...extraArgs], label: 'php' }
-    case '.vbs':
-      return { cmd: 'cscript.exe', args: ['//Nologo', abs, ...extraArgs], label: 'vbs' }
-    case '.wsf':
-      return { cmd: 'cscript.exe', args: ['//Nologo', abs, ...extraArgs], label: 'wsf' }
-    case '.exe':
-    case '.com':
-      return { cmd: abs, args: extraArgs, label: 'exe' }
-    case '.jar':
-      return { cmd: 'java', args: ['-jar', abs, ...extraArgs], label: 'java' }
-    default: {
-      // 无扩展名或未知：尝试直接执行（需可执行权限 / PATHEXT）
-      if (isWin) {
-        return {
-          cmd: process.env.ComSpec || 'cmd.exe',
-          args: ['/d', '/s', '/c', abs, ...extraArgs],
-          label: 'exec',
-        }
-      }
-      return { cmd: abs, args: extraArgs, label: 'exec' }
-    }
-  }
 }
 
 /**

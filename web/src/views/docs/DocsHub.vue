@@ -10,6 +10,7 @@
             size="small"
             type="primary"
             link
+            aria-label="导出全部文档"
             :loading="exportingAll"
             @click="onExportAll"
           >
@@ -24,6 +25,7 @@
             type="button"
             class="dh-group-item"
             :class="{ active: selectedGroupId === 'all' }"
+            aria-label="查看全部群模板文档"
             @click="selectedGroupId = 'all'"
           >
             <AcwIcon class="dh-group-item-icon" name="folder" :size="16" />
@@ -41,6 +43,7 @@
               type="button"
               class="dh-group-item"
               :class="{ active: selectedGroupId === groupKey(g) }"
+              :aria-label="`查看群模板 ${g.groupTitle} 的文档`"
               @click="selectedGroupId = groupKey(g)"
             >
               <AcwIcon class="dh-group-item-icon" name="users" :size="16" />
@@ -52,6 +55,7 @@
               type="button"
               class="dh-group-export-btn"
               title="导出该群文档"
+              :aria-label="`导出群模板 ${g.groupTitle} 的全部文档`"
               @click.stop="onExportGroup(g.groupId)"
             >
               导出

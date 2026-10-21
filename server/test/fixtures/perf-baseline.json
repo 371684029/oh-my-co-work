@@ -1,7 +1,7 @@
 {
-  "recordedAt": "2026-10-21T06:37:53.228Z",
+  "recordedAt": "2026-10-21T06:50:00.000Z",
   "node": "v22.23.3",
   "metrics": {
-    "dbInitMs": 9.96
+    "dbInitMs": 50
   }
 }
