@@ -17,11 +17,12 @@ import {
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
-import { resolveSessionId } from './sessionActionUi.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
 import { createSessionNotesActions } from './sessionNotesActions.js'
 import { createSessionAnnounceActions } from './sessionAnnounceActions.js'
+import { createSessionDeleteActions } from './sessionDeleteActions.js'
+import { createSessionRenameActions } from './sessionRenameActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   restartArchiveBlockedMessage,
@@ -33,10 +34,6 @@ import {
   composerCopyFailedMessage,
   composerCopySuccessMessage,
   composerEmptyMessage,
-  deleteConfirmDialogOptions,
-  deleteFailedMessage,
-  deleteNoSessionMessage,
-  deleteSuccessMessage,
   hashItemEmptyInsertMessage,
 } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
@@ -105,7 +102,6 @@ import {
   shouldSaveComposerDraftOnSessionSwitch,
   workbenchSessionRoute,
 } from './sessionLoadListsUi.js'
-import { shouldClearActiveSessionAfterDelete } from './sessionDeleteNavUi.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -609,6 +605,24 @@ function onConvChange(item) {
 
 const deleteSessionRef = { doDelete: async () => {} }
 
+const { doDelete } = createSessionDeleteActions({
+  activeId,
+  detail,
+  loadLists,
+  api,
+  acwConfirm,
+  terminalBridge,
+  leaveWorkbench: () => _router?.replace('/workbench'),
+})
+deleteSessionRef.doDelete = doDelete
+
+const { rename } = createSessionRenameActions({
+  activeId,
+  editTitle,
+  sessions,
+  api,
+})
+
 const { togglePin, onConvMenu } = createSessionConvActions({
   sessions,
   detail,
@@ -1038,47 +1052,6 @@ const { submitHuman, approveSessionStart, gate, answerAdapterQuestion } = create
   api,
 })
 Object.assign(gateActionsRef, { submitHuman, approveSessionStart, gate, answerAdapterQuestion })
-
-async function rename() {
-  if (!activeId.value || !editTitle.value.trim()) return
-  try {
-    await api.sessions.rename(activeId.value, editTitle.value.trim())
-    sessions.value = await api.sessions.list()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
-}
-
-/** @param {string} [targetId] 侧栏菜单可传指定会话 id；顶栏按钮不传则删当前 */
-async function doDelete(targetId) {
-  const id = resolveSessionId(targetId, activeId.value)
-  if (!id) {
-    ElMessage.warning(deleteNoSessionMessage())
-    return
-  }
-  const deleteOpts = deleteConfirmDialogOptions()
-  const ok = await acwConfirm('session.delete', {
-    ...deleteOpts,
-    type: 'warning',
-  })
-  if (!ok) return
-  const clearActive = shouldClearActiveSessionAfterDelete(id, activeId.value)
-  try {
-    await api.sessions.remove(id)
-    await loadLists()
-    if (clearActive) {
-      detail.value = null
-      terminalBridge.resetTerminals?.()
-      terminalBridge.closeWs?.()
-      activeId.value = ''
-      _router.replace('/workbench')
-    }
-    ElMessage.success(deleteSuccessMessage())
-  } catch (e) {
-    ElMessage.error(deleteFailedMessage(e))
-  }
-}
-deleteSessionRef.doDelete = doDelete
 
 // ===== 生命周期（Workbench 装配层调用）=====
 
