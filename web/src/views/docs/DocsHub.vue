@@ -213,7 +213,7 @@
       </aside>
 
       <!-- 栏 3：文档中心核心正文区（文档中心在第三栏） -->
-      <main class="dh-col dh-col-content">
+      <main class="dh-col dh-col-content" :class="readingClasses" :style="readingStyle">
         <!-- 未选中提示 -->
         <div v-if="!current" class="dh-welcome-pane">
           <div class="dh-welcome-hero">
@@ -246,6 +246,32 @@
               <span>{{ formatTime(file.mtimeMs) }}</span>
             </div>
             <p v-if="file.truncated" class="dh-truncated-warn">文件超过 1MB，已截断显示</p>
+          </div>
+
+          <div v-if="!editing" class="dh-reading-bar">
+            <el-segmented
+              :model-value="readingPrefs.width"
+              :options="readingWidthOptions"
+              size="small"
+              @change="setReadingWidth"
+            />
+            <el-segmented
+              :model-value="readingPrefs.fontScale"
+              :options="readingFontOptions"
+              size="small"
+              @change="setReadingFontScale"
+            />
+            <el-button size="small" plain @click="toggleReadingTheme">
+              {{ readingPrefs.theme === 'dark' ? '浅色' : '深色' }}
+            </el-button>
+            <el-button
+              size="small"
+              :type="readingPrefs.focus ? 'primary' : 'default'"
+              plain
+              @click="toggleReadingFocus"
+            >
+              {{ readingPrefs.focus ? '退出专注' : '专注' }}
+            </el-button>
           </div>
 
           <div class="dh-content-actions">
@@ -340,6 +366,15 @@ import {
   docOutline,
   codeLineNumbers,
   toggleCodeLineNumbers,
+  readingPrefs,
+  readingClasses,
+  readingStyle,
+  readingWidthOptions,
+  readingFontOptions,
+  setReadingWidth,
+  setReadingFontScale,
+  toggleReadingTheme,
+  toggleReadingFocus,
   searchQuery,
   searchResults,
   searchLoading,
@@ -495,7 +530,7 @@ async function onExportAll() {
 
 async function refresh() {
   if (!(await confirmDiscardIfDirty())) return
-  await loadList()
+  await loadList({ force: true })
   if (current.value) await loadFile(current.value.sessionId, current.value.name)
 }
 
@@ -1075,6 +1110,61 @@ onUnmounted(() => {
 .doc-prose :deep(.docs-heading-anchor) {
   scroll-margin-top: 12px;
   cursor: pointer;
+}
+
+.dh-reading-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto 10px;
+  padding: 0 8px;
+}
+
+.dh-col-content.docs-read-width-narrow .dh-content-head,
+.dh-col-content.docs-read-width-narrow .dh-content,
+.dh-col-content.docs-read-width-narrow .dh-content-actions,
+.dh-col-content.docs-read-width-narrow .dh-reading-bar,
+.dh-col-content.docs-read-width-narrow .dh-outline {
+  max-width: 640px;
+}
+
+.dh-col-content.docs-read-width-wide .dh-content-head,
+.dh-col-content.docs-read-width-wide .dh-content,
+.dh-col-content.docs-read-width-wide .dh-content-actions,
+.dh-col-content.docs-read-width-wide .dh-reading-bar {
+  max-width: 1080px;
+}
+
+.dh-col-content.docs-read-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  overflow: auto;
+  padding: 28px 32px;
+}
+
+.dh-col-content.docs-read-theme-dark {
+  background: #1a1b1e;
+}
+
+.dh-col-content.docs-read-theme-dark .dh-file-title,
+.dh-col-content.docs-read-theme-dark .doc-prose {
+  color: #e8eaed;
+}
+
+.dh-col-content.docs-read-theme-dark .doc-prose code {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dh-col-content.docs-read-theme-dark .doc-prose .docs-code-block {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dh-col-content .doc-prose {
+  font-size: calc(16px * var(--docs-font-scale, 1));
 }
 
 .dh-welcome-pane {

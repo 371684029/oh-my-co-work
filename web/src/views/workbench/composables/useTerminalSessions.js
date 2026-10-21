@@ -17,6 +17,7 @@ import {
 import { api, connectSessionWs } from '../../../api'
 import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
 import { syncTrayStatus } from '../../../composables/syncTrayStatus.js'
+import { refreshDocsForSession } from '../../docs/docsListStore.js'
 import {
   terminalBridge,
   activeId,
@@ -415,6 +416,7 @@ function bindWs(sessionId) {
       }
       if (ev.type === 'announcement.updated') {
         useFlowStore().bumpDocsUnread()
+        refreshDocsForSession(sessionId).catch(() => {})
         ElMessage.info({ message: '群报告已更新 · 可在文档中心查看', duration: 5000, showClose: true })
       }
       if (ev.type === 'gate.request') {

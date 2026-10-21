@@ -232,6 +232,30 @@ function decorateWithNodeMeta(sessionId, files) {
   })
 }
 
+/** 单会话文档摘要（增量刷新，不依赖全量 scan 缓存）。 */
+export function getSessionDocsSummary(sessionId) {
+  if (!SESSION_ID_RE.test(String(sessionId || ''))) {
+    throw Object.assign(new Error('非法会话 ID'), { code: 'BAD_SESSION' })
+  }
+  const files = decorateWithNodeMeta(sessionId, scanSessionDir(sessionId))
+  if (!files.length) return null
+  const meta = sessionMeta()
+  const s = meta.byId.get(sessionId)
+  if (!s) throw Object.assign(new Error('会话不存在'), { code: 'NO_SESSION' })
+  const group = meta.groupById.get(s.group_id)
+  return {
+    sessionId,
+    sessionTitle: s.title || sessionId,
+    groupId: s.group_id || null,
+    groupTitle: groupTitleOf(meta, s.group_id),
+    adhoc: !!group?.adhoc,
+    status: s.status || null,
+    updatedAt: s.updated_at || null,
+    workFolder: s.workFolder || null,
+    files,
+  }
+}
+
 export function listDocs({ sort = 'group' } = {}) {
   const { sessions, flat } = scanAll()
   if (sort === 'time') {

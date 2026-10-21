@@ -906,6 +906,17 @@ router.get('/docs/list', (req, res) => {
   }
 })
 
+router.get('/docs/sessions/:sessionId', (req, res) => {
+  try {
+    const summary = docsHub.getSessionDocsSummary(req.params.sessionId)
+    if (!summary) return res.status(404).json({ error: '该会话暂无文档' })
+    res.json(summary)
+  } catch (e) {
+    const code = e.code === 'BAD_SESSION' || e.code === 'NO_SESSION' ? 404 : 400
+    res.status(code).json({ error: e.message })
+  }
+})
+
 router.get('/docs/file', (req, res) => {
   try {
     res.json(

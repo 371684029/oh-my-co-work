@@ -42,6 +42,8 @@ export const api = {
   health: () => req('/health'),
   docs: {
     list: (sort = 'group') => req(`/docs/list?sort=${encodeURIComponent(sort)}`),
+    sessionSummary: (sessionId) =>
+      req(`/docs/sessions/${encodeURIComponent(sessionId)}`),
     file: (sessionId, name) =>
       req(`/docs/file?sessionId=${encodeURIComponent(sessionId)}&name=${encodeURIComponent(name)}`),
     saveAnnouncement: (sessionId, markdown) =>

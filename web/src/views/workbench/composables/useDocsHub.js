@@ -7,6 +7,18 @@ import {
   readDocsCodeLineNumbers,
   writeDocsCodeLineNumbers,
 } from '../../docs/docsCodeFence.js'
+import {
+  getDocsList,
+  subscribeDocsList,
+  refreshDocsForSession,
+  invalidateDocsListCache,
+} from '../../docs/docsListStore.js'
+import {
+  readDocsReadingPrefs,
+  writeDocsReadingPrefs,
+  docsReadingClassNames,
+  docsReadingStyle,
+} from '../../docs/docsReadingPrefs.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -18,6 +30,7 @@ import {
 let _router = null
 let _route = null
 let _stopWatchers = []
+let _stopDocsListSub = null
 
 // ===== 排序 =====
 const SORT_KEY = 'acw.docsHubSort'
@@ -59,6 +72,50 @@ const codeLineNumbers = ref(readDocsCodeLineNumbers())
 function toggleCodeLineNumbers() {
   codeLineNumbers.value = !codeLineNumbers.value
   writeDocsCodeLineNumbers(codeLineNumbers.value)
+}
+
+const readingPrefs = ref(readDocsReadingPrefs())
+const readingClasses = computed(() => docsReadingClassNames(readingPrefs.value))
+const readingStyle = computed(() => docsReadingStyle(readingPrefs.value))
+
+const readingWidthOptions = [
+  { label: '窄', value: 'narrow' },
+  { label: '标准', value: 'standard' },
+  { label: '宽', value: 'wide' },
+]
+
+const readingFontOptions = [
+  { label: '小', value: 0.9 },
+  { label: '标准', value: 1 },
+  { label: '大', value: 1.12 },
+  { label: '特大', value: 1.25 },
+]
+
+function persistReadingPrefs() {
+  writeDocsReadingPrefs(readingPrefs.value)
+}
+
+function setReadingWidth(width) {
+  readingPrefs.value = { ...readingPrefs.value, width }
+  persistReadingPrefs()
+}
+
+function setReadingFontScale(fontScale) {
+  readingPrefs.value = { ...readingPrefs.value, fontScale }
+  persistReadingPrefs()
+}
+
+function toggleReadingTheme() {
+  readingPrefs.value = {
+    ...readingPrefs.value,
+    theme: readingPrefs.value.theme === 'dark' ? 'light' : 'dark',
+  }
+  persistReadingPrefs()
+}
+
+function toggleReadingFocus() {
+  readingPrefs.value = { ...readingPrefs.value, focus: !readingPrefs.value.focus }
+  persistReadingPrefs()
 }
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
@@ -213,7 +270,7 @@ function statusClass(s) {
 async function ensureWorkFolders() {
   if (workFoldersReady) return
   try {
-    const g = await api.docs.list('group')
+    const g = await getDocsList('group')
     for (const group of g.groups || []) {
       for (const s of group.sessions || []) {
         if (s.workFolder) workFolderBySession.value[s.sessionId] = s.workFolder
@@ -225,11 +282,11 @@ async function ensureWorkFolders() {
   }
 }
 
-async function loadList() {
+async function loadList({ force = false } = {}) {
   listLoading.value = true
   listError.value = ''
   try {
-    const data = await api.docs.list(sort.value)
+    const data = await getDocsList(sort.value, { force })
     listData.value = data
     if (data.sort === 'group') {
       for (const group of data.groups || []) {
@@ -322,7 +379,9 @@ async function save() {
     await api.docs.saveAnnouncement(sessionId, draft.value)
     if (current.value?.sessionId !== sessionId || current.value?.name !== name) return
     editing.value = false
-    await loadList()
+    invalidateDocsListCache()
+    await refreshDocsForSession(sessionId)
+    listData.value = await getDocsList(sort.value)
     await loadFile(sessionId, name)
     ElMessage.success('群报告已保存')
   } catch (e) {
@@ -375,6 +434,12 @@ function initDocsHub({ route, router }) {
   _route = route
   _router = router
   window.addEventListener('beforeunload', onBeforeUnload)
+  _stopDocsListSub = subscribeDocsList(async (sessionId) => {
+    if (!sessionId || sessionId !== current.value?.sessionId) return
+    await refreshDocsForSession(sessionId)
+    listData.value = await getDocsList(sort.value)
+    if (current.value?.name) await loadFile(sessionId, current.value.name)
+  })
   _stopWatchers.push(
     watch(sort, (v) => {
       try {
@@ -398,6 +463,10 @@ function initDocsHub({ route, router }) {
 
 function disposeDocsHub() {
   window.removeEventListener('beforeunload', onBeforeUnload)
+  if (_stopDocsListSub) {
+    _stopDocsListSub()
+    _stopDocsListSub = null
+  }
   _stopWatchers.forEach((stop) => stop())
   _stopWatchers = []
   _router = null
@@ -441,6 +510,15 @@ export {
   docOutline,
   codeLineNumbers,
   toggleCodeLineNumbers,
+  readingPrefs,
+  readingClasses,
+  readingStyle,
+  readingWidthOptions,
+  readingFontOptions,
+  setReadingWidth,
+  setReadingFontScale,
+  toggleReadingTheme,
+  toggleReadingFocus,
   // 4.1.0 搜索
   searchQuery,
   searchResults,

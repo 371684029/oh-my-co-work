@@ -60,6 +60,16 @@ test('listDocs groups by group template with whitelisted files only', () => {
   assert.equal(names.includes('secret.md'), false)
 })
 
+test('getSessionDocsSummary returns one session without full rescan list', () => {
+  const session = seedSession('单会话摘要')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '# 单拉')
+  docsHub.invalidateDocsCache()
+  const summary = docsHub.getSessionDocsSummary(session.id)
+  assert.ok(summary)
+  assert.equal(summary.sessionId, session.id)
+  assert.equal(summary.files[0].name, 'ANNOUNCEMENT.md')
+})
+
 test('listDocs time sort returns flat items newest first', async () => {
   const a = seedSession('时间组')
   writeDoc(a.id, 'ANNOUNCEMENT.md', '旧文件')

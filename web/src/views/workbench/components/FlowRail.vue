@@ -379,6 +379,8 @@
           </div>
           <div
             class="docs-rail-content doc-prose"
+            :class="railReadingClasses"
+            :style="railReadingStyle"
             v-html="renderedDocHtml"
             @click="onRailContentClick"
           />
@@ -462,13 +464,19 @@ import {
   rebuildAnnouncement,
   saveSessionNotes,
 } from '../composables/useSessionDetail'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AppLogo from '../../../components/AppLogo.vue'
 import { api } from '../../../api'
 import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { handleDocsProseClick, readDocsCodeLineNumbers } from '../../docs/docsCodeFence.js'
+import { getDocsList, subscribeDocsList } from '../../docs/docsListStore.js'
+import {
+  docsReadingClassNames,
+  docsReadingStyle,
+  readDocsReadingPrefs,
+} from '../../docs/docsReadingPrefs.js'
 import { openPath } from '../composables/useDocsHub'
 
 const flowStore = useFlowStore()
@@ -517,11 +525,28 @@ const exportingRailDocs = ref(false)
 let currentFileReqId = 0
 let currentListReqId = 0
 
+const railReadingPrefs = readDocsReadingPrefs()
+const railReadingClasses = docsReadingClassNames(railReadingPrefs)
+const railReadingStyle = docsReadingStyle(railReadingPrefs)
+
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
   return md.value.render(selectedDocContent.value, {
     docCodeLineNumbers: readDocsCodeLineNumbers(),
   })
+})
+
+let stopDocsListSub = null
+onMounted(() => {
+  stopDocsListSub = subscribeDocsList((sessionId) => {
+    if (sessionId !== activeId.value || flowStore.rightTab !== 'docs') return
+    loadRailDocs()
+    if (selectedDocName.value) onSelectRailDoc(selectedDocName.value)
+  })
+})
+onUnmounted(() => {
+  stopDocsListSub?.()
+  stopDocsListSub = null
 })
 
 async function onRailContentClick(e) {
@@ -557,7 +582,7 @@ async function loadRailDocs() {
   }
   railDocsLoading.value = true
   try {
-    const res = await api.docs.list('group')
+    const res = await getDocsList('group')
     if (reqId !== currentListReqId || reqSessionId !== activeId.value) return
     let found = null
     for (const g of res?.groups || []) {
