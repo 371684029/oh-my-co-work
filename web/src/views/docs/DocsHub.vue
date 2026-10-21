@@ -259,31 +259,15 @@
 
       <!-- 栏 3：文档中心核心正文区（文档中心在第三栏） -->
       <main class="dh-col dh-col-content" :class="readingClasses" :style="readingStyle">
-        <!-- 未选中提示 -->
-        <div v-if="!current" class="dh-welcome-pane">
-          <div class="dh-welcome-hero">
-            <h2 class="dh-welcome-title">
-              {{ hasDocs ? docsHubWelcomeSelectTitle() : docsHubWelcomeEmptyTitle() }}
-            </h2>
-            <p class="dh-welcome-desc">
-              {{ hasDocs ? docsHubWelcomeSelectDesc() : docsHubWelcomeEmptyDesc() }}
-            </p>
-            <div v-if="!hasDocs" class="dh-welcome-actions">
-              <el-button type="primary" @click="goWorkbench">{{ docsHubGoWorkbenchLabel() }}</el-button>
-              <p class="dh-welcome-tip">
-                {{ docsHubWelcomeEmptyTip() }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 读取中 -->
-        <div v-else-if="fileLoading" class="dh-welcome-pane">
-          <p class="dh-welcome-desc">{{ docsHubLoadingFile() }}</p>
-        </div>
+        <DocsHubWelcomePane
+          :current="current"
+          :file-loading="fileLoading"
+          :has-docs="hasDocs"
+          @go-workbench="goWorkbench"
+        />
 
         <!-- 文件详情与正文 -->
-        <template v-else-if="file">
+        <template v-if="file && !fileLoading">
           <div class="dh-content-head">
             <div class="dh-content-title-row">
               <h2 class="dh-file-title">{{ fileLabel(file) }}</h2>
@@ -504,6 +488,7 @@ import {
 import proseCss from './docProse.css?raw'
 import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
 import AcwIcon from '../../components/icons/AcwIcon.vue'
+import DocsHubWelcomePane from './DocsHubWelcomePane.vue'
 import {
   docsTimeRangeBuckets,
   filterDocsItemsByTimeRange,
@@ -543,8 +528,6 @@ import {
   docsHubExportAllLabel,
   docsHubExportGroupAria,
   docsHubExportGroupShort,
-  docsHubGoWorkbenchLabel,
-  docsHubLoadingFile,
   docsHubNoDocsInRange,
   docsHubNoGroups,
   docsHubNoSessionDocs,
@@ -555,11 +538,6 @@ import {
   docsHubRefreshLabel,
   docsHubSearchPlaceholder,
   docsHubViewGroupAria,
-  docsHubWelcomeEmptyDesc,
-  docsHubWelcomeEmptyTitle,
-  docsHubWelcomeSelectDesc,
-  docsHubWelcomeSelectTitle,
-  docsHubWelcomeEmptyTip,
   docsHubUnpinTitle,
   docsHubReadingThemeLabel,
   docsHubReadingFocusLabel,
@@ -1453,47 +1431,6 @@ onUnmounted(() => {
 
 .dh-col-content .doc-prose {
   font-size: calc(16px * var(--docs-font-scale, 1));
-}
-
-.dh-welcome-pane {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 32px;
-}
-
-.dh-welcome-hero {
-  text-align: center;
-  max-width: 400px;
-}
-
-.dh-welcome-title {
-  margin: 0 0 8px;
-  font-size: 17px;
-  font-weight: 650;
-  color: var(--ecw-text-1, #1d1d1f);
-}
-
-.dh-welcome-desc {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ecw-text-2, #6e6e73);
-}
-
-.dh-welcome-actions {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.dh-welcome-tip {
-  margin: 0;
-  font-size: 12px;
-  color: var(--ecw-text-3, #86868b);
 }
 
 .dh-content-head {

@@ -207,6 +207,14 @@ async function main() {
     const sendRes = await sendWait
     assert.equal(sendRes.status(), 200, 'composer Enter should POST message')
 
+    await page.goto(`${base}/docs`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+    const docsWelcome = page.getByRole('region', {
+      name: /文档中心欢迎区|Docs hub welcome/i,
+    })
+    await docsWelcome.waitFor({ state: 'visible', timeout: 15000 })
+    const docsSearch = page.locator('input[aria-label*="搜索"], input[aria-label*="Search"]')
+    assert.equal(await docsSearch.count(), 1, 'docs hub search input aria-label')
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})
