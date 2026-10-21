@@ -78,7 +78,7 @@
   "customAgents": [],
   "promptSnippets": [],
   "onboarding": {
-    "firstRunGuideDismissed": false
+    "firstRunGuideDismissed": true
   },
   "scheduledJobs": [],
   "mcpConnections": []

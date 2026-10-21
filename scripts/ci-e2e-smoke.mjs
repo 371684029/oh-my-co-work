@@ -167,6 +167,46 @@ async function main() {
     const termsBody = await termsRes.json()
     assert.ok(Array.isArray(termsBody.terminals))
 
+    const dismissGuide = await fetch(`${base}/api/settings/app`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({ onboarding: { firstRunGuideDismissed: true } }),
+    })
+    assert.equal(dismissGuide.status, 200)
+
+    await page.goto(`${base}/workbench/${session.id}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await page.waitForTimeout(1200)
+    const firstRunBtn = page.getByRole('button', { name: /开始探索/ })
+    if (await firstRunBtn.isVisible().catch(() => false)) {
+      await firstRunBtn.click()
+      await page.waitForTimeout(400)
+    }
+    const composer = page.getByRole('region', { name: /消息输入区|Message composer/i })
+    await composer.waitFor({ state: 'visible', timeout: 30000 })
+    const footerToggle = page.locator('.footer-toggle').first()
+    if ((await footerToggle.getAttribute('aria-expanded')) === 'false') {
+      await footerToggle.click()
+    }
+    const chatSel =
+      '[contenteditable="true"], .elx-x-sender [contenteditable], [class*="x-sender"] [contenteditable]'
+    await page.waitForSelector(chatSel, { timeout: 30000 })
+    const marker = `e2e-smoke-${Date.now()}`
+    const editor = page.locator(chatSel).first()
+    await editor.click()
+    const sendWait = page.waitForResponse(
+      (r) =>
+        r.url().includes(`/api/sessions/${session.id}/messages`) &&
+        r.request().method() === 'POST',
+      { timeout: 20000 },
+    )
+    await page.keyboard.type(marker, { delay: 12 })
+    await page.keyboard.press('Enter')
+    const sendRes = await sendWait
+    assert.equal(sendRes.status(), 200, 'composer Enter should POST message')
+
     console.log('[ci-e2e-smoke] ok', base)
   } finally {
     if (browser) await browser.close().catch(() => {})

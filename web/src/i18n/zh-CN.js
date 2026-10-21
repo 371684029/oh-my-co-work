@@ -54,6 +54,18 @@ export const strings = {
       missingGroup: '未找到「演示流」。请到设置打开「显示演示示例」。',
       loadFailed: '加载群模板失败，请稍后重试',
     },
+    slash: {
+      executed: '已执行 /{slash}',
+      notFound: '未找到指令 /{token}，可在 设置 → 斜杠 / 快捷键 中配置',
+      agentInsert: '请【{name}】协助处理：',
+    },
+    message: {
+      needSession: '请先选择会话',
+      mentionPlanned: '临时协助 · 已记入挂起节点',
+      mentionOffsite: '已进入临时协助',
+      mainGateWaiting: '主流程仍停在当前确认，临时协助不替代提交',
+      newTask: '已创建新任务',
+    },
     gate: {
       approveStart: '已通过，开始执行',
       cancelStart: '已取消，任务关闭',
