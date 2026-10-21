@@ -163,6 +163,38 @@ export const strings = {
     },
   },
   workbench: {
+    chrome: {
+      titlePlaceholder: 'Untitled task',
+      humanAttention: 'Needs your attention',
+      searchChat: 'Search chat',
+      searchChatAria: 'Search this session’s messages',
+      searchPlaceholder: 'Search this session (pinyin / initials supported)',
+      searchLoading: 'Searching…',
+      searchEmpty: 'No matching messages',
+      detachAria: 'Open this session in a new window',
+      pin: 'Pin',
+      unpin: 'Unpin',
+      pinAria: 'Pin this session',
+      unpinAria: 'Unpin this session',
+      delete: 'Delete',
+      deleteAria: 'Delete this session',
+      detachFailed: 'Could not open a new window (desktop only)',
+    },
+    chatSearch: {
+      system: 'System',
+    },
+    welcome: {
+      living: 'Nodes are fixed; people are not · detour, cut in, assist, then return',
+      demoCta: 'Quick start: demo flow',
+      pickGroup: 'Or pick a group template on the left and tap Start chat',
+      slogan: {
+        humanAi: 'Human + AI',
+        allReturn: 'Everything returns to source',
+        allWorkflow: 'Everything is workflow',
+        terminalGuard: 'Terminal guardian',
+        furnaceConnect: 'Furnace connects all',
+      },
+    },
     start: {
       needTarget: 'Choose a group template or member',
       group: 'Chat started',

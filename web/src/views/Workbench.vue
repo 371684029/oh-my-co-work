@@ -12,7 +12,7 @@
               v-model="editTitle"
               class="title-input"
               size="large"
-              placeholder="未命名任务"
+              :placeholder="workbenchTitlePlaceholder()"
               @change="rename"
             />
             <el-tag
@@ -32,7 +32,7 @@
             >
               {{ archiveOutcomeTag.label }}
             </el-tag>
-            <span v-if="needsHuman" class="human-attention-pill">需人工处理</span>
+            <span v-if="needsHuman" class="human-attention-pill">{{ workbenchHumanAttentionPill() }}</span>
           </div>
           <div class="header-actions">
             <el-popover
@@ -47,21 +47,24 @@
                   size="default"
                   text
                   bg
-                  aria-label="搜索本会话聊天"
+                  :aria-label="workbenchSearchChatAria()"
                   @click="chatSearchOpen = !chatSearchOpen"
                 >
-                  搜索聊天
+                  {{ workbenchSearchChatLabel() }}
                 </el-button>
               </template>
               <div class="chat-search-box">
                 <el-input
                   v-model="chatSearchQ"
-                  placeholder="搜索本会话聊天（支持拼音/首字母）"
+                  :placeholder="workbenchSearchPlaceholder()"
+                  :aria-label="workbenchSearchChatAria()"
                   clearable
                   @input="runChatSearch"
                   @keyup.enter="runChatSearch"
                 />
-                <div v-if="chatSearchLoading" class="chat-search-empty">搜索中…</div>
+                <div v-if="chatSearchLoading" class="chat-search-empty" role="status">
+                  {{ workbenchSearchLoading() }}
+                </div>
                 <template v-else-if="chatSearchHits.length">
                   <div
                     v-for="(hit, i) in chatSearchHits"
@@ -70,13 +73,13 @@
                     @click="jumpToChatHit(hit)"
                   >
                     <div class="chat-search-hit-meta">
-                      <span class="hit-sender">{{ hit.memberName || hit.role || '系统' }}</span>
+                      <span class="hit-sender">{{ chatSearchHitSenderLabel(hit) }}</span>
                       <span v-if="hit.sessionTitle" class="hit-session">{{ hit.sessionTitle }}</span>
                     </div>
                     <div class="chat-search-hit-snippet">{{ hit.snippet }}</div>
                   </div>
                 </template>
-                <div v-else class="chat-search-empty">没有匹配的消息</div>
+                <div v-else class="chat-search-empty" role="status">{{ workbenchSearchEmpty() }}</div>
               </div>
             </el-popover>
             <NotificationInbox />
@@ -86,10 +89,10 @@
               text
               bg
               :title="detachWindowLabel"
-              aria-label="在新窗口打开本会话"
+              :aria-label="workbenchDetachWindowAria()"
               @click="openSessionDetached"
             >
-              新窗口
+              {{ t('desktop.openDetachedWindow') }}
             </el-button>
             <el-button
               v-if="detail.session"
@@ -97,20 +100,20 @@
               text
               bg
               :type="detail.session.pinned ? 'primary' : 'default'"
-              :aria-label="detail.session.pinned ? '取消置顶本会话' : '置顶本会话'"
+              :aria-label="workbenchPinAria(detail.session.pinned)"
               @click="togglePin(detail.session.id, !detail.session.pinned)"
             >
-              {{ detail.session.pinned ? '取消置顶' : '置顶' }}
+              {{ workbenchPinLabel(detail.session.pinned) }}
             </el-button>
             <el-button
               size="default"
               text
               bg
               type="danger"
-              aria-label="删除本会话"
+              :aria-label="workbenchDeleteAria()"
               @click="doDelete()"
             >
-              删除
+              {{ workbenchDeleteLabel() }}
             </el-button>
           </div>
         </div>
@@ -244,17 +247,17 @@
             <AppLogo size="lg" class="welcome-logo" :glow="false" />
           </div>
           <h1 class="core-slogan">
-            <span>人机协同</span>
+            <span>{{ workbenchWelcomeSloganPart('humanAi') }}</span>
             <i class="dot">·</i>
-            <span>万物归元</span>
+            <span>{{ workbenchWelcomeSloganPart('allReturn') }}</span>
             <i class="dot">·</i>
-            <span>皆可 Workflow</span>
+            <span>{{ workbenchWelcomeSloganPart('allWorkflow') }}</span>
             <i class="dot">·</i>
-            <span>终端守护者</span>
+            <span>{{ workbenchWelcomeSloganPart('terminalGuard') }}</span>
             <i class="dot">·</i>
-            <span>熔炉连接一切</span>
+            <span>{{ workbenchWelcomeSloganPart('furnaceConnect') }}</span>
           </h1>
-          <p class="core-living">节点是死的，人是活的 · 可绕行、插队，临时协助再回来</p>
+          <p class="core-living">{{ workbenchWelcomeLiving() }}</p>
           <div class="welcome-actions">
             <el-button
               type="primary"
@@ -262,9 +265,9 @@
               :disabled="startingChat"
               @click="startDemoChat"
             >
-              一键开聊：演示流
+              {{ workbenchWelcomeDemoCta() }}
             </el-button>
-            <p class="welcome-cta">或左侧自选群模板后点「开聊」</p>
+            <p class="welcome-cta">{{ workbenchWelcomePickGroup() }}</p>
           </div>
         </div>
       </div>
@@ -336,6 +339,32 @@ import { useFlowStore } from '../stores/flow.js'
 import { journalPathToDocFile } from '../composables/messageDocLinks.js'
 import { useDesktopBridge } from '../composables/useDesktopBridge.js'
 import { t } from '../i18n/index.js'
+import {
+  workbenchTitlePlaceholder,
+  workbenchHumanAttentionPill,
+  workbenchSearchChatLabel,
+  workbenchSearchChatAria,
+  workbenchSearchPlaceholder,
+  workbenchSearchLoading,
+  workbenchSearchEmpty,
+  workbenchDetachWindowAria,
+  workbenchPinLabel,
+  workbenchPinAria,
+  workbenchDeleteLabel,
+  workbenchDeleteAria,
+  workbenchDetachFailedMessage,
+  workbenchWelcomeSloganPart,
+  workbenchWelcomeLiving,
+  workbenchWelcomeDemoCta,
+  workbenchWelcomePickGroup,
+} from './workbench/composables/workbenchChromeCopy.js'
+import {
+  WORKBENCH_CHAT_SEARCH_DEBOUNCE_MS,
+  canRunChatSearch,
+  chatSearchHitSenderLabel,
+  nextChatSearchSeq,
+  shouldApplyChatSearchResponse,
+} from './workbench/composables/workbenchChatSearchUi.js'
 
 const { isDesktop, openDetachedWindow } = useDesktopBridge()
 const detachWindowLabel = computed(() => t('desktop.openDetachedWindow'))
@@ -345,7 +374,7 @@ async function openSessionDetached() {
   if (!id) return
   const path = `/workbench/${id}`
   const winId = await openDetachedWindow({ path })
-  if (!winId) ElMessage.warning('无法打开新窗口（仅桌面版支持）')
+  if (!winId) ElMessage.warning(workbenchDetachFailedMessage())
 }
 
 const TerminalWorkspace = defineAsyncComponent(
@@ -384,23 +413,24 @@ let chatSearchSeq = 0
 function runChatSearch() {
   // 防抖：避免每次击键都全量扫当前会话消息
   clearTimeout(chatSearchTimer)
-  chatSearchTimer = setTimeout(fireChatSearch, 200)
+  chatSearchTimer = setTimeout(fireChatSearch, WORKBENCH_CHAT_SEARCH_DEBOUNCE_MS)
 }
 
 async function fireChatSearch() {
   const q = chatSearchQ.value.trim()
   const sessionId = activeId.value
   chatSearchHits.value = []
-  if (!q || !sessionId) return
-  const seq = ++chatSearchSeq
+  if (!canRunChatSearch(q, sessionId)) return
+  const seq = nextChatSearchSeq(chatSearchSeq)
+  chatSearchSeq = seq
   chatSearchLoading.value = true
   try {
     const res = await api.messages.find(q, sessionId)
     // 竞态防护：仅采纳与当前查询一致的响应
-    if (seq !== chatSearchSeq) return
+    if (!shouldApplyChatSearchResponse(seq, chatSearchSeq)) return
     chatSearchHits.value = res.hits || []
   } catch (e) {
-    if (seq !== chatSearchSeq) return
+    if (!shouldApplyChatSearchResponse(seq, chatSearchSeq)) return
     chatSearchHits.value = []
     console.warn('[acw] chat search', e?.message || e)
   } finally {
