@@ -3,6 +3,7 @@ import path from 'node:path'
 import { ROOT, getDb, parseJson } from './db.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { defaultStepFlow, normalizeFurnaceSurface } from '@acw/shared'
+import { normalizePromptSnippets } from './promptSnippets.js'
 
 const SETTINGS_PATH = process.env.ACW_APP_SETTINGS_PATH
   ? path.resolve(process.env.ACW_APP_SETTINGS_PATH)
@@ -326,6 +327,7 @@ export function getAppSettings() {
       notifications: normalizeNotifications(raw.notifications),
       ui: normalizeUi(raw.ui),
       customAgents: normalizeCustomAgents(raw.customAgents),
+      promptSnippets: normalizePromptSnippets(raw.promptSnippets),
     }
   } catch {
     return {
@@ -342,6 +344,7 @@ export function getAppSettings() {
       notifications: defaultNotificationSettings(),
       ui: defaultUiSettings(),
       customAgents: [],
+      promptSnippets: [],
     }
   }
 }
@@ -416,6 +419,10 @@ export function updateAppSettings(patch = {}) {
       patch.customAgents !== undefined
         ? normalizeCustomAgents(patch.customAgents)
         : cur.customAgents || [],
+    promptSnippets:
+      patch.promptSnippets !== undefined
+        ? normalizePromptSnippets(patch.promptSnippets)
+        : cur.promptSnippets || [],
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

@@ -26,7 +26,8 @@
     "lint": "eslint .",
     "test": "npm run test -w server",
     "test:web": "node --test web/test/*.test.mjs",
-    "test:electron": "node --test electron/test/*.test.mjs"
+    "test:electron": "node --test electron/test/*.test.mjs",
+    "test:perf": "node scripts/perf-baseline.mjs"
   },
   "engines": {
     "node": ">=18"

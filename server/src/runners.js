@@ -23,6 +23,8 @@ import { resolveShowScriptPopup } from './appSettings.js'
 import { decodeConsoleBytes, consoleChildEnv } from './consoleEncoding.js'
 import { runTerminal } from './terminal/terminalService.js'
 import { applyFurnaceGrokRuntime } from './furnaceSituation.js'
+import { composeMemberPrompt } from './promptSnippets.js'
+import { getAppSettings } from './appSettings.js'
 
 /**
  * 工作文件夹候选（用于解析「相对路径的脚本文件」落在哪）
@@ -422,7 +424,12 @@ export async function runMember(
   }
 
   if (kind === 'echo') {
-    const tpl = config.defaultText || humanInput || 'echo: ok'
+    const snippets = getAppSettings().promptSnippets || []
+    const tpl = composeMemberPrompt(
+      config.defaultText || humanInput || 'echo: ok',
+      config,
+      snippets,
+    )
     const text = applyParamPlaceholders(tpl, paramsMap, {
       ...phExtra,
       input: humanInput != null ? humanInput : tpl,

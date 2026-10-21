@@ -695,11 +695,28 @@ async function remove(row) {
 
 async function start(row) {
   try {
-    const s = await api.groups.startSession(row.id, {})
-    ElMessage.success('已开聊')
+    const { value: mode } = await ElMessageBox.confirm(
+      '选择开聊模式：试运行只检查路径与命令，不真正执行成员。',
+      `开聊 · ${row.title}`,
+      {
+        distinguishCancelAndClose: true,
+        confirmButtonText: '正式开聊',
+        cancelButtonText: '试运行',
+        type: 'info',
+      },
+    )
+      .then(() => ({ value: 'live' }))
+      .catch((action) => {
+        if (action === 'cancel') return { value: 'dry' }
+        throw Object.assign(new Error('已取消'), { silent: true })
+      })
+    const s = await api.groups.startSession(row.id, {
+      dryRun: mode === 'dry',
+    })
+    ElMessage.success(mode === 'dry' ? '已开聊（试运行）' : '已开聊')
     router.push(`/workbench/${s.id}`)
   } catch (e) {
-    ElMessage.error(e.message)
+    if (!e.silent) ElMessage.error(e.message)
   }
 }
 

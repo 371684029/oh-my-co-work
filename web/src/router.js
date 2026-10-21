@@ -10,6 +10,7 @@ import Shortcuts from './views/settings/Shortcuts.vue'
 import Prefs from './views/settings/Prefs.vue'
 import GrokSetup from './views/settings/GrokSetup.vue'
 import RestoreCenter from './views/settings/RestoreCenter.vue'
+import PromptSnippets from './views/settings/PromptSnippets.vue'
 
 const routes = [
   { path: '/', redirect: '/workbench' },
@@ -24,6 +25,7 @@ const routes = [
       { path: 'members', component: Members },
       { path: 'groups', component: Groups },
       { path: 'shortcuts', component: Shortcuts },
+      { path: 'snippets', component: PromptSnippets },
       { path: 'prefs', component: Prefs },
       { path: 'restore', component: RestoreCenter },
       { path: 'grok', component: GrokSetup },
