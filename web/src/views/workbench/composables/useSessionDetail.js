@@ -17,10 +17,12 @@ import {
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
-import { resolveSessionId } from './sessionActionUi.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
 import { createSessionNotesActions } from './sessionNotesActions.js'
+import { createSessionAnnounceActions } from './sessionAnnounceActions.js'
+import { createSessionDeleteActions } from './sessionDeleteActions.js'
+import { createSessionRenameActions } from './sessionRenameActions.js'
 import { createSessionSlashActions } from './sessionSlashActions.js'
 import {
   restartArchiveBlockedMessage,
@@ -29,17 +31,9 @@ import {
 } from './sessionFlowRestartUi.js'
 import {
   announceMdHintLabel,
-  announceOpenFailedMessage,
-  announceOpenedMessage,
-  announceRefreshFailedMessage,
-  announceRefreshedMessage,
   composerCopyFailedMessage,
   composerCopySuccessMessage,
   composerEmptyMessage,
-  deleteConfirmDialogOptions,
-  deleteFailedMessage,
-  deleteNoSessionMessage,
-  deleteSuccessMessage,
   hashItemEmptyInsertMessage,
 } from './sessionWorkbenchFeedbackUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
@@ -108,7 +102,6 @@ import {
   shouldSaveComposerDraftOnSessionSwitch,
   workbenchSessionRoute,
 } from './sessionLoadListsUi.js'
-import { shouldClearActiveSessionAfterDelete } from './sessionDeleteNavUi.js'
 import {
   isSkippedFlowGroupExpanded as isSkippedFlowGroupExpandedUi,
   nextSkippedFlowGroupExpansion,
@@ -582,26 +575,6 @@ const announceMdHint = computed(() =>
   announceMdHintLabel(resolveAnnounceMdRelativePath(detail.value, activeId.value)),
 )
 
-/** 用系统默认程序打开 ANNOUNCEMENT.md */
-async function openAnnouncementMd() {
-  if (!activeId.value) return
-  announceOpenLoading.value = true
-  try {
-    const r = await api.sessions.openAnnouncement(activeId.value)
-    if (r?.path && detail.value) {
-      detail.value.announcement = {
-        ...(detail.value.announcement || {}),
-        path: r.path,
-      }
-    }
-    ElMessage.success(announceOpenedMessage(r?.absolutePath))
-  } catch (e) {
-    ElMessage.warning(announceOpenFailedMessage(e))
-  } finally {
-    announceOpenLoading.value = false
-  }
-}
-
 /** 文档中心（4.0）：新开标签打开并定位到当前会话公告，替代旧的裸 MD 打开 */
 function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   const query = buildDocsHubQuery(activeId.value, file)
@@ -625,27 +598,30 @@ function openDocsHub({ newTab = false, file = 'ANNOUNCEMENT.md' } = {}) {
   }
 }
 
-/** 刷新群报告台账文件（后台 MD）；界面始终跟节点 / # 参数走 */
-async function rebuildAnnouncement() {
-  if (!activeId.value) return
-  announceLoading.value = true
-  try {
-    await api.sessions.refreshAnnouncement(activeId.value, { modes: ['io'] })
-    await loadDetail(activeId.value)
-    ElMessage.success(announceRefreshedMessage())
-  } catch (e) {
-    ElMessage.error(announceRefreshFailedMessage(e))
-  } finally {
-    announceLoading.value = false
-  }
-}
-
 function onConvChange(item) {
   const id = item?.uniqueKey || item?.id
   if (id) selectSession(id)
 }
 
 const deleteSessionRef = { doDelete: async () => {} }
+
+const { doDelete } = createSessionDeleteActions({
+  activeId,
+  detail,
+  loadLists,
+  api,
+  acwConfirm,
+  terminalBridge,
+  leaveWorkbench: () => _router?.replace('/workbench'),
+})
+deleteSessionRef.doDelete = doDelete
+
+const { rename } = createSessionRenameActions({
+  activeId,
+  editTitle,
+  sessions,
+  api,
+})
 
 const { togglePin, onConvMenu } = createSessionConvActions({
   sessions,
@@ -671,6 +647,15 @@ const { saveSessionNotes } = createSessionNotesActions({
   sessionNotesDraft,
   detail,
   notesSaving,
+  api,
+})
+
+const { openAnnouncementMd, rebuildAnnouncement } = createSessionAnnounceActions({
+  activeId,
+  detail,
+  announceOpenLoading,
+  announceLoading,
+  loadDetail,
   api,
 })
 
@@ -1067,47 +1052,6 @@ const { submitHuman, approveSessionStart, gate, answerAdapterQuestion } = create
   api,
 })
 Object.assign(gateActionsRef, { submitHuman, approveSessionStart, gate, answerAdapterQuestion })
-
-async function rename() {
-  if (!activeId.value || !editTitle.value.trim()) return
-  try {
-    await api.sessions.rename(activeId.value, editTitle.value.trim())
-    sessions.value = await api.sessions.list()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
-}
-
-/** @param {string} [targetId] 侧栏菜单可传指定会话 id；顶栏按钮不传则删当前 */
-async function doDelete(targetId) {
-  const id = resolveSessionId(targetId, activeId.value)
-  if (!id) {
-    ElMessage.warning(deleteNoSessionMessage())
-    return
-  }
-  const deleteOpts = deleteConfirmDialogOptions()
-  const ok = await acwConfirm('session.delete', {
-    ...deleteOpts,
-    type: 'warning',
-  })
-  if (!ok) return
-  const clearActive = shouldClearActiveSessionAfterDelete(id, activeId.value)
-  try {
-    await api.sessions.remove(id)
-    await loadLists()
-    if (clearActive) {
-      detail.value = null
-      terminalBridge.resetTerminals?.()
-      terminalBridge.closeWs?.()
-      activeId.value = ''
-      _router.replace('/workbench')
-    }
-    ElMessage.success(deleteSuccessMessage())
-  } catch (e) {
-    ElMessage.error(deleteFailedMessage(e))
-  }
-}
-deleteSessionRef.doDelete = doDelete
 
 // ===== 生命周期（Workbench 装配层调用）=====
 
