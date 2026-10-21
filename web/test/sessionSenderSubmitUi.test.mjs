@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   canSendPlainMessage,
+  composerSubmitRoute,
   pickSlashCommandOnSubmit,
   shouldSubmitHumanGate,
 } from '../src/views/workbench/composables/sessionSenderSubmitUi.js'
@@ -23,4 +24,21 @@ test('canSendPlainMessage', () => {
   assert.equal(canSendPlainMessage('', 0), false)
   assert.equal(canSendPlainMessage('x', 0), true)
   assert.equal(canSendPlainMessage('', 1), true)
+})
+
+test('composerSubmitRoute', () => {
+  const gate = { content: { mode: 'human_input' } }
+  assert.equal(composerSubmitRoute({ text: '/x', gate: null, mentionAssistOnly: false, attachmentsCount: 0 }), 'slash')
+  assert.equal(
+    composerSubmitRoute({ text: 'hi', gate, mentionAssistOnly: false, attachmentsCount: 0 }),
+    'human_gate',
+  )
+  assert.equal(
+    composerSubmitRoute({ text: 'hi', gate: null, mentionAssistOnly: false, attachmentsCount: 0 }),
+    'plain_message',
+  )
+  assert.equal(
+    composerSubmitRoute({ text: '', gate: null, mentionAssistOnly: false, attachmentsCount: 0 }),
+    'noop',
+  )
 })

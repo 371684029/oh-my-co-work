@@ -17,3 +17,12 @@ export function shouldSubmitHumanGate(gate, mentionAssistOnly) {
 export function canSendPlainMessage(text, attachmentsCount) {
   return Boolean(String(text || '').trim()) || Number(attachmentsCount) > 0
 }
+
+/** @returns {'slash'|'human_gate'|'plain_message'|'noop'} */
+export function composerSubmitRoute({ text, gate, mentionAssistOnly, attachmentsCount }) {
+  const raw = String(text || '')
+  if (raw.startsWith('/')) return 'slash'
+  if (shouldSubmitHumanGate(gate, mentionAssistOnly)) return 'human_gate'
+  if (canSendPlainMessage(raw, attachmentsCount)) return 'plain_message'
+  return 'noop'
+}

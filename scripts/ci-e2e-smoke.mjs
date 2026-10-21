@@ -183,7 +183,7 @@ async function main() {
       timeout: 60000,
     })
     await page.waitForTimeout(1200)
-    const firstRunBtn = page.getByRole('button', { name: /开始探索/ })
+    const firstRunBtn = page.getByRole('button', { name: /开始探索|Start exploring/i })
     if (await firstRunBtn.isVisible().catch(() => false)) {
       await firstRunBtn.click()
       await page.waitForTimeout(400)

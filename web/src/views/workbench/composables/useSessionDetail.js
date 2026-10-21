@@ -22,9 +22,8 @@ import {
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
 import {
-  canSendPlainMessage,
+  composerSubmitRoute,
   pickSlashCommandOnSubmit,
-  shouldSubmitHumanGate,
 } from './sessionSenderSubmitUi.js'
 import {
   convMenuActionFromCommand,
@@ -1228,24 +1227,6 @@ async function onSenderSubmit() {
   if (sending.value || uploading.value) return
   const text = readSenderText()
   const atts = [...pendingFiles.value]
-
-  // /指令 提交时执行而非发消息
-  const slashCmd = pickSlashCommandOnSubmit(
-    text,
-    slashCommands.value,
-    filteredSlashCmds.value[useComposerStore().slashIndex],
-  )
-  if (text.startsWith('/')) {
-    if (slashCmd) {
-      await runSlash(slashCmd)
-      return
-    }
-    const token = text.slice(1).trim().split(/\s+/)[0] || ''
-    ElMessage.warning(slashCommandNotFoundMessage(token))
-    return
-  }
-
-  // 人工输入 / 缺参补齐闸门：Enter = 提交闸门（纯 @成员协助除外，不推进流程）
   const g = pendingGate.value
   const mentionAssist =
     !!text &&
@@ -1256,14 +1237,34 @@ async function onSenderSubmit() {
         name: m.name,
       })),
     )
-  if (shouldSubmitHumanGate(g, mentionAssist)) {
+  const route = composerSubmitRoute({
+    text,
+    gate: g,
+    mentionAssistOnly: mentionAssist,
+    attachmentsCount: atts.length,
+  })
+
+  if (route === 'slash') {
+    const slashCmd = pickSlashCommandOnSubmit(
+      text,
+      slashCommands.value,
+      filteredSlashCmds.value[useComposerStore().slashIndex],
+    )
+    if (slashCmd) {
+      await runSlash(slashCmd)
+      return
+    }
+    const token = text.slice(1).trim().split(/\s+/)[0] || ''
+    ElMessage.warning(slashCommandNotFoundMessage(token))
+    return
+  }
+
+  if (route === 'human_gate') {
     await submitHuman(g)
     return
   }
-  // 启动闸门 / 审核闸门：Enter 只发消息，保持 pending，不默认通过或拒绝
-  // 人工闸门下纯 @：走发消息协助，不当项目参数提交
 
-  if (!canSendPlainMessage(text, atts.length)) return
+  if (route === 'noop') return
 
   pushInputHistory(composerScopeKey(activeId.value), text)
   composerHistIndex = -1

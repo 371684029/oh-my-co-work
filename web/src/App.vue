@@ -192,34 +192,43 @@
       @click="onFurnaceClick"
       @open-docs="onSpriteOpenDocs"
     />
-    <el-dialog v-model="firstRunGuideOpen" title="欢迎使用 oh-my-co-work" width="560px" destroy-on-close>
-      <p class="first-run-lead">
-        这是本机人机协同台：用<strong>群模板</strong>串起成员与脚本，在<strong>工作台</strong>里开聊、审核、看流程轨。
-      </p>
+    <el-dialog
+      v-model="firstRunGuideOpen"
+      :title="onboardingFirstRunTitle()"
+      width="560px"
+      destroy-on-close
+      :aria-label="onboardingFirstRunTitle()"
+    >
+      <p class="first-run-lead">{{ onboardingFirstRunLead() }}</p>
       <ul class="first-run-list">
-        <li>设置 → <strong>群聊模板</strong>：一键开聊或试运行检查路径。</li>
-        <li>设置 → <strong>成员</strong>：脚本 / 回声 / 熔炉成员。</li>
-        <li><kbd>Ctrl/Cmd+K</kbd> 命令面板：跳转会话、缩放与主题。</li>
+        <li>{{ onboardingFirstRunListGroup() }}</li>
+        <li>{{ onboardingFirstRunListMembers() }}</li>
+        <li><kbd>Ctrl/Cmd+K</kbd> {{ onboardingFirstRunListPalette() }}</li>
       </ul>
       <template #footer>
-        <el-button type="primary" @click="dismissFirstRun">开始探索</el-button>
-        <el-button @click="go('settings/wizard')">首次向导</el-button>
-        <el-button @click="go('settings')">打开设置</el-button>
+        <el-button type="primary" @click="dismissFirstRun">{{ onboardingFirstRunExplore() }}</el-button>
+        <el-button @click="go('settings/wizard')">{{ onboardingFirstRunWizard() }}</el-button>
+        <el-button @click="go('settings')">{{ onboardingFirstRunSettings() }}</el-button>
       </template>
     </el-dialog>
 
     <el-dialog
       v-model="grokGuideOpen"
-      title="Grok Build 教程"
+      :title="onboardingGrokGuideTitle()"
       width="720px"
       class="grok-guide-dialog"
       destroy-on-close
+      :aria-label="onboardingGrokGuideTitle()"
     >
       <GrokSetupGuide :status="grokGuideStatus" :example-toml="grokExampleToml" />
       <template #footer>
-        <el-button @click="grokGuideOpen = false">关闭</el-button>
-        <el-button v-if="grokCanContinue" type="primary" @click="openFurnaceAnyway">打开熔炉</el-button>
-        <el-button :type="grokCanContinue ? 'default' : 'primary'" @click="goGrokSettings">去设置</el-button>
+        <el-button @click="grokGuideOpen = false">{{ onboardingGrokClose() }}</el-button>
+        <el-button v-if="grokCanContinue" type="primary" @click="openFurnaceAnyway">
+          {{ onboardingGrokOpenFurnace() }}
+        </el-button>
+        <el-button :type="grokCanContinue ? 'default' : 'primary'" @click="goGrokSettings">
+          {{ onboardingGrokGoSettings() }}
+        </el-button>
       </template>
     </el-dialog>
 
@@ -271,6 +280,20 @@ import {
   shellBrandTagline,
   shellBrandGuardEmphasis,
 } from './composables/appShellCopy.js'
+import {
+  onboardingFirstRunTitle,
+  onboardingFirstRunLead,
+  onboardingFirstRunListGroup,
+  onboardingFirstRunListMembers,
+  onboardingFirstRunListPalette,
+  onboardingFirstRunExplore,
+  onboardingFirstRunWizard,
+  onboardingFirstRunSettings,
+  onboardingGrokGuideTitle,
+  onboardingGrokClose,
+  onboardingGrokOpenFurnace,
+  onboardingGrokGoSettings,
+} from './composables/appOnboardingCopy.js'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'
