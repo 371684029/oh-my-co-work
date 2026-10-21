@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/{composables/furnaceWorkspaceCopy,components/terminal/FurnaceWorkspace.vue,views/workbench/{composables/sessionGatePanelUi,components/ComposerPanel.vue},i18n/{zh-CN,en-US}.js} web/test/sessionGatePanelUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | DSK-08 熔炉 chrome/compose i18n、闸门按钮 sessionGatePanelUi
 2026-10-21 | A/M | web/src/{composables/furnaceWorkspaceCopy,components/terminal/FurnaceWorkspace.vue,views/workbench/{composables/{sessionComposerPanelUi,sessionComposerUploadUi,sessionContextUi},components/ComposerPanel.vue},i18n/{zh-CN,en-US}.js} web/test/{furnaceWorkspaceCopy,sessionComposerPanelUi}.test.mjs docs/5.3.0-plan.md | DSK-08 熔炉复制 toast、Composer 上传/折叠 i18n
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionWorkbenchFeedbackUi,sessionSlashRunUi,useSessionDetail} web/src/i18n/{zh-CN,en-US}.js web/test/sessionWorkbenchFeedbackUi.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01/ENG-04 工作台 toast 模块、DSK-08 workbench.* i18n
 2026-10-21 | A/M | web/src/views/{docs/{docsHubInDocSearchUi,docsHubCopy,DocsHub.vue},workbench/composables/{sessionFlowRestartUi,useSessionDetail,useDocsHub}} web/src/i18n/{zh-CN,en-US}.js web/test/{docsHubInDocSearchUi,sessionFlowRestartUi}.test.mjs | FE-01 正文搜索/流程重启、DSK-08 i18n
