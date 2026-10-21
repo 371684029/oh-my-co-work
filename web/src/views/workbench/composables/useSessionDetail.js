@@ -1,10 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import {
-  formatBusinessIo,
-  wholeOutputText,
-  stepTypeLabel as sharedStepTypeLabel,
-  MAX_PROJECT_PARAMS,
-} from '@acw/shared'
+import { formatBusinessIo } from '@acw/shared'
 import { api } from '../../../api'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
@@ -30,16 +25,14 @@ import {
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 import { buildSessionListFilterOptions } from './sessionListFilterUi.js'
 import { createSessionMessageSendActions } from './sessionMessageSendActions.js'
-import { formatSessionTime, formatSessionIo } from './sessionFormatUtils.js'
+import { formatSessionTime } from './sessionFormatUtils.js'
 import {
   buildFlowEntries,
   computeFlowHistorySplitIndex,
   isClonedNode,
-  isCurrentStepNode,
   nodeHasAdapt,
   nodeHasRefine,
   pickFlowAnchorNodeId,
-  flowNodeClass,
 } from './sessionFlowUi.js'
 import {
   archiveOutcomeOf,
@@ -57,22 +50,13 @@ import {
   computeOffsiteActive,
   findActiveOffsiteNode,
   computeOffsiteMode,
-  isCurrentOffsiteSegment as isCurrentOffsiteSegmentNode,
-  offsiteEntryLabel as offsiteEntryLabelForNode,
-  offsiteInvokedLabel as offsiteInvokedLabelForNode,
 } from './sessionOffsiteUi.js'
 import { reviewAction, reviewLabel } from './sessionReviewUi.js'
-import { isPendingGateMessage } from './sessionGateUi.js'
 import { findPendingGateMessage } from './sessionPendingGate.js'
 import { isArchiveStatusMessage } from './sessionBubbleUi.js'
-import {
-  parseSessionContext,
-  extractSessionParamsList,
-  sessionGroupCardFromContext,
-  sessionGroupFolderFromContext,
-  footerCollapsedHintForPendingGate,
-} from './sessionContextUi.js'
-import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
+import { parseSessionContext, footerCollapsedHintForPendingGate } from './sessionContextUi.js'
+import { createSessionContextComputeds } from './sessionContextComputeds.js'
+import { createSessionNodePresentation } from './sessionNodePresentation.js'
 import { formatDocsHubSearchParams, resolveAnnounceMdRelativePath } from './sessionDocsNavUi.js'
 import { createSessionGateActions } from './sessionGateActions.js'
 import { createSessionLoadActions } from './sessionLoadActions.js'
@@ -94,7 +78,6 @@ import {
   composerToolbarHintForGate,
   showComposerHintIForGate,
 } from './sessionComposerUi.js'
-import { roleLabel as roleLabelForMessage, shortSender as shortSenderForMessage } from './sessionMessageUi.js'
 
 
 /**
@@ -220,6 +203,50 @@ const startableMembers = computed(() =>
   (members.value || []).filter((m) => m.enabled !== false),
 )
 
+const {
+  sessionParamsList,
+  sessionGroupCard,
+  sessionGroupFolder,
+  hashItems,
+  filteredHashItems,
+} = createSessionContextComputeds({ detail, activeId })
+
+const offsiteActive = computed(() =>
+  computeOffsiteActive(detail.value?.session, detail.value?.nodes),
+)
+
+const activeOffsiteNode = computed(() =>
+  findActiveOffsiteNode(detail.value?.nodes, detail.value?.session?.context),
+)
+
+const offsiteMode = computed(() =>
+  computeOffsiteMode(
+    detail.value?.session?.context,
+    activeOffsiteNode.value,
+    offsiteActive.value,
+  ),
+)
+
+const {
+  nodeBypassed,
+  stepTypeLabel,
+  roleLabel,
+  shortSender,
+  isPendingGate,
+  isCurrent,
+  isCurrentOffsiteSegment,
+  offsiteEntryLabel,
+  offsiteInvokedLabel,
+  flowClass,
+  toggleNodeExpand,
+  formatIo,
+} = createSessionNodePresentation({
+  detail,
+  members,
+  getActiveOffsiteNodeId: () => activeOffsiteNode.value?.id,
+  getOffsiteMode: () => offsiteMode.value,
+})
+
 const convMenu = CONVERSATION_MENU
 
 /** 会话历史两大块：群模板 / 成员（块内置顶+时间已在 filteredSessions 排好） */
@@ -252,44 +279,6 @@ const pendingGate = computed(() => {
   )
 })
 
-function sessionCtx() {
-  return parseSessionContext(detail.value?.session)
-}
-
-/** 会话项目参数 #1 #2…（不含系统 #群聊） */
-const sessionParamsList = computed(() =>
-  extractSessionParamsList(sessionCtx(), MAX_PROJECT_PARAMS),
-)
-
-/** #群聊 → 整份群聊名片 */
-const sessionGroupCard = computed(() => sessionGroupCardFromContext(sessionCtx()))
-
-/** #文件夹 → 群聊工作目录 */
-const sessionGroupFolder = computed(() => sessionGroupFolderFromContext(sessionCtx()))
-
-/**
- * # 文本快捷候选（# 只是唤起键，选中后只插入正文）
- * label：面板展示用，不含 #
- */
-const hashItems = computed(() => {
-  if (!activeId.value) return []
-  return buildHashComposerItems({
-    groupCard: sessionGroupCard.value || '',
-    groupFolder: sessionGroupFolder.value || '',
-    paramsList: sessionParamsList.value,
-    nodes: detail.value?.nodes || [],
-    maxParams: MAX_PROJECT_PARAMS,
-    wholeOutputText,
-  })
-})
-
-const filteredHashItems = computed(() =>
-  filterHashComposerItems(hashItems.value, useComposerStore().hashQuery, {
-    maxParams: MAX_PROJECT_PARAMS,
-    paramsList: sessionParamsList.value,
-  }),
-)
-
 /** 折叠时底栏提示文案 */
 const footerCollapsedHint = computed(() =>
   footerCollapsedHintForPendingGate(pendingGate.value),
@@ -309,10 +298,14 @@ const archiveOutcomeTag = computed(() => {
 })
 
 /** 群报告：启动说明 */
-const announceKickoff = computed(() => announceKickoffFromContext(sessionCtx()))
+const announceKickoff = computed(() =>
+  announceKickoffFromContext(parseSessionContext(detail.value?.session)),
+)
 
 /** 群报告：用户参与附言列表 */
-const announceUserNotes = computed(() => announceUserNotesFromContext(sessionCtx()))
+const announceUserNotes = computed(() =>
+  announceUserNotesFromContext(parseSessionContext(detail.value?.session)),
+)
 
 /**
  * 群报告：每个节点的实质入/出（含脚本额外产出、审核附言）
@@ -335,80 +328,8 @@ const showComposerHintI = computed(() => showComposerHintIForGate(pendingGate.va
 const composerFooterHint = computed(() => composerFooterHintForGate(pendingGate.value))
 
 const statusLabel = sessionStatusLabel
-
-function nodeBypassed(n) {
-  return !!(n?.output?.bypassed || n?.input?.bypassed)
-}
-
-function stepTypeLabel(t) {
-  return sharedStepTypeLabel(t) || t
-}
-
 const statusType = sessionStatusType
-
 const formatTime = formatSessionTime
-
-function roleLabel(m) {
-  return roleLabelForMessage(m, members.value)
-}
-
-function shortSender(m, fullName) {
-  return shortSenderForMessage(m, fullName, members.value)
-}
-
-function isPendingGate(m) {
-  if (!detail.value) return false
-  return isPendingGateMessage(m, detail.value.nodes)
-}
-
-function isCurrent(n) {
-  if (!detail.value) return false
-  return isCurrentStepNode(n, detail.value.session)
-}
-
-const offsiteActive = computed(() =>
-  computeOffsiteActive(detail.value?.session, detail.value?.nodes),
-)
-
-const activeOffsiteNode = computed(() =>
-  findActiveOffsiteNode(detail.value?.nodes, detail.value?.session?.context),
-)
-
-/** planned | interrupt */
-const offsiteMode = computed(() =>
-  computeOffsiteMode(
-    detail.value?.session?.context,
-    activeOffsiteNode.value,
-    offsiteActive.value,
-  ),
-)
-
-function isCurrentOffsiteSegment(n) {
-  return isCurrentOffsiteSegmentNode(n, activeOffsiteNode.value?.id)
-}
-
-function offsiteEntryLabel(n) {
-  return offsiteEntryLabelForNode(n, {
-    activeOffsiteNodeId: activeOffsiteNode.value?.id,
-    mode: offsiteMode.value,
-  })
-}
-
-function offsiteInvokedLabel(n) {
-  return offsiteInvokedLabelForNode(n)
-}
-
-function flowClass(n) {
-  return flowNodeClass(n, detail.value?.session)
-}
-
-function toggleNodeExpand(n) {
-  useFlowStore().expandedNodeId = useFlowStore().expandedNodeId === n.id ? null : n.id
-}
-
-function formatIo(val, role = 'auto') {
-  return formatSessionIo(val, role)
-}
 
 const { loadLists, loadDetail, selectSession } = createSessionLoadActions({
   sessions,
