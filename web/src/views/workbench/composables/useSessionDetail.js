@@ -7,8 +7,6 @@ import {
   formatSessionAutoTitle,
   extractCallArgsFromSlash,
   isMentionAssistOnly,
-  nodeStatusLabel,
-  isDiscardedUnexecutedFlowNode,
   stepTypeLabel as sharedStepTypeLabel,
   MAX_PROJECT_PARAMS,
   FURNACE_DISPLAY_NAME,
@@ -33,6 +31,16 @@ import {
 } from './sessionMessageUtils.js'
 import { sessionStatusLabel, sessionStatusType } from './sessionStatusUi.js'
 import { formatSessionTime } from './sessionFormatUtils.js'
+import {
+  buildFlowEntries,
+  computeFlowHistorySplitIndex,
+  isClonedNode,
+  isCurrentStepNode,
+  isFlowHistoryNode as isFlowHistoryNodeAt,
+  nodeHasAdapt,
+  nodeHasRefine,
+  pickFlowAnchorNodeId,
+} from './sessionFlowUi.js'
 
 
 /**
@@ -957,14 +965,7 @@ function isPendingGate(m) {
 
 function isCurrent(n) {
   if (!detail.value) return false
-  if (n.step_type === 'offsite') return false
-  const s = detail.value.session
-  if (s.status === 'archived') return false
-  return (
-    n.step_index === s.current_step_index &&
-    n.status !== 'succeeded' &&
-    n.status !== 'skipped'
-  )
+  return isCurrentStepNode(n, detail.value.session)
 }
 
 function isWaitingHuman(n) {
@@ -1709,42 +1710,13 @@ async function insertHashItem(h) {
   await replaceSenderText(stripped ? `${stripped} ${insert}` : insert)
 }
 
-function isDiscardedUnexecutedNode(n) {
-  return isDiscardedUnexecutedFlowNode(n, {
-    currentStepIndex: detail.value?.session?.current_step_index,
-    isCurrent: isCurrent(n),
-  })
-}
-
 /**
  * 将相邻的「未跑过且已废弃」节点归为一段并默认收起。
  * 已执行节点（成功/失败/执行中/场外）和当前轨将要跑的节点保持展开。
  */
-const flowEntries = computed(() => {
-  const entries = []
-  for (const node of detail.value?.nodes || []) {
-    if (node.step_type === 'archive') continue
-    const previous = entries.at(-1)
-    if (isDiscardedUnexecutedNode(node) && previous?.type === 'skipped') {
-      previous.nodes.push(node)
-      previous.key = `skipped-${previous.nodes[0].id}-${node.id}`
-    } else if (isDiscardedUnexecutedNode(node)) {
-      entries.push({ type: 'skipped', key: `skipped-${node.id}-${node.id}`, nodes: [node] })
-    } else {
-      entries.push({ type: 'node', key: `node-${node.id}`, nodes: [node] })
-    }
-  }
-  return entries
-})
-
-function nodeHasAdapt(n) {
-  return !!(n?.input?.adapt || n?.output?.adapt)
-}
-
-/** 4.5 炼化：节点 input 带 refine 标记（refined / fallback / source）即视为已炼化/走格式化节点 */
-function nodeHasRefine(n) {
-  return !!n?.input?.refine
-}
+const flowEntries = computed(() =>
+  buildFlowEntries(detail.value?.nodes, detail.value?.session),
+)
 
 function isSkippedFlowGroupExpanded(entry) {
   return !!useFlowStore().expandedSkippedFlowGroups[entry.key]
@@ -1757,61 +1729,21 @@ function toggleSkippedFlowGroup(entry) {
   }
 }
 
-function isClonedNode(n) {
-  return !!(n?.output?.cloned || n?.input?.cloned)
-}
-
 /** 当前世代起点：最近一次克隆批次，否则当前步及之后（仅用于历史样式，不再折叠） */
-const flowHistorySplitIndex = computed(() => {
-  const nodes = detail.value?.nodes || []
-  if (!nodes.length) return 0
-  const last = detail.value?.session?.context?.lastRestart
-  const batch = last?.cloneBatchId
-  if (batch) {
-    const i = nodes.findIndex(
-      (n) => (n.output?.cloneBatchId || n.input?.cloneBatchId) === batch,
-    )
-    if (i > 0) return i
-  }
-  const cur = Number(detail.value?.session?.current_step_index)
-  if (!Number.isFinite(cur)) return 0
-  const i = nodes.findIndex((n) => Number(n.step_index) >= cur)
-  return i > 0 ? i : 0
-})
+const flowHistorySplitIndex = computed(() =>
+  computeFlowHistorySplitIndex(detail.value?.nodes, detail.value?.session),
+)
 
 function isFlowHistoryNode(n) {
-  const nodes = detail.value?.nodes || []
-  const i = nodes.findIndex((x) => x.id === n.id)
-  return i >= 0 && i < flowHistorySplitIndex.value
+  return isFlowHistoryNodeAt(n, detail.value?.nodes, flowHistorySplitIndex.value)
 }
 
 /** 流程轨应锚定滚动的节点：场外当前段 → 待确认 → 执行中 → 当前步 → 游标步 */
-const flowAnchorNodeId = computed(() => {
-  const nodes = detail.value?.nodes || []
-  if (!nodes.length) return null
-  const off = activeOffsiteNode.value
-  if (off?.id) return off.id
-  const archWait = nodes.find(
-    (n) => n.step_type === 'archive' && n.status === 'waiting_human' && isCurrent(n),
-  )
-  if (archWait) return archWait.id
-  const waitingAtCur = nodes.find(
-    (n) => n.status === 'waiting_human' && Number(n.step_index) === Number(detail.value?.session?.current_step_index),
-  )
-  if (waitingAtCur) return waitingAtCur.id
-  const waiting = [...nodes].reverse().find((n) => n.status === 'waiting_human')
-  if (waiting) return waiting.id
-  const running = nodes.find((n) => n.status === 'running')
-  if (running) return running.id
-  const cur = nodes.find((n) => isCurrent(n))
-  if (cur) return cur.id
-  const idx = Number(detail.value?.session?.current_step_index)
-  if (Number.isFinite(idx)) {
-    const byIdx = nodes.find((n) => Number(n.step_index) === idx)
-    if (byIdx) return byIdx.id
-  }
-  return nodes[nodes.length - 1]?.id || null
-})
+const flowAnchorNodeId = computed(() =>
+  pickFlowAnchorNodeId(detail.value?.nodes, detail.value?.session, {
+    activeOffsiteId: activeOffsiteNode.value?.id,
+  }),
+)
 
 function scrollFlowToAnchor() {
   if (useFlowStore().rightTab !== 'flow') return

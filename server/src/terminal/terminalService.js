@@ -5,8 +5,8 @@ import * as pty from 'node-pty'
 import { inferFurnaceAgent, uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
 import { emitSession, emitTerminalOutput, setWsTerminalAttach } from '../bus.js'
-import { getAppSettings } from '../appSettings.js'
 import { quotaLimits, redactOpts } from './quota.js'
+import { publicTerminal } from './publicTerminal.js'
 import { pickWindowsMatch } from '../commandResolver.js'
 import { redactText } from './redact.js'
 import {
@@ -105,37 +105,6 @@ function appendReplay(entry, data) {
   if (entry.replay.length > maxChars) {
     entry.replay = entry.replay.slice(-maxChars)
     entry.replayTruncated = true
-  }
-}
-
-function publicTerminal(entry, { includeReplay = false } = {}) {
-  if (!entry) return null
-  return {
-    id: entry.id,
-    sessionId: entry.sessionId,
-    nodeInstanceId: entry.nodeInstanceId,
-    memberId: entry.memberId,
-    runId: entry.runId,
-    label: entry.label,
-    runtime: entry.runtime,
-    command: entry.command || null,
-    furnaceAgent: entry.furnaceAgent || null,
-    cwd: entry.cwd,
-    status: entry.status,
-    pid: entry.pid,
-    cols: entry.cols,
-    rows: entry.rows,
-    seq: entry.seq,
-    exitCode: entry.exitCode,
-    signal: entry.signal,
-    startedAt: entry.startedAt,
-    finishedAt: entry.finishedAt,
-    log: entry.logName,
-    logTruncated: entry.logTruncated,
-    replayTruncated: entry.replayTruncated,
-    adapter: entry.adapterType || null,
-    lastError: entry.lastError || null,
-    ...(includeReplay ? { replay: entry.replay } : {}),
   }
 }
 

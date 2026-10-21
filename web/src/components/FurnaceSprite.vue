@@ -168,7 +168,6 @@ const sheetUrl = ref('')
 const bubbleStyle = computed(() => {
   if (typeof window === 'undefined' || !rootEl.value) return {}
   const rect = rootEl.value.getBoundingClientRect()
-  const bubbleW = 128
   const pad = 8
   let shift = 0
   if (rect.right + pad > window.innerWidth) {

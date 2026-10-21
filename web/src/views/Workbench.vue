@@ -97,11 +97,21 @@
               text
               bg
               :type="detail.session.pinned ? 'primary' : 'default'"
+              :aria-label="detail.session.pinned ? '取消置顶本会话' : '置顶本会话'"
               @click="togglePin(detail.session.id, !detail.session.pinned)"
             >
               {{ detail.session.pinned ? '取消置顶' : '置顶' }}
             </el-button>
-            <el-button size="default" text bg type="danger" @click="doDelete()">删除</el-button>
+            <el-button
+              size="default"
+              text
+              bg
+              type="danger"
+              aria-label="删除本会话"
+              @click="doDelete()"
+            >
+              删除
+            </el-button>
           </div>
         </div>
 

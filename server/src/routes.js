@@ -29,6 +29,7 @@ import updateRoutes from './routes/updateRoutes.js'
 import settingsRoutes from './routes/settingsRoutes.js'
 import catalogRoutes from './routes/catalogRoutes.js'
 import sessionsRoutes from './routes/sessionsRoutes.js'
+import sessionsSystemRoutes from './routes/sessionsSystemRoutes.js'
 
 const router = Router()
 
@@ -192,7 +193,7 @@ router.get('/fs/stat', (req, res) => {
 })
 
 router.use(catalogRoutes)
-
+router.use(sessionsSystemRoutes)
 router.use(sessionsRoutes)
 
 // Support
