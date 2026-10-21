@@ -522,6 +522,18 @@ import {
   isDocsSessionExpanded,
   toggleDocsSessionExpansion,
 } from './docsHubSessionUi.js'
+import {
+  docsCopyAnchorFallbackMessage,
+  docsCopyAnchorSuccessMessage,
+  docsCopyCodeFailedMessage,
+  docsCopyCodeSuccessMessage,
+  docsExportAllErrorMessage,
+  docsExportAllSuccessMessage,
+  docsExportGroupErrorMessage,
+  docsExportGroupSuccessMessage,
+  docsLinkResolveFailedMessage,
+  docsPrintPopupBlockedMessage,
+} from './docsHubMessages.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -562,7 +574,7 @@ function onExportPrint() {
     bodyHtml: renderedHtml.value,
     proseCss,
   })
-  if (!openDocPrintWindow(html)) ElMessage.warning('请允许弹出窗口以打印/保存 PDF')
+  if (!openDocPrintWindow(html)) ElMessage.warning(docsPrintPopupBlockedMessage())
 }
 
 const selectedGroupId = ref('all')
@@ -658,9 +670,9 @@ function highlightSnippet(snippet, query) {
 async function onExportGroup(groupId) {
   try {
     await api.docs.downloadDocsExport(groupId)
-    ElMessage.success('群文档导出成功')
+    ElMessage.success(docsExportGroupSuccessMessage())
   } catch (e) {
-    ElMessage.error(e?.message || '导出失败')
+    ElMessage.error(docsExportGroupErrorMessage(e))
   }
 }
 
@@ -668,9 +680,9 @@ async function onExportAll() {
   exportingAll.value = true
   try {
     await api.docs.downloadAllDocsExport()
-    ElMessage.success('全量文档导出成功')
+    ElMessage.success(docsExportAllSuccessMessage())
   } catch (e) {
-    ElMessage.error(e?.message || '全量导出失败')
+    ElMessage.error(docsExportAllErrorMessage(e))
   } finally {
     exportingAll.value = false
   }
@@ -696,9 +708,9 @@ async function copyHeadingAnchor(slug) {
   const hash = `#${slug}`
   try {
     await navigator.clipboard.writeText(hash)
-    ElMessage.success('已复制锚点链接')
+    ElMessage.success(docsCopyAnchorSuccessMessage())
   } catch {
-    ElMessage.success(`锚点 ${hash}`)
+    ElMessage.success(docsCopyAnchorFallbackMessage(hash))
   }
 }
 
@@ -731,8 +743,8 @@ watch([file, editing, renderedHtml], () => {
 
 async function onContentClick(e) {
   const handled = await handleDocsProseClick(e, {
-    onCopied: () => ElMessage.success('已复制代码'),
-    onCopyFailed: () => ElMessage.warning('复制失败'),
+    onCopied: () => ElMessage.success(docsCopyCodeSuccessMessage()),
+    onCopyFailed: () => ElMessage.warning(docsCopyCodeFailedMessage()),
   })
   if (handled) return
 
@@ -755,7 +767,7 @@ async function onContentClick(e) {
       expandFor(r.sessionId)
       selectFile(r.sessionId, r.name)
     } else {
-      ElMessage.warning('无法定位文档')
+      ElMessage.warning(docsLinkResolveFailedMessage())
     }
   }
 }

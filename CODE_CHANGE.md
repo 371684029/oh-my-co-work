@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-21 | A/M | web/src/views/{docs/docsHubMessages,DocsHub.vue,workbench/composables/{sessionSenderSubmitUi,useSessionDetail}} web/src/i18n/{zh-CN,en-US}.js web/test/{docsHubMessages,sessionSenderSubmitUi}.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 submit 路由、DSK-08 DocsHub 提示文案
 2026-10-21 | A/M | web/src/views/docs/{docsHubStatusUi,docsHubSortUi,docsHubOutlineUi,docsHubSessionUi,docsHubFilterUi,DocsHub.vue} web/src/views/workbench/composables/{sessionComposerPickerUi,sessionComposerKeydownUi,useSessionDetail,useDocsHub} web/src/i18n/{zh-CN,en-US}.js web/test/{docsHubStatusUi,docsHubSortUi,docsHubSessionUi,sessionComposerKeydownUi,sessionComposerPickerUi}.test.mjs docs/{5.1.0,5.3.0}-plan.md | FE-01 DocsHub/composer 拆分、DSK-08 docs 文案键
 2026-10-21 | A/M | web/src/views/docs/{docsHubSessionUi,DocsHub.vue} web/src/views/workbench/composables/{sessionComposerPickerUi,useSessionDetail} web/src/views/settings/SettingsLayout.vue web/src/i18n/{zh-CN,en-US}.js packages/README.md web/test/{docsHubSessionUi,sessionComposerPickerUi}.test.mjs docs/5.1.0-plan.md | FE-01 DocsHub/composer、DSK-08 设置菜单 i18n、DESK-07 README
 2026-10-21 | A/M | web/src/composables/{furnaceWorkspacePresentation,useFurnaceWorkspace} web/src/views/settings/SettingsLayout.vue web/test/furnaceWorkspacePresentation.test.mjs server/test/backupRestore.test.js web/src/i18n/{zh-CN,en-US}.js docs/5.1.0-plan.md | FE-01 熔炉文案、SRV-01 async 单测、UX-03 设置布局 aria

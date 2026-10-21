@@ -21,6 +21,11 @@ import {
 } from '../../../composables/inputDraftHistory.js'
 import { historyNavigationDelta, isHistoryNavigationKey } from '../../../composables/inputIntent.js'
 import { handleComposerPickerListKeydown } from './sessionComposerKeydownUi.js'
+import {
+  canSendPlainMessage,
+  pickSlashCommandOnSubmit,
+  shouldSubmitHumanGate,
+} from './sessionSenderSubmitUi.js'
 import { acwConfirm } from '../../../composables/acwConfirm.js'
 import {
   messageText,
@@ -1167,15 +1172,17 @@ async function onSenderSubmit() {
   const atts = [...pendingFiles.value]
 
   // /指令 提交时执行而非发消息
+  const slashCmd = pickSlashCommandOnSubmit(
+    text,
+    slashCommands.value,
+    filteredSlashCmds.value[useComposerStore().slashIndex],
+  )
   if (text.startsWith('/')) {
-    const token = text.slice(1).trim().split(/\s+/)[0] || ''
-    const cmd =
-      slashCommands.value.find((c) => c.enabled !== false && c.slash === token) ||
-      filteredSlashCmds.value[useComposerStore().slashIndex]
-    if (cmd) {
-      await runSlash(cmd)
+    if (slashCmd) {
+      await runSlash(slashCmd)
       return
     }
+    const token = text.slice(1).trim().split(/\s+/)[0] || ''
     ElMessage.warning(`未找到指令 /${token}，可在 设置 → 斜杠 / 快捷键 中配置`)
     return
   }
@@ -1191,17 +1198,14 @@ async function onSenderSubmit() {
         name: m.name,
       })),
     )
-  if (
-    (g?.content?.mode === 'human_input' || g?.content?.mode === 'need_params') &&
-    !mentionAssist
-  ) {
+  if (shouldSubmitHumanGate(g, mentionAssist)) {
     await submitHuman(g)
     return
   }
   // 启动闸门 / 审核闸门：Enter 只发消息，保持 pending，不默认通过或拒绝
   // 人工闸门下纯 @：走发消息协助，不当项目参数提交
 
-  if (!text && !atts.length) return
+  if (!canSendPlainMessage(text, atts.length)) return
 
   pushInputHistory(composerScopeKey(activeId.value), text)
   composerHistIndex = -1

@@ -54,6 +54,18 @@ export const strings = {
       month: 'Last 30 days',
       older: 'Older',
     },
+    export: {
+      groupSuccess: 'Group docs exported',
+      allSuccess: 'All docs exported',
+      failed: 'Export failed',
+      allFailed: 'Full export failed',
+    },
+    copyAnchorSuccess: 'Anchor link copied',
+    copyAnchorFallback: 'Anchor {hash}',
+    printPopupBlocked: 'Allow pop-ups to print or save PDF',
+    linkResolveFailed: 'Could not locate document',
+    copyCodeSuccess: 'Code copied',
+    copyCodeFailed: 'Copy failed',
   },
 }
 

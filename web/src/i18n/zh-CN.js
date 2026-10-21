@@ -59,6 +59,18 @@ export const strings = {
       month: '最近 30 天',
       older: '更早以前',
     },
+    export: {
+      groupSuccess: '群文档导出成功',
+      allSuccess: '全量文档导出成功',
+      failed: '导出失败',
+      allFailed: '全量导出失败',
+    },
+    copyAnchorSuccess: '已复制锚点链接',
+    copyAnchorFallback: '锚点 {hash}',
+    printPopupBlocked: '请允许弹出窗口以打印/保存 PDF',
+    linkResolveFailed: '无法定位文档',
+    copyCodeSuccess: '已复制代码',
+    copyCodeFailed: '复制失败',
   },
 }
 
