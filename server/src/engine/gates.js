@@ -17,6 +17,8 @@ import {
   resolveGroupFolder,
   mergeSystemParams,
   isMentionAssistOnly,
+  validateAndFillSessionParams,
+  resolveGroupParamSpecs,
 } from '@acw/shared'
 import { getSession, getGroup, getMember, resolveStepForNode, templateStepIndexOf, syncAutoSessionTitle, bindGateHumanInput,  } from './store.js'
 import { archiveOffsiteOnReturnToMain } from './offsite.js'
@@ -270,7 +272,25 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         // #a 已写入 params，下方统一发启动状态
       }
 
-      const autoTitleStart = syncAutoSessionTitle(ctxStart, getGroup(session.group_id))
+      const groupForSpecs = getGroup(session.group_id)
+      const paramSpecs = resolveGroupParamSpecs(groupForSpecs)
+      if (paramSpecs.length) {
+        const merged = {
+          ...(ctxStart.params && typeof ctxStart.params === 'object' ? ctxStart.params : {}),
+          ...(parsed?.map && typeof parsed.map === 'object' ? parsed.map : {}),
+        }
+        const validated = validateAndFillSessionParams(paramSpecs, merged)
+        if (!validated.ok) {
+          throw Object.assign(
+            new Error(validated.errors.map((e) => e.message).join('；')),
+            { code: 'PARAM_INVALID', errors: validated.errors },
+          )
+        }
+        ctxStart.params = validated.params
+        if (parsed?.map) parsed.map = { ...parsed.map, ...validated.params }
+      }
+
+      const autoTitleStart = syncAutoSessionTitle(ctxStart, groupForSpecs)
       engineEmit('persist_session', sessionId, {
         status: SESSION_STATUS.ACTIVE,
         context_json: JSON.stringify(ctxStart),

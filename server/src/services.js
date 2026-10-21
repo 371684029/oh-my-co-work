@@ -280,6 +280,12 @@ function normalizeSteps(steps) {
     if (s.refine === true || s.refine === 'true' || s.refine === 1) {
       row.refine = true
     }
+    if (s.skipWhen && typeof s.skipWhen === 'object') {
+      row.skipWhen = s.skipWhen
+    }
+    if (s.run && typeof s.run === 'object') {
+      row.run = s.run
+    }
     return row
   })
 }

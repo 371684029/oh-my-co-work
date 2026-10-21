@@ -29,6 +29,8 @@ import {
   stopChild,
   waitHealth,
 } from './lib/server.mjs'
+import { resolveDefaultAcwDataRoot } from './lib/dataDir.mjs'
+import { releaseAllResources } from './lib/shutdown.mjs'
 import { createNotifier, parseNotificationDeepLink } from './lib/notifier.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -433,6 +435,12 @@ async function ensureServer() {
   const logPath = path.join(appRoot, 'data', 'desktop-server.log')
   const logFd = openAppendFd(logPath)
   const instanceId = randomUUID()
+  const dataRoot = resolveDefaultAcwDataRoot()
+  try {
+    fs.mkdirSync(dataRoot, { recursive: true })
+  } catch {
+    /* ignore */
+  }
   serverChild = spawnAppServer({
     appRoot,
     port,
@@ -440,6 +448,7 @@ async function ensureServer() {
     entry,
     logFd,
     instanceId,
+    dataRoot,
   })
   try {
     fs.closeSync(logFd)
@@ -522,10 +531,18 @@ if (!gotLock) {
   })
 }
 
-app.on('before-quit', () => {
+let quitReleaseDone = false
+app.on('before-quit', (event) => {
+  if (quitReleaseDone) return
+  event.preventDefault()
+  quitReleaseDone = true
   isQuitting = true
-  stopChild(serverChild)
-  serverChild = null
+  const port = Number(process.env.ACW_PORT || 3780)
+  void releaseAllResources(port).finally(() => {
+    stopChild(serverChild)
+    serverChild = null
+    app.exit(0)
+  })
 })
 
 app.on('window-all-closed', () => {

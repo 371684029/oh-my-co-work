@@ -1,3 +1,5 @@
+当前开发线：**v5.3.0**（见仓库根 `package.json`）。
+
 # 文档索引
 
 本目录为 **oh-my-co-work** 的设计与约定文档。上手运行请先看仓库根目录 [README.md](../README.md)。

@@ -24,6 +24,23 @@
       </div>
     </section>
 
+    <section v-if="isDesktop" class="prefs-card">
+      <div class="prefs-title">数据目录</div>
+      <p class="prefs-hint">
+        桌面版默认把数据库与日志放在系统用户目录（DSK-05），避免覆盖安装包时丢数据。
+      </p>
+      <pre v-if="dataDirInfo" class="usage-pre">{{ dataDirSummary }}</pre>
+      <el-button
+        v-if="dataDirInfo?.hasLegacy && !dataDirInfo?.migrated"
+        size="small"
+        type="warning"
+        :loading="migratingData"
+        @click="migrateData"
+      >
+        从安装目录迁移数据
+      </el-button>
+    </section>
+
     <section class="prefs-card">
       <div class="prefs-row">
         <div class="prefs-text">
@@ -500,6 +517,21 @@ const notifyPrefs = ref({
 })
 const savingNotify = ref(false)
 const notifyPlatform = ref({ supported: true, platform: 'web', hint: '' })
+const dataDirInfo = ref(null)
+const migratingData = ref(false)
+const dataDirSummary = computed(() => {
+  const d = dataDirInfo.value
+  if (!d) return ''
+  return [
+    `当前：${d.current}`,
+    `推荐：${d.recommended}`,
+    d.hasLegacy ? `检测到旧目录：${d.legacy}` : '无安装目录旧库',
+    d.migrated ? '已迁移' : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+})
+
 const usageLoading = ref(false)
 const usageStats = ref(null)
 const usageSummaryText = computed(() => {
@@ -848,6 +880,30 @@ async function saveNotify() {
   }
 }
 
+async function loadDataDir() {
+  if (!isDesktop.value) return
+  try {
+    dataDirInfo.value = await api.system.dataDir()
+  } catch {
+    dataDirInfo.value = null
+  }
+}
+
+async function migrateData() {
+  migratingData.value = true
+  try {
+    const r = await api.system.migrateDataDir()
+    if (r.ok) {
+      ElMessage.success('迁移完成，请重启应用以使用新目录')
+      await loadDataDir()
+    } else ElMessage.warning(r.error || '无法迁移')
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    migratingData.value = false
+  }
+}
+
 async function loadUsageStats() {
   usageLoading.value = true
   try {
@@ -915,6 +971,7 @@ function onResourcePageVisible() {
 
 onMounted(() => {
   load()
+  void loadDataDir()
   window.__ACW_DESKTOP_API__?.getNotificationPlatform?.().then((p) => {
     if (p && typeof p === 'object') notifyPlatform.value = p
   }).catch(() => {})

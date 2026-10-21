@@ -18,6 +18,9 @@ import {
   normalizeStepFlow,
   injectCallArgsParam,
   SYSTEM_PARAM_KEYS,
+  evalStepSkipWhen,
+  validateAndFillSessionParams,
+  resolveGroupParamSpecs,
 } from '@acw/shared'
 import { getAppSettings } from '../appSettings.js'
 import { prepareAdaptForMember, adaptStatusText } from '../adaptBackup.js'
@@ -156,6 +159,32 @@ export async function advance(sessionId) {
 
     const { step } = resolveStepForNode(node, steps)
     const ctx = parseJson(session.context_json, {})
+    const prevRow =
+      idx > 0
+        ? getDb()
+            .prepare(
+              `SELECT output_json FROM node_instances WHERE session_id = ? AND step_index = ?`,
+            )
+            .get(sessionId, idx - 1)
+        : null
+    const prevOutput = prevRow ? parseJson(prevRow.output_json, {}) : null
+    if (evalStepSkipWhen(step, ctx, prevOutput)) {
+      engineEmit('persist_node_io', sessionId, node.id, {
+        input: parseJson(node.input_json, {}),
+        output: { skipped: true, skipWhen: step.skipWhen || true },
+        status: NODE_STATUS.SKIPPED,
+        finished: true,
+      })
+      engineEmit('add_message', sessionId, {
+        role: 'system',
+        type: 'status',
+        node_instance_id: node.id,
+        content: { text: `「${node.title}」按条件跳过（skipWhen）。` },
+      })
+      idx += 1
+      engineEmit('persist_session', sessionId, { current_step_index: idx })
+      continue
+    }
     const cloneMeta = (() => {
       const out = parseJson(node.output_json, {})
       const input = parseJson(node.input_json, {})
@@ -289,10 +318,38 @@ export async function advance(sessionId) {
       return
     }
 
-    const paramsMap = injectCallArgsParam(
-      resolveParamsMap(ctx, group),
-      ctx.lastHumanInput,
-    )
+    let paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), ctx.lastHumanInput)
+    const paramSpecs = resolveGroupParamSpecs(group)
+    if (paramSpecs.length) {
+      const validated = validateAndFillSessionParams(paramSpecs, paramsMap)
+      if (!validated.ok) {
+        engineEmit('persist_node_io', sessionId, node.id, {
+          input: { memberId: member.id, paramErrors: validated.errors },
+          output: {
+            error: 'param_invalid',
+            errors: validated.errors,
+            summary: validated.errors.map((e) => e.message).join('；'),
+          },
+          status: NODE_STATUS.FAILED,
+          finished: true,
+        })
+        engineEmit('add_message', sessionId, {
+          role: 'system',
+          type: 'text',
+          node_instance_id: node.id,
+          content: {
+            text: `参数校验失败：${validated.errors.map((e) => e.message).join('；')}`,
+          },
+        })
+        dismissPendingArchiveIfAny(sessionId, 'failed')
+        return
+      }
+      paramsMap = validated.params
+      if (JSON.stringify(validated.params) !== JSON.stringify(ctx.params || {})) {
+        ctx.params = { ...(ctx.params || {}), ...validated.params }
+        engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+      }
+    }
     const wantAdapt = !!(
       step?.adapt ||
       parseJson(node.input_json, {}).adapt ||

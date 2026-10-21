@@ -24,6 +24,7 @@ export function useAppInit() {
   const desktop = useDesktopBridge()
   const isFullscreen = ref(false)
   const grokGuideOpen = ref(false)
+  const firstRunGuideOpen = ref(false)
   const grokGuideStatus = ref({})
   const grokExampleToml = ref('')
 
@@ -55,6 +56,9 @@ export function useAppInit() {
       grokExampleToml.value = probe.exampleToml || ''
       setFurnaceGrokGate({ probe })
       applyUiSettings(s)
+      if (s && !s.onboarding?.firstRunGuideDismissed) {
+        firstRunGuideOpen.value = true
+      }
       return { s, probe }
     } catch {
       setGrokConfigured(false)
@@ -140,9 +144,20 @@ export function useAppInit() {
     window.removeEventListener('focus', clearTrayOnFocus)
   })
 
+  async function dismissFirstRunGuide() {
+    firstRunGuideOpen.value = false
+    try {
+      await api.appSettings.update({ onboarding: { firstRunGuideDismissed: true } })
+    } catch {
+      /* ignore */
+    }
+  }
+
   return {
     isFullscreen,
     grokGuideOpen,
+    firstRunGuideOpen,
+    dismissFirstRunGuide,
     grokGuideStatus,
     grokExampleToml,
     grokCanContinue,

@@ -233,6 +233,16 @@ function ensureSettingsFile() {
   }
 }
 
+export function defaultOnboardingSettings() {
+  return { firstRunGuideDismissed: false }
+}
+
+function normalizeOnboarding(raw) {
+  const d = defaultOnboardingSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return { firstRunGuideDismissed: raw.firstRunGuideDismissed === true }
+}
+
 /** 未人工确认归档时，超时自动归档（小时）；默认 3 */
 function defaultUpdateCheckSettings() {
   // 4.7.0：降低打扰，启动检查更新默认开启（仅用 Message 轻提示不弹窗）
@@ -328,6 +338,7 @@ export function getAppSettings() {
       ui: normalizeUi(raw.ui),
       customAgents: normalizeCustomAgents(raw.customAgents),
       promptSnippets: normalizePromptSnippets(raw.promptSnippets),
+      onboarding: normalizeOnboarding(raw.onboarding),
     }
   } catch {
     return {
@@ -345,6 +356,7 @@ export function getAppSettings() {
       ui: defaultUiSettings(),
       customAgents: [],
       promptSnippets: [],
+      onboarding: defaultOnboardingSettings(),
     }
   }
 }
@@ -423,6 +435,10 @@ export function updateAppSettings(patch = {}) {
       patch.promptSnippets !== undefined
         ? normalizePromptSnippets(patch.promptSnippets)
         : cur.promptSnippets || [],
+    onboarding:
+      patch.onboarding !== undefined
+        ? normalizeOnboarding({ ...cur.onboarding, ...patch.onboarding })
+        : cur.onboarding || defaultOnboardingSettings(),
   }
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
   fs.writeFileSync(SETTINGS_PATH, JSON.stringify(next, null, 2), 'utf8')

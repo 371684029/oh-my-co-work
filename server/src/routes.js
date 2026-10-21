@@ -45,6 +45,15 @@ import { collectDiagnostics } from './diagnostics.js'
 import { collectUsageStats } from './usageStats.js'
 import { buildSessionAuditMarkdown } from './auditExport.js'
 import { listAgentDefinitions } from './agentRegistry.js'
+import {
+  listParseProfiles,
+  listParseSamples,
+  recordParseSample,
+} from './parseProfiles.js'
+import {
+  getDataDirStatus,
+  migrateLegacyDataToCurrent,
+} from './dataDirMigration.js'
 import { listBuiltinTemplates, BUILTIN_TEMPLATES } from './builtinTemplates.js'
 import {
   exportMemberTemplate,
@@ -501,6 +510,33 @@ router.get('/usage-stats', (_req, res) => {
 
 router.get('/agent-registry', (_req, res) => {
   res.json({ agents: listAgentDefinitions() })
+})
+router.get('/agent-registry/parse-profiles', (_req, res) => {
+  res.json({ profiles: listParseProfiles() })
+})
+router.get('/agent-registry/parse-samples', (req, res) => {
+  const agentId = req.query.agentId || 'generic-cli'
+  res.json({ agentId, samples: listParseSamples(agentId) })
+})
+router.post('/agent-registry/parse-samples', (req, res) => {
+  try {
+    const body = req.body || {}
+    const entry = recordParseSample(body)
+    res.status(201).json(entry)
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/system/data-dir', (_req, res) => {
+  res.json(getDataDirStatus())
+})
+router.post('/system/migrate-data-dir', (_req, res) => {
+  try {
+    res.json(migrateLegacyDataToCurrent())
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
 })
 
 router.get('/templates/builtin', (_req, res) => {

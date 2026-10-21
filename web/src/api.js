@@ -119,6 +119,18 @@ export const api = {
     list: () => req('/restore-center'),
   },
   diagnostics: () => req('/diagnostics'),
+  system: {
+    dataDir: () => req('/system/data-dir'),
+    migrateDataDir: () => req('/system/migrate-data-dir', { method: 'POST', body: '{}' }),
+  },
+  agentRegistry: {
+    list: () => req('/agent-registry'),
+    parseProfiles: () => req('/agent-registry/parse-profiles'),
+    parseSamples: (agentId) =>
+      req(`/agent-registry/parse-samples?agentId=${encodeURIComponent(agentId || 'generic-cli')}`),
+    recordParseSample: (body) =>
+      req('/agent-registry/parse-samples', { method: 'POST', body: JSON.stringify(body || {}) }),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),
@@ -162,7 +174,6 @@ export const api = {
       }),
   },
   usageStats: () => req('/usage-stats'),
-  agentRegistry: () => req('/agent-registry'),
   sessions: {
     list: (status) => req(status ? `/sessions?status=${status}` : '/sessions'),
     get: (id) => req(`/sessions/${id}`),

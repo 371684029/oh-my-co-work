@@ -142,6 +142,21 @@
       @click="onFurnaceClick"
       @open-docs="onSpriteOpenDocs"
     />
+    <el-dialog v-model="firstRunGuideOpen" title="欢迎使用 oh-my-co-work" width="560px" destroy-on-close>
+      <p class="first-run-lead">
+        这是本机人机协同台：用<strong>群模板</strong>串起成员与脚本，在<strong>工作台</strong>里开聊、审核、看流程轨。
+      </p>
+      <ul class="first-run-list">
+        <li>设置 → <strong>群聊模板</strong>：一键开聊或试运行检查路径。</li>
+        <li>设置 → <strong>成员</strong>：脚本 / 回声 / 熔炉成员。</li>
+        <li><kbd>Ctrl/Cmd+K</kbd> 命令面板：跳转会话、缩放与主题。</li>
+      </ul>
+      <template #footer>
+        <el-button type="primary" @click="dismissFirstRun">开始探索</el-button>
+        <el-button @click="go('settings')">打开设置</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog
       v-model="grokGuideOpen"
       title="Grok Build 教程"
@@ -208,6 +223,8 @@ const appRoot = ref(null)
 const {
   isFullscreen,
   grokGuideOpen,
+  firstRunGuideOpen,
+  dismissFirstRunGuide,
   grokGuideStatus,
   grokExampleToml,
   grokCanContinue,
@@ -215,6 +232,10 @@ const {
   ensureFurnaceGrokWired,
   reduceEffects,
 } = useAppInit()
+
+function dismissFirstRun() {
+  void dismissFirstRunGuide()
+}
 
 const furnaceTitle = computed(() => {
   const probe = grokProbe.value
