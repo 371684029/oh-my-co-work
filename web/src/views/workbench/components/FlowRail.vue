@@ -316,71 +316,72 @@
           >
             展开完整文档中心
           </el-button>
-          <el-button
-            size="small"
-            plain
-            :disabled="!activeId"
-            @click="openDocsHub({ newTab: true })"
-          >
-            新标签打开
-          </el-button>
-          <el-button
-            v-if="detail?.session?.group_id"
-            size="small"
-            plain
-            :disabled="!activeId"
-            :loading="exportingRailDocs"
-            @click="onExportRailGroupDocs"
-          >
-            导出群
-          </el-button>
-          <el-button
-            size="small"
-            text
-            :disabled="!activeId"
-            :loading="announceOpenLoading"
-            :title="announceMdHint"
-            @click="openAnnouncementMd"
-          >
-            系统打开
-          </el-button>
-          <el-button
-            size="small"
-            type="primary"
-            plain
-            :disabled="!activeId"
-            :loading="announceLoading"
-            @click="rebuildAnnouncement"
-          >
-            刷新报告
-          </el-button>
-          <el-button
-            size="small"
-            type="primary"
-            plain
-            :disabled="!activeId"
-            :loading="railDocsLoading"
-            @click="loadRailDocs"
-          >
-            刷新
-          </el-button>
+          <el-dropdown trigger="click" class="docs-rail-more">
+            <el-button size="small" plain :disabled="!activeId">更多</el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item :disabled="!activeId" @click="openDocsHub({ newTab: true })">
+                  新标签打开
+                </el-dropdown-item>
+                <el-dropdown-item
+                  v-if="detail?.session?.group_id"
+                  :disabled="!activeId || exportingRailDocs"
+                  @click="onExportRailGroupDocs"
+                >
+                  导出群
+                </el-dropdown-item>
+                <el-dropdown-item
+                  :disabled="!activeId || announceOpenLoading"
+                  @click="openAnnouncementMd"
+                >
+                  系统打开
+                </el-dropdown-item>
+                <el-dropdown-item
+                  :disabled="!activeId || announceLoading"
+                  @click="rebuildAnnouncement"
+                >
+                  刷新报告
+                </el-dropdown-item>
+                <el-dropdown-item :disabled="!activeId || railDocsLoading" @click="loadRailDocs">
+                  刷新列表
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
 
       <div v-if="detail && activeId" class="docs-rail-body">
         <!-- 文件选项列表 -->
         <div v-if="railDocFiles.length" class="docs-rail-files">
-          <button
-            v-for="f in railDocFiles"
-            :key="f.name"
-            type="button"
-            class="docs-rail-file-pill"
-            :class="{ active: selectedDocName === f.name }"
-            @click="onSelectRailDoc(f.name)"
+          <el-select
+            v-model="selectedDocName"
+            class="docs-rail-file-select"
+            size="small"
+            filterable
+            placeholder="选择文档"
+            @change="onSelectRailDoc"
           >
-            <span class="pill-name">{{ f.title || f.name }}</span>
-            <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
-          </button>
+            <el-option
+              v-for="f in railDocFiles"
+              :key="f.name"
+              :label="`${f.title || f.name}`"
+              :value="f.name"
+            />
+          </el-select>
+          <div class="docs-rail-file-pills" aria-hidden="true">
+            <button
+              v-for="f in railDocFiles"
+              :key="f.name"
+              type="button"
+              class="docs-rail-file-pill"
+              :class="{ active: selectedDocName === f.name }"
+              @click="onSelectRailDoc(f.name)"
+            >
+              <span class="pill-name">{{ f.title || f.name }}</span>
+              <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
+            </button>
+          </div>
         </div>
         <div v-else-if="!railDocsLoading" class="docs-rail-empty">
           当前会话暂无生成台账或报告
@@ -454,7 +455,6 @@ import {
   announceLoading,
   announceOpenLoading,
   notesSaving,
-  announceMdHint,
   isSkippedFlowGroupExpanded,
   toggleSkippedFlowGroup,
   flowClass,
@@ -494,6 +494,7 @@ import {
   readDocsReadingPrefs,
 } from '../../docs/docsReadingPrefs.js'
 import { openPath } from '../composables/useDocsHub'
+import { recordDocsOpen } from '../../docs/docsReadingHistory.js'
 
 function nodeJournalDocFile(n) {
   return journalPathToDocFile(n?.journalPath)
@@ -559,6 +560,8 @@ const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
   return md.value.render(selectedDocContent.value, {
     docCodeLineNumbers: readDocsCodeLineNumbers(),
+    docSessionId: activeId.value,
+    docRelName: selectedDocName.value,
   })
 })
 
@@ -646,6 +649,12 @@ async function onSelectRailDoc(name) {
     const res = await api.docs.file(reqSessionId, name)
     if (reqId !== currentFileReqId || reqSessionId !== activeId.value) return
     selectedDocContent.value = res?.content || ''
+    recordDocsOpen({
+      sessionId: reqSessionId,
+      name,
+      label: railDocFiles.value.find((f) => f.name === name)?.title || name,
+      sessionTitle: detail.value?.session?.title || '',
+    })
   } catch (e) {
     if (reqId === currentFileReqId && reqSessionId === activeId.value) {
       ElMessage.error(e?.message || '读取文档内容失败')
@@ -681,6 +690,17 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => flowStore.railDocFocus,
+  async (req) => {
+    if (!req?.sessionId || !req?.name) return
+    if (req.sessionId !== activeId.value) return
+    flowStore.rightTab = 'docs'
+    await loadRailDocs()
+    await onSelectRailDoc(req.name)
+  },
 )
 </script>
 
@@ -1122,16 +1142,38 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  container-type: inline-size;
+  container-name: docs-rail;
 }
 
 .docs-rail-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.docs-rail-file-select {
+  display: none;
+  width: 100%;
+}
+
+.docs-rail-file-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   max-height: 96px;
   overflow-y: auto;
   padding: 4px 2px;
-  flex-shrink: 0;
+}
+
+@container docs-rail (max-width: 260px) {
+  .docs-rail-file-select {
+    display: block;
+  }
+  .docs-rail-file-pills {
+    display: none;
+  }
 }
 
 .docs-rail-file-pill {
@@ -1143,7 +1185,7 @@ watch(
   border: 0;
   background: rgba(143, 149, 158, 0.12);
   color: #646a73;
-  font-size: 11px;
+  font-size: var(--ecw-font-xs, 12px);
   line-height: 18px;
   cursor: pointer;
   transition: background 0.15s ease;

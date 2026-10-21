@@ -13,7 +13,9 @@ import { writeZipArchive } from './adaptBackup.js'
 import { fuzzyScore, searchMatchThreshold } from '@acw/shared'
 
 const MAX_READ_BYTES = 1024 * 1024
+const MAX_ASSET_BYTES = 5 * 1024 * 1024
 const CACHE_TTL_MS = 60_000
+const ASSET_EXT_RE = /\.(png|jpe?g|gif|webp|svg)$/i
 
 const SESSION_ID_RE = /^[A-Za-z0-9_-]+$/
 // Whitelist: ANNOUNCEMENT.md / README.md / nodes/step-NN-<nodeId>.md
@@ -54,6 +56,20 @@ function resolveWhitelistedAbs(sessionId, relName) {
     throw Object.assign(new Error('不是普通文件'), { code: 'BAD_FILE' })
   }
   return realFile
+}
+
+function sessionWorkFolder(sessionId) {
+  assertSession(sessionId)
+  const row = getDb()
+    .prepare('SELECT context_json FROM sessions WHERE id = ?')
+    .get(sessionId)
+  if (!row) return null
+  try {
+    const ctx = JSON.parse(row.context_json || '{}')
+    return ctx.groupFolder || ctx.primaryWorkFolder || ctx.workFolders?.[0] || null
+  } catch {
+    return null
+  }
 }
 
 function classify(name) {
@@ -330,6 +346,79 @@ export function readDoc(sessionId, name) {
     content,
     truncated,
   }
+}
+
+/**
+ * Resolve a relative image/asset href for markdown (5.2.0 DOC-08).
+ * Search order: beside the current doc in journal → session journal root → work folder.
+ */
+export function resolveSessionAssetAbs(sessionId, href, docRelName = '') {
+  assertSession(sessionId)
+  const raw = String(href || '').trim().replace(/\\/g, '/')
+  if (!raw || /^https?:/i.test(raw) || /^data:/i.test(raw)) {
+    throw Object.assign(new Error('不支持的资源链接'), { code: 'BAD_ASSET' })
+  }
+  if (!ASSET_EXT_RE.test(raw.split('?')[0])) {
+    throw Object.assign(new Error('非图片资源'), { code: 'BAD_ASSET' })
+  }
+  const sessionJournalRoot = path.resolve(journalRoot(), sessionId)
+  const docDir = docRelName ? path.dirname(String(docRelName).replace(/\\/g, '/')) : ''
+  const rel = raw.replace(/^\.\//, '')
+  const candidates = []
+  if (docDir) candidates.push(path.resolve(sessionJournalRoot, docDir, rel))
+  candidates.push(path.resolve(sessionJournalRoot, rel))
+  const work = sessionWorkFolder(sessionId)
+  if (work) candidates.push(path.resolve(String(work), rel))
+
+  for (const candidate of candidates) {
+    const roots = [sessionJournalRoot]
+    if (work) roots.push(path.resolve(String(work)))
+    if (!roots.some((root) => confinedUnder(root, candidate))) continue
+    if (!fs.existsSync(candidate)) continue
+    try {
+      if (fs.lstatSync(candidate).isSymbolicLink()) continue
+    } catch {
+      continue
+    }
+    const realRoots = roots.map((r) => {
+      try {
+        return fs.realpathSync(r)
+      } catch {
+        return r
+      }
+    })
+    let realFile
+    try {
+      realFile = fs.realpathSync(candidate)
+    } catch {
+      continue
+    }
+    if (!realRoots.some((root) => confinedUnder(root, realFile))) continue
+    const st = fs.statSync(realFile)
+    if (!st.isFile() || st.size > MAX_ASSET_BYTES) continue
+    if (!ASSET_EXT_RE.test(realFile)) continue
+    return { abs: realFile, size: st.size, mtimeMs: st.mtimeMs }
+  }
+  throw Object.assign(new Error('找不到本地图片'), { code: 'NO_ASSET' })
+}
+
+/**
+ * @returns {{ abs: string, mime: string, size: number }}
+ */
+export function openSessionAsset(sessionId, href, docRelName = '') {
+  const hit = resolveSessionAssetAbs(sessionId, href, docRelName)
+  const ext = path.extname(hit.abs).toLowerCase()
+  const mime =
+    ext === '.png'
+      ? 'image/png'
+      : ext === '.gif'
+        ? 'image/gif'
+        : ext === '.webp'
+          ? 'image/webp'
+          : ext === '.svg'
+            ? 'image/svg+xml'
+            : 'image/jpeg'
+  return { abs: hit.abs, mime, size: hit.size }
 }
 
 /**

@@ -207,6 +207,18 @@ test('exportAllDocsZip packages all documents across sessions', () => {
   fs.rmSync(out.path, { force: true })
 })
 
+test('openSessionAsset resolves relative image beside markdown', () => {
+  const session = seedSession('图片资源')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '![x](./assets/x.png)')
+  const assetsDir = path.join(dataRoot, 'journals', 'sessions', session.id, 'assets')
+  fs.mkdirSync(assetsDir, { recursive: true })
+  const png = path.join(assetsDir, 'x.png')
+  fs.writeFileSync(png, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+  const out = docsHub.openSessionAsset(session.id, './assets/x.png', 'ANNOUNCEMENT.md')
+  assert.equal(out.mime, 'image/png')
+  assert.ok(fs.existsSync(out.abs))
+})
+
 test('empty docs zip placeholder is a valid zip entry', async () => {
   const { writeZipArchive } = await import('../src/adaptBackup.js')
   const tmp = path.join(os.tmpdir(), `acw-empty-docs-${Date.now()}.zip`)

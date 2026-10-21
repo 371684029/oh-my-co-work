@@ -17,7 +17,20 @@
       <div v-show="showBubble" class="furnace-bubble" role="status">
         <p>{{ bubbleText }}</p>
         <div class="furnace-actions">
-          <button type="button" class="furnace-act furnace-act--primary" @click.stop="$emit('click')">
+          <button
+            v-if="docsNotifyActive"
+            type="button"
+            class="furnace-act furnace-act--primary"
+            @click.stop="$emit('open-docs')"
+          >
+            看报告
+          </button>
+          <button
+            v-else
+            type="button"
+            class="furnace-act furnace-act--primary"
+            @click.stop="$emit('click')"
+          >
             开熔炉
           </button>
           <button type="button" class="furnace-act" @click.stop="poke">戳一下</button>
@@ -83,8 +96,10 @@ const props = defineProps({
     validator: (v) => ['idle', 'working', 'waiting'].includes(v),
   },
   title: { type: String, default: '熔炉' },
+  /** Increment to show "报告好了" bubble (5.2.0 DOC-18). */
+  docsNotifySeq: { type: Number, default: 0 },
 })
-defineEmits(['click'])
+defineEmits(['click', 'open-docs'])
 
 const creditTitle = computed(() => PET_COPYRIGHT)
 const hitTitle = computed(() => `${props.title} · ${PET_CREDIT_SHORT}`)
@@ -108,6 +123,7 @@ const frame = ref(0)
 const minimized = ref(false)
 const showBubble = ref(false)
 const bubbleText = ref(IDLE_LINES[0])
+const docsNotifyActive = ref(false)
 function defaultPos() {
   const h = typeof window !== 'undefined' ? window.innerHeight : 720
   return {
@@ -336,6 +352,16 @@ watch(
   () => {
     lineIndex = 0
     if (hovered.value) bubbleText.value = linesForState()[0]
+  },
+)
+
+watch(
+  () => props.docsNotifySeq,
+  (n, prev) => {
+    if (n > 0 && n !== prev) {
+      docsNotifyActive.value = true
+      say('报告好了，点我看', 8000)
+    }
   },
 )
 

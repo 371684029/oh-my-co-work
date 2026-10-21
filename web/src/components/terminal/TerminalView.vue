@@ -63,6 +63,7 @@ import {
 import { api } from '../../api.js'
 import { wrapBracketedPaste, chunkBracketedPaste } from '../../composables/bracketedPaste.js'
 import { pathsToTerminalPaste } from '../../composables/terminalFilePaste.js'
+import { shouldSkipPasteConfirmWhileComposing } from '../../composables/terminalIme.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -91,6 +92,7 @@ const forceSelection = ref(false)
 const ctxMenu = ref({ open: false, x: 0, y: 0 })
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
 const sequencer = createInputSequencer()
+let imeComposing = false
 
 function closeCtxMenu() {
   ctxMenu.value.open = false
@@ -346,10 +348,17 @@ onMounted(async () => {
   host.value?.addEventListener('drop', onHostDrop)
   host.value?.addEventListener('paste', onHostPaste)
   document.addEventListener('click', closeCtxMenu)
+  xterm.textarea?.addEventListener('compositionstart', () => {
+    imeComposing = true
+  })
+  xterm.textarea?.addEventListener('compositionend', () => {
+    imeComposing = false
+  })
   xterm.onData((data) => {
     if (!isRunning.value) return
     const pastePolicy = props.prefs?.pastePolicy || 'confirm'
     if (
+      !shouldSkipPasteConfirmWhileComposing(imeComposing) &&
       shouldConfirmTerminalPaste({
         data,
         pastePolicy,

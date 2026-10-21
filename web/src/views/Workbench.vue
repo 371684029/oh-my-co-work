@@ -280,7 +280,6 @@ import {
   selectSession,
   terminalPrefs,
   furnaceSurface,
-  openDocsHub,
 } from './workbench/composables/useSessionDetail'
 import {
   initTerminalSessions,
@@ -305,6 +304,8 @@ import {
   disposeFurnaceSync,
   startWorkbench,
 } from './workbench/composables/useFurnaceSync'
+import { useFlowStore } from '../stores/flow.js'
+import { journalPathToDocFile } from '../composables/messageDocLinks.js'
 
 const TerminalWorkspace = defineAsyncComponent(
   () => import('../components/terminal/TerminalWorkspace.vue'),
@@ -322,9 +323,13 @@ initTerminalSessions()
 initFurnaceSync({ route, router })
 startWorkbench()
 
-function onBubbleOpenDoc({ file }) {
-  if (!file) return
-  openDocsHub({ file })
+const flowStore = useFlowStore()
+
+function onBubbleOpenDoc({ file, path }) {
+  if (!activeId.value) return
+  const resolved = journalPathToDocFile(path || file) || file
+  if (!resolved) return
+  flowStore.focusRailDoc(activeId.value, resolved)
 }
 
 // —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——

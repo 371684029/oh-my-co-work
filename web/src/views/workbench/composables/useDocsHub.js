@@ -19,6 +19,12 @@ import {
   docsReadingClassNames,
   docsReadingStyle,
 } from '../../docs/docsReadingPrefs.js'
+import {
+  readDocsReadingHistory,
+  recordDocsOpen,
+  toggleDocsPin,
+  isDocsPinned,
+} from '../../docs/docsReadingHistory.js'
 
 /**
  * 文档中心（4.0）模块级单例状态（furnaceUi.js 同款模式）。
@@ -233,7 +239,47 @@ const renderedHtml = computed(() => {
   const md = createDocsMarkdown({
     workFolders: [currentSession.value?.workFolder].filter(Boolean),
   })
-  return md.render(file.value.content, { docCodeLineNumbers: codeLineNumbers.value })
+  return md.render(file.value.content, {
+    docCodeLineNumbers: codeLineNumbers.value,
+    docSessionId: current.value?.sessionId,
+    docRelName: current.value?.name,
+  })
+})
+
+const docsHistory = ref(readDocsReadingHistory())
+const docsPinned = computed(() => docsHistory.value.pinned || [])
+const docsRecent = computed(() => docsHistory.value.recent || [])
+
+function refreshDocsHistory() {
+  docsHistory.value = readDocsReadingHistory()
+}
+
+function pinCurrentDoc() {
+  if (!current.value) return
+  docsHistory.value = toggleDocsPin({
+    sessionId: current.value.sessionId,
+    name: current.value.name,
+    label: fileLabel(file.value || { name: current.value.name }),
+    sessionTitle: currentSession.value?.sessionTitle || '',
+  })
+}
+
+function isCurrentPinned() {
+  if (!current.value) return false
+  return isDocsPinned(current.value.sessionId, current.value.name, docsPinned.value)
+}
+
+/** Live preview while editing announcement (DOC-07). */
+const draftPreviewHtml = computed(() => {
+  if (!editing.value || !canEdit.value) return ''
+  const md = createDocsMarkdown({
+    workFolders: [currentSession.value?.workFolder].filter(Boolean),
+  })
+  return md.render(draft.value || '', {
+    docCodeLineNumbers: codeLineNumbers.value,
+    docSessionId: current.value?.sessionId,
+    docRelName: current.value?.name,
+  })
 })
 
 // ===== 工具函数 =====
@@ -391,6 +437,14 @@ async function selectFile(sessionId, name, { force = false } = {}) {
   current.value = { sessionId, name }
   syncQuery()
   await loadFile(sessionId, name)
+  if (file.value) {
+    docsHistory.value = recordDocsOpen({
+      sessionId,
+      name,
+      label: fileLabel(file.value),
+      sessionTitle: currentSession.value?.sessionTitle || '',
+    })
+  }
 }
 
 // ===== 编辑 =====
@@ -587,4 +641,10 @@ export {
   openPath,
   initDocsHub,
   disposeDocsHub,
+  docsPinned,
+  docsRecent,
+  refreshDocsHistory,
+  pinCurrentDoc,
+  isCurrentPinned,
+  draftPreviewHtml,
 }

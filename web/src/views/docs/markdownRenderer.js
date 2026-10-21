@@ -224,5 +224,24 @@ export function createDocsMarkdown({ workFolders = [] } = {}) {
     return renderDocsFence(token.content, token.info, { lineNumbers })
   }
 
+  const defaultImage =
+    md.renderer.rules.image ||
+    ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options))
+  md.renderer.rules.image = (tokens, idx, options, env, self) => {
+    const token = tokens[idx]
+    const src = String(token.attrGet('src') || '')
+    const sid = env?.docSessionId
+    if (sid && src && !isExternalHref(src) && !/^data:/i.test(src)) {
+      const q = new URLSearchParams({
+        sessionId: sid,
+        href: src,
+        doc: String(env.docRelName || ''),
+      })
+      token.attrSet('src', `/api/docs/asset?${q.toString()}`)
+      token.attrSet('loading', 'lazy')
+    }
+    return defaultImage(tokens, idx, options, env, self)
+  }
+
   return md
 }

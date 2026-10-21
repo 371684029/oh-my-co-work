@@ -103,6 +103,46 @@
           </el-button>
         </div>
 
+        <div v-if="docsPinned.length || docsRecent.length" class="dh-quick-docs">
+          <div v-if="docsPinned.length" class="dh-quick-section">
+            <div class="dh-quick-title">已固定</div>
+            <button
+              v-for="item in docsPinned"
+              :key="`p:${item.sessionId}:${item.name}`"
+              type="button"
+              class="dh-quick-item"
+              :class="{ active: isActiveFile(item.sessionId, item.name) }"
+              @click="onQuickOpen(item)"
+            >
+              <span class="dh-quick-name">{{ item.label || item.name }}</span>
+              <span
+                class="dh-quick-pin"
+                title="取消固定"
+                @click.stop="onTogglePin(item)"
+              >★</span>
+            </button>
+          </div>
+          <div v-if="docsRecent.length" class="dh-quick-section">
+            <div class="dh-quick-title">最近打开</div>
+            <button
+              v-for="item in docsRecent.slice(0, 8)"
+              :key="`r:${item.sessionId}:${item.name}`"
+              type="button"
+              class="dh-quick-item"
+              :class="{ active: isActiveFile(item.sessionId, item.name) }"
+              @click="onQuickOpen(item)"
+            >
+              <span class="dh-quick-name">{{ item.label || item.name }}</span>
+              <span
+                v-if="!isPinnedItem(item)"
+                class="dh-quick-pin is-off"
+                title="固定"
+                @click.stop="onTogglePin(item)"
+              >☆</span>
+            </button>
+          </div>
+        </div>
+
         <div class="dh-sessions-menu">
           <!-- 全文搜索结果 -->
           <template v-if="isSearching">
@@ -309,6 +349,21 @@
             >
               代码行号
             </el-button>
+            <el-button
+              v-if="current && file && !editing"
+              size="small"
+              plain
+              :type="isCurrentPinned() ? 'primary' : 'default'"
+              @click="pinCurrentDoc"
+            >
+              {{ isCurrentPinned() ? '取消固定' : '固定' }}
+            </el-button>
+            <el-button v-if="file && !editing" size="small" plain @click="onExportHtml">
+              导出 HTML
+            </el-button>
+            <el-button v-if="file && !editing" size="small" plain @click="onExportPrint">
+              导出 PDF
+            </el-button>
           </div>
 
           <!-- 渲染（只读） -->
@@ -337,15 +392,22 @@
               {{ item.text }}
             </button>
           </nav>
-          <!-- 编辑（仅公告） -->
-          <el-input
-            v-else
-            v-model="draft"
-            type="textarea"
-            class="dh-editor"
-            :autosize="{ minRows: 12, maxRows: 42 }"
-            placeholder="在此编辑群报告 Markdown"
-          />
+          <!-- 编辑（仅公告）：分栏预览 (DOC-07) -->
+          <div v-else class="dh-editor-split">
+            <el-input
+              v-model="draft"
+              type="textarea"
+              class="dh-editor"
+              :autosize="{ minRows: 12, maxRows: 42 }"
+              placeholder="在此编辑群报告 Markdown"
+            />
+            <div
+              class="dh-editor-preview doc-prose"
+              :class="readingClasses"
+              :style="readingStyle"
+              v-html="draftPreviewHtml"
+            />
+          </div>
         </template>
       </main>
     </div>
@@ -422,13 +484,61 @@ import {
   openPath,
   initDocsHub,
   disposeDocsHub,
+  docsPinned,
+  docsRecent,
+  refreshDocsHistory,
+  pinCurrentDoc,
+  isCurrentPinned,
+  draftPreviewHtml,
 } from '../workbench/composables/useDocsHub'
+import {
+  buildDocExportHtml,
+  downloadTextFile,
+  openDocPrintWindow,
+} from './docsExport.js'
+import proseCss from './docProse.css?raw'
+import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
 
 const route = useRoute()
 const router = useRouter()
 
 function goWorkbench() {
   void router.push('/workbench')
+}
+
+function isPinnedItem(item) {
+  return isDocsPinned(item.sessionId, item.name, docsPinned.value)
+}
+
+function onTogglePin(item) {
+  toggleDocsPin(item)
+  refreshDocsHistory()
+}
+
+async function onQuickOpen(item) {
+  expandFor(item.sessionId)
+  await selectFile(item.sessionId, item.name)
+}
+
+function onExportHtml() {
+  if (!file.value) return
+  const html = buildDocExportHtml({
+    title: fileLabel(file.value),
+    bodyHtml: renderedHtml.value,
+    proseCss,
+  })
+  const base = (file.value.name || 'doc').replace(/[^\w.-]+/g, '_')
+  downloadTextFile(`${base}.html`, html)
+}
+
+function onExportPrint() {
+  if (!file.value) return
+  const html = buildDocExportHtml({
+    title: fileLabel(file.value),
+    bodyHtml: renderedHtml.value,
+    proseCss,
+  })
+  if (!openDocPrintWindow(html)) ElMessage.warning('请允许弹出窗口以打印/保存 PDF')
 }
 
 const selectedGroupId = ref('all')
@@ -872,6 +982,61 @@ onUnmounted(() => {
 
 .dh-refresh-btn {
   flex-shrink: 0;
+}
+
+.dh-quick-docs {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.06));
+}
+
+.dh-quick-section + .dh-quick-section {
+  margin-top: 8px;
+}
+
+.dh-quick-title {
+  font-size: var(--ecw-font-xs, 12px);
+  font-weight: 700;
+  color: var(--ecw-text-3, #86868b);
+  margin-bottom: 4px;
+}
+
+.dh-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 5px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--ecw-font-sm, 13px);
+}
+
+.dh-quick-item:hover,
+.dh-quick-item.active {
+  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.dh-quick-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-quick-pin {
+  font-size: 12px;
+  color: var(--ecw-accent, #007aff);
+  opacity: 0.9;
+}
+
+.dh-quick-pin.is-off {
+  color: var(--ecw-text-3, #86868b);
+  opacity: 0.5;
 }
 
 .dh-sessions-menu {
@@ -1376,6 +1541,31 @@ onUnmounted(() => {
   width: 100%;
   margin: 0 auto;
   padding: 4px 8px 32px;
+}
+
+.dh-editor-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 8px 16px;
+  min-height: 320px;
+}
+
+.dh-editor-preview {
+  border: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.06));
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow: auto;
+  max-height: 70vh;
+  background: var(--ecw-surface-solid, #fff);
+}
+
+@media (max-width: 960px) {
+  .dh-editor-split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dh-editor :deep(.el-textarea__inner) {

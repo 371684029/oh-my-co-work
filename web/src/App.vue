@@ -56,18 +56,42 @@
             >
               工作台
             </button>
-            <button
-              type="button"
-              class="nav-item nav-item--docs"
-              :class="{ active: nav === 'docs' }"
-              title="文档中心 (Ctrl+Shift+D)"
-              @click="goDocs()"
+            <el-popover
+              placement="bottom"
+              :width="280"
+              trigger="hover"
+              :show-after="200"
+              popper-class="nav-docs-preview-pop"
             >
-              文档中心
-              <span v-if="flowStore.docsUnread > 0" class="nav-docs-badge">{{
-                flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
-              }}</span>
-            </button>
+              <template #reference>
+                <button
+                  type="button"
+                  class="nav-item nav-item--docs"
+                  :class="{ active: nav === 'docs' }"
+                  title="文档中心 (Ctrl+Shift+D)"
+                  @click="goDocs()"
+                >
+                  文档中心
+                  <span v-if="flowStore.docsUnread > 0" class="nav-docs-badge">{{
+                    flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
+                  }}</span>
+                </button>
+              </template>
+              <div v-if="navDocsPreview.length" class="nav-docs-preview">
+                <div class="nav-docs-preview-title">最近打开</div>
+                <button
+                  v-for="item in navDocsPreview"
+                  :key="`${item.sessionId}:${item.name}`"
+                  type="button"
+                  class="nav-docs-preview-item"
+                  @click="goDocsItem(item)"
+                >
+                  <span class="nav-docs-preview-name">{{ item.label || item.name }}</span>
+                  <span v-if="item.sessionTitle" class="nav-docs-preview-sub">{{ item.sessionTitle }}</span>
+                </button>
+              </div>
+              <p v-else class="nav-docs-preview-empty">暂无最近文档</p>
+            </el-popover>
             <button
               type="button"
               class="nav-item"
@@ -106,7 +130,9 @@
       v-show="!furnaceWorkspaceOpen && !isDocsRoute"
       :state="furnaceSpriteState"
       :title="furnaceTitle"
+      :docs-notify-seq="flowStore.docsNotifySeq"
       @click="onFurnaceClick"
+      @open-docs="onSpriteOpenDocs"
     />
     <el-dialog
       v-model="grokGuideOpen"
@@ -144,9 +170,14 @@ import { api } from './api'
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'
+import {
+  readDocsReadingHistory,
+  recentDocsPreview,
+} from './views/docs/docsReadingHistory.js'
 
 const route = useRoute()
 const flowStore = useFlowStore()
+const navDocsPreview = ref(recentDocsPreview(readDocsReadingHistory().recent, 3))
 const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
 const appRoot = ref(null)
@@ -234,11 +265,32 @@ function go(v) {
   router.push(v === 'settings' ? '/settings/members' : '/workbench')
 }
 
-function goDocs() {
+function goDocs(query = {}) {
   nav.value = 'docs'
   flowStore.clearDocsUnread()
-  router.push('/docs')
+  router.push({ path: '/docs', query })
 }
+
+function goDocsItem(item) {
+  if (!item?.sessionId || !item?.name) return goDocs()
+  goDocs({ session: item.sessionId, file: item.name })
+}
+
+function onSpriteOpenDocs() {
+  flowStore.clearDocsUnread()
+  goDocs()
+}
+
+function refreshNavDocsPreview() {
+  navDocsPreview.value = recentDocsPreview(readDocsReadingHistory().recent, 3)
+}
+
+watch(
+  () => route.path,
+  (p) => {
+    if (p.startsWith('/docs')) refreshNavDocsPreview()
+  },
+)
 
 function onGlobalKeydown(ev) {
   const mod = ev.metaKey || ev.ctrlKey
@@ -513,6 +565,47 @@ function goGrokSettings() {
   background: #ff3b30;
   color: #fff;
   vertical-align: middle;
+}
+
+.nav-docs-preview-title {
+  font-size: var(--ecw-font-xs, 12px);
+  font-weight: 700;
+  color: var(--ecw-text-3, #86868b);
+  margin: 0 0 6px;
+}
+
+.nav-docs-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-docs-preview-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nav-docs-preview-name {
+  font-size: var(--ecw-font-sm, 13px);
+  font-weight: 600;
+  color: var(--ecw-text-1, #1d1d1f);
+}
+
+.nav-docs-preview-sub {
+  font-size: var(--ecw-font-xs, 12px);
+  color: var(--ecw-text-3, #86868b);
+}
+
+.nav-docs-preview-empty {
+  margin: 0;
+  font-size: var(--ecw-font-xs, 12px);
+  color: var(--ecw-text-3, #86868b);
 }
 
 .nav-item.active {

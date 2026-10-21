@@ -939,6 +939,22 @@ router.get('/docs/file', (req, res) => {
   }
 })
 
+router.get('/docs/asset', (req, res) => {
+  try {
+    const sessionId = String(req.query.sessionId || '')
+    const href = String(req.query.href || '')
+    const doc = String(req.query.doc || '')
+    const out = docsHub.openSessionAsset(sessionId, href, doc)
+    res.setHeader('Content-Type', out.mime)
+    res.setHeader('Cache-Control', 'private, max-age=120')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    fs.createReadStream(out.abs).pipe(res)
+  } catch (e) {
+    const code = e.code === 'BAD_SESSION' || e.code === 'BAD_ASSET' ? 400 : 404
+    res.status(code).json({ error: e.message })
+  }
+})
+
 router.post('/docs/announcement', (req, res) => {
   try {
     const { sessionId, markdown } = req.body || {}
