@@ -1,8 +1,13 @@
 <template>
   <div class="settings-layout">
-    <aside class="settings-side">
+    <aside class="settings-side" aria-label="设置侧栏">
       <div class="settings-side-label">项目</div>
-      <el-menu :default-active="route.path" router class="settings-menu">
+      <el-menu
+        :default-active="route.path"
+        router
+        class="settings-menu"
+        aria-label="项目设置菜单"
+      >
         <el-menu-item index="/settings/members">成员管理</el-menu-item>
         <el-menu-item index="/settings/groups">群聊模板</el-menu-item>
         <el-menu-item index="/settings/shortcuts">斜杠 / 快捷键</el-menu-item>
@@ -13,7 +18,12 @@
       <div class="settings-side-divider" aria-hidden="true" />
 
       <div class="settings-side-label settings-side-label--meta">其它</div>
-      <el-menu :default-active="route.path" router class="settings-menu settings-menu--meta">
+      <el-menu
+        :default-active="route.path"
+        router
+        class="settings-menu settings-menu--meta"
+        aria-label="其它设置菜单"
+      >
         <el-menu-item index="/settings/prefs" class="menu-item-meta">
           设置
         </el-menu-item>
