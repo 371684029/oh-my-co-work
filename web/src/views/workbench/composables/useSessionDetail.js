@@ -53,6 +53,7 @@ import {
   offsiteEntryLabel as offsiteEntryLabelForNode,
   offsiteInvokedLabel as offsiteInvokedLabelForNode,
 } from './sessionOffsiteUi.js'
+import { reviewAction, reviewLabel } from './sessionReviewUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -749,22 +750,6 @@ function offsiteEntryLabel(n) {
 
 function offsiteInvokedLabel(n) {
   return offsiteInvokedLabelForNode(n)
-}
-
-/** 审核三态：pending | approve | reject */
-function reviewAction(n) {
-  const a = n?.output?.humanAction
-  if (a === 'approve' || a === 'reject' || a === 'pending') return a
-  if (n?.status === 'waiting_human') return 'pending'
-  return ''
-}
-
-function reviewLabel(n) {
-  const a = reviewAction(n)
-  if (a === 'approve') return '通过'
-  if (a === 'reject') return '拒绝'
-  if (a === 'pending') return 'pending'
-  return ''
 }
 
 function flowClass(n) {
