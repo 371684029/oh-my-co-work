@@ -4,7 +4,7 @@
     <SessionRail />
 
     <!-- 中：主对话（Codex 式主舞台） -->
-    <section class="wb-center">
+    <section class="wb-center" aria-label="会话主区域">
       <template v-if="detail">
         <div class="wb-chat-header" :class="{ 'is-human-attention': needsHuman }">
           <div class="header-left">

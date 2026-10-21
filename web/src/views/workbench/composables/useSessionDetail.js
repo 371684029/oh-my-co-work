@@ -63,9 +63,14 @@ import {
   extractSessionParamsList,
   sessionGroupCardFromContext,
   sessionGroupFolderFromContext,
-  previewHashValue,
   footerCollapsedHintForPendingGate,
 } from './sessionContextUi.js'
+import { buildHashComposerItems, filterHashComposerItems } from './sessionHashUi.js'
+import {
+  computeNeedsHuman,
+  announceKickoffFromContext,
+  announceUserNotesFromContext,
+} from './sessionAttentionUi.js'
 import { stripTrailingHashTrigger, textToChatNode } from './sessionComposerInput.js'
 import {
   composerFooterHintForGate,
@@ -441,95 +446,22 @@ const sessionGroupFolder = computed(() => sessionGroupFolderFromContext(sessionC
  */
 const hashItems = computed(() => {
   if (!activeId.value) return []
-  const items = []
-  const card = sessionGroupCard.value || ''
-  items.push({
-    key: '群聊',
-    label: '群聊',
-    name: '群聊名片',
-    value: card,
-    preview: previewHashValue(card),
-    emptyHint: '开聊后写入群名片',
+  return buildHashComposerItems({
+    groupCard: sessionGroupCard.value || '',
+    groupFolder: sessionGroupFolder.value || '',
+    paramsList: sessionParamsList.value,
+    nodes: detail.value?.nodes || [],
+    maxParams: MAX_PROJECT_PARAMS,
+    wholeOutputText,
   })
-  const folder = sessionGroupFolder.value || ''
-  items.push({
-    key: '文件夹',
-    label: '文件夹',
-    name: '工作文件夹',
-    value: folder,
-    preview: previewHashValue(folder),
-    emptyHint: '未配置工作目录',
-  })
-
-  // 用户输入：空格/换行切成第 1…99 段
-  const list = sessionParamsList.value.slice(0, MAX_PROJECT_PARAMS)
-  const shown = Math.min(MAX_PROJECT_PARAMS, Math.max(list.length, 1))
-  for (let n = 1; n <= shown; n++) {
-    const text = list[n - 1] == null ? '' : String(list[n - 1])
-    items.push({
-      key: String(n),
-      label: String(n),
-      name: `输入·第${n}段`,
-      value: text,
-      preview: previewHashValue(text),
-      emptyHint: n === 1 && !list.length ? '空格/换行分隔录入；最多 #99' : '空',
-    })
-  }
-
-  // 节点输出：整段不切分
-  const nodes = detail.value?.nodes || []
-  let outIdx = 0
-  for (const n of nodes) {
-    const whole = wholeOutputText(n.output)
-    if (!whole) continue
-    outIdx += 1
-    const title = n.title || `步骤 ${n.step_index + 1}`
-    items.push({
-      key: `出${outIdx}`,
-      label: `出${outIdx}`,
-      name: `输出·${title}`,
-      value: whole,
-      preview: previewHashValue(whole),
-      emptyHint: '',
-    })
-  }
-
-  return items
 })
 
-const filteredHashItems = computed(() => {
-  const q = (useComposerStore().hashQuery || '').toLowerCase().trim().replace(/^#/, '')
-  const list = hashItems.value
-  const filtered = !q
-    ? list
-    : list.filter(
-        (h) =>
-          h.key.toLowerCase().includes(q) ||
-          h.label.toLowerCase().includes(q) ||
-          h.name.toLowerCase().includes(q) ||
-          String(h.value || '')
-            .toLowerCase()
-            .includes(q),
-      )
-  const n = Number(q)
-  if (Number.isInteger(n) && n >= 1 && n <= MAX_PROJECT_PARAMS) {
-    if (!filtered.some((h) => h.key === String(n))) {
-      const text = sessionParamsList.value[n - 1] == null ? '' : String(sessionParamsList.value[n - 1])
-      return [
-        ...filtered,
-        {
-          key: String(n),
-          label: String(n),
-          name: `输入·第${n}段`,
-          value: text,
-          preview: previewHashValue(text),
-          emptyHint: '尚未写入',
-        },
-      ]
-    }
-  }
-  return filtered
-})
+const filteredHashItems = computed(() =>
+  filterHashComposerItems(hashItems.value, useComposerStore().hashQuery, {
+    maxParams: MAX_PROJECT_PARAMS,
+    paramsList: sessionParamsList.value,
+  }),
+)
 
 /** 折叠时底栏提示文案 */
 const footerCollapsedHint = computed(() =>
@@ -537,13 +469,9 @@ const footerCollapsedHint = computed(() =>
 )
 
 /** 运行时：当前需要人介入（闸门 / 等人状态）→ 标红突出 */
-const needsHuman = computed(() => {
-  if (!detail.value) return false
-  if (detail.value.session.status === 'archived') return false
-  if (detail.value.session.status === 'waiting_human') return true
-  if (detail.value.session.status === 'interrupted') return true
-  return !!pendingGate.value
-})
+const needsHuman = computed(() =>
+  computeNeedsHuman(detail.value?.session, pendingGate.value),
+)
 
 const archiveOutcomeTag = computed(() => {
   if (!detail.value?.session) return null
@@ -554,24 +482,10 @@ const archiveOutcomeTag = computed(() => {
 })
 
 /** 群报告：启动说明 */
-const announceKickoff = computed(() => {
-  const k = sessionCtx()?.kickoff
-  const t = k && typeof k === 'object' ? String(k.text || '').trim() : ''
-  return t
-})
+const announceKickoff = computed(() => announceKickoffFromContext(sessionCtx()))
 
 /** 群报告：用户参与附言列表 */
-const announceUserNotes = computed(() => {
-  const list = sessionCtx()?.userNotes
-  if (!Array.isArray(list)) return []
-  return list
-    .filter((u) => u && String(u.text || '').trim())
-    .map((u) => ({
-      actionLabel: u.actionLabel || u.action || '附言',
-      nodeTitle: u.nodeTitle || '',
-      text: String(u.text).trim(),
-    }))
-})
+const announceUserNotes = computed(() => announceUserNotesFromContext(sessionCtx()))
 
 /**
  * 群报告：每个节点的实质入/出（含脚本额外产出、审核附言）

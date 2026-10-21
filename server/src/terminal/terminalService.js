@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import * as pty from 'node-pty'
-import { inferFurnaceAgent, uid } from '@acw/shared'
+import { uid } from '@acw/shared'
 import { DATA_ROOT, getDb } from '../db.js'
 import { setWsTerminalAttach } from '../bus.js'
 import { quotaLimits } from './quota.js'
@@ -32,6 +32,7 @@ import {
   markInterruptedTerminalsInDb,
   pruneFinishedTerminals,
 } from './terminalLifecycle.js'
+import { countRunningTerminals, stopMemberTerminals } from './terminalQuota.js'
 
 export { normalizePtyLaunch, resolveWindowsExecutable }
 
@@ -41,30 +42,6 @@ let adapterEventHandler = null
 
 export function setAdapterEventHandler(fn) {
   adapterEventHandler = typeof fn === 'function' ? fn : null
-}
-
-function countRunningTerminals(sessionId, { exceptMemberId, exceptPair } = {}) {
-  return [...terminals.values()].filter((t) => {
-    if (t.sessionId !== sessionId) return false
-    if (t.status !== 'running' && t.status !== 'starting') return false
-    if (exceptPair?.memberId && t.memberId === exceptPair.memberId) {
-      if (inferFurnaceAgent(t) === exceptPair.furnaceAgent) return false
-    } else if (exceptMemberId && t.memberId === exceptMemberId) {
-      return false
-    }
-    return true
-  }).length
-}
-
-function stopMemberTerminals(sessionId, memberId, { furnaceAgent } = {}) {
-  if (!sessionId || !memberId) return
-  const onlyAgent = furnaceAgent === 'cursor' || furnaceAgent === 'grok' ? furnaceAgent : null
-  for (const entry of [...terminals.values()]) {
-    if (entry.sessionId !== sessionId || entry.memberId !== memberId) continue
-    if (entry.status !== 'running' && entry.status !== 'starting') continue
-    if (onlyAgent && inferFurnaceAgent(entry) !== onlyAgent) continue
-    killTerminal(entry.id, 'replaced')
-  }
 }
 
 function nowIso() {
@@ -119,7 +96,7 @@ export function runTerminal({
 
     const agentKind = furnaceAgent === 'cursor' || furnaceAgent === 'grok' ? furnaceAgent : null
     // 同成员再开终端会先替换旧 PTY；双 Agent 只替换同一 Agent，另一路常驻。
-    const running = countRunningTerminals(sessionId, {
+    const running = countRunningTerminals(terminals, sessionId, {
       exceptMemberId: agentKind ? undefined : memberId || undefined,
       exceptPair:
         agentKind && memberId ? { memberId, furnaceAgent: agentKind } : undefined,
@@ -134,7 +111,10 @@ export function runTerminal({
     }
 
     if (memberId) {
-      stopMemberTerminals(sessionId, memberId, { furnaceAgent: agentKind })
+      stopMemberTerminals(terminals, sessionId, memberId, {
+        furnaceAgent: agentKind,
+        killTerminal,
+      })
       if (!agentKind) {
         killMemberProcesses(sessionId, memberId, { includeDetach: true })
       }
