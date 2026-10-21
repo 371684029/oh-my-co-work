@@ -441,6 +441,25 @@ export function renderPtyPlainText(value, opts = {}) {
   return tidyLines(lines, maxLines)
 }
 
+/** Drop Cursor CLI chrome lines when building GUI transcript (5.2.0 FUR-01 profile). */
+export function filterAgentTranscriptNoise(text, profile) {
+  const p = String(profile || '').toLowerCase()
+  if (p !== 'cursor') return String(text || '')
+  const boxOnly =
+    /^[\s│─┌┐└┘├┤┬┴┼╭╮╯╰═║╔╗╝╚╠╣╦╩╬▁▂▃▄▅▆▇█▀▐░▒▓\-=+_*~`"'<>[\](){}|\\/:;,.!?@#$%^&]+$/
+  return String(text || '')
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim()
+      if (!t) return true
+      if (boxOnly.test(t)) return false
+      if (/^\(esc to interrupt/i.test(t)) return false
+      if (/^ctrl\+c to exit/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+}
+
 /** GUI 用：累积各次清屏前的可读正文，再去壳。不再只留当前一屏。 */
 export function furnaceGuiTranscript(value, opts = {}) {
   const cols = clamp(opts.cols, 20, 300, 120)
@@ -451,7 +470,9 @@ export function furnaceGuiTranscript(value, opts = {}) {
   const screen = createScreen(cols, rows)
   parse(raw, screen)
   commitVisibleFrame(screen)
-  return tidyLines(screen.historyLines, maxLines)
+  let text = tidyLines(screen.historyLines, maxLines)
+  if (opts.profile === 'cursor') text = filterAgentTranscriptNoise(text, 'cursor')
+  return text
 }
 
 /**

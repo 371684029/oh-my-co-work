@@ -55,11 +55,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
   const isStopped = computed(() =>
     ['exited', 'failed', 'killed', 'timed_out'].includes(props.terminal.status),
   )
+  const furnaceAgentKind = computed(() => inferFurnaceAgent(props.terminal))
+
   const liveText = computed(() =>
     furnaceGuiTranscript(props.terminal.replay || '', {
       cols: props.terminal.cols || 120,
       rows: props.terminal.rows || 40,
       maxLines: 2000,
+      profile: furnaceAgentKind.value === 'cursor' ? 'cursor' : 'grok',
     }),
   )
   const showBody = computed(() => furnaceGuiReadable(liveText.value) || chatTurns.value.length > 0)
@@ -110,16 +113,34 @@ export function useFurnaceWorkspace(props, emit, refs) {
     return `${base} · ${PET_CREDIT_SHORT}`
   })
 
+  const agentBrand = computed(() =>
+    furnaceAgentKind.value === 'cursor' ? 'Cursor CLI' : 'Grok',
+  )
+
+  const welcomeTitle = computed(() =>
+    furnaceAgentKind.value === 'cursor'
+      ? '本机 Cursor CLI 已接进协同台'
+      : '本机 Grok 已接进协同台',
+  )
+
   const buddyLine = computed(() => {
     if (!isRunning.value) return '这轮停了。记录还在，可上翻。'
-    if (!showBody.value) return '她准备好后会先介绍，再等你。'
-    return '同一条 Grok。问当前格即可。可上翻看更早的话。'
+    if (!showBody.value) {
+      return furnaceAgentKind.value === 'cursor'
+        ? 'CLI 就绪后会先显示界面，再等你输入。'
+        : '她准备好后会先介绍，再等你。'
+    }
+    return `同一条 ${agentBrand.value}。问当前格即可。可上翻看更早的话。`
   })
 
   const welcomeKicker = computed(() => {
     if (props.connectionStatus === 'connecting') return '正在连工作台…'
-    if (props.terminal.status === 'starting') return '正在启动本机 grok…'
-    if (isRunning.value) return '已就绪 · 短规则在 AGENTS.md'
+    if (props.terminal.status === 'starting') return `正在启动本机 ${agentBrand.value}…`
+    if (isRunning.value) {
+      return furnaceAgentKind.value === 'cursor'
+        ? '已就绪 · 建议用 TUI 复制粘贴'
+        : '已就绪 · 短规则在 AGENTS.md'
+    }
     return '进程未在跑'
   })
 
@@ -279,9 +300,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
   watch(surface, (mode) => {
     if (mode === 'tui') tuiEverShown.value = true
     if (mode === 'chat') {
-      emit('resize', { cols: 120, rows: 40 })
       nextTick(() => composerEl.value?.focus?.())
     }
+    // FUR-02: switching GUI/TUI must not resize the live PTY; fit on next frame only.
     nextTick(() => window.dispatchEvent(new Event('resize')))
   })
 
@@ -293,7 +314,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
 
   onMounted(() => {
     furnaceWorkspaceOpen.value = true
-    if (surface.value === 'chat') emit('resize', { cols: 120, rows: 40 })
     syncAssistantFromTranscript()
     nextTick(scrollLog)
   })
@@ -318,6 +338,8 @@ export function useFurnaceWorkspace(props, emit, refs) {
     buddyTitle,
     buddyLine,
     welcomeKicker,
+    welcomeTitle,
+    agentBrand,
     failHint,
     showBody,
     showFail,

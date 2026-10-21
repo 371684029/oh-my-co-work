@@ -3,13 +3,19 @@ import test from 'node:test'
 
 // 4.0.0 文档中心渲染测试：XSS 转义、三类链接行为、路径识别（含反斜杠/空格/误判防护）。
 
-const { createDocsMarkdown, findPathsInText } = await import(
+const { createDocsMarkdown, findPathsInText, isAllowedLinkHref } = await import(
   '../src/views/docs/markdownRenderer.js'
 )
 
 function render(text, opts = {}) {
   return createDocsMarkdown(opts).render(text)
 }
+
+test('isAllowedLinkHref blocks javascript and data URLs', () => {
+  assert.equal(isAllowedLinkHref('javascript:alert(1)'), false)
+  assert.equal(isAllowedLinkHref('data:text/html,x'), false)
+  assert.equal(isAllowedLinkHref('https://ok.example'), true)
+})
 
 test('raw HTML in markdown is escaped, never executable', () => {
   const out = render('<script>alert(1)</script>\n\n<img src=x onerror="alert(1)">')

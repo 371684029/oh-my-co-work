@@ -130,10 +130,16 @@
             </div>
             <div v-else-if="showWelcome" class="furnace-welcome">
               <p class="furnace-welcome-kicker">{{ welcomeKicker }}</p>
-              <h3>本机 Grok 已接进协同台</h3>
+              <h3>{{ welcomeTitle }}</h3>
               <p>
-                同一条进程：这里是对话框，菜单和模型在 TUI。细节在工作目录
-                <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。聊太长就「新开熔炉」。
+                同一条 {{ agentBrand }} 进程：这里是对话框，完整交互在 TUI。
+                <template v-if="activeAgent === 'cursor'">
+                  多行粘贴请用 TUI；登录问题在终端里按提示完成。
+                </template>
+                <template v-else>
+                  细节在工作目录 <code>AGENTS.md</code> / <code>ACTIVE.md</code>，不用整段粘贴。
+                </template>
+                聊太长就「新开熔炉」。
               </p>
               <ul>
                 <li>问这场群<strong>现在做到哪</strong>、当前格缺什么</li>
@@ -302,6 +308,7 @@
             :key="terminal.id"
             :terminal="terminal"
             :prefs="prefs"
+            paste-context="furnace"
             :active="surface === 'tui'"
             @input="$emit('input', $event)"
             @resize="$emit('resize', $event)"
@@ -389,6 +396,12 @@ const composerEl = ref(null)
 const guiEnabled = false
 const surface = ref(guiEnabled && props.defaultSurface === 'chat' ? 'chat' : 'tui')
 const activeAgent = ref(inferFurnaceAgent(props.terminal))
+watch(
+  () => props.terminal?.furnaceAgent ?? props.terminal?.id,
+  () => {
+    activeAgent.value = inferFurnaceAgent(props.terminal)
+  },
+)
 const agentLabel = computed(() => (activeAgent.value === 'cursor' ? 'Cursor' : 'Grok'))
 const tuiHistoryOpen = ref(false)
 const tuiHistStick = ref(true)
@@ -434,6 +447,8 @@ const {
   buddyTitle,
   buddyLine,
   welcomeKicker,
+  welcomeTitle,
+  agentBrand,
   failHint,
   showFail,
   showWelcome,

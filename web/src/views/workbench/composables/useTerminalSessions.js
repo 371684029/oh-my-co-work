@@ -374,15 +374,43 @@ function bindWs(sessionId) {
         return
       }
       if (ev.type === 'terminal.exited') {
-        upsertTerminal(ev.payload?.terminal)
-        if (terminalPrefs.value.autoCollapseOnExit && activeTerminalId.value === ev.payload?.terminal?.id) {
+        const term = ev.payload?.terminal
+        upsertTerminal(term)
+        const code = Number(term?.exitCode)
+        if (Number.isFinite(code) && code !== 0) {
+          const title = detail.value?.session?.title || '工作台'
+          pushDesktopNotification(
+            `[${title}] 终端异常退出`,
+            `${term?.label || '终端'} · exit ${code}`,
+            {
+              id: `term-exit:${term?.id}:${code}`,
+              deepLink: `session:${sessionId}`,
+              level: 'error',
+            },
+          )
+        }
+        if (terminalPrefs.value.autoCollapseOnExit && activeTerminalId.value === term?.id) {
           activeTerminalId.value = null
         }
         return
       }
       if (ev.type === 'terminal.error' || ev.type === 'terminal.adapter_error') {
         ElMessage.warning(ev.payload?.message || '终端连接异常')
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 终端异常`, ev.payload?.message || '连接异常', {
+          id: `term-err:${sessionId}:${Date.now()}`,
+          deepLink: `session:${sessionId}`,
+          level: 'error',
+        })
         return
+      }
+      if (ev.type === 'session.interrupted') {
+        const title = detail.value?.session?.title || '工作台'
+        pushDesktopNotification(`[${title}] 会话已中断`, '后台服务重启或异常，请检查流程状态', {
+          id: `session-interrupted:${sessionId}`,
+          deepLink: `session:${sessionId}`,
+          level: 'error',
+        })
       }
       if (ev.type === 'announcement.updated') {
         useFlowStore().bumpDocsUnread()
@@ -396,6 +424,18 @@ function bindWs(sessionId) {
           level: 'action',
         })
       }
+      if (ev.type === 'node.status') {
+        const st = ev.payload?.status || ev.payload?.node?.status
+        if (st === 'failed') {
+          const title = detail.value?.session?.title || '工作台'
+          const nodeTitle = ev.payload?.node?.title || ev.payload?.title || '步骤'
+          pushDesktopNotification(`[${title}] 步骤失败`, nodeTitle, {
+            id: `node-fail:${sessionId}:${ev.payload?.node?.id || ev.payload?.nodeId || 'x'}`,
+            deepLink: `session:${sessionId}`,
+            level: 'error',
+          })
+        }
+      }
       if (
         [
           'message',
@@ -403,6 +443,7 @@ function bindWs(sessionId) {
           'session.archived',
           'session.restart',
           'session.status',
+          'session.interrupted',
           'gate.request',
           'announcement.updated',
         ].includes(ev.type)

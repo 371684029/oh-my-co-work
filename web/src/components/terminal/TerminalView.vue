@@ -54,12 +54,18 @@ import {
 } from '../../composables/terminalFocusGuard.js'
 import { writeClipboardText, readClipboardText } from '../../composables/terminalClipboardBridge.js'
 import { copyVisibleTerminalText, scrollTerminalToBottom } from '../../composables/terminalBufferUtils.js'
+import {
+  buildPasteConfirmMessage,
+  shouldConfirmTerminalPaste,
+} from '../../composables/terminalPasteConfirm.js'
 
 const props = defineProps({
   terminal: { type: Object, required: true },
   prefs: { type: Object, default: () => ({}) },
   /** 隐藏时禁止 fit，避免把 PTY 缩成几列 */
   active: { type: Boolean, default: true },
+  /** shell | furnace | agent — furnace 多行粘贴不弹确认 (CP-08) */
+  pasteContext: { type: String, default: 'shell' },
 })
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
@@ -258,11 +264,17 @@ onMounted(async () => {
   document.addEventListener('click', closeCtxMenu)
   xterm.onData((data) => {
     if (!isRunning.value) return
-    const lineBreaks = (data.match(/[\r\n]/g) || []).length
-    const confirmPaste = (props.prefs?.pastePolicy || 'confirm') !== 'allow'
-    if (confirmPaste && lineBreaks > 1) {
+    const pastePolicy = props.prefs?.pastePolicy || 'confirm'
+    if (
+      shouldConfirmTerminalPaste({
+        data,
+        pastePolicy,
+        pasteContext: props.pasteContext,
+      })
+    ) {
+      const { title, message } = buildPasteConfirmMessage(data)
       sequencer.begin()
-      ElMessageBox.confirm(`即将向终端粘贴 ${lineBreaks} 行内容，确定继续？`, '粘贴确认', {
+      ElMessageBox.confirm(message, title, {
         confirmButtonText: '粘贴',
         cancelButtonText: '取消',
         type: 'warning',

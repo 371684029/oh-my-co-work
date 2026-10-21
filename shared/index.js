@@ -162,6 +162,7 @@ export function cursorCanRun(probe) {
 export {
   renderPtyPlainText,
   furnaceGuiTranscript,
+  filterAgentTranscriptNoise,
   sanitizeFurnaceGuiText,
   furnaceGuiReadable,
   takeFurnaceAssistantDelta,

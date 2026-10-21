@@ -73,6 +73,20 @@ function isExternalHref(href) {
   return /^(https?:|mailto:)/i.test(h) || /^\/\//.test(h)
 }
 
+/** Block dangerous protocols (5.2.0 DOC-03). */
+export function isAllowedLinkHref(href) {
+  const h = String(href || '').trim()
+  if (!h || h === '#') return true
+  const lower = h.toLowerCase()
+  if (lower.startsWith('javascript:') || lower.startsWith('data:') || lower.startsWith('vbscript:')) {
+    return false
+  }
+  if (isExternalHref(h)) {
+    return /^(https?:|mailto:)/i.test(h) || /^\/\//.test(h)
+  }
+  return true
+}
+
 function isDocRelativeHref(href) {
   const h = String(href || '')
   return !isExternalHref(h) && /\.md$/i.test(h)
@@ -158,6 +172,12 @@ export function createDocsMarkdown({ workFolders = [] } = {}) {
   md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
     const token = tokens[idx]
     const href = token.attrGet('href') || ''
+    if (!isAllowedLinkHref(href)) {
+      token.attrSet('href', '#')
+      token.attrSet('aria-disabled', 'true')
+      token.attrSet('class', 'docs-link-blocked')
+      return defaultLinkOpen(tokens, idx, options, env, self)
+    }
     if (isDocRelativeHref(href)) {
       token.attrSet('data-docs-link', href)
       token.attrSet('class', 'docs-doc-link')
