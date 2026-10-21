@@ -277,7 +277,28 @@ async function main() {
     const xtermInput = page.locator('.terminal-view .xterm-helper-textarea')
     await xtermInput.waitFor({ state: 'attached', timeout: 20000 })
     await page.locator('.terminal-view').waitFor({ state: 'visible', timeout: 20000 })
-    await xtermInput.pressSequentially(' ', { force: true })
+    const echoMarker = 'e2eZ9'
+    await xtermInput.pressSequentially(`${echoMarker}\n`, { force: true })
+
+    let replayHasEcho = false
+    for (let i = 0; i < 40; i++) {
+      const termsRes = await fetch(`${base}/api/sessions/${session.id}/terminals`, {
+        headers: { 'X-ACW-Token': token, Origin: origin },
+      })
+      const termsBody = await termsRes.json()
+      const term = (termsBody.terminals || []).find((t) => t.id === spawnBody.terminalId)
+      if (term?.replay?.includes(echoMarker)) {
+        replayHasEcho = true
+        break
+      }
+      await page.waitForTimeout(250)
+    }
+    assert.ok(replayHasEcho, 'PTY typed input should appear in terminal replay')
+
+    await page
+      .locator('.terminal-view .xterm-screen')
+      .getByText(echoMarker, { exact: false })
+      .waitFor({ state: 'visible', timeout: 15000 })
 
     await fetch(`${base}/api/sessions/${session.id}/terminals/${spawnBody.terminalId}/kill`, {
       method: 'POST',

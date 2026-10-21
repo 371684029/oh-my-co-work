@@ -80,8 +80,8 @@
               }}</span>
               <span>{{
                 isSkippedFlowGroupExpanded(entry)
-                  ? `收起 ${entry.nodes.length} 个未执行的废弃步骤`
-                  : `${entry.nodes.length} 个未执行的废弃步骤已折叠`
+                  ? flowRailSkippedExpandLabel(entry.nodes.length)
+                  : flowRailSkippedCollapsedLabel(entry.nodes.length)
               }}</span>
             </button>
           </div>
@@ -250,12 +250,14 @@
                     <span v-if="reviewLabel(n)" class="meta-review" :class="'is-' + reviewAction(n)">
                       · {{ reviewLabel(n) }}
                     </span>
-                    <span v-if="n.gate" class="meta-gate"> · 待确认</span>
+                    <span v-if="n.gate" class="meta-gate"> · {{ flowRailMetaGatePending() }}</span>
                     <span v-if="nodeChangeSummary(n)" class="meta-change">
                       · {{ nodeChangeSummary(n) }}
                     </span>
                     <span class="flow-expand-caret">{{
-                      flowStore.expandedNodeId === n.id ? '收起' : '展开'
+                      flowStore.expandedNodeId === n.id
+                        ? flowRailCollapseLabel()
+                        : flowRailExpandLabel()
                     }}</span>
                   </div>
                 </button>
@@ -275,11 +277,11 @@
                 </div>
                 <div v-if="flowStore.expandedNodeId === n.id" class="flow-io">
                   <div class="flow-io-block">
-                    <div class="flow-io-label">输入（用户说了啥）</div>
+                    <div class="flow-io-label">{{ flowRailIoInputLabel() }}</div>
                     <pre class="flow-io-pre">{{ formatIo(n.input, 'input') }}</pre>
                   </div>
                   <div v-if="nodeChangePatch(n)" class="flow-io-block">
-                    <div class="flow-io-label">本步改动（git diff）</div>
+                    <div class="flow-io-label">{{ flowRailIoDiffLabel() }}</div>
                     <pre class="flow-io-pre flow-io-pre--diff">{{ nodeChangePatch(n) }}</pre>
                     <el-button
                       size="small"
@@ -287,17 +289,17 @@
                       :loading="revertLoadingId === n.id"
                       @click.stop="revertStepChanges(n)"
                     >
-                      回退本步改动
+                      {{ flowRailRevertStepButton() }}
                     </el-button>
                   </div>
                   <div class="flow-io-block">
-                    <div class="flow-io-label">输出（做了啥）</div>
+                    <div class="flow-io-label">{{ flowRailIoOutputLabel() }}</div>
                     <pre class="flow-io-pre">{{ formatIo(n.output, 'output') }}</pre>
                   </div>
                   <div v-if="n.journalPath" class="flow-io-path">
-                    台账：{{ n.journalPath }}
+                    {{ flowRailJournalPathPrefix() }}{{ n.journalPath }}
                     <el-button size="small" text type="primary" @click.stop="openNodeJournal(n)">
-                      在文档中心打开
+                      {{ flowRailOpenInDocsHub() }}
                     </el-button>
                   </div>
                 </div>
@@ -315,24 +317,26 @@
         >
           <span class="flow-current-label">{{
             offsiteActive
-              ? offsiteMode === 'planned'
-                ? '临时协助'
-                : '临时协助'
+              ? flowRailCurrentBarOffsite()
               : needsHuman
-                ? '待确认'
-                : '当前节点'
+                ? flowRailCurrentBarNeedsHuman()
+                : flowRailCurrentBarCurrentNode()
           }}</span>
           <strong>
             {{
               offsiteActive
-                ? activeOffsiteNode?.title || '临时协助'
+                ? activeOffsiteNode?.title || flowRailCurrentBarOffsite()
                 : detail.nodes.find((n) => isCurrent(n))?.title ||
-                  (detail.session.status === 'archived' ? '已归档（可重开）' : '—')
+                  (detail.session.status === 'archived' ? flowRailArchivedReopen() : '—')
             }}
           </strong>
         </div>
       </template>
-      <EmptyState v-else title="暂无流程" description="开聊后显示流程步骤" />
+      <EmptyState
+        v-else
+        :title="flowRailEmptyFlowTitle()"
+        :description="flowRailEmptyFlowDescription()"
+      />
     </div>
 
     <div v-show="flowStore.rightTab === 'timeline'" class="wb-right-pane timeline-pane">
@@ -343,21 +347,21 @@
           style="width: 120px"
           @change="loadSessionTimeline"
         >
-          <el-option label="全部" value="all" />
-          <el-option label="步骤" value="node" />
-          <el-option label="闸门" value="gate" />
-          <el-option label="终端" value="terminal" />
-          <el-option label="文档" value="docs" />
-          <el-option label="场外" value="offsite" />
+          <el-option
+            v-for="opt in timelineFilterOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
         </el-select>
         <el-button size="small" text :loading="timelineLoading" @click="loadSessionTimeline">
-          刷新
+          {{ flowRailTimelineRefresh() }}
         </el-button>
         <el-button size="small" text :disabled="!activeId" @click="downloadSessionAudit">
-          审计导出
+          {{ flowRailTimelineAuditExport() }}
         </el-button>
       </div>
-      <p v-if="!activeId" class="timeline-hint">请先选择会话</p>
+      <p v-if="!activeId" class="timeline-hint">{{ flowRailTimelineSelectSessionFirst() }}</p>
       <ul v-else-if="timelineEvents.length" class="timeline-list">
         <li v-for="ev in timelineEvents" :key="ev.id">
           <button type="button" class="timeline-item" @click="onTimelineEvent(ev)">
@@ -369,8 +373,8 @@
       </ul>
       <EmptyState
         v-else-if="!timelineLoading"
-        title="暂无事件"
-        description="节点、闸门、终端与文档动态会出现在这里"
+        :title="flowRailEmptyTimelineTitle()"
+        :description="flowRailEmptyTimelineDescription()"
       />
     </div>
 
@@ -379,7 +383,7 @@
       <div class="docs-rail-toolbar">
         <div class="docs-rail-title-wrap">
           <AppLogo size="sm" class="docs-rail-logo" />
-          <span class="docs-rail-title">文档中心</span>
+          <span class="docs-rail-title">{{ flowRailDocsRailTitle() }}</span>
         </div>
         <div class="docs-rail-actions">
           <el-button
@@ -388,36 +392,36 @@
             :disabled="!activeId"
             @click="openDocsHub()"
           >
-            展开完整文档中心
+            {{ flowRailDocsExpandFull() }}
           </el-button>
           <el-dropdown trigger="click" class="docs-rail-more">
-            <el-button size="small" plain :disabled="!activeId">更多</el-button>
+            <el-button size="small" plain :disabled="!activeId">{{ flowRailDocsMore() }}</el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item :disabled="!activeId" @click="openDocsHub({ newTab: true })">
-                  新标签打开
+                  {{ flowRailDocsNewTab() }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   v-if="detail?.session?.group_id"
                   :disabled="!activeId || exportingRailDocs"
                   @click="onExportRailGroupDocs"
                 >
-                  导出群
+                  {{ flowRailDocsExportGroup() }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   :disabled="!activeId || announceOpenLoading"
                   @click="openAnnouncementMd"
                 >
-                  系统打开
+                  {{ flowRailDocsOpenSystem() }}
                 </el-dropdown-item>
                 <el-dropdown-item
                   :disabled="!activeId || announceLoading"
                   @click="rebuildAnnouncement"
                 >
-                  刷新报告
+                  {{ flowRailDocsRefreshReport() }}
                 </el-dropdown-item>
                 <el-dropdown-item :disabled="!activeId || railDocsLoading" @click="loadRailDocs">
-                  刷新列表
+                  {{ flowRailDocsRefreshList() }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -433,7 +437,7 @@
             class="docs-rail-file-select"
             size="small"
             filterable
-            placeholder="选择文档"
+            :placeholder="flowRailDocsSelectPlaceholder()"
             @change="onSelectRailDoc"
           >
             <el-option
@@ -453,19 +457,23 @@
               @click="onSelectRailDoc(f.name)"
             >
               <span class="pill-name">{{ f.title || f.name }}</span>
-              <span class="pill-badge">{{ f.kind === 'announce' ? '报告' : '台账' }}</span>
+              <span class="pill-badge">{{
+                f.kind === 'announce' ? flowRailDocsBadgeReport() : flowRailDocsBadgeJournal()
+              }}</span>
             </button>
           </div>
         </div>
         <div v-else-if="!railDocsLoading" class="docs-rail-empty">
-          当前会话暂无生成台账或报告
+          {{ flowRailDocsNoFiles() }}
         </div>
 
         <!-- 正文阅读区 -->
         <div v-if="selectedDocContent" class="docs-rail-content-wrap">
           <div class="docs-rail-file-header">
             <span class="file-header-name">{{ selectedDocName }}</span>
-            <span v-if="selectedDocName.includes('step')" class="file-header-badge">审计留痕只读</span>
+            <span v-if="selectedDocName.includes('step')" class="file-header-badge">{{
+              flowRailDocsAuditReadonlyBadge()
+            }}</span>
           </div>
           <div
             class="docs-rail-content doc-prose"
@@ -476,18 +484,18 @@
           />
         </div>
         <div v-else-if="selectedDocLoading" class="docs-rail-empty">
-          读取中…
+          {{ flowRailDocsLoading() }}
         </div>
 
         <div class="docs-rail-notes">
-          <div class="docs-rail-notes-title">备注</div>
+          <div class="docs-rail-notes-title">{{ flowRailDocsNotesTitle() }}</div>
           <el-input
             v-model="sessionNotesDraft"
             type="textarea"
             :rows="3"
             maxlength="2000"
             show-word-limit
-            placeholder="写给自己/团队的备注（不覆盖自动进度）"
+            :placeholder="flowRailDocsNotesPlaceholder()"
             :disabled="!activeId || notesSaving"
           />
           <div class="docs-rail-notes-actions">
@@ -498,19 +506,30 @@
               :disabled="!activeId"
               @click="saveSessionNotes"
             >
-              保存备注
+              {{ flowRailDocsSaveNotes() }}
             </el-button>
           </div>
         </div>
       </div>
 
-      <EmptyState v-else title="文档中心" description="选择会话后查看群报告与台账" />
+      <EmptyState
+        v-else
+        :title="flowRailDocsEmptyTitle()"
+        :description="flowRailDocsEmptyDescription()"
+      />
     </div>
 
-    <el-dialog v-model="terminalReplayOpen" title="终端回放（日志尾部）" width="640px" append-to-body>
+    <el-dialog
+      v-model="terminalReplayOpen"
+      :title="flowRailTerminalReplayTitle()"
+      width="640px"
+      append-to-body
+    >
       <p v-if="terminalReplayMeta" class="timeline-hint">
-        {{ terminalReplayMeta.truncated ? '（仅显示尾部）' : '' }}
-        {{ terminalReplayMeta.bytes ? `${terminalReplayMeta.bytes} 字节` : '' }}
+        {{ terminalReplayMeta.truncated ? flowRailReplayTruncatedHint() : '' }}
+        {{
+          terminalReplayMeta.bytes ? flowRailReplayBytesLabel(terminalReplayMeta.bytes) : ''
+        }}
       </p>
       <pre class="flow-io-pre flow-io-pre--diff terminal-replay-pre">{{ terminalReplayText }}</pre>
     </el-dialog>
@@ -521,8 +540,57 @@
 import { t } from '../../../i18n/index.js'
 import {
   flowRailArchivedHint,
+  flowRailArchivedReopen,
+  flowRailCollapseLabel,
+  flowRailCurrent,
+  flowRailCurrentBarCurrentNode,
+  flowRailCurrentBarNeedsHuman,
+  flowRailCurrentBarOffsite,
+  flowRailDiffTruncatedSuffix,
+  flowRailDocsAuditReadonlyBadge,
+  flowRailDocsBadgeJournal,
+  flowRailDocsBadgeReport,
+  flowRailDocsEmptyDescription,
+  flowRailDocsEmptyTitle,
+  flowRailDocsExpandFull,
+  flowRailDocsExportGroup,
+  flowRailDocsLoading,
+  flowRailDocsMore,
+  flowRailDocsNewTab,
+  flowRailDocsNoFiles,
+  flowRailDocsNotesPlaceholder,
+  flowRailDocsNotesTitle,
+  flowRailDocsOpenSystem,
+  flowRailDocsRailTitle,
+  flowRailDocsRefreshList,
+  flowRailDocsRefreshReport,
+  flowRailDocsSaveNotes,
+  flowRailDocsSelectPlaceholder,
+  flowRailEmptyFlowDescription,
+  flowRailEmptyFlowTitle,
+  flowRailEmptyTimelineDescription,
+  flowRailEmptyTimelineTitle,
+  flowRailExpandLabel,
+  flowRailIoDiffLabel,
+  flowRailIoInputLabel,
+  flowRailIoOutputLabel,
+  flowRailJournalButton,
+  flowRailJournalPathPrefix,
+  flowRailMetaGatePending,
   flowRailOffsiteHint,
+  flowRailOpenInDocsHub,
+  flowRailPending,
+  flowRailReplayBytesLabel,
+  flowRailReplayTruncatedHint,
+  flowRailRevertStepButton,
+  flowRailSkipped,
+  flowRailSkippedBypassed,
+  flowRailSkippedCollapsedLabel,
+  flowRailSkippedExpandLabel,
+  flowRailSuspended,
   flowRailTabDocs,
+  flowRailTabFlow,
+  flowRailTabTimeline,
   flowRailTagAdapt,
   flowRailTagArchive,
   flowRailTagClone,
@@ -530,16 +598,36 @@ import {
   flowRailTagOffsite,
   flowRailTagOffsiteArchived,
   flowRailTagRefine,
-  flowRailCurrent,
-  flowRailJournalButton,
-  flowRailPending,
-  flowRailSkipped,
-  flowRailSkippedBypassed,
-  flowRailSuspended,
-  flowRailTabFlow,
-  flowRailTabTimeline,
+  flowRailTerminalReplayTitle,
+  flowRailTimelineAuditExport,
+  flowRailTimelineRefresh,
+  flowRailTimelineSelectSessionFirst,
   flowRailWaitingHuman,
 } from '../composables/flowRailCopy.js'
+import {
+  flowRailAuditExportFailedMessage,
+  flowRailDocsExportFailedMessage,
+  flowRailDocsExportSuccessMessage,
+  flowRailDocsListFailedMessage,
+  flowRailDocsNoGroupMessage,
+  flowRailDocsReadFailedMessage,
+  flowRailRevertBlockedMessage,
+  flowRailRevertConfirmButton,
+  flowRailRevertConfirmMessage,
+  flowRailRevertConfirmTitle,
+  flowRailRevertConflictMessage,
+  flowRailRevertConflictTitle,
+  flowRailRevertFailedMessage,
+  flowRailRevertForceButton,
+  flowRailRevertForcedSuccessMessage,
+  flowRailRevertSuccessMessage,
+  flowRailTerminalLogFailedMessage,
+  flowRailTimelineLoadFailedMessage,
+} from '../composables/flowRailFeedbackUi.js'
+import {
+  flowRailTimelineCatLabel,
+  flowRailTimelineFilterOptions,
+} from '../composables/flowRailTimelineUi.js'
 import { flowRailRestartFromHereLabel } from '../composables/sessionFlowRestartUi.js'
 import { useFlowStore } from '../../../stores/flow.js'
 import {
@@ -547,7 +635,6 @@ import {
   activeId,
   archiveOutcomeTag,
   offsiteActive,
-  offsiteMode,
   activeOffsiteNode,
   needsHuman,
   flowEntries,
@@ -607,7 +694,7 @@ function nodeChangeSummary(n) {
 function nodeChangePatch(n) {
   const cs = n?.output?.changeSnapshot
   if (!cs?.patch) return ''
-  return `${cs.patch}${cs.patchTruncated ? '\n\n…（diff 已截断）' : ''}`
+  return `${cs.patch}${cs.patchTruncated ? `\n\n${flowRailDiffTruncatedSuffix()}` : ''}`
 }
 
 function nodeJournalDocFile(n) {
@@ -623,6 +710,7 @@ function openNodeJournal(n) {
 const flowStore = useFlowStore()
 const timelineEvents = ref([])
 const timelineFilter = ref('all')
+const timelineFilterOptions = flowRailTimelineFilterOptions()
 const timelineLoading = ref(false)
 const revertLoadingId = ref('')
 
@@ -642,8 +730,7 @@ function formatTimelineAt(iso) {
 }
 
 function timelineCatLabel(cat) {
-  const m = { node: '步骤', gate: '闸门', terminal: '终端', docs: '文档', offsite: '场外' }
-  return m[cat] || cat || ''
+  return flowRailTimelineCatLabel(cat)
 }
 
 async function loadSessionTimeline() {
@@ -656,7 +743,7 @@ async function loadSessionTimeline() {
     const data = await api.sessions.timeline(activeId.value, timelineFilter.value)
     timelineEvents.value = data.events || []
   } catch (e) {
-    ElMessage.error(e.message || '加载时间线失败')
+    ElMessage.error(flowRailTimelineLoadFailedMessage(e))
   } finally {
     timelineLoading.value = false
   }
@@ -671,7 +758,7 @@ async function downloadSessionAudit() {
   try {
     await api.sessions.downloadAudit(activeId.value)
   } catch (e) {
-    ElMessage.error(e.message || '导出失败')
+    ElMessage.error(flowRailAuditExportFailedMessage(e))
   }
 }
 
@@ -683,7 +770,7 @@ async function openTerminalReplay(terminalId) {
     terminalReplayMeta.value = preview
     terminalReplayOpen.value = true
   } catch (e) {
-    ElMessage.error(e.message || '无法读取终端日志')
+    ElMessage.error(flowRailTerminalLogFailedMessage(e))
   }
 }
 
@@ -720,38 +807,39 @@ async function revertStepChanges(n) {
   try {
     const preview = await api.sessions.previewStepRevert(sid, n.id)
     if (!preview.ok) {
-      ElMessage.warning(preview.message || '无法回退')
+      ElMessage.warning(flowRailRevertBlockedMessage(preview))
       return
     }
-    const msg = preview.needsForce
-      ? `${preview.message}\n\n仍要继续吗？`
-      : preview.message || '将把工作区还原到本步执行前，继续？'
-    await ElMessageBox.confirm(msg, '回退本步改动', {
+    await ElMessageBox.confirm(flowRailRevertConfirmMessage(preview), flowRailRevertConfirmTitle(), {
       type: 'warning',
-      confirmButtonText: preview.needsForce ? '强制回退' : '确认回退',
+      confirmButtonText: flowRailRevertConfirmButton(preview.needsForce),
     })
     revertLoadingId.value = n.id
     await api.sessions.applyStepRevert(sid, n.id, { force: preview.needsForce })
-    ElMessage.success('已回退本步 git 改动')
+    ElMessage.success(flowRailRevertSuccessMessage())
   } catch (e) {
     if (e === 'cancel' || e === 'close') return
     if (e.status === 409) {
       try {
-        await ElMessageBox.confirm(e.message || '存在冲突，强制回退？', '冲突', {
-          type: 'warning',
-          confirmButtonText: '强制回退',
-        })
+        await ElMessageBox.confirm(
+          flowRailRevertConflictMessage(e),
+          flowRailRevertConflictTitle(),
+          {
+            type: 'warning',
+            confirmButtonText: flowRailRevertForceButton(),
+          },
+        )
         revertLoadingId.value = n.id
         await api.sessions.applyStepRevert(sid, n.id, { force: true })
-        ElMessage.success('已强制回退')
+        ElMessage.success(flowRailRevertForcedSuccessMessage())
       } catch (e2) {
-        if (e2 !== 'cancel' && e2 !== 'close') ElMessage.error(e2.message || '回退失败')
+        if (e2 !== 'cancel' && e2 !== 'close') ElMessage.error(flowRailRevertFailedMessage(e2))
       } finally {
         revertLoadingId.value = ''
       }
       return
     }
-    ElMessage.error(e.message || '回退失败')
+    ElMessage.error(flowRailRevertFailedMessage(e))
   } finally {
     revertLoadingId.value = ''
   }
@@ -829,8 +917,8 @@ onUnmounted(() => {
 
 async function onRailContentClick(e) {
   const handled = await handleDocsProseClick(e, {
-    onCopied: () => ElMessage.success('已复制代码'),
-    onCopyFailed: () => ElMessage.warning('复制失败'),
+    onCopied: () => ElMessage.success(t('docsHub.copyCodeSuccess')),
+    onCopyFailed: () => ElMessage.warning(t('docsHub.copyCodeFailed')),
   })
   if (handled) return
 
@@ -845,7 +933,7 @@ async function onRailContentClick(e) {
     e.preventDefault()
     const r = resolveRailDocLink(docEl.getAttribute('data-docs-link'), activeId.value)
     if (r) onSelectRailDoc(r.name)
-    else ElMessage.warning('无法定位文档')
+    else ElMessage.warning(t('docsHub.linkResolveFailed'))
   }
 }
 
@@ -879,7 +967,7 @@ async function loadRailDocs() {
     }
   } catch (e) {
     if (reqId === currentListReqId && reqSessionId === activeId.value) {
-      ElMessage.warning(e?.message || '加载文档列表失败')
+      ElMessage.warning(flowRailDocsListFailedMessage(e))
     }
   } finally {
     if (reqId === currentListReqId) {
@@ -906,7 +994,7 @@ async function onSelectRailDoc(name) {
     })
   } catch (e) {
     if (reqId === currentFileReqId && reqSessionId === activeId.value) {
-      ElMessage.error(e?.message || '读取文档内容失败')
+      ElMessage.error(flowRailDocsReadFailedMessage(e))
     }
   } finally {
     if (reqId === currentFileReqId) {
@@ -917,15 +1005,15 @@ async function onSelectRailDoc(name) {
 
 async function onExportRailGroupDocs() {
   if (!detail.value?.session?.group_id) {
-    ElMessage.warning('当前会话未绑定群模板')
+    ElMessage.warning(flowRailDocsNoGroupMessage())
     return
   }
   exportingRailDocs.value = true
   try {
     await api.docs.downloadDocsExport(detail.value.session.group_id)
-    ElMessage.success('导出成功')
+    ElMessage.success(flowRailDocsExportSuccessMessage())
   } catch (e) {
-    ElMessage.error(e?.message || '导出失败')
+    ElMessage.error(flowRailDocsExportFailedMessage(e))
   } finally {
     exportingRailDocs.value = false
   }
