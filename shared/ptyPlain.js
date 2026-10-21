@@ -632,3 +632,10 @@ export function parseFurnaceTurnText(rawText) {
     body: bodyLines.join('\n'),
   }
 }
+
+/** 复制熔炉 GUI/TUI 单条对话（5.2.0 CP-04） */
+export function furnaceTurnCopyPlain(role, text) {
+  if (role === 'user') return String(text || '').trim()
+  const meta = parseFurnaceTurnText(text)
+  return (meta.body || String(text || '')).trim()
+}

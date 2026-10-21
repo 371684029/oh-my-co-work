@@ -167,6 +167,14 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span class="furnace-turn-label">{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <button
+                type="button"
+                class="furnace-turn-copy"
+                title="复制本条（纯文本）"
+                @click="copyTurn(turn)"
+              >
+                复制
+              </button>
               <div class="furnace-bubble">
                 <template v-if="turn.role === 'assistant'">
                   <div
@@ -344,6 +352,7 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span>{{ turn.role === 'user' ? '你' : agentLabel }}</span>
+              <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">复制</button>
               <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
             </div>
           </div>
@@ -361,13 +370,15 @@
 
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import './furnaceLayout.css'
 import FurnaceAvatar from '../FurnaceAvatar.vue'
 import TerminalView from './TerminalView.vue'
 import { PET_COPYRIGHT, PET_CREDIT_SHORT } from '../../composables/furnacePetAtlas.js'
 import { usePagefill } from '../../composables/pagefill'
 import { useFurnaceWorkspace } from '../../composables/useFurnaceWorkspace'
-import { parseFurnaceTurnText, inferFurnaceAgent } from '@acw/shared'
+import { parseFurnaceTurnText, inferFurnaceAgent, furnaceTurnCopyPlain } from '@acw/shared'
+import { writeClipboardText } from '../../composables/terminalClipboardBridge.js'
 
 const turnMetaCache = new Map()
 function getTurnMeta(text) {
@@ -377,6 +388,20 @@ function getTurnMeta(text) {
   if (turnMetaCache.size > 200) turnMetaCache.clear()
   turnMetaCache.set(key, meta)
   return meta
+}
+
+async function copyTurn(turn) {
+  const text = furnaceTurnCopyPlain(turn?.role, turn?.text)
+  if (!text) {
+    ElMessage.warning('没有可复制的内容')
+    return
+  }
+  try {
+    await writeClipboardText(text)
+    ElMessage.success('已复制本条（纯文本）')
+  } catch {
+    ElMessage.warning('复制失败')
+  }
 }
 const props = defineProps({
   terminal: { type: Object, required: true },
@@ -999,6 +1024,33 @@ onUnmounted(() => {
 
 .furnace-turn.is-assistant {
   align-items: flex-start;
+}
+
+.furnace-turn-copy,
+.furnace-tui-copy {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: #007aff;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 6px;
+  opacity: 0.85;
+}
+
+.furnace-turn-copy:hover,
+.furnace-tui-copy:hover {
+  text-decoration: underline;
+}
+
+.furnace-tui-line {
+  position: relative;
+}
+
+.furnace-tui-copy {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .furnace-turn-label {

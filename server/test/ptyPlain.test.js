@@ -7,6 +7,7 @@ import {
   takeFurnaceAssistantDelta,
   buildFurnaceChatTurns,
   parseFurnaceTurnText,
+  furnaceTurnCopyPlain,
 } from '@acw/shared'
 
 test('carriage return overwrites the same line', () => {
@@ -142,4 +143,9 @@ test('parseFurnaceTurnText extracts time, thought, worked, and cleans body', () 
   assert.equal(meta.body.includes('13K / 131K'), false)
 })
 
+test('furnaceTurnCopyPlain returns cleaned assistant body', () => {
+  const raw = '> 3:00 PM\nHello from agent\nWorked for 1s'
+  assert.match(furnaceTurnCopyPlain('assistant', raw), /Hello from agent/)
+  assert.equal(furnaceTurnCopyPlain('user', '  hi  '), 'hi')
+})
 

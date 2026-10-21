@@ -248,6 +248,13 @@
             <p v-if="file.truncated" class="dh-truncated-warn">文件超过 1MB，已截断显示</p>
           </div>
 
+          <div v-if="inDocSearch && inDocMarkTotal && !editing" class="dh-in-doc-search">
+            <span class="dh-in-doc-search-label">正文「{{ inDocSearch.query }}」· {{ inDocSearchLabel }}</span>
+            <el-button size="small" @click="stepInDocSearchMark(-1)">上一个</el-button>
+            <el-button size="small" @click="stepInDocSearchMark(1)">下一个</el-button>
+            <el-button size="small" link type="info" @click="clearInDocSearch">关闭</el-button>
+          </div>
+
           <div v-if="!editing" class="dh-reading-bar">
             <el-segmented
               :model-value="readingPrefs.width"
@@ -347,6 +354,11 @@ import { api } from '../../api'
 import './docProse.css'
 import { handleDocsProseClick } from './docsCodeFence.js'
 import {
+  applyInDocSearchMarks,
+  clearInDocSearchMarks,
+  scrollToInDocSearchMark,
+} from './docsInDocSearch.js'
+import {
   sort,
   sortOptions,
   listLoading,
@@ -379,6 +391,13 @@ import {
   searchResults,
   searchLoading,
   isSearching,
+  inDocSearch,
+  inDocMarkTotal,
+  inDocSearchLabel,
+  activateInDocSearch,
+  clearInDocSearch,
+  setInDocMarkTotal,
+  stepInDocSearchMark,
   relativeTime,
   formatSize,
   formatTime,
@@ -493,9 +512,48 @@ function isActiveFile(sessionId, name) {
 }
 
 function onSearchHit(hit) {
+  activateInDocSearch(searchQuery.value, hit.line || 1)
   expandFor(hit.sessionId)
   selectFile(hit.sessionId, hit.name)
 }
+
+function syncInDocSearchHighlights() {
+  const root = contentScrollRef.value
+  if (!root || editing.value || !inDocSearch.value) {
+    clearInDocSearchMarks(root)
+    setInDocMarkTotal(0)
+    return
+  }
+  const total = applyInDocSearchMarks(root, inDocSearch.value.query)
+  setInDocMarkTotal(total)
+  if (!total) return
+  scrollToInDocSearchMark(root, {
+    markIndex: inDocSearch.value.markIndex,
+    lineHint: inDocSearch.value.lineHint,
+    content: file.value?.content,
+    query: inDocSearch.value.query,
+  })
+}
+
+watch([renderedHtml, file, inDocSearch, editing], () => {
+  nextTick(() => syncInDocSearchHighlights())
+})
+
+watch(
+  () => inDocSearch.value?.markIndex,
+  () => {
+    nextTick(() => {
+      const root = contentScrollRef.value
+      if (!root || !inDocSearch.value) return
+      scrollToInDocSearchMark(root, {
+        markIndex: inDocSearch.value.markIndex,
+        lineHint: inDocSearch.value.lineHint,
+        content: file.value?.content,
+        query: inDocSearch.value.query,
+      })
+    })
+  },
+)
 
 function highlightSnippet(snippet, query) {
   if (!snippet || !query) return snippet || ''
@@ -641,6 +699,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   teardownOutlineObserver()
+  clearInDocSearchMarks(contentScrollRef.value)
   disposeDocsHub()
 })
 </script>
@@ -1110,6 +1169,38 @@ onUnmounted(() => {
 .doc-prose :deep(.docs-heading-anchor) {
   scroll-margin-top: 12px;
   cursor: pointer;
+}
+
+.dh-in-doc-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 200, 0, 0.12);
+  border: 1px solid rgba(255, 180, 0, 0.35);
+  font-size: 12px;
+}
+
+.dh-in-doc-search-label {
+  flex: 1;
+  min-width: 120px;
+  color: var(--ecw-text-2, #6e6e73);
+}
+
+.doc-prose :deep(mark.docs-search-hit) {
+  background: rgba(255, 200, 0, 0.45);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.doc-prose :deep(mark.docs-search-hit-active) {
+  background: rgba(255, 140, 0, 0.55);
+  outline: 1px solid rgba(255, 120, 0, 0.8);
 }
 
 .dh-reading-bar {

@@ -120,6 +120,41 @@ function toggleReadingFocus() {
 
 const isSearching = computed(() => searchQuery.value.trim().length > 0)
 
+// ===== 正文内搜索（DOC-06）=====
+const inDocSearch = ref(null)
+const inDocMarkTotal = ref(0)
+
+function activateInDocSearch(query, lineHint = 1) {
+  const q = String(query || '').trim()
+  if (!q) {
+    inDocSearch.value = null
+    inDocMarkTotal.value = 0
+    return
+  }
+  inDocSearch.value = { query: q, lineHint: Number(lineHint) || 1, markIndex: 0 }
+}
+
+function clearInDocSearch() {
+  inDocSearch.value = null
+  inDocMarkTotal.value = 0
+}
+
+function setInDocMarkTotal(n) {
+  inDocMarkTotal.value = Math.max(0, Number(n) || 0)
+}
+
+function stepInDocSearchMark(delta) {
+  if (!inDocSearch.value || !inDocMarkTotal.value) return
+  const n = inDocMarkTotal.value
+  const next = (inDocSearch.value.markIndex + delta + n) % n
+  inDocSearch.value = { ...inDocSearch.value, markIndex: next }
+}
+
+const inDocSearchLabel = computed(() => {
+  if (!inDocSearch.value || !inDocMarkTotal.value) return ''
+  return `${inDocSearch.value.markIndex + 1} / ${inDocMarkTotal.value}`
+})
+
 async function doSearch(q) {
   const trimmed = (q || '').trim()
   const reqId = ++searchReqId
@@ -454,6 +489,7 @@ function initDocsHub({ route, router }) {
       const q = (v || '').trim()
       if (!q) {
         searchResults.value = []
+        clearInDocSearch()
         return
       }
       searchDebounceTimer = setTimeout(() => doSearch(q), 300)
@@ -525,6 +561,13 @@ export {
   searchLoading,
   isSearching,
   doSearch,
+  inDocSearch,
+  inDocMarkTotal,
+  inDocSearchLabel,
+  activateInDocSearch,
+  clearInDocSearch,
+  setInDocMarkTotal,
+  stepInDocSearchMark,
   relativeTime,
   formatSize,
   formatTime,
