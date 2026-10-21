@@ -4,6 +4,24 @@ export const strings = {
     confirm: 'OK',
     cancel: 'Cancel',
   },
+  onboarding: {
+    firstRun: {
+      title: 'Welcome to oh-my-co-work',
+      lead: 'Your local co-work bench: group templates wire up members and scripts—chat, review, and follow the flow rail on the workbench.',
+      listGroup: 'Settings → Group templates: quick start or dry-run paths.',
+      listMembers: 'Settings → Members: scripts, echo, and furnace members.',
+      listPalette: 'Command palette: jump to sessions, zoom, and theme.',
+      explore: 'Start exploring',
+      wizard: 'Setup wizard',
+      openSettings: 'Open settings',
+    },
+    grokGuide: {
+      title: 'Grok Build guide',
+      close: 'Close',
+      openFurnace: 'Open furnace',
+      goSettings: 'Go to settings',
+    },
+  },
   shell: {
     logoBackWorkbench: 'Back to workbench',
     docsHubTitle: 'Docs hub',

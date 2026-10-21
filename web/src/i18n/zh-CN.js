@@ -6,6 +6,24 @@ export const strings = {
     confirm: '确定',
     cancel: '取消',
   },
+  onboarding: {
+    firstRun: {
+      title: '欢迎使用 oh-my-co-work',
+      lead: '这是本机人机协同台：用群模板串起成员与脚本，在工作台里开聊、审核、看流程轨。',
+      listGroup: '设置 → 群聊模板：一键开聊或试运行检查路径。',
+      listMembers: '设置 → 成员：脚本 / 回声 / 熔炉成员。',
+      listPalette: '命令面板：跳转会话、缩放与主题。',
+      explore: '开始探索',
+      wizard: '首次向导',
+      openSettings: '打开设置',
+    },
+    grokGuide: {
+      title: 'Grok Build 教程',
+      close: '关闭',
+      openFurnace: '打开熔炉',
+      goSettings: '去设置',
+    },
+  },
   shell: {
     logoBackWorkbench: '返回工作台',
     docsHubTitle: '文档中心',
