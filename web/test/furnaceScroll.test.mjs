@@ -51,7 +51,7 @@ test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => 
   assert.match(vueSrc, /furnaceAgentFromHotkey/)
   assert.match(vueSrc, /setActiveAgent/)
   assert.match(vueSrc, /ensure-agent/)
-  assert.match(vueSrc, /Ctrl\/Cmd\+1/)
+  assert.match(vueSrc, /furnaceAgentGrokTitle/)
 })
 
 test('xterm 尊重 prefs.scrollback 与 fontSize，不再强行抬到 10000', () => {

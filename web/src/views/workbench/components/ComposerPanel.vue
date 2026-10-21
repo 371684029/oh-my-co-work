@@ -243,20 +243,20 @@
                 <div v-if="pendingGate" class="composer-gate-actions">
                   <template v-if="pendingGate.content?.mode === 'session_start'">
                     <el-button type="danger" @click="approveSessionStart(pendingGate)">
-                      通过
+                      {{ gatePassButtonLabel() }}
                     </el-button>
                     <el-button plain @click="gate(pendingGate, 'cancel_start')">
-                      取消
+                      {{ gateCancelStartLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'human_input'">
                     <el-button type="danger" @click="submitHuman(pendingGate)">
-                      提交
+                      {{ gateSubmitButtonLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'need_params'">
                     <el-button type="danger" @click="submitHuman(pendingGate)">
-                      提交
+                      {{ gateSubmitButtonLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'adapter_question'">
@@ -273,18 +273,18 @@
                       type="danger"
                       @click="answerAdapterQuestion(pendingGate)"
                     >
-                      提交
+                      {{ gateSubmitButtonLabel() }}
                     </el-button>
                     <el-button plain @click="answerAdapterQuestion(pendingGate, '取消', 'reject')">
-                      拒绝
+                      {{ gateRejectButtonLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'interrupted'">
                     <el-button type="danger" @click="gate(pendingGate, 'resume_interrupted')">
-                      继续
+                      {{ gateResumeInterruptedLabel() }}
                     </el-button>
                     <el-button plain @click="gate(pendingGate, 'discard_interrupted')">
-                      放弃
+                      {{ gateDiscardInterruptedLabel() }}
                     </el-button>
                   </template>
                   <template v-else>
@@ -293,13 +293,13 @@
                       :show-after="200"
                       :content="pendingGate.content?.text || ''"
                     >
-                      <span class="gate-info-dot" title="查看详情">i</span>
+                      <span class="gate-info-dot" :title="gateViewDetailsTitle()">i</span>
                     </el-tooltip>
                     <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                      {{ pendingGate.content?.lastNodeComplete ? '同意并完成' : '同意' }}
+                      {{ gateApproveButtonLabel(pendingGate.content?.lastNodeComplete) }}
                     </el-button>
                     <el-button plain @click="gate(pendingGate, 'reject')">
-                      拒绝
+                      {{ gateRejectButtonLabel() }}
                     </el-button>
                   </template>
                 </div>
@@ -340,6 +340,16 @@ import {
   composerUploadNoTargetAddMessage,
   composerUploadSuccessMessage,
 } from '../composables/sessionComposerUploadUi.js'
+import {
+  gateApproveButtonLabel,
+  gateCancelStartLabel,
+  gateDiscardInterruptedLabel,
+  gatePassButtonLabel,
+  gateRejectButtonLabel,
+  gateResumeInterruptedLabel,
+  gateSubmitButtonLabel,
+  gateViewDetailsTitle,
+} from '../composables/sessionGatePanelUi.js'
 
 const composerStore = useComposerStore()
 

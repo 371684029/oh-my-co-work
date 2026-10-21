@@ -10,7 +10,7 @@
           <button
             type="button"
             class="furnace-btn"
-            title="关掉这层皮，回到群聊。Agent 进程后台常驻；要清上下文请关熔炉或新开。"
+            :title="furnaceBackToChatTitle()"
             @click="$emit('close')"
           >
             {{ furnaceBackToChatLabel() }}
@@ -21,7 +21,7 @@
               type="button"
               class="furnace-agent-tab"
               :class="{ active: activeAgent === 'grok' }"
-              title="Grok CLI Agent（熔炉聚焦时 Ctrl/Cmd+1）"
+              :title="furnaceAgentGrokTitle()"
               @click="setActiveAgent('grok')"
             >
               <span class="agent-dot grok" />
@@ -31,7 +31,7 @@
               type="button"
               class="furnace-agent-tab"
               :class="{ active: activeAgent === 'cursor' }"
-              title="Cursor CLI Agent（熔炉聚焦时 Ctrl/Cmd+2）"
+              :title="furnaceAgentCursorTitle()"
               @click="setActiveAgent('cursor')"
             >
               <span class="agent-dot cursor" />
@@ -48,7 +48,7 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'chat' }"
-            title="GUI：可读正文 + 底部输入；模型菜单请用 TUI"
+            :title="furnaceGuiModeTitle()"
             @click="surface = 'chat'"
           >
             {{ furnaceGuiLabel() }}
@@ -58,7 +58,7 @@
             type="button"
             class="furnace-btn"
             :class="{ on: surface === 'tui' }"
-            title="TUI：原 Grok 终端；右侧箭头展开对话记录"
+            :title="furnaceTuiModeTitle()"
             @click="surface = 'tui'"
           >
             {{ furnaceTuiLabel() }}
@@ -66,11 +66,7 @@
           <button
             type="button"
             class="furnace-btn"
-            :title="
-              isPagefill
-                ? '退出满屏，回到工作台三栏'
-                : '满屏：铺满整个页面'
-            "
+            :title="furnacePagefillTitle(isPagefill)"
             @click="togglePagefill"
           >
             {{ furnacePagefillLabel(isPagefill) }}
@@ -79,13 +75,13 @@
             type="button"
             class="furnace-btn"
             data-fullscreen-control
-            :title="isFullscreen ? '退出系统全屏' : '浏览器全屏'"
+            :title="furnaceBrowserFullscreenTitle(isFullscreen)"
             @click="toggleTerminalFullscreen"
           >
             {{ furnaceFullscreenLabel(isFullscreen) }}
           </button>
           <details class="furnace-more">
-            <summary class="furnace-btn" title="关掉或新开 Grok 进程；返回群聊只关皮">{{ furnaceProcessMenuSummary() }}</summary>
+            <summary class="furnace-btn" :title="furnaceProcessMenuTitle()">{{ furnaceProcessMenuSummary() }}</summary>
             <div class="furnace-more-menu">
               <button type="button" class="furnace-more-item" @click="emit('reopen', { agent: activeAgent })">{{ furnaceReopenLabel() }}</button>
               <button
@@ -179,7 +175,7 @@
               <button
                 type="button"
                 class="furnace-turn-copy"
-                title="复制本条（纯文本）"
+                :title="furnaceTurnCopyTitle()"
                 @click="copyTurn(turn)"
               >
                 复制
@@ -193,7 +189,7 @@
                     <span
                       v-if="getTurnMeta(turn.text).time"
                       class="furnace-chip-time"
-                      title="消息时间"
+                      :title="furnaceTurnTimeTitle()"
                     >
                       <svg
                         class="furnace-chip-icon"
@@ -211,7 +207,7 @@
                     <span
                       v-if="getTurnMeta(turn.text).thought"
                       class="furnace-chip-thought"
-                      title="模型思考时长"
+                      :title="furnaceTurnThinkingTitle()"
                     >
                       <span class="furnace-chip-sparkle">✦</span>
                       {{ getTurnMeta(turn.text).thought }}
@@ -228,7 +224,7 @@
                   >
                     <span
                       class="furnace-chip-worked"
-                      title="执行耗时"
+                      :title="furnaceTurnDurationTitle()"
                     >
                       <svg
                         class="furnace-chip-icon"
@@ -283,8 +279,8 @@
             :closable="true"
             show-icon
             class="furnace-input-tips"
-            title="熔炉三件套"
-            description="复制：终端里先选中再 Ctrl/Cmd+C（有选区不会中断任务）；粘贴：多行请用 TUI + Shift+Ctrl/Cmd+V；选择：Shift 拖选或 macOS Option 点击。"
+            :title="furnaceInputTipsTitle()"
+            :description="furnaceInputTipsDescription()"
             @close="dismissFurnaceTips"
           />
           <div class="furnace-compose-main">
@@ -293,7 +289,7 @@
               v-model="draft"
               rows="3"
               :disabled="!isRunning"
-              placeholder="问进度、适配或过闸… Enter 发送，Shift+Enter 换行"
+              :placeholder="furnaceChatPlaceholder()"
               @keydown="onComposerKey"
               @paste="onPaste"
             />
@@ -304,7 +300,7 @@
                 class="furnace-pending-chip"
               >
                 {{ f.name }}
-                <button type="button" title="去掉" @click="removePending(i)">×</button>
+                <button type="button" :title="furnaceRemovePendingTitle()" @click="removePending(i)">×</button>
               </span>
             </div>
             <div class="furnace-compose-bar">
@@ -312,16 +308,16 @@
                 type="button"
                 class="furnace-btn"
                 :disabled="!isRunning || uploading || !sessionId"
-                title="文件落到熔炉工作目录 inbox/；发送时把相对路径写成一行写进 grok，不是官方附件通道"
+                :title="furnaceAttachmentTitle()"
                 @click="pickFiles"
               >
-                {{ uploading ? '上传中…' : '附件' }}
+                {{ furnaceAttachmentButtonLabel(uploading) }}
               </button>
               <span v-if="uploadError" class="furnace-upload-err">{{ uploadError }}</span>
-              <span class="furnace-compose-hint">同一条 grok · 菜单请切 TUI · 附件最多 8 个</span>
+              <span class="furnace-compose-hint">{{ furnaceComposeBarHint() }}</span>
             </div>
           </div>
-          <button type="submit" class="furnace-send" :disabled="!canSend">发送</button>
+          <button type="submit" class="furnace-send" :disabled="!canSend">{{ furnaceSendLabel() }}</button>
         </form>
       </div>
 
@@ -350,7 +346,7 @@
             class="furnace-tui-toggle"
             :aria-expanded="tuiHistoryOpen"
             aria-controls="furnace-tui-drawer"
-            :title="tuiHistoryOpen ? '收起对话记录' : '展开对话记录（和 GUI 同一份）'"
+            :title="furnaceTuiHistoryTitle(tuiHistoryOpen)"
             @click="toggleTuiHistory"
           >
             {{ tuiHistoryOpen ? '›' : '‹' }}
@@ -362,8 +358,8 @@
             class="furnace-tui-drawer"
             @scroll.passive="onTuiHistScroll"
           >
-            <div class="furnace-tui-drawer-head">对话记录</div>
-            <p v-if="!chatTurns.length" class="furnace-tui-drawer-empty">还没有对话。发过之后会出现在这里，和 GUI 是同一份。</p>
+            <div class="furnace-tui-drawer-head">{{ furnaceTuiDrawerHead() }}</div>
+            <p v-if="!chatTurns.length" class="furnace-tui-drawer-empty">{{ furnaceTuiDrawerEmpty() }}</p>
             <div
               v-for="turn in chatTurns"
               :key="`tui-${turn.id}`"
@@ -371,7 +367,7 @@
               :class="turn.role === 'user' ? 'is-user' : 'is-assistant'"
             >
               <span>{{ turn.role === 'user' ? furnaceRoleYouLabel() : agentLabel }}</span>
-              <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">复制</button>
+              <button type="button" class="furnace-tui-copy" @click="copyTurn(turn)">{{ furnaceTuiCopyTurnLabel() }}</button>
               <pre>{{ turn.role === 'assistant' ? getTurnMeta(turn.text).body || turn.text : turn.text }}</pre>
             </div>
           </div>
@@ -379,7 +375,7 @@
       </div>
 
       <footer class="furnace-foot">
-        <span>{{ isPagefill ? '满屏' : '三栏中栏' }} · {{ surface === 'chat' ? 'GUI' : 'TUI' }}</span>
+        <span>{{ furnaceStatusBarLine(isPagefill, surface) }}</span>
         <span v-if="terminal.cwd" class="furnace-cwd" :title="terminal.cwd">{{ terminal.cwd }}</span>
         <span>{{ footerHint }}</span>
       </footer>
@@ -406,18 +402,43 @@ import {
   shouldIgnoreFurnaceHotkeyTarget,
 } from './furnaceWorkspaceUi.js'
 import {
+  furnaceAgentCursorTitle,
+  furnaceAgentGrokTitle,
+  furnaceAttachmentButtonLabel,
+  furnaceAttachmentTitle,
   furnaceBackToChatLabel,
+  furnaceBackToChatTitle,
+  furnaceBrowserFullscreenTitle,
+  furnaceChatPlaceholder,
   furnaceCloseFurnaceLabel,
+  furnaceComposeBarHint,
   furnaceFullscreenLabel,
   furnaceGuiLabel,
+  furnaceGuiModeTitle,
+  furnaceInputTipsDescription,
+  furnaceInputTipsTitle,
   furnacePagefillLabel,
+  furnacePagefillTitle,
   furnaceProcessMenuSummary,
+  furnaceProcessMenuTitle,
+  furnaceRemovePendingTitle,
   furnaceReopenLabel,
   furnaceRoleYouLabel,
+  furnaceSendLabel,
+  furnaceStatusBarLine,
   furnaceTurnCopyEmptyMessage,
   furnaceTurnCopyFailedMessage,
   furnaceTurnCopySuccessMessage,
+  furnaceTurnCopyTitle,
+  furnaceTurnDurationTitle,
+  furnaceTurnThinkingTitle,
+  furnaceTurnTimeTitle,
+  furnaceTuiCopyTurnLabel,
+  furnaceTuiDrawerEmpty,
+  furnaceTuiDrawerHead,
+  furnaceTuiHistoryTitle,
   furnaceTuiLabel,
+  furnaceTuiModeTitle,
 } from '../../composables/furnaceWorkspaceCopy.js'
 
 const getTurnMeta = getFurnaceTurnMeta
