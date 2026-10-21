@@ -160,7 +160,7 @@
                 <button
                   type="button"
                   class="attach-chip-x"
-                  title="移除"
+                  :title="composerRemovePendingTitle()"
                   @click="removePending(i)"
                 >
                   ×
@@ -172,7 +172,7 @@
                 size="small"
                 round
                 class="slash-btn"
-                title="斜杠指令 /"
+                :title="composerSlashTriggerTitle()"
                 @click="toggleSlashPanel"
               >
                 /
@@ -201,7 +201,7 @@
                 size="small"
                 round
                 class="attach-btn"
-                title="上传文件"
+                :title="composerUploadFileTitle()"
                 :loading="uploading"
                 :disabled="!activeId"
                 @click="triggerFilePick"
@@ -212,7 +212,7 @@
                 size="small"
                 round
                 class="copy-btn"
-                title="复制输入框内容"
+                :title="composerCopyInputTitle()"
                 @click="copyComposerText"
               >
                 复制
@@ -340,7 +340,11 @@ import {
   composerHashEmptyHint,
   composerHashPanelTip,
   composerHashPanelTitle,
+  composerCopyInputTitle,
   composerPanelCloseLabel,
+  composerRemovePendingTitle,
+  composerSlashTriggerTitle,
+  composerUploadFileTitle,
   composerSlashEmptyHint,
   composerSlashPanelTitle,
   composerSlashSettingsLabel,

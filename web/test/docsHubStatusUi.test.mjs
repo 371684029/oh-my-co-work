@@ -5,8 +5,10 @@ import {
   docsSessionStatusClass,
   docsSessionStatusLabel,
 } from '../src/views/docs/docsHubStatusUi.js'
+import { setLocale } from '../src/i18n/index.js'
 
 test('docsSessionStatusLabel maps known statuses', () => {
+  setLocale('zh-CN')
   assert.equal(docsSessionStatusLabel('active'), '进行中')
   assert.equal(docsSessionStatusLabel('unknown_x'), 'unknown_x')
 })

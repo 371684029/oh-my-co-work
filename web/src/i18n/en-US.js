@@ -195,6 +195,10 @@ export const strings = {
       toolbarIdle: '@ members/nodes · # params · / commands · Enter to send',
       footerGate: 'Gate and messages share the composer · notes go to the group report',
       footerIdle: '# inserts body · @ offsite assist · sends update # and report',
+      removePending: 'Remove',
+      slashTrigger: 'Slash commands /',
+      uploadFile: 'Upload files',
+      copyInput: 'Copy composer text',
       footerHint: {
         default: 'Type a message · expand',
         sessionStart: 'Confirm start · expand',
@@ -316,6 +320,20 @@ export const strings = {
       outline: 'Document outline',
       exportGroup: 'Export all documents for group {title}',
       viewGroup: 'View documents for group {title}',
+    },
+    status: {
+      active: 'Active',
+      running: 'Running',
+      waitingHuman: 'Waiting',
+      interrupted: 'Interrupted',
+      archived: 'Archived',
+      failed: 'Failed',
+      paused: 'Paused',
+      unknown: 'Unknown',
+    },
+    file: {
+      stepLedger: 'Step ledger · step-{step}',
+      stepLedgerGeneric: 'Step ledger',
     },
     welcome: {
       selectTitle: 'Select a document on the left',
