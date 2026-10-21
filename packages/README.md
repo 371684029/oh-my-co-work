@@ -5,14 +5,6 @@
 
 Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载 `*-win32-x64-desktop.zip`。
 
-## 桌面包形态（5.1.0 DESK-07）
-
-| 形态 | 交付位置 | 说明 |
-|------|----------|------|
-| Windows **Electron 桌面包** | GitHub Release `*-win32-x64-desktop.zip` | 含内置 Node，一般无需本机 Node |
-| Linux / macOS **runtime zip** | 本目录 + Release | 解压后 `start.sh` / `start.bat`，需本机 Node ≥ 18 |
-| macOS / Linux **Electron 安装包** | 未提供 | 签名/公证与安装器仍待补（见 `docs/5.1.0-plan.md` DESK-07） |
-
 ## 版本策略
 
 - **同大版本**：覆盖替换同平台 zip（小版本只留最新）
@@ -24,7 +16,7 @@ Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js�
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
-| darwin-arm64 | [`oh-my-co-work-v5-darwin-arm64.zip`](./oh-my-co-work-v5-darwin-arm64.zip) | 24427204 | `a23da4185937` | 2026-10-21T07:49:41.327Z |
+| darwin-arm64 | [`oh-my-co-work-v5-darwin-arm64.zip`](./oh-my-co-work-v5-darwin-arm64.zip) | 24427491 | `08b3bb58050e` | 2026-10-21T07:53:09.960Z |
 
 版本：`5.3.0`（大版本 v5）
 
