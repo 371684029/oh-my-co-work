@@ -1,17 +1,18 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="命令面板"
+    :title="commandPaletteTitle()"
     width="520px"
     class="command-palette-dialog"
     append-to-body
     destroy-on-close
+    :aria-label="t('a11y.commandPaletteDialog')"
     @closed="emit('closed')"
   >
     <el-input
       ref="inputRef"
       v-model="query"
-      placeholder="搜索会话、文档或输入命令…"
+      :placeholder="commandPalettePlaceholder()"
       :aria-label="t('a11y.commandPaletteSearch')"
       clearable
       @keydown.down.prevent="move(1)"
@@ -23,6 +24,7 @@
         v-for="(item, i) in filtered"
         :key="item.id"
         role="option"
+        :aria-selected="i === highlight"
         :class="{ active: i === highlight }"
         @click="run(item)"
         @mouseenter="highlight = i"
@@ -31,9 +33,9 @@
         <span class="cp-label">{{ item.label }}</span>
       </li>
     </ul>
-    <p v-if="!filtered.length" class="cp-empty">无匹配项</p>
+    <p v-if="!filtered.length" class="cp-empty" role="status">{{ commandPaletteEmpty() }}</p>
     <template #footer>
-      <span class="cp-hint"><kbd>Ctrl/Cmd+K</kbd> 打开 · ↑↓ 选择 · Enter 执行</span>
+      <span class="cp-hint">{{ commandPaletteFooterHint() }}</span>
     </template>
   </el-dialog>
 </template>
@@ -51,6 +53,23 @@ import {
 } from '../composables/uiZoom.js'
 import { applyColorScheme, normalizeColorScheme } from '../composables/uiColorScheme.js'
 import { t } from '../i18n/index.js'
+import {
+  commandPaletteTitle,
+  commandPalettePlaceholder,
+  commandPaletteEmpty,
+  commandPaletteFooterHint,
+  commandPaletteKindNav,
+  commandPaletteKindView,
+  commandPaletteKindSession,
+  commandPaletteNavWorkbench,
+  commandPaletteNavDocs,
+  commandPaletteNavSettings,
+  commandPaletteNavRestore,
+  commandPaletteZoomReset,
+  commandPaletteZoomIn,
+  commandPaletteZoomOut,
+  commandPaletteThemeToggle,
+} from '../composables/commandPaletteCopy.js'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -69,15 +88,35 @@ const visible = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-const staticCommands = [
-  { id: 'nav-workbench', kind: '导航', label: '工作台', run: () => router.push('/workbench') },
-  { id: 'nav-docs', kind: '导航', label: '文档中心', run: () => router.push('/docs') },
-  { id: 'nav-settings', kind: '导航', label: '设置', run: () => router.push('/settings/prefs') },
-  { id: 'nav-restore', kind: '导航', label: '还原中心', run: () => router.push('/settings/restore') },
+const staticCommands = computed(() => [
+  {
+    id: 'nav-workbench',
+    kind: commandPaletteKindNav(),
+    label: commandPaletteNavWorkbench(),
+    run: () => router.push('/workbench'),
+  },
+  {
+    id: 'nav-docs',
+    kind: commandPaletteKindNav(),
+    label: commandPaletteNavDocs(),
+    run: () => router.push('/docs'),
+  },
+  {
+    id: 'nav-settings',
+    kind: commandPaletteKindNav(),
+    label: commandPaletteNavSettings(),
+    run: () => router.push('/settings/prefs'),
+  },
+  {
+    id: 'nav-restore',
+    kind: commandPaletteKindNav(),
+    label: commandPaletteNavRestore(),
+    run: () => router.push('/settings/restore'),
+  },
   {
     id: 'zoom-reset',
-    kind: '视图',
-    label: '缩放重置 100%',
+    kind: commandPaletteKindView(),
+    label: commandPaletteZoomReset(),
     run: () => {
       const v = applyUiZoom(1)
       persistZoom(v)
@@ -85,8 +124,8 @@ const staticCommands = [
   },
   {
     id: 'zoom-in',
-    kind: '视图',
-    label: '放大界面',
+    kind: commandPaletteKindView(),
+    label: commandPaletteZoomIn(),
     run: () => {
       const v = applyUiZoom(stepUiZoom(readStoredZoom(), 1))
       persistZoom(v)
@@ -94,8 +133,8 @@ const staticCommands = [
   },
   {
     id: 'zoom-out',
-    kind: '视图',
-    label: '缩小界面',
+    kind: commandPaletteKindView(),
+    label: commandPaletteZoomOut(),
     run: () => {
       const v = applyUiZoom(stepUiZoom(readStoredZoom(), -1))
       persistZoom(v)
@@ -103,8 +142,8 @@ const staticCommands = [
   },
   {
     id: 'theme-toggle',
-    kind: '视图',
-    label: '切换浅色/深色主题',
+    kind: commandPaletteKindView(),
+    label: commandPaletteThemeToggle(),
     run: async () => {
       const s = await api.appSettings.get()
       const cur = normalizeColorScheme(s?.ui?.colorScheme || 'system')
@@ -113,7 +152,7 @@ const staticCommands = [
       await api.appSettings.update({ ui: { colorScheme: next } })
     },
   },
-]
+])
 
 watch(
   () => props.modelValue,
@@ -135,11 +174,11 @@ const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   const sessionItems = (sessions.value || []).map((s) => ({
     id: `session-${s.id}`,
-    kind: '会话',
+    kind: commandPaletteKindSession(),
     label: s.title || s.id,
     run: () => router.push(`/workbench/${s.id}`),
   }))
-  const all = [...staticCommands, ...sessionItems]
+  const all = [...staticCommands.value, ...sessionItems]
   if (!q) return all.slice(0, 14)
   return all.filter((x) => x.label.toLowerCase().includes(q)).slice(0, 14)
 })
