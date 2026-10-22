@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { lstat, realpath, readdir } from 'node:fs/promises'
 
 function confinedUnder(root, candidate) {
   const r = path.resolve(root)
@@ -50,4 +51,49 @@ export function assertTreeNoSymlinks(root) {
     }
   }
   walk(root)
+}
+
+export async function assertRegularFileAsync(abs, label = '文件') {
+  const st = await lstat(abs)
+  if (st.isSymbolicLink()) {
+    throw Object.assign(new Error(`${label}不能是符号链接`), { code: 'SYMLINK' })
+  }
+  if (!st.isFile()) {
+    throw Object.assign(new Error(`${label}不是普通文件`), { code: 'BAD_FILE' })
+  }
+}
+
+export async function assertTreeNoSymlinksAsync(root) {
+  let rootStat
+  try {
+    rootStat = await lstat(root)
+  } catch (e) {
+    if (e.code === 'ENOENT') return
+    throw e
+  }
+  if (rootStat.isSymbolicLink()) {
+    throw Object.assign(new Error('备份含符号链接：.'), { code: 'SYMLINK' })
+  }
+  const rootReal = await realpath(root)
+  const pending = [root]
+  while (pending.length) {
+    const dir = pending.pop()
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, e.name)
+      if (e.isSymbolicLink()) {
+        throw Object.assign(new Error(`备份含符号链接：${path.relative(root, abs)}`), {
+          code: 'SYMLINK',
+        })
+      }
+      if (e.isDirectory() || e.isFile()) {
+        const real = await realpath(abs)
+        if (!confinedUnder(rootReal, real)) {
+          throw Object.assign(new Error(`备份路径越界：${path.relative(root, abs)}`), {
+            code: 'ESCAPE',
+          })
+        }
+        if (e.isDirectory()) pending.push(abs)
+      }
+    }
+  }
 }

@@ -18,7 +18,7 @@ import {
 } from './slashCommands.js'
 import {
   createBackupAsync,
-  listBackups,
+  listBackupsAsync,
   BACKUP_DOWNLOAD_RE,
 } from './backup.js'
 import { emitAll } from './bus.js'
@@ -121,14 +121,14 @@ router.post('/backup', async (_req, res) => {
 })
 
 /** 下载已生成的备份压缩包（安全限制在 DATA_ROOT/backups） */
-router.get('/backup/download', (req, res) => {
+router.get('/backup/download', async (req, res) => {
   try {
     const requested = req.query.filename ? String(req.query.filename).trim() : ''
     let filename = ''
     if (requested) {
       filename = path.basename(requested)
     } else {
-      const backups = listBackups().filter((b) => b.format !== 'dir' && b.filename.endsWith('.tar.gz'))
+      const backups = (await listBackupsAsync()).filter((b) => b.format !== 'dir' && b.filename.endsWith('.tar.gz'))
       if (!backups.length) {
         return res.status(404).json({ error: '暂无可下载的压缩包备份文件' })
       }

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { cp } from 'node:fs/promises'
-import { assertRegularFile, assertTreeNoSymlinks } from './pathSafety.js'
+import { assertRegularFile, assertTreeNoSymlinks, assertTreeNoSymlinksAsync } from './pathSafety.js'
 
 function copyRegularFileSync(src, dest) {
   assertRegularFile(src, src)
@@ -33,7 +33,7 @@ export function applyStagedToLiveSync(work, dataRoot) {
 }
 
 export async function applyStagedToLiveAsync(work, dataRoot) {
-  assertTreeNoSymlinks(work)
+  await assertTreeNoSymlinksAsync(work)
   const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
   await cp(stagedDb, path.join(dataRoot, 'oh-my-co-work.sqlite'))
   for (const suf of ['-wal', '-shm']) {

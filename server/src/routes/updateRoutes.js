@@ -6,7 +6,7 @@ import * as updateCheck from '../updateCheck.js'
 import {
   createBackupAsync,
   restoreBackupAsync,
-  listBackups,
+  listBackupsAsync,
   isGzipFile,
 } from '../backup.js'
 
@@ -20,9 +20,9 @@ router.get('/update/check', async (req, res) => {
   }
 })
 
-router.get('/update/backups', (req, res) => {
+router.get('/update/backups', async (req, res) => {
   try {
-    res.json({ backups: listBackups() })
+    res.json({ backups: await listBackupsAsync() })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }

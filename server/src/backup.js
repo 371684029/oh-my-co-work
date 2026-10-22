@@ -2,9 +2,11 @@
  * M01 / M07：备份与 integrity_check
  */
 import fs from 'node:fs'
+import { mkdir, mkdtemp, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import {
   moveLiveAsideAsync,
   moveLiveAsideSync,
@@ -21,7 +23,12 @@ import {
   applyStagedToLiveAsync as applyStagedToLiveAsyncImpl,
   applyStagedToLiveSync as applyStagedToLiveSyncImpl,
 } from './backup/stagedApply.js'
-import { assertRegularFile, assertTreeNoSymlinks } from './backup/pathSafety.js'
+import {
+  assertRegularFile,
+  assertRegularFileAsync,
+  assertTreeNoSymlinks,
+  assertTreeNoSymlinksAsync,
+} from './backup/pathSafety.js'
 
 export { assertTreeNoSymlinks } from './backup/pathSafety.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
@@ -186,38 +193,42 @@ export async function createBackupAsync(opts = {}) {
   }
 
   const outDir = opts.outDir || path.join(DATA_ROOT, 'backups')
-  fs.mkdirSync(outDir, { recursive: true })
-  const name = `acw-backup-${stamp()}`
+  await mkdir(outDir, { recursive: true })
+  const name = `acw-backup-${stamp()}-${randomUUID()}`
   const work = path.join(outDir, `.${name}-work`)
-  if (fs.existsSync(work)) fs.rmSync(work, { recursive: true, force: true })
-  fs.mkdirSync(work, { recursive: true })
+  await mkdir(work)
 
-  const liveDb = resolveLiveDbPath()
-  const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
-  if (!fs.existsSync(liveDb)) {
-    throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
-  }
-  await copyLiveSqliteAsync(liveDb, dbCopy)
-  await stageJournalsAndUploadsAsync(work, DATA_ROOT, { includeUploads: opts.includeUploads })
+  try {
+    const liveDb = resolveLiveDbPath()
+    const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
+    if (!fs.existsSync(liveDb)) {
+      throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
+    }
+    await copyLiveSqliteAsync(liveDb, dbCopy)
+    await stageJournalsAndUploadsAsync(work, DATA_ROOT, { includeUploads: opts.includeUploads })
 
-  const meta = {
-    createdAt: new Date().toISOString(),
-    product: 'oh-my-co-work',
-    dataRoot: DATA_ROOT,
-    repoRoot: ROOT,
-    integrity: integrity.detail,
-    sourceDb: liveDb,
+    const meta = {
+      createdAt: new Date().toISOString(),
+      product: 'oh-my-co-work',
+      dataRoot: DATA_ROOT,
+      repoRoot: ROOT,
+      integrity: integrity.detail,
+      sourceDb: liveDb,
+    }
+    await writeFile(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
+  } catch (e) {
+    await rm(work, { recursive: true, force: true })
+    throw e
   }
-  fs.writeFileSync(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
 
   const archivePath = path.join(outDir, `${name}.tar.gz`)
   try {
-    const entries = fs.readdirSync(work)
+    const entries = await readdir(work)
     await tarCreateArchive(archivePath, work, entries, { async: true })
   } catch (e) {
     const dirBackup = path.join(outDir, name)
-    if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
-    fs.renameSync(work, dirBackup)
+    await rm(dirBackup, { recursive: true, force: true })
+    await rename(work, dirBackup)
     return {
       ok: true,
       path: dirBackup,
@@ -227,8 +238,8 @@ export async function createBackupAsync(opts = {}) {
     }
   }
 
-  fs.rmSync(work, { recursive: true, force: true })
-  const size = fs.statSync(archivePath).size
+  await rm(work, { recursive: true, force: true })
+  const size = (await stat(archivePath)).size
   return {
     ok: true,
     path: archivePath,
@@ -383,12 +394,12 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
   let work = null
   let ownWork = false
   if (entry.kind === 'tar') {
-    work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
+    work = await mkdtemp(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
       await tarExtractArchive(entry.path, work, { async: true })
     } catch (e) {
-      fs.rmSync(work, { recursive: true, force: true })
+      await rm(work, { recursive: true, force: true })
       throw Object.assign(new Error(`备份解包失败：${e.message}`), { code: 'EXTRACT_FAIL' })
     }
   } else {
@@ -475,29 +486,21 @@ function applyRestoreWorkSync({ work, ownWork, entry, pre, initDbFn, checkSqlite
 
 async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, checkSqlite, applyLive }) {
   try {
-    assertTreeNoSymlinks(work)
+    await assertTreeNoSymlinksAsync(work)
+    const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
+    if (!fs.existsSync(stagedDb)) {
+      throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
+    }
+    await assertRegularFileAsync(stagedDb, '备份库')
+    const check = checkSqlite(stagedDb)
+    if (!check.ok) {
+      throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
+        code: 'INTEGRITY_FAIL',
+      })
+    }
   } catch (e) {
-    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
+    if (ownWork) await rm(work, { recursive: true, force: true })
     throw e
-  }
-
-  const stagedDb = path.join(work, 'oh-my-co-work.sqlite')
-  if (!fs.existsSync(stagedDb)) {
-    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
-    throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
-  }
-  try {
-    assertRegularFile(stagedDb, '备份库')
-  } catch (e) {
-    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
-    throw e
-  }
-  const check = checkSqlite(stagedDb)
-  if (!check.ok) {
-    if (ownWork) fs.rmSync(work, { recursive: true, force: true })
-    throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
-      code: 'INTEGRITY_FAIL',
-    })
   }
 
   closeDb()
@@ -532,7 +535,7 @@ async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, chec
   } finally {
     if (ownWork && work) {
       try {
-        fs.rmSync(work, { recursive: true, force: true })
+        await rm(work, { recursive: true, force: true })
       } catch {
         /* ignore */
       }
@@ -608,6 +611,53 @@ export function listBackups() {
     } else if (e.isDirectory() && /^acw-backup-[A-Za-z0-9._-]+$/.test(e.name)) {
       const st = fs.statSync(abs)
       items.push({ filename: e.name, bytes: dirBytes(abs), mtimeMs: st.mtimeMs, format: 'dir' })
+    }
+  }
+  return items.sort((a, b) => b.mtimeMs - a.mtimeMs)
+}
+
+async function dirBytesAsync(root) {
+  let bytes = 0
+  const pending = [root]
+  while (pending.length) {
+    const dir = pending.pop()
+    try {
+      for (const e of await readdir(dir, { withFileTypes: true })) {
+        const file = path.join(dir, e.name)
+        if (e.isFile()) bytes += (await stat(file)).size
+        else if (e.isDirectory()) pending.push(file)
+      }
+    } catch {
+      // Match sync dirBytes: a backup may be moved/deleted while listing, and an
+      // unreadable subtree (EACCES/EPERM) must not fail the whole listing.
+    }
+  }
+  return bytes
+}
+
+export async function listBackupsAsync() {
+  const dir = path.join(DATA_ROOT, 'backups')
+  let entries
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch (e) {
+    if (e.code === 'ENOENT') return []
+    throw e
+  }
+  const items = []
+  for (const e of entries) {
+    if (e.name.startsWith('.')) continue
+    const abs = path.join(dir, e.name)
+    try {
+      if (e.isFile() && BACKUP_DOWNLOAD_RE.test(e.name)) {
+        const info = await stat(abs)
+        items.push({ filename: e.name, bytes: info.size, mtimeMs: info.mtimeMs, format: 'tar.gz' })
+      } else if (e.isDirectory() && BACKUP_NAME_RE.test(e.name)) {
+        const info = await stat(abs)
+        items.push({ filename: e.name, bytes: await dirBytesAsync(abs), mtimeMs: info.mtimeMs, format: 'dir' })
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
     }
   }
   return items.sort((a, b) => b.mtimeMs - a.mtimeMs)

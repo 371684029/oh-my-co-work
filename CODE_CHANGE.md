@@ -3,6 +3,20 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-22 | M | server/src/backup.js | listBackupsAsync 容忍备份子树 EACCES（对齐同步 dirBytes），避免备份列表接口 500
+2026-10-22 | M | server/test/backupRestore.test.js | 新增不可读备份子树回归测试（setpriv 丢 dac 能力模拟 EACCES）
+2026-10-22 | M | server/src/backup.js | SRV-01 异步备份与还原暂存清理、列表扫描及并发备份唯一命名
+2026-10-22 | M | server/src/backup/pathSafety.js | SRV-01 新增异步还原路径及符号链接校验
+2026-10-22 | M | server/src/backup/stagedApply.js | SRV-01 还原应用前使用异步文件树校验
+2026-10-22 | M | server/src/routes.js | 下载最新备份时使用异步列表
+2026-10-22 | M | server/src/routes/updateRoutes.js | 更新页备份列表使用异步扫描
+2026-10-22 | M | server/test/backupRestore.test.js | 覆盖异步备份/还原、并发命名、失败清理、列表与符号链接拒绝
+2026-10-22 | A | server/test/backupRoutes.test.js | 用隔离数据根验证备份列表、显式及最新下载、还原 HTTP 路径
+2026-10-22 | A | server/test/pathSafetyAsync.test.js | 覆盖异步文件树校验和 staging 根目录安全
+2026-10-22 | M | docs/5.5.0-plan.md | 记录 SRV-01 已改文件操作及剩余 SQLite 同步边界
+2026-10-22 | M | docs/5.1.0-plan.md | 同步历史 SRV-01 状态与剩余阻塞点
+2026-10-22 | M | docs/data-storage.md | 说明备份/还原异步文件路径和同步数据库限制
+
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds,useSessionDetail} web/test/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 gate/bubble + flow anchor 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionContextComputeds,sessionNodePresentation,useSessionDetail} web/test/{sessionContextComputeds,sessionNodePresentation}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 context/hash + node presentation 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionSenderInputBridge,sessionFlowRailHandlers,useSessionDetail} web/test/{sessionSenderInputBridge,sessionFlowRailHandlers}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 sender 桥接 + flow rail handlers

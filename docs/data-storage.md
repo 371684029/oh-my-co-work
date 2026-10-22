@@ -140,6 +140,8 @@ WAL 下可能存在：
 
 **完整备份建议停服后拷贝三件，或使用 SQLite backup API。** 只拷贝主文件可能丢未 checkpoint 的数据。
 
+应用内 `POST /api/backup`、`POST /api/update/backup` 及备份还原入口使用异步文件复制与 tar 子进程；备份列表也以异步方式遍历目录，避免大目录扫描阻塞其他请求。还原在覆盖活库前检查暂存目录中的符号链接与 SQLite 完整性，失败时从保留的旧数据回滚。当前 `better-sqlite3` 的 `integrity_check`、WAL checkpoint 与重新初始化仍同步执行，大库下可能短暂阻塞事件循环，详见 [5.5.0 SRV-01](./5.5.0-plan.md)。
+
 ---
 
 ## 3. Markdown 台账

@@ -130,6 +130,9 @@ test('directory backup can be listed and restored', async () => {
   const hit = listed.find((b) => b.filename === dirName)
   assert.ok(hit, 'listBackups 应包含目录备份')
   assert.equal(hit.format, 'dir')
+  const asyncHit = (await backup.listBackupsAsync()).find((b) => b.filename === dirName)
+  assert.equal(asyncHit?.format, 'dir')
+  assert.ok(asyncHit.bytes >= (await fs.promises.stat(path.join(dest, 'oh-my-co-work.sqlite'))).size)
 
   writeJournal(session.id, 'ANNOUNCEMENT.md', '改过了')
   const r = await backup.restoreBackupAsync(dirName)
@@ -175,6 +178,69 @@ test('listBackups distinguishes format correctly and backup download validation 
   assert.equal(BACKUP_DOWNLOAD_RE.test('notes.json'), false)
 })
 
+test('async backup listing omits symlinks and matches downloadable tar names', async (t) => {
+  const root = path.join(dataRoot, 'backups')
+  const created = await backup.createBackupAsync()
+  const symlink = path.join(root, 'acw-backup-link.tar.gz')
+  fs.symlinkSync(created.path, symlink)
+  t.after(() => fs.rmSync(symlink, { force: true }))
+
+  const listed = await backup.listBackupsAsync()
+  assert.ok(listed.some((item) => item.filename === path.basename(created.path) && item.format === 'tar.gz'))
+  assert.equal(listed.some((item) => item.filename === path.basename(symlink)), false)
+})
+
+test('listBackupsAsync tolerates unreadable backup subtrees like sync (EACCES)', async (t) => {
+  if (process.platform === 'win32') return t.skip('POSIX mode bits only')
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-backup-eacces-'))
+  const backups = path.join(fixture, 'backups')
+  const locked = path.join(backups, 'acw-backup-locked')
+  const hidden = path.join(locked, 'hidden')
+  fs.mkdirSync(hidden, { recursive: true })
+  fs.writeFileSync(path.join(locked, 'visible.txt'), 'visible-bytes')
+  fs.writeFileSync(path.join(hidden, 'secret.txt'), 'secret-bytes')
+  fs.writeFileSync(path.join(backups, 'acw-backup-good.tar.gz'), Buffer.from([0x1f, 0x8b]))
+  fs.chmodSync(hidden, 0o000)
+  t.after(() => {
+    fs.chmodSync(hidden, 0o755)
+    fs.rmSync(fixture, { recursive: true, force: true })
+  })
+
+  // 作为 root 运行时 chmod 000 拦不住 DAC，需在子进程里丢掉 dac 能力才能制造 EACCES。
+  const backupHref = new URL('../src/backup.js', import.meta.url).href
+  const script = `
+    const backup = await import(${JSON.stringify(backupHref)})
+    const sync = backup.listBackups()
+    const asyncListed = await backup.listBackupsAsync()
+    process.stdout.write(JSON.stringify({ sync, asyncListed }))
+  `
+  const env = { ...process.env, ACW_DATA_ROOT: fixture }
+  const { execFileSync } = await import('node:child_process')
+  let out
+  try {
+    if (process.geteuid && process.geteuid() === 0) {
+      out = execFileSync(
+        'setpriv',
+        ['--bounding-set=-dac_override,-dac_read_search', '--', process.execPath, '--input-type=module', '-e', script],
+        { env, encoding: 'utf8' }
+      )
+    } else {
+      out = execFileSync(process.execPath, ['--input-type=module', '-e', script], { env, encoding: 'utf8' })
+    }
+  } catch (e) {
+    if (e.code === 'ENOENT') return t.skip('setpriv unavailable')
+    assert.fail(`listing child failed: ${e.stderr || e.message}`)
+  }
+
+  const { sync, asyncListed } = JSON.parse(out)
+  const names = (list) => list.map((item) => item.filename).sort()
+  assert.deepEqual(names(asyncListed), names(sync))
+  assert.deepEqual(names(asyncListed), ['acw-backup-good.tar.gz', 'acw-backup-locked'])
+  // hidden 子目录不可读：同步与异步都只统计 visible.txt，不整单失败
+  assert.equal(sync.find((i) => i.filename === 'acw-backup-locked').bytes, 'visible-bytes'.length)
+  assert.equal(asyncListed.find((i) => i.filename === 'acw-backup-locked').bytes, 'visible-bytes'.length)
+})
+
 test('restore rejects archives that plant journal symlinks', async () => {
   const created = backup.createBackup()
   const extract = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-symlink-bak-'))
@@ -204,3 +270,62 @@ test('restoreBackupAsync roundtrip', async () => {
   assert.equal(r.ok, true)
 })
 
+test('async backup and restore never synchronously remove staging trees', async (t) => {
+  const originalRmSync = fs.rmSync
+  t.mock.method(fs, 'rmSync', (target, options) => {
+    if (String(target).includes('-work') || String(target).includes('acw-restore-')) {
+      throw new Error(`synchronous staging removal: ${target}`)
+    }
+    return originalRmSync(target, options)
+  })
+  const created = await backup.createBackupAsync()
+  assert.equal(created.ok, true)
+  const restored = await backup.restoreBackupAsync(path.basename(created.path))
+  assert.equal(restored.ok, true)
+})
+
+test('concurrent async backups created in the same millisecond keep separate archives', async (t) => {
+  const NativeDate = Date
+  const fixedTime = NativeDate.now()
+  globalThis.Date = class extends NativeDate {
+    constructor(...args) {
+      super(...(args.length ? args : [fixedTime]))
+    }
+  }
+  t.after(() => { globalThis.Date = NativeDate })
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-parallel-backups-'))
+  t.after(() => fs.rmSync(outDir, { recursive: true, force: true }))
+
+  const [first, second] = await Promise.all([
+    backup.createBackupAsync({ outDir }),
+    backup.createBackupAsync({ outDir }),
+  ])
+  assert.notEqual(first.path, second.path)
+  assert.equal(backup.isGzipFile(first.path), true)
+  assert.equal(backup.isGzipFile(second.path), true)
+})
+
+test('async backup removes its staging directory if the source database disappears', async (t) => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-missing-db-backup-'))
+  t.after(() => fs.rmSync(outDir, { recursive: true, force: true }))
+  const originalExists = fs.existsSync
+  t.mock.method(fs, 'existsSync', (file) => {
+    if (file === path.join(dataRoot, 'oh-my-co-work.sqlite')) return false
+    return originalExists(file)
+  })
+
+  await assert.rejects(backup.createBackupAsync({ outDir }), { code: 'NO_DB' })
+  assert.deepEqual(fs.readdirSync(outDir), [])
+})
+
+test('async restore rejects a symlink in a directory backup without changing the live database', async (t) => {
+  const backupName = `acw-backup-linked-${Date.now()}`
+  const folder = path.join(dataRoot, 'backups', backupName)
+  fs.mkdirSync(folder, { recursive: true })
+  t.after(() => fs.rmSync(folder, { recursive: true, force: true }))
+  fs.symlinkSync(path.join(dataRoot, 'oh-my-co-work.sqlite'), path.join(folder, 'oh-my-co-work.sqlite'))
+  const before = getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c
+
+  await assert.rejects(backup.restoreBackupAsync(backupName), { code: 'SYMLINK' })
+  assert.equal(getDb().prepare('SELECT COUNT(*) AS c FROM sessions').get().c, before)
+})
