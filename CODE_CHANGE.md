@@ -16,7 +16,7 @@
 2026-10-22 | M | docs/5.5.0-plan.md | 记录 SRV-01 已改文件操作及剩余 SQLite 同步边界
 2026-10-22 | M | docs/5.1.0-plan.md | 同步历史 SRV-01 状态与剩余阻塞点
 2026-10-22 | M | docs/data-storage.md | 说明备份/还原异步文件路径和同步数据库限制
-
+2026-10-21 | A/M | web/src/views/workbench/composables/{sessionComposerFilterComputeds,sessionWorkbenchListComputeds,sessionDetailResetState,sessionDetailInitWatchers,useSessionDetail} web/test/{sessionComposerFilterComputeds,sessionDetailResetState}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 filter/reset/init 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds,useSessionDetail} web/test/{sessionGateAndBubbleComputeds,sessionFlowAnchorComputeds}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 gate/bubble + flow anchor 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionContextComputeds,sessionNodePresentation,useSessionDetail} web/test/{sessionContextComputeds,sessionNodePresentation}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 context/hash + node presentation 模块
 2026-10-21 | A/M | web/src/views/workbench/composables/{sessionSenderInputBridge,sessionFlowRailHandlers,useSessionDetail} web/test/{sessionSenderInputBridge,sessionFlowRailHandlers}.test.mjs docs/{5.1.0,5.3.0,5.5.0}-plan.md | FE-01 sender 桥接 + flow rail handlers
