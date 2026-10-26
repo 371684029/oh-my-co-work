@@ -229,7 +229,8 @@ function unzipTo(zipPath, destDir) {
   execFileSync('unzip', ['-q', '-o', zipPath, '-d', destDir], { stdio: 'inherit' })
 }
 
-async function cachedDownload(url, cacheName, { minBytes = 1024 * 1024 } = {}) {
+async function cachedDownload(urlOrUrls, cacheName, { minBytes = 1024 * 1024 } = {}) {
+  const urls = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls]
   const cacheDir = path.join(OUT_ROOT, 'cache')
   const dest = path.join(cacheDir, cacheName)
   if (fs.existsSync(dest) && fs.statSync(dest).size >= minBytes) {
@@ -239,23 +240,25 @@ async function cachedDownload(url, cacheName, { minBytes = 1024 * 1024 } = {}) {
   const tmp = dest + '.part'
   let lastErr
   for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
-    if (fs.existsSync(tmp)) fs.rmSync(tmp)
-    try {
-      console.log(`[pack] download (${attempt}/${DOWNLOAD_RETRIES})`, url)
-      await downloadHttps(url, tmp)
-      const size = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0
-      if (size < minBytes) {
-        throw new Error(`下载不完整: ${size} bytes < ${minBytes}: ${url}`)
+    for (const url of urls) {
+      if (fs.existsSync(tmp)) fs.rmSync(tmp)
+      try {
+        console.log(`[pack] download (${attempt}/${DOWNLOAD_RETRIES})`, url)
+        await downloadHttps(url, tmp)
+        const size = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0
+        if (size < minBytes) {
+          throw new Error(`下载不完整: ${size} bytes < ${minBytes}: ${url}`)
+        }
+        fs.renameSync(tmp, dest)
+        return dest
+      } catch (e) {
+        lastErr = e
+        console.error(`[pack] download failed:`, e?.message || e)
       }
-      fs.renameSync(tmp, dest)
-      return dest
-    } catch (e) {
-      lastErr = e
-      console.error(`[pack] download failed:`, e?.message || e)
     }
   }
   if (fs.existsSync(tmp)) fs.rmSync(tmp)
-  throw lastErr || new Error(`下载失败: ${url}`)
+  throw lastErr || new Error(`下载失败: ${urls.join(' | ')}`)
 }
 
 function copyElectronAppFiles(stage) {
@@ -295,7 +298,11 @@ async function embedWin32Desktop(stage) {
   }
 
   const electronZip = await cachedDownload(
-    `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+    [
+      // 国内/受限网络优先镜像，失败再走官方 GitHub Release
+      `https://npmmirror.com/mirrors/electron/${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+      `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+    ],
     `electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
     { minBytes: 80 * 1024 * 1024 },
   )
