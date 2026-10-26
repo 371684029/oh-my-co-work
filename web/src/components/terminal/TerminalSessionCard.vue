@@ -64,7 +64,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { stripAnsi } from '@acw/shared'
 import { isTerminalRunning, terminalStatusText } from '../../composables/terminalStatus'
 import {

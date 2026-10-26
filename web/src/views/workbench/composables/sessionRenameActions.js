@@ -1,5 +1,5 @@
 /** Session title rename (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 
 export function createSessionRenameActions({ activeId, editTitle, sessions, api }) {
   async function rename() {

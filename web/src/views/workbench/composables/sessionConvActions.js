@@ -1,5 +1,6 @@
 /** Session list pin / conv context menu (FE-01 extract from useSessionDetail). */
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import {
   convMenuActionFromCommand,
   normalizeMenuCommand,

@@ -328,7 +328,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
 import { useComposerStore } from '../../../stores/composer.js'

@@ -139,7 +139,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { handleDocsProseClick } from './docsCodeFence.js'
 import {
   applyInDocSearchMarks,

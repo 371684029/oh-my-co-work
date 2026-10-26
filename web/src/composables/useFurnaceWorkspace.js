@@ -7,7 +7,7 @@ import {
   inferFurnaceCliBanner,
   takeFurnaceAssistantDelta,
 } from '@acw/shared'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../api'
 import { PET_CREDIT_SHORT } from './furnacePetAtlas.js'
 import { furnaceWorkspaceOpen } from './furnaceUi.js'

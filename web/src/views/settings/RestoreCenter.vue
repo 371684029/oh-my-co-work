@@ -1,17 +1,17 @@
 <template>
-  <div class="restore-center" aria-labelledby="restore-center-title">
-    <h2 id="restore-center-title">还原中心</h2>
+  <div class="restore-center" role="region" aria-labelledby="restore-center-title">
+    <h2 id="restore-center-title">{{ restoreT('title') }}</h2>
     <p class="restore-lead">
-      炼化备份与流程步骤 git 快照的统一入口。步骤回退在工作台流程轨展开节点后操作。
+      {{ restoreT('lead') }}
     </p>
 
     <section v-if="data?.members?.length" class="restore-section">
-      <h3>成员炼化备份</h3>
+      <h3>{{ restoreT('membersHeading') }}</h3>
       <ul class="restore-list">
         <li v-for="m in refineMembers" :key="m.id">
           <strong>{{ m.name }}</strong>
           <span v-if="m.refineBackup" class="restore-path">{{ m.refineBackup }}</span>
-          <span v-else class="restore-muted">无备份</span>
+          <span v-else class="restore-muted">{{ restoreT('noBackup') }}</span>
           <el-button
             v-if="m.refineBackup"
             size="small"
@@ -19,36 +19,43 @@
             :loading="restoringId === m.id"
             @click="restoreRefine(m.id)"
           >
-            还原到炼化前
+            {{ restoreT('restoreRefine') }}
           </el-button>
-          <router-link :to="`/settings/members`" class="restore-link">成员设置</router-link>
+          <router-link :to="`/settings/members`" class="restore-link">{{ restoreT('membersLink') }}</router-link>
         </li>
       </ul>
     </section>
 
     <section v-if="data?.sessions?.length" class="restore-section">
-      <h3>近期会话 · 步骤改动</h3>
+      <h3>{{ restoreT('sessionsHeading') }}</h3>
       <ul class="restore-list">
         <li v-for="s in data.sessions" :key="s.sessionId">
           <router-link :to="`/workbench/${s.sessionId}`">{{ s.title || s.sessionId }}</router-link>
           <ul>
             <li v-for="n in s.nodes" :key="n.id">
-              步骤 {{ n.stepIndex + 1 }} · {{ n.title }} — {{ n.filesChanged }} 个文件
+              {{ restoreNodeLine(n.stepIndex + 1, n.title, n.filesChanged) }}
             </li>
           </ul>
         </li>
       </ul>
     </section>
 
-    <p v-if="loading" class="restore-muted">加载中…</p>
-    <p v-else-if="empty" class="restore-muted">暂无可还原项</p>
+    <p v-if="loading" class="restore-muted">{{ restoreT('loading') }}</p>
+    <p v-else-if="empty" class="restore-muted">{{ restoreT('empty') }}</p>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
+import {
+  restoreT,
+  restoreToast,
+  restoreConfirm,
+  restoreNodeLine,
+} from '../../composables/settingsRestoreCopy.js'
 
 const data = ref(null)
 const loading = ref(true)
@@ -69,7 +76,7 @@ onMounted(async () => {
   try {
     data.value = await api.restoreCenter.list()
   } catch (e) {
-    ElMessage.error(e.message || '加载失败')
+    ElMessage.error(e.message || restoreToast('loadFail'))
   } finally {
     loading.value = false
   }
@@ -78,8 +85,8 @@ onMounted(async () => {
 async function restoreRefine(id) {
   try {
     await ElMessageBox.confirm(
-      '将把炼化改动的源文件还原到保存炼化前的备份。继续？',
-      '还原炼化',
+      restoreConfirm('body'),
+      restoreConfirm('title'),
       { type: 'warning' },
     )
   } catch {
@@ -88,9 +95,9 @@ async function restoreRefine(id) {
   restoringId.value = id
   try {
     await api.members.restoreRefine(id)
-    ElMessage.success('已还原炼化源文件')
+    ElMessage.success(restoreToast('restored'))
   } catch (e) {
-    ElMessage.error(e.message || '还原失败')
+    ElMessage.error(e.message || restoreToast('restoreFail'))
   } finally {
     restoringId.value = ''
   }

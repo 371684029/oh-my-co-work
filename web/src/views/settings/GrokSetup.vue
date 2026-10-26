@@ -15,7 +15,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import GrokSetupGuide from '../../components/GrokSetupGuide.vue'
 import { api } from '../../api'
 import { setFurnaceGrokGate } from '../../composables/furnaceUi.js'

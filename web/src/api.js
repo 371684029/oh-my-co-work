@@ -320,6 +320,14 @@ export const api = {
       req('/settings/app', { method: 'PATCH', body: JSON.stringify(body || {}) }),
     purgeDemo: () => req('/settings/purge-demo', { method: 'POST', body: '{}' }),
   },
+  notificationInbox: {
+    list: ({ unread = false, limit = 200 } = {}) =>
+      req(`/notification/inbox?${unread ? 'unread=1&' : ''}limit=${Number(limit) || 200}`),
+    record: (item) => req('/notification/inbox', { method: 'POST', body: JSON.stringify(item || {}) }),
+    read: (body) =>
+      req('/notification/inbox/read', { method: 'POST', body: JSON.stringify(body || {}) }),
+    clear: () => req('/notification/inbox/clear', { method: 'POST', body: '{}' }),
+  },
   resources: {
     list: () => req('/resources'),
     release: (sessionIds = []) =>

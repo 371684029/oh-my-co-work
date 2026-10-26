@@ -1,5 +1,5 @@
 /** Session gate API actions (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { buildSessionGateBody } from './sessionGateRequestUi.js'
 import { gateActionToast } from './sessionGateFeedbackUi.js'
 import { humanGateShouldSendAsMessage } from './sessionHumanGateRouteUi.js'

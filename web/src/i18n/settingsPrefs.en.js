@@ -44,7 +44,7 @@ export const settingsPrefsEn = {
     save: 'Save notification settings',
     test: 'Send test notification',
     footnote:
-      'Quick actions and inline replies on notifications (NTF-18) stay off by default; this version opens the app when you click a notification.',
+      'Quick actions and inline replies (NTF-18) are not supported yet; the related setting has been removed. Clicking a notification opens the app at the related session/doc.',
   },
   usage: {
     title: 'Local usage stats',

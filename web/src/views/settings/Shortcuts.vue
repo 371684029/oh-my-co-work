@@ -1,13 +1,16 @@
 <template>
-  <div class="shortcuts-page" role="main" :aria-label="t('a11y.shortcutsPage')">
+  <div class="shortcuts-page" role="region" :aria-label="t('a11y.shortcutsPage')">
     <div class="page-head">
       <div>
-        <h2 id="shortcuts-page-title" class="page-title">斜杠指令与快捷键脚本</h2>
+        <h2 id="shortcuts-page-title" class="page-title">{{ shortcutsT('title') }}</h2>
         <p class="page-desc">
-          聊天 <code>/</code> 为<strong>斜杠指令</strong>（脚本工作目录可自动填）。勾选<strong>快捷键触发</strong>的项用于任意位置绑键跑脚本（脚本工作目录须手填，逻辑相同）。
+          {{ shortcutsT('desc1') }}<code>/</code>{{ shortcutsT('desc2')
+          }}<strong>{{ shortcutsT('descStrong1') }}</strong
+          >{{ shortcutsT('desc3') }}<strong>{{ shortcutsT('descStrong2') }}</strong
+          >{{ shortcutsT('desc4') }}
         </p>
       </div>
-      <el-button type="primary" @click="openCreate">添加指令</el-button>
+      <el-button type="primary" @click="openCreate">{{ shortcutsT('addBtn') }}</el-button>
     </div>
 
     <el-alert
@@ -15,7 +18,7 @@
       :closable="false"
       show-icon
       class="hint"
-      title="斜杠指令：选脚本可自动填脚本工作目录。快捷键触发跑脚本：脚本工作目录必填且不会自动填写（页内/桌面绑键同一规则）。"
+      :title="shortcutsT('hint')"
     />
 
     <el-alert
@@ -28,38 +31,44 @@
       :aria-label="t('a11y.shortcutsBuiltinHotkeys')"
     >
       <ul class="builtin-hotkeys">
-        <li><kbd>Ctrl/Cmd+K</kbd> — 命令面板（会话 / 导航 / 缩放 / 主题）</li>
-        <li><kbd>Ctrl/Cmd+Shift+D</kbd> — 打开文档中心</li>
-        <li><kbd>Ctrl/Cmd+1</kbd> / <kbd>2</kbd> — 熔炉内切换 Grok / Cursor（焦点在熔炉且不在 xterm 选区时）</li>
-        <li>终端 <kbd>Ctrl/Cmd+F</kbd> — 终端内搜索；有选区时 <kbd>Ctrl/Cmd+C</kbd> 复制不中断</li>
+        <li><kbd>Ctrl/Cmd+K</kbd> — {{ shortcutsT('builtin.palette') }}</li>
+        <li><kbd>Ctrl/Cmd+Shift+D</kbd> — {{ shortcutsT('builtin.docs') }}</li>
+        <li><kbd>Ctrl/Cmd+1</kbd> / <kbd>2</kbd> — {{ shortcutsT('builtin.switchTool') }}</li>
+        <li>{{ shortcutsT('builtin.termPrefix') }}<kbd>Ctrl/Cmd+F</kbd
+          >{{ shortcutsT('builtin.termMid') }}<kbd>Ctrl/Cmd+C</kbd
+          >{{ shortcutsT('builtin.termSuffix') }}</li>
       </ul>
     </el-alert>
 
-    <el-table :data="commands" stripe v-loading="loading" aria-label="斜杠指令与快捷键列表">
-      <el-table-column label="启用" width="72">
+    <el-table :data="commands" stripe v-loading="loading" :aria-label="shortcutsT('a11y.list')">
+      <el-table-column :label="shortcutsT('table.enabled')" width="72">
         <template #default="{ row }">
-          <el-switch v-model="row.enabled" @change="persist" />
+          <el-switch
+            v-model="row.enabled"
+            :aria-label="shortcutsToggleEnableAria(row.name)"
+            @change="persist"
+          />
         </template>
       </el-table-column>
-      <el-table-column label="名称" prop="name" min-width="120" />
-      <el-table-column label="触发" width="140">
+      <el-table-column :label="shortcutsT('table.name')" prop="name" min-width="120" />
+      <el-table-column :label="shortcutsT('table.trigger')" width="140">
         <template #default="{ row }">
-          <code v-if="row.hotkeyScript || row.desktopHotkey" class="slash">⌨ {{ row.hotkey || '快捷键' }}</code>
+          <code v-if="row.hotkeyScript || row.desktopHotkey" class="slash">⌨ {{ row.hotkey || shortcutsT('table.hotkeyFallback') }}</code>
           <code v-else class="slash">/{{ row.slash }}</code>
         </template>
       </el-table-column>
-      <el-table-column label="类型" width="100">
+      <el-table-column :label="shortcutsT('table.kind')" width="100">
         <template #default="{ row }">
-          {{ kindLabel(row.kind) }}
+          {{ shortcutsKindLabel(row.kind) }}
         </template>
       </el-table-column>
-      <el-table-column label="弹窗" width="100">
+      <el-table-column :label="shortcutsT('table.popup')" width="100">
         <template #default="{ row }">
           <span v-if="row.kind !== 'shell'">—</span>
           <span v-else>{{ popupLabel(row) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="目标" min-width="200" show-overflow-tooltip>
+      <el-table-column :label="shortcutsT('table.target')" min-width="200" show-overflow-tooltip>
         <template #default="{ row }">
           <template v-if="row.kind === 'agent'">
             Agent · {{ row.memberName || row.memberKey || row.memberId || '—' }}
@@ -68,58 +77,60 @@
           <template v-else>{{ row.command }}</template>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column :label="shortcutsT('table.actions')" width="260" fixed="right">
         <template #default="{ row, $index }">
-          <el-button link type="primary" @click="openEdit(row, $index)">编辑</el-button>
-          <el-button link type="primary" @click="openClone(row)">克隆</el-button>
-          <el-button link type="success" @click="tryRun(row)">试运行</el-button>
-          <el-button link type="danger" @click="removeAt($index)">删除</el-button>
+          <el-button link type="primary" @click="openEdit(row, $index)">{{ shortcutsT('actions.edit') }}</el-button>
+          <el-button link type="primary" @click="openClone(row)">{{ shortcutsT('actions.clone') }}</el-button>
+          <el-button link type="success" @click="tryRun(row)">{{ shortcutsT('actions.run') }}</el-button>
+          <el-button link type="danger" @click="removeAt($index)">{{ shortcutsT('actions.remove') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <el-drawer v-model="drawer" :title="drawerTitle" size="440px" destroy-on-close append-to-body>
       <el-form label-position="top">
-        <el-form-item label="显示名称" required>
-          <el-input v-model="form.name" placeholder="如：打开编辑器" />
+        <el-form-item :label="shortcutsT('form.name')" required>
+          <el-input v-model="form.name" :placeholder="shortcutsT('form.namePlaceholder')" />
         </el-form-item>
-        <el-form-item label="快捷键触发">
+        <el-form-item :label="shortcutsT('form.hotkeyTrigger')">
           <el-switch v-model="form.hotkeyScript" />
           <p class="field-hint">
-            用于页内、桌面或任意位置绑键跑脚本（非聊天 <code>/</code>）。<strong>脚本工作目录必填</strong>，选脚本也不会自动填写。
+            {{ shortcutsT('form.hotkeyHint1') }}<code>/</code>{{ shortcutsT('form.hotkeyHint2')
+            }}<strong>{{ shortcutsT('form.hotkeyHintStrong') }}</strong
+            >{{ shortcutsT('form.hotkeyHint3') }}
           </p>
         </el-form-item>
-        <el-form-item v-if="!form.hotkeyScript" label="触发词（/ 后面）" required>
+        <el-form-item v-if="!form.hotkeyScript" :label="shortcutsT('form.slash')" required>
           <el-input v-model="form.slash" placeholder="editor">
             <template #prepend>/</template>
           </el-input>
         </el-form-item>
-        <el-form-item v-else label="快捷键（可选，预留）">
-          <el-input v-model="form.hotkey" placeholder="如 Ctrl+Shift+E（绑定位置不限，规则相同）" />
+        <el-form-item v-else :label="shortcutsT('form.hotkey')">
+          <el-input v-model="form.hotkey" :placeholder="shortcutsT('form.hotkeyPlaceholder')" />
         </el-form-item>
-        <el-form-item v-if="form.hotkeyScript" label="内部标识（/ 触发词，必填）" required>
+        <el-form-item v-if="form.hotkeyScript" :label="shortcutsT('form.slashInternal')" required>
           <el-input v-model="form.slash" placeholder="run_my_script">
             <template #prepend>/</template>
           </el-input>
-          <p class="field-hint">仅作配置 id，聊天里不一定要用 / 唤起。</p>
+          <p class="field-hint">{{ shortcutsT('form.slashInternalHint') }}</p>
         </el-form-item>
-        <el-form-item label="说明">
+        <el-form-item :label="shortcutsT('form.desc')">
           <el-input v-model="form.description" type="textarea" :rows="2" />
         </el-form-item>
-        <el-form-item label="类型" required>
+        <el-form-item :label="shortcutsT('form.kind')" required>
           <el-radio-group v-model="form.kind">
-            <el-radio value="agent">熔炉/成员 Agent</el-radio>
-            <el-radio value="shell">本机命令</el-radio>
-            <el-radio value="url">打开网址</el-radio>
+            <el-radio value="agent">{{ shortcutsT('form.kindAgent') }}</el-radio>
+            <el-radio value="shell">{{ shortcutsT('form.kindShell') }}</el-radio>
+            <el-radio value="url">{{ shortcutsT('form.kindUrl') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.kind === 'agent'">
-          <el-form-item label="绑定成员 Agent" required>
+          <el-form-item :label="shortcutsT('form.member')" required>
             <el-select
               v-model="form.memberId"
               filterable
               clearable
-              placeholder="选择成员（默认熔炉）"
+              :placeholder="shortcutsT('form.memberPlaceholder')"
               style="width: 100%"
               @change="onMemberPick"
             >
@@ -131,40 +142,40 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="唤起后填入输入框的提示语">
+          <el-form-item :label="shortcutsT('form.prompt')">
             <el-input
               v-model="form.prompt"
               type="textarea"
               :rows="2"
-              placeholder="请【熔炉】协助处理："
+              :placeholder="shortcutsT('defaultPrompt')"
             />
           </el-form-item>
         </template>
         <template v-else-if="form.kind === 'shell'">
-          <el-form-item label="命令模板" required>
+          <el-form-item :label="shortcutsT('form.command')" required>
             <el-input
               v-model="form.command"
               type="textarea"
               :rows="2"
-              placeholder='node index.mjs  或  code "{folder}"'
+              :placeholder="shortcutsT('form.commandPlaceholder')"
             />
           </el-form-item>
-          <el-form-item label="脚本文件（可选）">
+          <el-form-item :label="shortcutsT('form.scriptPath')">
             <PathPicker
               v-model="form.scriptPath"
               mode="file"
-              placeholder="选本机脚本；相对路径以「脚本工作目录」为基准"
+              :placeholder="shortcutsT('form.scriptPathPlaceholder')"
               :hint="
                 form.hotkeyScript
-                  ? '快捷键触发：选文件不会自动填脚本工作目录'
-                  : '斜杠指令：选文件后自动填脚本工作目录；仅写 node index.mjs 时保存也会从命令推断'
+                  ? shortcutsT('form.scriptPathHintHotkey')
+                  : shortcutsT('form.scriptPathHintSlash')
               "
               @update:model-value="onSlashScriptPathChange"
             />
           </el-form-item>
           <el-form-item
             v-if="form.kind === 'shell'"
-            label="脚本工作目录"
+            :label="shortcutsT('form.workDir')"
             :required="shellHasScriptAnchor(form)"
           >
             <PathPicker
@@ -172,22 +183,22 @@
               mode="folder"
               :placeholder="
                 form.hotkeyScript
-                  ? '快捷键跑脚本时必填'
-                  : '命令如 node index.mjs 时一般会自动填写'
+                  ? shortcutsT('form.workDirPlaceholderHotkey')
+                  : shortcutsT('form.workDirPlaceholderSlash')
               "
               :hint="
                 form.hotkeyScript
-                  ? '须手填；页内/桌面绑键同一规则'
-                  : '运行脚本的 cwd；{folder} 仍指会话工作目录'
+                  ? shortcutsT('form.workDirHintHotkey')
+                  : shortcutsT('form.workDirHintSlash')
               "
             />
           </el-form-item>
-          <el-form-item v-if="!form.hotkeyScript" label="继承成员脚本工作目录（可选）">
+          <el-form-item v-if="!form.hotkeyScript" :label="shortcutsT('form.anchor')">
             <el-select
               v-model="form.anchorMemberId"
               filterable
               clearable
-              placeholder="与某成员的脚本工作目录 / 脚本文件对齐"
+              :placeholder="shortcutsT('form.anchorPlaceholder')"
               style="width: 100%"
             >
               <el-option
@@ -198,38 +209,38 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="工作目录目标">
+          <el-form-item :label="shortcutsT('form.openTarget')">
             <el-select v-model="form.openTarget" style="width: 100%">
-              <el-option label="当前会话/群工作文件夹" value="sessionWorkFolder" />
-              <el-option label="自定义路径" value="custom" />
+              <el-option :label="shortcutsT('form.openTargetSession')" value="sessionWorkFolder" />
+              <el-option :label="shortcutsT('form.customPath')" value="custom" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="form.openTarget === 'custom'" label="自定义路径">
+          <el-form-item v-if="form.openTarget === 'custom'" :label="shortcutsT('form.customPath')">
             <el-input v-model="form.customPath" placeholder="D:\projects\foo" />
           </el-form-item>
-          <el-form-item label="是否展示脚本弹窗">
+          <el-form-item :label="shortcutsT('form.popup')">
             <el-select v-model="form.showScriptPopupMode" style="width: 100%">
-              <el-option label="跟随全局设置" value="inherit" />
-              <el-option label="是（尽量显示控制台）" value="yes" />
-              <el-option label="否（静默）" value="no" />
+              <el-option :label="shortcutsT('form.popupInherit')" value="inherit" />
+              <el-option :label="shortcutsT('form.popupYes')" value="yes" />
+              <el-option :label="shortcutsT('form.popupNo')" value="no" />
             </el-select>
             <p class="field-hint">
-              优先级：本指令 &gt; 全局。打开编辑器/资源管理器等 GUI 本身会弹窗，不受此限制。
+              {{ shortcutsT('form.popupHint') }}
             </p>
           </el-form-item>
         </template>
         <template v-else>
-          <el-form-item label="默认 URL">
+          <el-form-item :label="shortcutsT('form.url')">
             <el-input v-model="form.url" placeholder="https://" />
           </el-form-item>
-          <el-form-item label="运行时询问网址">
+          <el-form-item :label="shortcutsT('form.promptForUrl')">
             <el-switch v-model="form.promptForUrl" />
           </el-form-item>
         </template>
-        <el-form-item label="启用">
+        <el-form-item :label="shortcutsT('form.enabled')">
           <el-switch v-model="form.enabled" />
         </el-form-item>
-        <el-button type="primary" @click="saveForm">保存</el-button>
+        <el-button type="primary" @click="saveForm">{{ shortcutsT('form.save') }}</el-button>
       </el-form>
     </el-drawer>
   </div>
@@ -237,16 +248,29 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { t } from '../../i18n/index.js'
+import {
+  shortcutsT,
+  shortcutsToast,
+  shortcutsConfirm,
+  shortcutsKindLabel,
+  shortcutsPopupLabelForMode,
+  shortcutsCloneName,
+  shortcutsRunAgentOk,
+  shortcutsToggleEnableAria,
+  shortcutsDefaultMemberName,
+  shortcutsDefaultPrompt,
+} from '../../composables/settingsShortcutsCopy.js'
 
 const commands = ref([])
 const members = ref([])
 const loading = ref(false)
 const drawer = ref(false)
-const drawerTitle = ref('添加指令')
+const drawerTitle = ref(shortcutsT('drawer.add'))
 const editIndex = ref(-1)
 const form = ref(emptyForm())
 
@@ -268,9 +292,9 @@ function emptyForm() {
     openTarget: 'sessionWorkFolder',
     customPath: '',
     memberId: '',
-    memberName: '熔炉',
+    memberName: shortcutsDefaultMemberName(),
     memberKey: 'unified_admin',
-    prompt: '请【熔炉】协助处理：',
+    prompt: shortcutsDefaultPrompt(),
     /** inherit | yes | no — 仅 shell 有效 */
     showScriptPopupMode: 'inherit',
     scriptPath: '',
@@ -318,12 +342,6 @@ function onSlashScriptPathChange(v) {
   }
 }
 
-function kindLabel(k) {
-  if (k === 'agent') return 'Agent'
-  if (k === 'url') return '网址'
-  return '本机命令'
-}
-
 function popupModeFromCmd(row = {}) {
   if (row.showScriptPopup === true) return 'yes'
   if (row.showScriptPopup === false) return 'no'
@@ -331,10 +349,7 @@ function popupModeFromCmd(row = {}) {
 }
 
 function popupLabel(row) {
-  const m = popupModeFromCmd(row)
-  if (m === 'yes') return '是'
-  if (m === 'no') return '否'
-  return '跟随全局'
+  return shortcutsPopupLabelForMode(popupModeFromCmd(row))
 }
 
 function applyPopupModeToCmd(f) {
@@ -376,7 +391,7 @@ async function persist() {
   try {
     const r = await api.slashCommands.save(commands.value)
     commands.value = r.commands || commands.value
-    ElMessage.success('已保存')
+    ElMessage.success(shortcutsToast('saved'))
   } catch (e) {
     ElMessage.error(e.message)
     await load()
@@ -387,7 +402,7 @@ function openCreate() {
   editIndex.value = -1
   form.value = emptyForm()
   form.value.id = `cmd_${Date.now().toString(36)}`
-  drawerTitle.value = '添加指令'
+  drawerTitle.value = shortcutsT('drawer.add')
   drawer.value = true
 }
 
@@ -403,7 +418,7 @@ function openEdit(row, index) {
     hotkey: row.hotkey || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
-  drawerTitle.value = '编辑指令'
+  drawerTitle.value = shortcutsT('drawer.edit')
   drawer.value = true
 }
 
@@ -420,7 +435,7 @@ function openClone(row) {
     ...emptyForm(),
     ...row,
     id: `cmd_${Date.now().toString(36)}`,
-    name: `${row.name || baseSlash} 副本`,
+    name: shortcutsCloneName(row.name || baseSlash),
     slash,
     scriptWorkDir: row.scriptWorkDir || row.scriptDir || '',
     scriptDir: row.scriptWorkDir || row.scriptDir || '',
@@ -429,7 +444,7 @@ function openClone(row) {
     hotkey: row.hotkey || '',
     showScriptPopupMode: popupModeFromCmd(row),
   }
-  drawerTitle.value = '克隆指令'
+  drawerTitle.value = shortcutsT('drawer.clone')
   drawer.value = true
 }
 
@@ -439,13 +454,13 @@ async function saveForm() {
     .replace(/^\//, '')
     .trim()
   if (!f.name.trim() || !f.slash) {
-    ElMessage.warning('请填写名称与触发词')
+    ElMessage.warning(shortcutsToast('saveWarn'))
     return
   }
   if (f.kind === 'shell' && shellHasScriptAnchor(f)) {
     const sw = String(f.scriptWorkDir || f.scriptDir || '').trim()
     if (!sw) {
-      ElMessage.warning('跑脚本须填写脚本工作目录')
+      ElMessage.warning(shortcutsToast('workDirWarn'))
       return
     }
   }
@@ -473,7 +488,9 @@ async function saveForm() {
 }
 
 async function removeAt(index) {
-  await ElMessageBox.confirm('删除该快捷指令？', '删除', { type: 'warning' })
+  await ElMessageBox.confirm(shortcutsConfirm('removeBody'), shortcutsConfirm('removeTitle'), {
+    type: 'warning',
+  })
   commands.value.splice(index, 1)
   await persist()
 }
@@ -482,7 +499,7 @@ async function tryRun(row) {
   try {
     let url
     if (row.kind === 'url' && row.promptForUrl) {
-      const { value } = await ElMessageBox.prompt('打开网址', '试运行', {
+      const { value } = await ElMessageBox.prompt(shortcutsConfirm('runUrl'), shortcutsConfirm('runTitle'), {
         inputValue: row.url || 'https://',
       })
       url = value
@@ -492,10 +509,10 @@ async function tryRun(row) {
       window.open(r.url, '_blank', 'noopener')
     }
     if (r.kind === 'agent') {
-      ElMessage.success(r.message || `已唤起 ${r.memberName || 'Agent'}`)
+      ElMessage.success(r.message || shortcutsRunAgentOk(r.memberName))
       return
     }
-    ElMessage.success(r.message || '已执行')
+    ElMessage.success(r.message || shortcutsToast('runOk'))
   } catch (e) {
     ElMessage.error(e.message)
   }

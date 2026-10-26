@@ -2,14 +2,14 @@
   <div class="about-page">
     <div class="page-head">
       <div>
-        <h2 class="page-title">关于与更新</h2>
-        <p class="page-desc">版本信息 · 更新日志 · 本地承诺</p>
+        <h2 class="page-title">{{ aboutT('title') }}</h2>
+        <p class="page-desc">{{ aboutT('desc') }}</p>
       </div>
     </div>
 
-    <div v-if="loading" class="about-loading">加载中…</div>
+    <div v-if="loading" class="about-loading">{{ aboutT('loading') }}</div>
     <template v-else>
-      <!-- 版本 -->
+      <!-- Version -->
       <section class="about-card">
         <div class="about-brand">
           <AppLogo size="lg" :glow="true" />
@@ -20,103 +20,103 @@
           </div>
         </div>
         <p class="about-credit">
-          熔炉桌宠立绘（李慕婉）复制自
+          {{ aboutT('credit1') }}
           <el-link
             href="https://github.com/xiongxianzhu/chatgpt-pets"
             type="primary"
             target="_blank"
             rel="noopener"
-          >chatgpt-pets</el-link>
-          git 仓库。© 2026 zhuxiongxian / chatgpt-pets 贡献者 · MIT。
+          >chatgpt-pets</el-link
+          >{{ aboutT('credit2') }}
         </p>
         <div class="about-version-row">
-          <span class="about-label">当前版本</span>
+          <span class="about-label">{{ aboutT('versionLabel') }}</span>
           <el-tag type="info" effect="plain" round class="version-tag">v{{ data.version }}</el-tag>
           <el-tag :type="isDesktop ? 'success' : 'info'" size="small" style="margin-left: 8px">
-            {{ isDesktop ? `桌面端 (${desktopEnv})` : 'Web 端' }}
+            {{ isDesktop ? aboutDesktopTag(desktopEnv) : aboutT('webTag') }}
           </el-tag>
         </div>
         <div class="update-row" style="margin-top: 12px">
           <el-button
             size="small"
-            aria-label="导出诊断信息 JSON"
+            :aria-label="aboutT('a11y.diag')"
             :loading="diagLoading"
             @click="exportDiagnostics"
           >
-            导出诊断信息
+            {{ aboutT('diagBtn') }}
           </el-button>
-          <span class="muted tiny">本地 JSON（日志尾部、版本、设置摘要；密钥已脱敏）</span>
+          <span class="muted tiny">{{ aboutT('diagHint') }}</span>
         </div>
       </section>
 
-      <!-- 更新 (4.2.0) -->
+      <!-- Updates (4.2.0) -->
       <section class="about-card">
-        <div class="section-title">更新</div>
+        <div class="section-title">{{ aboutT('updateSection') }}</div>
 
-        <!-- 检查更新 -->
+        <!-- Check for updates -->
         <div class="update-row">
           <el-button
             size="small"
-            aria-label="检查应用更新"
+            :aria-label="aboutT('a11y.check')"
             :loading="updateChecking"
             @click="checkUpdate"
           >
-            检查更新
+            {{ aboutT('checkBtn') }}
           </el-button>
           <template v-if="updateResult">
             <el-tag v-if="!updateResult.hasUpdate" type="success" effect="plain" round size="small">
-              已是最新
+              {{ aboutT('upToDate') }}
             </el-tag>
             <template v-else>
               <el-tag type="warning" effect="plain" round size="small">
-                发现新版本 v{{ updateResult.latest }}
+                {{ aboutFoundNew(updateResult.latest) }}
               </el-tag>
               <div v-if="updateResult.notes" class="update-notes">{{ updateResult.notes }}</div>
               <div v-if="updateResult.date" class="update-date">{{ updateResult.date }}</div>
               <el-button v-if="updateResult.url" size="small" type="primary" plain @click="openUrl(updateResult.url)">
-                打开下载页
+                {{ aboutT('openDownload') }}
               </el-button>
               <template v-if="isDesktop && updateResult.url">
                 <el-button size="small" :loading="updateDownloading" @click="downloadDesktopUpdate">
-                  下载到本机
+                  {{ aboutT('downloadLocal') }}
                 </el-button>
                 <el-button size="small" type="warning" plain :loading="updateApplying" @click="applyOnQuit">
-                  退出时安装
+                  {{ aboutT('applyOnQuit') }}
                 </el-button>
               </template>
             </template>
           </template>
-          <span v-else class="muted tiny">启动时也会检查（设置可关）；桌面端可下载 zip，退出时写入安装说明</span>
+          <span v-else class="muted tiny">{{ aboutT('updateHint') }}</span>
         </div>
 
-        <!-- 备份与恢复 -->
+        <!-- Backup and restore -->
         <div class="update-divider" />
         <div class="update-row">
           <el-button
             size="small"
-            aria-label="立即创建数据备份"
+            :aria-label="aboutT('a11y.backup')"
             :loading="backupCreating"
             @click="createBackupNow"
           >
-            立即备份
+            {{ aboutT('backupBtn') }}
           </el-button>
-          <span v-if="lastBackupName" class="update-last-backup">最近备份：{{ lastBackupName }}</span>
+          <span v-if="lastBackupName" class="update-last-backup">{{ aboutLastBackup(lastBackupName) }}</span>
         </div>
         <div class="update-row" style="margin-top: 8px">
           <el-button size="small" :loading="backupsLoading" @click="loadBackupsForRestore">
-            从备份恢复
+            {{ aboutT('restoreBtn') }}
           </el-button>
           <el-select
             v-if="showRestoreSelect"
             v-model="selectedRestoreFile"
-            placeholder="选择备份文件"
+            :placeholder="aboutT('restorePlaceholder')"
             size="small"
             style="width: 280px; margin-left: 8px"
           >
             <el-option
               v-for="b in availableBackups"
               :key="b.filename"
-              :label="`${b.filename}${b.format === 'dir' ? ' · 目录' : ''}（${formatSize(b.bytes)}）`"
+              :label="aboutBackupOptionLabel(b.filename, b.format === 'dir', formatSize(b.bytes))"
               :value="b.filename"
             />
           </el-select>
@@ -128,46 +128,46 @@
             :loading="restoreRunning"
             @click="doRestore"
           >
-            恢复
+            {{ aboutT('restoreGo') }}
           </el-button>
         </div>
       </section>
 
-      <!-- 特殊说明：完全本地 -->
+      <!-- Special note: fully local -->
       <section class="about-card about-card--local">
-        <div class="local-kicker">特殊说明</div>
-        <p class="local-title">本项目完全本地，不夹带任何后台服务</p>
+        <div class="local-kicker">{{ aboutT('localSection') }}</div>
+        <p class="local-title">{{ aboutT('localTitle') }}</p>
         <p class="local-body">{{ data.localNote }}</p>
         <ul v-if="data.extraNotes?.length" class="local-extra">
           <li v-for="(n, i) in data.extraNotes" :key="i">{{ n }}</li>
         </ul>
       </section>
 
-      <!-- 更新地址 -->
+      <!-- Update URL -->
       <section class="about-card">
-        <div class="section-title">更新地址</div>
+        <div class="section-title">{{ aboutT('updateUrlSection') }}</div>
         <template v-if="data.updateUrl">
           <el-link :href="data.updateUrl" type="primary" target="_blank" rel="noopener">
             {{ data.updateUrl }}
           </el-link>
           <div class="section-actions">
-            <el-button size="small" @click="copy(data.updateUrl)">复制链接</el-button>
+            <el-button size="small" @click="copy(data.updateUrl)">{{ aboutT('copyLink') }}</el-button>
             <el-button size="small" type="primary" plain @click="openUrl(data.updateUrl)">
-              打开
+              {{ aboutT('open') }}
             </el-button>
           </div>
         </template>
         <p v-else class="muted">
-          {{ data.updateHint || '暂未配置更新地址。' }}
+          {{ data.updateHint || aboutT('noUpdateUrl') }}
         </p>
         <p class="muted tiny">
-          启动检查默认可关。检查只向 GitHub Releases 读取版本号，不上传数据、不自动下载安装。「更新地址」仅在你主动打开时访问。
+          {{ aboutT('updateFootnote') }}
         </p>
       </section>
 
-      <!-- 版本日志 -->
+      <!-- Changelog -->
       <section class="about-card">
-        <div class="section-title">版本日志</div>
+        <div class="section-title">{{ aboutT('changelogSection') }}</div>
         <el-timeline v-if="data.changelog?.length">
           <el-timeline-item
             v-for="(entry, i) in data.changelog"
@@ -186,7 +186,7 @@
             </ul>
           </el-timeline-item>
         </el-timeline>
-        <p v-else class="muted">暂无版本日志。</p>
+        <p v-else class="muted">{{ aboutT('noChangelog') }}</p>
       </section>
     </template>
   </div>
@@ -194,18 +194,33 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
 import AppLogo from '../../components/AppLogo.vue'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
+import {
+  aboutT,
+  aboutToast,
+  aboutConfirm,
+  aboutConfirmCancel,
+  aboutDefaultTagline,
+  aboutDefaultLivingLine,
+  aboutDesktopTag,
+  aboutFoundNew,
+  aboutDownloadOk,
+  aboutLastBackup,
+  aboutBackupOptionLabel,
+  aboutRestoreConfirmBody,
+} from '../../composables/settingsAboutCopy.js'
 
 const { isDesktop, desktopEnv, initDesktopBridge, applyDesktopUpdate } = useDesktopBridge()
 initDesktopBridge()
 
 const data = ref({
   productName: 'oh-my-co-work',
-  tagline: '人机协同 · 万物归元 · 皆可 Workflow',
-  livingLine: '节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。',
+  tagline: aboutDefaultTagline(),
+  livingLine: aboutDefaultLivingLine(),
   version: '—',
   updateUrl: '',
   updateHint: '',
@@ -239,9 +254,9 @@ async function exportDiagnostics() {
     a.download = `acw-diagnostics-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
-    ElMessage.success('诊断信息已下载')
+    ElMessage.success(aboutToast('diagOk'))
   } catch (e) {
-    ElMessage.error(e?.message || '导出失败')
+    ElMessage.error(e?.message || aboutToast('diagFail'))
   } finally {
     diagLoading.value = false
   }
@@ -249,20 +264,20 @@ async function exportDiagnostics() {
 
 function copy(t) {
   navigator.clipboard.writeText(t || '')
-  ElMessage.success('已复制')
+  ElMessage.success(aboutToast('copied'))
 }
 
 function openUrl(url) {
   if (url) window.open(url, '_blank', 'noopener')
 }
 
-// 4.2.0 更新
+// 4.2.0 update
 async function checkUpdate() {
   updateChecking.value = true
   try {
     updateResult.value = await api.update.check()
   } catch (e) {
-    ElMessage.error(e?.message || '检查更新失败')
+    ElMessage.error(e?.message || aboutToast('checkFail'))
   } finally {
     updateChecking.value = false
   }
@@ -278,10 +293,10 @@ async function downloadDesktopUpdate() {
       url: u.url,
       version: u.latest,
     })
-    if (r?.ok) ElMessage.success(`已下载 v${u.latest}（${Math.round((r.bytes || 0) / 1024 / 1024)} MB）`)
-    else ElMessage.warning(r?.reason || '下载失败')
+    if (r?.ok) ElMessage.success(aboutDownloadOk(u.latest, Math.round((r.bytes || 0) / 1024 / 1024)))
+    else ElMessage.warning(r?.reason || aboutToast('downloadFail'))
   } catch (e) {
-    ElMessage.error(e?.message || '下载失败')
+    ElMessage.error(e?.message || aboutToast('downloadFail'))
   } finally {
     updateDownloading.value = false
   }
@@ -291,10 +306,10 @@ async function applyOnQuit() {
   updateApplying.value = true
   try {
     const r = await applyDesktopUpdate({ action: 'apply' })
-    if (r?.ok) ElMessage.success('已标记：下次退出时写入安装说明（保留用户数据目录）')
-    else ElMessage.warning(r?.reason || '请先下载更新包')
+    if (r?.ok) ElMessage.success(aboutToast('applyOk'))
+    else ElMessage.warning(r?.reason || aboutToast('applyNeedDownload'))
   } catch (e) {
-    ElMessage.error(e?.message || '操作失败')
+    ElMessage.error(e?.message || aboutToast('applyFail'))
   } finally {
     updateApplying.value = false
   }
@@ -304,10 +319,10 @@ async function createBackupNow() {
   backupCreating.value = true
   try {
     const r = await api.update.backup()
-    lastBackupName.value = r.path || r.filename || '备份完成'
-    ElMessage.success('备份成功')
+    lastBackupName.value = r.path || r.filename || aboutT('backupDoneFallback')
+    ElMessage.success(aboutToast('backupOk'))
   } catch (e) {
-    ElMessage.error(e?.message || '备份失败')
+    ElMessage.error(e?.message || aboutToast('backupFail'))
   } finally {
     backupCreating.value = false
   }
@@ -321,7 +336,7 @@ async function loadBackupsForRestore() {
     showRestoreSelect.value = true
     selectedRestoreFile.value = ''
   } catch (e) {
-    ElMessage.error(e?.message || '加载备份列表失败')
+    ElMessage.error(e?.message || aboutToast('backupListFail'))
   } finally {
     backupsLoading.value = false
   }
@@ -331,18 +346,22 @@ async function doRestore() {
   if (!selectedRestoreFile.value) return
   try {
     await ElMessageBox.confirm(
-      `确定从备份 ${selectedRestoreFile.value} 恢复？当前数据会被覆盖（恢复前会自动再备份一次）。`,
-      '从备份恢复',
-      { type: 'warning', confirmButtonText: '确认恢复', cancelButtonText: '取消' },
+      aboutRestoreConfirmBody(selectedRestoreFile.value),
+      aboutConfirm('restoreTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: aboutConfirm('restoreOk'),
+        cancelButtonText: aboutConfirmCancel(),
+      },
     )
   } catch { return }
   restoreRunning.value = true
   try {
     await api.update.restore(selectedRestoreFile.value)
-    ElMessage.success('恢复完成，正在重启应用…')
+    ElMessage.success(aboutToast('restoreOk'))
     setTimeout(() => window.location.reload(), 1500)
   } catch (e) {
-    ElMessage.error(e?.message || '恢复失败')
+    ElMessage.error(e?.message || aboutToast('restoreFail'))
   } finally {
     restoreRunning.value = false
   }
@@ -359,7 +378,7 @@ onMounted(async () => {
   try {
     data.value = await api.about()
   } catch (e) {
-    ElMessage.error(e.message || '加载失败')
+    ElMessage.error(e.message || aboutToast('loadFail'))
   } finally {
     loading.value = false
   }

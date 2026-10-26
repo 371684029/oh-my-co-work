@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
 import { getCachedDocHtml, setCachedDocHtml } from '../../../composables/docsRenderCache.js'

@@ -1,5 +1,10 @@
 /** English strings (DSK-08 partial; extend as pages migrate off hard-coded copy). */
 import { settingsPrefsEn } from './settingsPrefs.en.js'
+import { settingsMembersEn } from './settingsMembers.en.js'
+import { settingsGroupsEn } from './settingsGroups.en.js'
+import { settingsShortcutsEn } from './settingsShortcuts.en.js'
+import { settingsRestoreEn } from './settingsRestore.en.js'
+import { settingsAboutEn } from './settingsAbout.en.js'
 
 export const strings = {
   common: {
@@ -613,6 +618,11 @@ export const strings = {
     projectSection: 'Project',
     metaSection: 'Other',
     prefsPage: settingsPrefsEn,
+    membersPage: settingsMembersEn,
+    groupsPage: settingsGroupsEn,
+    shortcutsPage: settingsShortcutsEn,
+    restorePage: settingsRestoreEn,
+    aboutPage: settingsAboutEn,
   },
   docs: {
     colTitleGroup: 'Group templates',

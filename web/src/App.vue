@@ -239,7 +239,7 @@
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import AppLogo from './components/AppLogo.vue'
 import AcwIcon from './components/icons/AcwIcon.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'

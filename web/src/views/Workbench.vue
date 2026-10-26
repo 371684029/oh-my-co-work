@@ -280,7 +280,7 @@
 
 <script setup>
 import { onUnmounted, defineAsyncComponent, ref, nextTick, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
 import { api } from '../api'

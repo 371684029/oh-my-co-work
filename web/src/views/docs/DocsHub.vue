@@ -52,7 +52,7 @@
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../../api'
 import './docProse.css'
 import {

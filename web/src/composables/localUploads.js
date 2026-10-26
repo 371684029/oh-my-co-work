@@ -1,4 +1,4 @@
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 
 /**
  * 本地文件选择 / 上传流程的单一来源。

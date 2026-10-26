@@ -1,5 +1,5 @@
 /** Session notes save (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import {
   sessionNotesSaveFailedMessage,
   sessionNotesSavedMessage,

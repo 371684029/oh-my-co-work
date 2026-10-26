@@ -2,60 +2,63 @@
   <div>
     <div class="page-head">
       <div>
-        <h2 class="page-title">成员管理</h2>
+        <h2 class="page-title">{{ membersT('title') }}</h2>
         <p class="page-desc">
-          脚本成员支持 bat / PowerShell / Python / Node / Shell 等。默认走<strong>内嵌终端</strong>。支持<strong>编辑</strong>与<strong>克隆</strong>。
+          {{ membersT('desc1') }}<strong>{{ membersT('descStrong1') }}</strong
+          >{{ membersT('desc2') }}<strong>{{ membersT('descStrong2') }}</strong
+          >{{ membersT('desc3') }}<strong>{{ membersT('descStrong3') }}</strong
+          >{{ membersT('desc4') }}
         </p>
       </div>
       <div class="page-head-actions">
-        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <el-button @click="triggerImportTemplate">{{ membersT('importBtn') }}</el-button>
         <input
           ref="importFileRef"
           type="file"
           accept=".json,.acw.json"
           class="hidden-file-input"
-          aria-label="选择成员模板 JSON 文件"
+          :aria-label="membersT('a11y.importFile')"
           @change="onImportFile"
         />
-        <el-button type="primary" @click="openCreate()">新建成员</el-button>
+        <el-button type="primary" @click="openCreate()">{{ membersT('createBtn') }}</el-button>
       </div>
     </div>
 
     <el-input
       v-model="searchQ"
       class="page-search"
-      placeholder="搜索成员（支持拼音/首字母，如 cy、chengyuan）"
+      :placeholder="membersT('searchPlaceholder')"
       clearable
       :prefix-icon="SearchIcon"
-      aria-label="搜索成员"
+      :aria-label="membersT('a11y.search')"
     />
 
-    <el-table :data="filteredList" stripe aria-label="成员列表">
-      <el-table-column prop="display_name" label="显示名" min-width="120" />
-      <el-table-column label="简介" min-width="140" show-overflow-tooltip>
+    <el-table :data="filteredList" stripe :aria-label="membersT('a11y.list')">
+      <el-table-column prop="display_name" :label="membersT('table.displayName')" min-width="120" />
+      <el-table-column :label="membersT('table.desc')" min-width="140" show-overflow-tooltip>
         <template #default="{ row }">
           {{ row.config?.description || '—' }}
         </template>
       </el-table-column>
-      <el-table-column prop="kind" label="类型" width="90" />
-      <el-table-column label="炼化" width="88">
+      <el-table-column prop="kind" :label="membersT('table.kind')" width="90" />
+      <el-table-column :label="membersT('table.refine')" width="88">
         <template #default="{ row }">
-          <el-tag v-if="row.config?.refine?.enabled" size="small" type="success" effect="plain">开</el-tag>
+          <el-tag v-if="row.config?.refine?.enabled" size="small" type="success" effect="plain">{{ membersT('table.refineOn') }}</el-tag>
           <span v-else class="muted-dash">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="运行" min-width="160" show-overflow-tooltip>
+      <el-table-column :label="membersT('table.run')" min-width="160" show-overflow-tooltip>
         <template #default="{ row }">
           {{ runSummary(row) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="320">
+      <el-table-column :label="membersT('table.actions')" width="320">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="primary" @click="openClone(row)">克隆</el-button>
-          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
-          <el-button link type="info" @click="view(row)">查看</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <el-button link type="primary" @click="openEdit(row)">{{ membersT('actions.edit') }}</el-button>
+          <el-button link type="primary" @click="openClone(row)">{{ membersT('actions.clone') }}</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">{{ membersT('actions.export') }}</el-button>
+          <el-button link type="info" @click="view(row)">{{ membersT('actions.view') }}</el-button>
+          <el-button link type="danger" @click="remove(row)">{{ membersT('actions.remove') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -69,13 +72,13 @@
       class="member-settings-drawer"
     >
       <el-form v-if="!readonly" label-position="top">
-        <el-form-item label="显示名称" required>
-          <el-input v-model="form.displayName" placeholder="如：示例回声" />
+        <el-form-item :label="membersT('form.displayName')" required>
+          <el-input v-model="form.displayName" :placeholder="membersT('form.displayNamePlaceholder')" />
         </el-form-item>
-        <el-form-item label="简介">
+        <el-form-item :label="membersT('form.desc')">
           <el-input
             v-model="form.description"
-            placeholder="可选，一句话说明职责"
+            :placeholder="membersT('form.descPlaceholder')"
             maxlength="120"
             show-word-limit
             clearable
@@ -83,14 +86,14 @@
         </el-form-item>
         <el-form-item>
           <el-tooltip :content="adaptHover" placement="top" :show-after="300">
-            <el-checkbox v-model="form.adapt">是否适配</el-checkbox>
+            <el-checkbox v-model="form.adapt">{{ membersT('form.adapt') }}</el-checkbox>
           </el-tooltip>
         </el-form-item>
         <el-form-item>
-          <el-tooltip content="点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。" placement="top" :show-after="300">
-            <el-checkbox v-model="form.refine">熔炉炼化</el-checkbox>
+          <el-tooltip :content="membersT('form.refineTip')" placement="top" :show-after="300">
+            <el-checkbox v-model="form.refine">{{ membersT('form.refine') }}</el-checkbox>
           </el-tooltip>
-          <div class="field-hint">勾上并保存后会马上改源文件（如 newBranch.bat），不是等群聊跑完才改。跑完仍会把产出整理进文档中心。</div>
+          <div class="field-hint">{{ membersT('form.refineHint') }}</div>
           <el-button
             v-if="form._editId"
             size="small"
@@ -100,10 +103,10 @@
             :loading="restoringRefine"
             @click="onRestoreRefine"
           >
-            还原到炼化前
+            {{ membersT('form.refineRestore') }}
           </el-button>
         </el-form-item>
-        <el-form-item v-if="form.refine" label="炼化 skills（第三方 Agent 调起指令）">
+        <el-form-item v-if="form.refine" :label="membersT('form.refineSkills')">
           <div class="refine-skill-box">
             <el-input
               v-model="refineSkillPrompt"
@@ -112,100 +115,99 @@
               readonly
             />
             <el-button size="small" type="primary" plain @click="copyRefineSkillPrompt">
-              复制炼化 Skill 指令
+              {{ membersT('form.refineCopySkill') }}
             </el-button>
           </div>
           <div class="field-hint">
-            使用 Cursor 等外部第三方 Agent 时，复制此指令粘贴给 Agent。Agent 会调用本机
-            <code>POST /api/docs/refine</code>
-            把改动与结论写入当前会话群报告（文档中心）。
+            {{ membersT('form.refineSkillHint1') }}<code>POST /api/docs/refine</code
+            >{{ membersT('form.refineSkillHint2') }}
           </div>
         </el-form-item>
 
 
         <template v-if="form.kind === 'script'">
           <el-tabs v-model="scriptTab" class="member-script-tabs">
-            <el-tab-pane label="基础" name="basic">
-              <el-form-item label="运行方式">
+            <el-tab-pane :label="membersT('form.tabBasic')" name="basic">
+              <el-form-item :label="membersT('form.mode')">
                 <el-radio-group v-model="form.script.mode" @change="onScriptModeChange">
-                  <el-radio value="file">脚本 / 程序文件</el-radio>
-                  <el-radio value="command">一段命令</el-radio>
+                  <el-radio value="file">{{ membersT('form.modeFile') }}</el-radio>
+                  <el-radio value="command">{{ membersT('form.modeCommand') }}</el-radio>
                 </el-radio-group>
               </el-form-item>
 
-              <el-form-item v-if="form.script.mode === 'file'" label="文件路径" required>
+              <el-form-item v-if="form.script.mode === 'file'" :label="membersT('form.filePath')" required>
                 <PathPicker
                   v-model="form.script.filePath"
                   mode="file"
-                  placeholder="选择 .bat / .ps1 / .py / .js …"
+                  :placeholder="membersT('form.filePathPlaceholder')"
                   :extensions="scriptExts"
-                  hint="可手填，或点「浏览」选择本机脚本；相对路径以「脚本工作目录」为基准"
+                  :hint="membersT('form.filePathHint')"
                   @update:model-value="onScriptAnchorPathChange"
                 />
               </el-form-item>
 
-              <el-form-item v-else label="命令" required>
+              <el-form-item v-else :label="membersT('form.command')" required>
                 <el-input
                   v-model="form.script.command"
                   type="textarea"
                   :rows="3"
-                  placeholder="如 node index.mjs、python app.py（保存时会尝试从命令里识别 .mjs/.js 等并自动填脚本工作目录）"
+                  :placeholder="membersT('form.commandPlaceholder')"
                 />
                 <div class="field-hint">
-                  <strong>完全由你配置</strong>，产品不内置任何工具名。走 PATH；占位符
-                  <code>#a</code> / <code>{#a}</code>（调用时输入框参数）、{#1} #群聊 #文件夹 {input}
-                  {folder}（空占位自动去掉）。含 $env: 时 runtime 用 PowerShell 或 auto。
+                  <strong>{{ membersT('form.commandHintStrong') }}</strong
+                  >{{ membersT('form.commandHint1') }}<code>#a</code> / <code>{#a}</code
+                  >{{ membersT('form.commandHint2') }}{{ membersT('form.commandHintPlaceholders')
+                  }}{{ membersT('form.commandHint3') }}
                 </div>
               </el-form-item>
 
-              <el-form-item label="脚本工作目录" required>
+              <el-form-item :label="membersT('form.workDir')" required>
                 <PathPicker
                   v-model="form.script.scriptWorkDir"
                   mode="folder"
-                  placeholder="必填：脚本运行时的 cwd"
+                  :placeholder="membersT('form.workDirPlaceholder')"
                   :hint="workDirHint"
                 />
               </el-form-item>
 
-              <el-form-item label="执行界面">
+              <el-form-item :label="membersT('form.execMode')">
                 <el-select v-model="form.script.executionMode" style="width: 100%">
-                  <el-option label="内嵌终端（TUI / 交互式 CLI）" value="terminal" />
-                  <el-option label="普通执行（兼容现有脚本）" value="pipe" />
+                  <el-option :label="membersT('form.execTerminal')" value="terminal" />
+                  <el-option :label="membersT('form.execPipe')" value="pipe" />
                 </el-select>
                 <div class="field-hint">
-                  默认内嵌终端：<strong>保存后</strong>开聊该成员，对话里会出现终端卡，可进中栏交互。仅非交互脚本才改回普通执行。
+                  {{ membersT('form.execHintPrefix') }}<strong>{{ membersT('form.execHintStrong') }}</strong
+                  >{{ membersT('form.execHintSuffix') }}
                 </div>
               </el-form-item>
 
-              <el-form-item v-if="form.script.executionMode === 'terminal'" label="结构化 Adapter">
+              <el-form-item v-if="form.script.executionMode === 'terminal'" :label="membersT('form.adapter')">
                 <el-select v-model="form.script.adapter" style="width: 100%">
-                  <el-option label="关闭（仅真实终端）" value="none" />
-                  <el-option label="JSONL 侧通道（提问转闸门）" value="jsonl" />
+                  <el-option :label="membersT('form.adapterNone')" value="none" />
+                  <el-option :label="membersT('form.adapterJsonl')" value="jsonl" />
                 </el-select>
                 <div class="field-hint">
-                  开启后工作目录写入 <code>.acw-adapter.events.jsonl</code>，环境变量
-                  <code>ACW_ADAPTER_EVENTS</code> / <code>ACW_ADAPTER_REPLY</code>。
-                  提问会出现在对话闸门，回答写回 reply 文件。解析失败不影响终端。
+                  {{ membersT('form.adapterHint1') }}<code>.acw-adapter.events.jsonl</code
+                  >{{ membersT('form.adapterHint2') }}<code>ACW_ADAPTER_EVENTS</code> /
+                  <code>ACW_ADAPTER_REPLY</code>{{ membersT('form.adapterHint3') }}
                 </div>
               </el-form-item>
 
-              <el-form-item v-if="form.script.executionMode !== 'terminal'" label="是否展示脚本弹窗">
+              <el-form-item v-if="form.script.executionMode !== 'terminal'" :label="membersT('form.popup')">
                 <el-select v-model="form.script.showScriptPopupMode" style="width: 100%">
-                  <el-option label="跟随全局设置" value="inherit" />
-                  <el-option label="是（始终弹窗）" value="yes" />
-                  <el-option label="否（静默）" value="no" />
+                  <el-option :label="membersT('form.popupInherit')" value="inherit" />
+                  <el-option :label="membersT('form.popupYes')" value="yes" />
+                  <el-option :label="membersT('form.popupNo')" value="no" />
                 </el-select>
-                <span class="switch-hint"
-                  >优先级：本成员 &gt; 全局「设置 → 是否展示脚本弹窗」。</span
-                >
+                <span class="switch-hint">{{ membersT('form.popupHint') }}</span>
               </el-form-item>
             </el-tab-pane>
 
-            <el-tab-pane label="高级" name="advanced">
-              <el-form-item label="运行时 / 解释器">
+            <el-tab-pane :label="membersT('form.tabAdvanced')" name="advanced">
+              <el-form-item :label="membersT('form.runtime')">
                 <el-select v-model="form.script.runtime" style="width: 100%" filterable allow-create>
                   <el-option label="cmd" value="cmd" />
-                  <el-option label="自动（按扩展名 / 系统）" value="auto" />
+                  <el-option :label="membersT('form.runtimeAuto')" value="auto" />
                   <el-option label="PowerShell" value="powershell" />
                   <el-option label="pwsh" value="pwsh" />
                   <el-option label="bash" value="bash" />
@@ -213,42 +215,41 @@
                   <el-option label="node" value="node" />
                 </el-select>
                 <div class="field-hint">
-                  也可直接填解释器路径，如 C:\Python311\python.exe。
+                  {{ membersT('form.runtimeHint1') }}
                   <template v-if="form.script.mode === 'file'">
-                    脚本文件建议用「自动」按扩展名分派（.py 走 python、.js 走 node）；
-                    选 cmd 会用 cmd /c 调起该文件，仅适合 .bat / .cmd / .exe。
+                    {{ membersT('form.runtimeHintFile') }}
                   </template>
-                  <template v-else>默认「自动」：Windows 一段命令走 cmd，其它系统走本机 shell。不要为了 bat 去选 bash。</template>
+                  <template v-else>{{ membersT('form.runtimeHintCommand') }}</template>
                 </div>
               </el-form-item>
 
-              <el-form-item v-if="form.script.mode === 'file'" label="附加参数（空格分隔）">
+              <el-form-item v-if="form.script.mode === 'file'" :label="membersT('form.args')">
                 <el-input v-model="form.script.argsText" placeholder="--flag value" />
               </el-form-item>
 
-              <el-form-item label="环境变量（可选）">
+              <el-form-item :label="membersT('form.env')">
                 <el-input
                   v-model="form.script.envText"
                   type="textarea"
                   :rows="2"
-                  placeholder="KEY=value 每行一个；留空则继承本机环境（含系统代理）"
+                  :placeholder="membersT('form.envPlaceholder')"
                 />
-                <div class="field-hint">勿写死机器路径；代理等请用本机环境或在此自行配置</div>
+                <div class="field-hint">{{ membersT('form.envHint') }}</div>
               </el-form-item>
 
-              <el-form-item label="进程常驻（不等待退出）">
+              <el-form-item :label="membersT('form.detach')">
                 <el-switch v-model="form.script.detach" />
                 <span class="switch-hint">
                   <template v-if="form.script.executionMode === 'terminal'">
-                    内嵌终端默认开启：启动成功即推进节点，grok / CLI 可继续输入。关掉则等进程退出。回收请到设置「释放资源」。
+                    {{ membersT('form.detachHintTerminal') }}
                   </template>
                   <template v-else>
-                    适合 Cursor CLI 等：打开窗口后立刻回「已打开」，不把关窗当成失败；可能还需手动关窗。
+                    {{ membersT('form.detachHintPipe') }}
                   </template>
                 </span>
               </el-form-item>
 
-              <el-form-item label="把输入写入 stdin">
+              <el-form-item :label="membersT('form.stdin')">
                 <el-switch v-model="form.script.useHumanAsStdin" />
               </el-form-item>
             </el-tab-pane>
@@ -256,27 +257,27 @@
         </template>
 
         <el-button type="primary" @click="save">
-          {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
+          {{ form._editId ? membersT('form.save') : form._cloneFrom ? membersT('form.saveClone') : membersT('form.create') }}
         </el-button>
       </el-form>
 
       <div v-else>
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="显示名">{{ viewRow.display_name }}</el-descriptions-item>
-          <el-descriptions-item label="简介">
+          <el-descriptions-item :label="membersT('table.displayName')">{{ viewRow.display_name }}</el-descriptions-item>
+          <el-descriptions-item :label="membersT('form.desc')">
             {{ viewRow.config?.description || '—' }}
           </el-descriptions-item>
-          <el-descriptions-item label="类型">{{ viewRow.kind }}</el-descriptions-item>
-          <el-descriptions-item label="是否适配">
-            {{ viewRow.config?.adapt ? '是' : '否' }}
+          <el-descriptions-item :label="membersT('table.kind')">{{ viewRow.kind }}</el-descriptions-item>
+          <el-descriptions-item :label="membersT('form.adapt')">
+            {{ viewRow.config?.adapt ? membersT('form.yes') : membersT('form.no') }}
           </el-descriptions-item>
-          <el-descriptions-item label="配置">
+          <el-descriptions-item :label="membersT('form.viewConfig')">
             <pre class="cfg-pre">{{ JSON.stringify(viewRow.config, null, 2) }}</pre>
           </el-descriptions-item>
         </el-descriptions>
         <div class="view-actions">
-          <el-button type="primary" @click="openEdit(viewRow)">编辑</el-button>
-          <el-button @click="openClone(viewRow)">克隆</el-button>
+          <el-button type="primary" @click="openEdit(viewRow)">{{ membersT('actions.edit') }}</el-button>
+          <el-button @click="openClone(viewRow)">{{ membersT('actions.clone') }}</el-button>
         </div>
       </div>
     </el-drawer>
@@ -285,12 +286,26 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { ADAPT_OPTION_HOVER } from '@acw/shared'
 import { fuzzySearch } from '@acw/shared'
+import {
+  membersT,
+  membersToast,
+  membersConfirm,
+  membersConfirmCancel,
+  membersCloneName,
+  membersRefineSkillFallback,
+  membersRefineSavedHint,
+  membersRestoreOk,
+  membersRemoveConfirmBody,
+  membersRestoreConflictBody,
+  membersPlanConfirmBody,
+} from '../../composables/settingsMembersCopy.js'
 
 const adaptHover = ADAPT_OPTION_HOVER
 
@@ -330,9 +345,9 @@ async function exportTemplate(row) {
     const pack = await api.members.exportTemplate(row.id)
     const safe = String(row.display_name || row.name || 'member').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
     downloadJson(`${safe}.acw.json`, pack)
-    ElMessage.success('已导出配置模板')
+    ElMessage.success(membersToast('exportOk'))
   } catch (e) {
-    ElMessage.error(e.message || '导出失败')
+    ElMessage.error(e.message || membersToast('exportFail'))
   }
 }
 
@@ -350,9 +365,9 @@ async function onImportFile(ev) {
     let vars = null
     try {
       const { value } = await ElMessageBox.prompt(
-        '工作目录（替换模板中的 {{WORKSPACE}}，留空则用服务端当前目录）',
-        '导入模板',
-        { inputPlaceholder: '例如 D:\\projects\\app 或 /home/user/proj' },
+        membersT('importPrompt'),
+        membersT('importPromptTitle'),
+        { inputPlaceholder: membersT('importPromptPlaceholder') },
       )
       if (value && String(value).trim()) vars = { workspace: String(value).trim() }
     } catch {
@@ -360,9 +375,9 @@ async function onImportFile(ev) {
     }
     await api.templates.import(pack, { onConflict: 'rename', vars })
     await load()
-    ElMessage.success('模板已导入')
+    ElMessage.success(membersToast('importOk'))
   } catch (e) {
-    ElMessage.error(e.message || '导入失败')
+    ElMessage.error(e.message || membersToast('importFail'))
   }
 }
 // 成员模糊搜索（拼音/首字母/大小写/子序列），多字段取最优
@@ -382,9 +397,7 @@ const drawerTitle = ref('')
 const readonly = ref(false)
 const viewRow = ref(null)
 const form = ref(emptyForm())
-const refineSkillPrompt = ref(
-  '请在完成本次代码修改后，调用 agent-refine-skill：POST /api/docs/refine，JSON 含 sessionId、input、output、conclusion。',
-)
+const refineSkillPrompt = ref(membersRefineSkillFallback())
 const restoringRefine = ref(false)
 
 async function refreshRefineSkillPrompt() {
@@ -392,17 +405,8 @@ async function refreshRefineSkillPrompt() {
     const r = await api.docs.refinePrompt()
     if (r?.prompt) refineSkillPrompt.value = r.prompt
   } catch {
-    /* 保留本地兜底文案 */
+    /* Keep the local fallback copy */
   }
-}
-
-function refineSavedHint(saved, refineOn) {
-  if (!refineOn) return '已保存'
-  const prep = saved?.refinePrep
-  const names = (prep?.patched || []).map((p) => String(p).split(/[/\\]/).pop()).filter(Boolean)
-  if (names.length) return `已保存，并按炼化契约改写 ${names.join('、')}`
-  if (prep?.fallback) return '已保存炼化规格；没有可改的源文件时，跑完仍会整理进文档中心'
-  return '已保存；源文件已按炼化契约处理'
 }
 
 async function onRestoreRefine() {
@@ -410,9 +414,13 @@ async function onRestoreRefine() {
   if (!id) return
   try {
     await ElMessageBox.confirm(
-      '将把炼化改动的源文件还原到保存炼化前的备份（若无备份则尝试移除契约块）。继续？',
-      '还原炼化',
-      { type: 'warning', confirmButtonText: '还原', cancelButtonText: '取消' },
+      membersConfirm('restoreBody'),
+      membersConfirm('restoreTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: membersConfirm('restoreOk'),
+        cancelButtonText: membersConfirmCancel(),
+      },
     )
   } catch {
     return
@@ -428,13 +436,17 @@ async function onRestoreRefine() {
       }
       const list = (e.conflicts || []).map((c) => c.path).join('\n')
       await ElMessageBox.confirm(
-        `以下文件在炼化保存后又有改动，强制还原会覆盖当前内容：\n${list || e.message}\n\n仍要还原到炼化前备份吗？`,
-        '检测到后续编辑',
-        { type: 'warning', confirmButtonText: '强制还原', cancelButtonText: '取消' },
+        membersRestoreConflictBody(list, e.message),
+        membersConfirm('conflictTitle'),
+        {
+          type: 'warning',
+          confirmButtonText: membersConfirm('forceOk'),
+          cancelButtonText: membersConfirmCancel(),
+        },
       )
       r = await api.members.restoreRefine(id, { force: true })
     }
-    ElMessage.success(`已还原 ${(r.restored || []).length} 个文件`)
+    ElMessage.success(membersRestoreOk((r.restored || []).length))
     form.value.refine = false
     await load()
     if (viewRow.value?.id === id) {
@@ -442,7 +454,7 @@ async function onRestoreRefine() {
       if (row) viewRow.value = row
     }
   } catch (e) {
-    ElMessage.error(e?.message || '还原失败')
+    ElMessage.error(e?.message || membersToast('restoreFail'))
   } finally {
     restoringRefine.value = false
   }
@@ -453,11 +465,11 @@ async function copyRefineSkillPrompt() {
   try {
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(refineSkillPrompt.value)
-      ElMessage.success('已复制炼化 Skill 指令到剪贴板')
+      ElMessage.success(membersToast('copySkillOk'))
       return
     }
   } catch {
-    /* 非安全上下文或权限拒绝 */
+    /* Non-secure context or permission denied */
   }
   ElMessage.info(refineSkillPrompt.value)
 }
@@ -466,9 +478,9 @@ const installDir = ref('')
 
 const workDirHint = computed(() => {
   if (form.value.script.scriptWorkDir === installDir.value && installDir.value) {
-    return '已预填软件安装目录，可按需修改'
+    return membersT('form.workDirHintPrefilled')
   }
-  return '必填。选脚本文件可自动填写；命令如 node index.mjs 时保存也会尝试推断'
+  return membersT('form.workDirHintRequired')
 })
 
 function isWindowsClient() {
@@ -623,7 +635,7 @@ async function load() {
 function fillFromRow(row, { asClone = false } = {}) {
   const s = row.config?.script || {}
   return {
-    displayName: asClone ? `${row.display_name} 副本` : row.display_name,
+    displayName: asClone ? membersCloneName(row.display_name) : row.display_name,
     description: row.config?.description || '',
     kind: row.kind,
     adapt: !!row.config?.adapt,
@@ -657,7 +669,7 @@ function openCreate() {
   }
   form.value = f
   scriptTab.value = 'basic'
-  drawerTitle.value = '新建成员'
+  drawerTitle.value = membersT('drawer.create')
   drawer.value = true
 }
 
@@ -665,7 +677,7 @@ function openEdit(row) {
   readonly.value = false
   form.value = fillFromRow(row, { asClone: false })
   scriptTab.value = 'basic'
-  drawerTitle.value = '编辑成员'
+  drawerTitle.value = membersT('drawer.edit')
   drawer.value = true
 }
 
@@ -673,36 +685,36 @@ function openClone(row) {
   readonly.value = false
   form.value = fillFromRow(row, { asClone: true })
   scriptTab.value = 'basic'
-  drawerTitle.value = '克隆成员'
+  drawerTitle.value = membersT('drawer.clone')
   drawer.value = true
 }
 
 function view(row) {
   readonly.value = true
   viewRow.value = row
-  drawerTitle.value = '查看成员'
+  drawerTitle.value = membersT('drawer.view')
   drawer.value = true
 }
 
 async function save() {
   try {
     if (!form.value.displayName?.trim()) {
-      ElMessage.warning('请填写显示名称')
+      ElMessage.warning(membersToast('saveWarnName'))
       return
     }
     const s = form.value.script
     if (form.value.kind === 'script') {
       const sw = String(s.scriptWorkDir || s.scriptDir || '').trim()
       if (!sw) {
-        ElMessage.warning('请填写脚本工作目录')
+        ElMessage.warning(membersToast('saveWarnWorkDir'))
         return
       }
       if (s.mode === 'file' && !String(s.filePath || '').trim()) {
-        ElMessage.warning('请填写脚本文件路径')
+        ElMessage.warning(membersToast('saveWarnFile'))
         return
       }
       if (s.mode === 'command' && !String(s.command || '').trim()) {
-        ElMessage.warning('请填写要执行的命令')
+        ElMessage.warning(membersToast('saveWarnCommand'))
         return
       }
     }
@@ -782,12 +794,12 @@ async function save() {
           )
           .join('\n\n')
         await ElMessageBox.confirm(
-          `保存后将修改 ${plan.fileCount} 个源文件并插入炼化契约（已有备份机制）。\n\n${lines}`,
-          '炼化改源确认',
+          membersPlanConfirmBody(plan.fileCount, lines),
+          membersConfirm('planTitle'),
           {
             type: 'warning',
-            confirmButtonText: '确认保存并改源',
-            cancelButtonText: '取消',
+            confirmButtonText: membersConfirm('planOk'),
+            cancelButtonText: membersConfirmCancel(),
           },
         )
       }
@@ -802,18 +814,20 @@ async function save() {
     }
     drawer.value = false
     await load()
-    ElMessage.success(refineSavedHint(saved, form.value.refine))
+    ElMessage.success(membersRefineSavedHint(saved, form.value.refine))
   } catch (e) {
     ElMessage.error(e.message)
   }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(`删除成员「${row.display_name}」？`, '删除', { type: 'warning' })
+  await ElMessageBox.confirm(membersRemoveConfirmBody(row.display_name), membersConfirm('removeTitle'), {
+    type: 'warning',
+  })
   try {
     await api.members.remove(row.id)
     await load()
-    ElMessage.success('已删除')
+    ElMessage.success(membersToast('removed'))
   } catch (e) {
     ElMessage.error(e.message)
   }

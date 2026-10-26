@@ -1,7 +1,7 @@
 /**
  * Unified confirm dialogs with optional "don't ask again" (5.2.0 UX-05).
  */
-import { ElMessageBox } from 'element-plus'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 
 const SKIP_PREFIX = 'acw.confirm.skip.'
 

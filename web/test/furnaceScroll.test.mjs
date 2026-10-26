@@ -11,6 +11,12 @@ const headSrc = fs.readFileSync(path.join(root, 'src/components/terminal/Furnace
 const tuiDrawerSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceTuiDrawer.vue'), 'utf8')
 const chatTurnsSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceChatTurns.vue'), 'utf8')
 const chatComposerSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceChatComposer.vue'), 'utf8')
+const chatThreadSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceChatThread.vue'), 'utf8')
+const tuiSurfaceSrc = fs.readFileSync(path.join(root, 'src/components/terminal/FurnaceTuiSurface.vue'), 'utf8')
+const hotkeysSrc = fs.readFileSync(
+  path.join(root, 'src/components/terminal/composables/furnaceAgentHotkeys.js'),
+  'utf8',
+)
 const viewSrc = fs.readFileSync(path.join(root, 'src/components/terminal/TerminalView.vue'), 'utf8')
 const hookSrc = fs.readFileSync(path.join(root, 'src/composables/useFurnaceWorkspace.js'), 'utf8')
 const presentationSrc = fs.readFileSync(
@@ -39,11 +45,11 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
   assert.match(layoutCss, /\.furnace-tui-stage[\s\S]*flex:\s*1 1 0%/)
   assert.match(layoutCss, /\.furnace-tui-drawer[\s\S]*overflow-y:\s*scroll/)
   assert.match(layoutCss, /\.furnace-tui-toggle[\s\S]*width:\s*22px/)
-  assert.match(vueSrc, /FurnaceChatTurns/)
+  assert.match(chatThreadSrc, /FurnaceChatTurns/)
   assert.match(vueSrc, /FurnaceChatComposer/)
   assert.match(chatComposerSrc, /class="furnace-composer"/)
   assert.match(chatTurnsSrc, /class="furnace-chat-turns"/)
-  assert.match(vueSrc, /FurnaceTuiDrawer/)
+  assert.match(tuiSurfaceSrc, /FurnaceTuiDrawer/)
   assert.match(tuiDrawerSrc, /class="furnace-tui-toggle"/)
   assert.match(tuiDrawerSrc, /class="furnace-tui-drawer"/)
   assert.match(vueSrc, /tuiHistoryOpen/)
@@ -57,8 +63,8 @@ test('TUI 历史走右侧抽屉，不抢 Grok 滚轮、不垫顶栏', () => {
 })
 
 test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => {
-  assert.match(vueSrc, /isEventWithinFurnaceRoot/)
-  assert.match(vueSrc, /furnaceAgentFromHotkey/)
+  assert.match(hotkeysSrc, /isEventWithinFurnaceRoot/)
+  assert.match(hotkeysSrc, /furnaceAgentFromHotkey/)
   assert.match(vueSrc, /setActiveAgent/)
   assert.match(vueSrc, /ensure-agent/)
   assert.match(headSrc, /furnaceAgentGrokTitle/)

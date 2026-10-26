@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  flowRailFormatTimelineAt,
   flowRailTimelineCatLabel,
   flowRailTimelineFilterOptions,
 } from '../src/views/workbench/composables/flowRailTimelineUi.js'
@@ -18,4 +19,11 @@ test('flowRailTimelineFilterOptions has six filters', () => {
     opts.map((o) => o.value),
     ['all', 'node', 'gate', 'terminal', 'docs', 'offsite'],
   )
+})
+
+test('flowRailFormatTimelineAt formats iso timestamps and guards empty', () => {
+  assert.equal(flowRailFormatTimelineAt(''), '—')
+  assert.equal(flowRailFormatTimelineAt(null), '—')
+  assert.match(flowRailFormatTimelineAt('2026-10-23T08:30:00.000Z'), /\d/)
+  assert.equal(typeof flowRailFormatTimelineAt('not-a-date'), 'string')
 })

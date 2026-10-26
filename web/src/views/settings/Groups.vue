@@ -2,13 +2,17 @@
   <div>
     <div class="page-head">
       <div>
-        <h2 class="page-title">群聊模板</h2>
-        <p class="page-desc">线性步骤编排。支持<strong>编辑</strong>与<strong>克隆</strong>。</p>
+        <h2 class="page-title">{{ groupsT('title') }}</h2>
+        <p class="page-desc">
+          {{ groupsT('desc1') }}<strong>{{ groupsT('descStrong1') }}</strong
+          >{{ groupsT('desc2') }}<strong>{{ groupsT('descStrong2') }}</strong
+          >{{ groupsT('desc3') }}
+        </p>
       </div>
       <div class="page-head-actions">
-        <el-button @click="triggerImportTemplate">导入模板</el-button>
+        <el-button @click="triggerImportTemplate">{{ groupsT('importBtn') }}</el-button>
         <el-dropdown trigger="click" @command="applyBuiltinTemplate">
-          <el-button>从模板库创建</el-button>
+          <el-button>{{ groupsT('fromBuiltin') }}</el-button>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item v-for="t in builtinTemplates" :key="t.id" :command="t.id">
@@ -22,36 +26,36 @@
           type="file"
           accept=".json,.acw.json"
           class="hidden-file-input"
-          aria-label="选择群模板 JSON 文件"
+          :aria-label="groupsT('a11y.importFile')"
           @change="onImportFile"
         />
-        <el-button type="primary" @click="openCreate()">新建群模板</el-button>
+        <el-button type="primary" @click="openCreate()">{{ groupsT('createBtn') }}</el-button>
       </div>
     </div>
 
     <el-input
       v-model="searchQ"
       class="page-search"
-      placeholder="搜索群模板（支持拼音/首字母）"
+      :placeholder="groupsT('searchPlaceholder')"
       clearable
       :prefix-icon="SearchIcon"
-      aria-label="搜索群模板"
+      :aria-label="groupsT('a11y.search')"
     />
 
-    <el-table :data="filteredList" stripe aria-label="群模板列表">
-      <el-table-column prop="title" label="名称" />
-      <el-table-column prop="work_folder" label="工作文件夹" show-overflow-tooltip />
-      <el-table-column label="步骤数" width="90">
+    <el-table :data="filteredList" stripe :aria-label="groupsT('a11y.list')">
+      <el-table-column prop="title" :label="groupsT('table.title')" />
+      <el-table-column prop="work_folder" :label="groupsT('table.workFolder')" show-overflow-tooltip />
+      <el-table-column :label="groupsT('table.steps')" width="90">
         <template #default="{ row }">{{ row.steps?.length || 0 }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="380">
+      <el-table-column :label="groupsT('table.actions')" width="380">
         <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="primary" @click="openClone(row)">克隆</el-button>
-          <el-button link type="primary" @click="exportTemplate(row)">导出模板</el-button>
-          <el-button link type="success" @click="start(row)">开聊</el-button>
-          <el-button link type="info" @click="view(row)">查看</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <el-button link type="primary" @click="openEdit(row)">{{ groupsT('actions.edit') }}</el-button>
+          <el-button link type="primary" @click="openClone(row)">{{ groupsT('actions.clone') }}</el-button>
+          <el-button link type="primary" @click="exportTemplate(row)">{{ groupsT('actions.export') }}</el-button>
+          <el-button link type="success" @click="start(row)">{{ groupsT('actions.start') }}</el-button>
+          <el-button link type="info" @click="view(row)">{{ groupsT('actions.view') }}</el-button>
+          <el-button link type="danger" @click="remove(row)">{{ groupsT('actions.remove') }}</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -59,40 +63,40 @@
     <el-drawer v-model="drawer" :title="drawerTitle" size="520px" destroy-on-close append-to-body>
       <template v-if="!readonly">
         <el-form label-position="top">
-          <el-form-item label="群名称" required>
+          <el-form-item :label="groupsT('form.title')" required>
             <el-input v-model="form.title" />
           </el-form-item>
-          <el-form-item label="工作文件夹（可选）">
+          <el-form-item :label="groupsT('form.workFolder')">
             <PathPicker
               v-model="form.workFolder"
               mode="folder"
-              placeholder="会话默认工作目录"
-              hint="可手填，或点「浏览」在本机选择文件夹"
+              :placeholder="groupsT('form.workFolderPlaceholder')"
+              :hint="groupsT('form.workFolderHint')"
             />
           </el-form-item>
-          <el-form-item label="简介">
+          <el-form-item :label="groupsT('form.desc')">
             <el-input v-model="form.description" type="textarea" :rows="2" />
           </el-form-item>
 
-          <!-- 熔炉配置：默认继承全局，可改、可不填 -->
+          <!-- Furnace config: inherits global by default -->
           <div class="admin-block">
             <div class="admin-block-title">
-              熔炉配置
-              <span class="admin-block-hint">可选 · 默认继承全局</span>
+              {{ groupsT('admin.title') }}
+              <span class="admin-block-hint">{{ groupsT('admin.hint') }}</span>
             </div>
-            <el-form-item label="继承全局熔炉" class="admin-inherit-item">
+            <el-form-item :label="groupsT('admin.inherit')" class="admin-inherit-item">
               <el-switch v-model="form.adminInherit" />
               <span class="switch-hint">
-                开启后使用「设置 → 熔炉」
-                <template v-if="globalAdminLabel">（当前：{{ globalAdminLabel }}）</template>
+                {{ groupsT('admin.inheritHint') }}
+                <template v-if="globalAdminLabel">{{ groupsAdminInheritHintCurrent(globalAdminLabel) }}</template>
               </span>
             </el-form-item>
-            <el-form-item v-if="!form.adminInherit" label="本群熔炉">
+            <el-form-item v-if="!form.adminInherit" :label="groupsT('admin.member')">
               <el-select
                 v-model="form.adminMemberId"
                 clearable
                 filterable
-                placeholder="可不选 · 留空表示本群不指定熔炉"
+                :placeholder="groupsT('admin.memberPlaceholder')"
                 style="width: 100%"
               >
                 <el-option
@@ -102,27 +106,27 @@
                   :value="m.id"
                 />
               </el-select>
-              <div class="field-hint">不填则本群无专属熔炉，仅使用步骤上的流转勾选。</div>
+              <div class="field-hint">{{ groupsT('admin.memberHint') }}</div>
             </el-form-item>
           </div>
 
           <div style="display: flex; justify-content: space-between; margin-bottom: 8px">
-            <strong>流程步骤</strong>
-            <el-button size="small" @click="addStep">+ 添加步骤</el-button>
-            <el-button size="small" @click="showBatch = !showBatch">+ 批量绑成员</el-button>
+            <strong>{{ groupsT('steps.title') }}</strong>
+            <el-button size="small" @click="addStep">{{ groupsT('steps.add') }}</el-button>
+            <el-button size="small" @click="showBatch = !showBatch">{{ groupsT('steps.batchToggle') }}</el-button>
           </div>
           <div v-if="showBatch" class="batch-add">
             <el-select
               v-model="batchMemberIds"
               multiple
               filterable
-              placeholder="选择成员（可多选，每个成员生成一个步骤）"
+              :placeholder="groupsT('steps.batchPlaceholder')"
               style="flex: 1; min-width: 200px"
             >
               <el-option v-for="m in members" :key="m.id" :label="m.display_name" :value="m.id" />
             </el-select>
-            <el-checkbox v-model="batchRefine" class="capture-check">熔炉炼化</el-checkbox>
-            <el-button size="small" type="primary" @click="applyBatchMembers">添加为步骤</el-button>
+            <el-checkbox v-model="batchRefine" class="capture-check">{{ groupsT('steps.batchRefine') }}</el-checkbox>
+            <el-button size="small" type="primary" @click="applyBatchMembers">{{ groupsT('steps.batchApply') }}</el-button>
           </div>
           <div
             v-for="(s, i) in form.steps"
@@ -136,18 +140,18 @@
           >
             <div class="step-card-row">
               <span class="step-idx">{{ i + 1 }}.</span>
-              <el-input v-model="s.title" placeholder="步骤标题" />
+              <el-input v-model="s.title" :placeholder="groupsT('steps.titlePlaceholder')" />
             </div>
             <div class="step-card-row step-card-tools">
               <el-select v-model="s.type" style="width: 150px">
-                <el-option label="成员" value="member" />
-                <el-option label="人工" value="human" />
-                <el-option label="临时协助" value="offsite" />
+                <el-option :label="groupsT('steps.typeMember')" value="member" />
+                <el-option :label="groupsT('steps.typeHuman')" value="human" />
+                <el-option :label="groupsT('steps.typeOffsite')" value="offsite" />
               </el-select>
               <el-select
                 v-if="s.type === 'member'"
                 v-model="s.memberId"
-                placeholder="绑定成员"
+                :placeholder="groupsT('steps.memberPlaceholder')"
                 style="width: 160px"
                 @change="(id) => onStepMemberChange(s, id)"
               >
@@ -159,70 +163,70 @@
                 />
               </el-select>
               <el-tag v-if="s.type === 'human'" size="small" type="info" effect="plain" round>
-                人工步骤
+                {{ groupsT('steps.humanTag') }}
               </el-tag>
               <el-tag v-else-if="s.type === 'offsite'" size="small" type="warning" effect="plain" round>
-                临时
+                {{ groupsT('steps.offsiteTag') }}
               </el-tag>
               <el-checkbox
                 v-if="s.type === 'human'"
                 v-model="s.captureParams"
                 class="capture-check"
               >
-                项目参数 #1 #2…
+                {{ groupsT('steps.captureParams') }}
               </el-checkbox>
               <el-tooltip :content="adaptHover" placement="top" :show-after="300">
-                <el-checkbox v-model="s.adapt" class="capture-check">是否适配</el-checkbox>
+                <el-checkbox v-model="s.adapt" class="capture-check">{{ groupsT('steps.adapt') }}</el-checkbox>
               </el-tooltip>
-              <el-tooltip content="点保存立刻按炼化契约改该步成员源脚本（ACW 输入 + stdout 标题）；跑完再写入文档中心。" placement="top" :show-after="300">
-                <el-checkbox v-model="s.refine" class="capture-check">熔炉炼化</el-checkbox>
+              <el-tooltip :content="groupsT('steps.refineTip')" placement="top" :show-after="300">
+                <el-checkbox v-model="s.refine" class="capture-check">{{ groupsT('steps.refine') }}</el-checkbox>
               </el-tooltip>
-              <el-button size="small" @click="move(i, -1)" :disabled="i === 0">上移</el-button>
+              <el-button size="small" @click="move(i, -1)" :disabled="i === 0">{{ groupsT('steps.moveUp') }}</el-button>
               <el-button size="small" @click="move(i, 1)" :disabled="i === form.steps.length - 1">
-                下移
+                {{ groupsT('steps.moveDown') }}
               </el-button>
               <el-button size="small" type="danger" plain @click="form.steps.splice(i, 1)">
-                删
+                {{ groupsT('steps.remove') }}
               </el-button>
             </div>
             <el-collapse v-if="s.type !== 'offsite'" class="flow-advanced">
-              <el-collapse-item title="高级流转" name="flow">
+              <el-collapse-item :title="groupsT('steps.flowCollapse')" name="flow">
                 <div class="flow-block">
                   <div class="flow-label">
-                    节点流转
-                    <span class="flow-hint">可多选 · 默认全开</span>
+                    {{ groupsT('steps.flowLabel') }}
+                    <span class="flow-hint">{{ groupsT('steps.flowHint') }}</span>
                   </div>
                   <el-checkbox-group v-model="s.flowKeys" class="flow-checks">
-                    <el-checkbox value="admin">熔炉总结与流转</el-checkbox>
-                    <el-checkbox value="auto">子节点产出自动流转</el-checkbox>
-                    <el-checkbox value="human">人工流转</el-checkbox>
+                    <el-checkbox value="admin">{{ groupsT('steps.flowAdmin') }}</el-checkbox>
+                    <el-checkbox value="auto">{{ groupsT('steps.flowAuto') }}</el-checkbox>
+                    <el-checkbox value="human">{{ groupsT('steps.flowHuman') }}</el-checkbox>
                   </el-checkbox-group>
                   <p class="flow-policy">
-                    明确拒绝=不通过；「人工流转」须人工同意；「熔炉总结」写入群报告。
+                    {{ groupsT('steps.flowPolicy') }}
                   </p>
                 </div>
               </el-collapse-item>
             </el-collapse>
             <p v-else class="flow-policy">
-              临时协助仅在 @ / 插队时插入。回主线点「从这里继续」。进程占用到设置里释放。
+              {{ groupsT('steps.offsitePolicy') }}
             </p>
           </div>
           <p class="flow-policy" style="margin-top: 4px">
-            临时协助按步骤内联、琥珀色高亮。宗旨见「关于」。
+            {{ groupsT('steps.footerPolicy') }}
           </p>
           <el-button type="primary" @click="save">
-            {{ form._editId ? '保存修改' : form._cloneFrom ? '克隆保存' : '创建' }}
+            {{ form._editId ? groupsT('form.save') : form._cloneFrom ? groupsT('form.saveClone') : groupsT('form.create') }}
           </el-button>
         </el-form>
       </template>
       <template v-else>
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="名称">{{ viewRow.title }}</el-descriptions-item>
-          <el-descriptions-item label="工作文件夹">{{ viewRow.work_folder || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="熔炉">
+          <el-descriptions-item :label="groupsT('steps.viewLabels.title')">{{ viewRow.title }}</el-descriptions-item>
+          <el-descriptions-item :label="groupsT('steps.viewLabels.workFolder')">{{ viewRow.work_folder || '—' }}</el-descriptions-item>
+          <el-descriptions-item :label="groupsT('steps.viewLabels.admin')">
             {{ formatAdminView(viewRow) }}
           </el-descriptions-item>
-          <el-descriptions-item label="步骤">
+          <el-descriptions-item :label="groupsT('steps.viewLabels.steps')">
             <div v-for="(s, i) in viewRow.steps" :key="i" class="view-step">
               <span class="view-step-idx">{{ i + 1 }}.</span>
               <span>{{ s.title }}</span>
@@ -234,7 +238,7 @@
                 class="view-step-tag"
               >
                 {{
-                  s.type === 'human' ? '人工' : s.type === 'offsite' ? '临时协助' : '成员'
+                  s.type === 'human' ? groupsT('steps.typeHuman') : s.type === 'offsite' ? groupsT('steps.typeOffsite') : groupsT('steps.typeMember')
                 }}
               </el-tag>
               <el-tag
@@ -245,7 +249,7 @@
                 type="success"
                 class="view-step-tag"
               >
-                项目参数
+                {{ groupsT('steps.viewCaptureParams') }}
               </el-tag>
               <el-tag
                 v-if="s.adapt"
@@ -255,7 +259,7 @@
                 type="warning"
                 class="view-step-tag"
               >
-                适配
+                {{ groupsT('steps.viewAdapt') }}
               </el-tag>
               <el-tag
                 v-for="t in flowTags(s)"
@@ -272,8 +276,8 @@
           </el-descriptions-item>
         </el-descriptions>
         <div class="view-actions">
-          <el-button type="primary" @click="openEdit(viewRow)">编辑</el-button>
-          <el-button @click="openClone(viewRow)">克隆</el-button>
+          <el-button type="primary" @click="openEdit(viewRow)">{{ groupsT('actions.edit') }}</el-button>
+          <el-button @click="openClone(viewRow)">{{ groupsT('actions.clone') }}</el-button>
         </div>
       </template>
     </el-drawer>
@@ -283,12 +287,27 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { ADAPT_OPTION_HOVER, isFurnaceMember } from '@acw/shared'
 import { fuzzySearch } from '@acw/shared'
+import {
+  groupsT,
+  groupsToast,
+  groupsConfirm,
+  groupsCloneName,
+  groupsRemoveConfirmBody,
+  groupsStartTitle,
+  groupsBatchAdded,
+  groupsAdminInherit,
+  groupsAdminInheritNamed,
+  groupsAdminNone,
+  groupsAdminInheritHintCurrent,
+  groupsFlowTags,
+} from '../../composables/settingsGroupsCopy.js'
 
 const adaptHover = ADAPT_OPTION_HOVER
 
@@ -329,10 +348,10 @@ async function loadBuiltinTemplates() {
 async function applyBuiltinTemplate(id) {
   try {
     await api.templates.applyBuiltin(id)
-    ElMessage.success('已从模板库创建群模板')
+    ElMessage.success(groupsToast('builtinCreated'))
     await load()
   } catch (e) {
-    ElMessage.error(e.message || '创建失败')
+    ElMessage.error(e.message || groupsToast('createFail'))
   }
 }
 
@@ -350,9 +369,9 @@ async function exportTemplate(row) {
     const pack = await api.groups.exportTemplate(row.id)
     const safe = String(row.title || 'group').replace(/[^\w\u4e00-\u9fff-]+/gu, '_')
     downloadJson(`${safe}.acw.json`, pack)
-    ElMessage.success('已导出配置模板')
+    ElMessage.success(groupsToast('exportOk'))
   } catch (e) {
-    ElMessage.error(e.message || '导出失败')
+    ElMessage.error(e.message || groupsToast('exportFail'))
   }
 }
 
@@ -370,9 +389,9 @@ async function onImportFile(ev) {
     let vars = null
     try {
       const { value } = await ElMessageBox.prompt(
-        '工作目录（替换 {{WORKSPACE}}，留空则用服务端当前目录）',
-        '导入模板',
-        { inputPlaceholder: '可选' },
+        groupsT('importPrompt'),
+        groupsT('importPromptTitle'),
+        { inputPlaceholder: groupsT('importPromptPlaceholder') },
       )
       if (value && String(value).trim()) vars = { workspace: String(value).trim() }
     } catch {
@@ -380,9 +399,9 @@ async function onImportFile(ev) {
     }
     await api.templates.import(pack, { onConflict: 'rename', vars })
     await load()
-    ElMessage.success('模板已导入')
+    ElMessage.success(groupsToast('importOk'))
   } catch (e) {
-    ElMessage.error(e.message || '导入失败')
+    ElMessage.error(e.message || groupsToast('importFail'))
   }
 }
 
@@ -448,7 +467,7 @@ function stepForm(s = {}, index = 0) {
         : s.type === 'human' && index === 0
   return {
     id: s.id,
-    title: s.title || '新步骤',
+    title: s.title || groupsT('steps.defaultTitle'),
     type: s.type || 'member',
     memberId: s.memberId || null,
     gate: !!(s.gate || flowKeys.includes('human') || flowKeys.includes('admin')),
@@ -467,11 +486,11 @@ function emptyForm() {
     description: '',
     adminInherit: true,
     adminMemberId: null,
-    // 第一个节点：采集项目信息 → #1 #2…；流转默认跟全局
+    // First node: collect project info → #1 #2…; flow follows global by default
     steps: [
       stepForm(
         {
-          title: '输入项目信息（空格或换行分隔 → #1 #2…）',
+          title: groupsT('steps.defaultFirst'),
           type: 'human',
           captureParams: true,
           flow,
@@ -497,18 +516,16 @@ function formatAdminView(row) {
   const a = row?.config?.admin
   if (!a || a.inherit !== false) {
     return globalAdminLabel.value
-      ? `继承全局（${globalAdminLabel.value}）`
-      : '继承全局'
+      ? groupsAdminInheritNamed(globalAdminLabel.value)
+      : groupsAdminInherit()
   }
-  if (!a.memberId) return '本群未指定（空）'
+  if (!a.memberId) return groupsAdminNone()
   const m = members.value.find((x) => x.id === a.memberId)
   return m?.display_name || a.memberId
 }
 
 function flowTags(s) {
-  const keys = flowToKeys(s.flow, s.gate)
-  const map = { admin: '熔炉总结与流转', auto: '自动流转', human: '人工流转' }
-  return keys.map((k) => map[k]).filter(Boolean)
+  return groupsFlowTags(flowToKeys(s.flow, s.gate))
 }
 
 function serializeSteps(steps) {
@@ -546,7 +563,7 @@ function openCreate() {
   readonly.value = false
   form.value = emptyForm()
   const flow = globalDefaultFlow()
-  // 默认第二步：优先熔炉，否则第一个成员
+  // Default second step: the furnace first, otherwise the first member
   const admin =
     members.value.find((x) => isFurnaceMember(x)) ||
     members.value.find((x) => x.name === 'unified_admin') ||
@@ -554,14 +571,14 @@ function openCreate() {
   if (admin) {
     form.value.steps.push(
       stepForm({
-        title: '执行成员',
+        title: groupsT('steps.defaultMember'),
         type: 'member',
         memberId: admin.id,
         flow,
       }),
     )
   }
-  drawerTitle.value = '新建群模板'
+  drawerTitle.value = groupsT('drawer.create')
   drawer.value = true
 }
 
@@ -577,7 +594,7 @@ function openEdit(row) {
     steps: (row.steps || []).map((s, i) => stepForm(s, i)),
     _editId: row.id,
   }
-  drawerTitle.value = '编辑群模板'
+  drawerTitle.value = groupsT('drawer.edit')
   drawer.value = true
 }
 
@@ -585,7 +602,7 @@ function openClone(row) {
   readonly.value = false
   const adm = adminFromRow(row)
   form.value = {
-    title: `${row.title} 副本`,
+    title: groupsCloneName(row.title),
     workFolder: row.work_folder || '',
     description: row.description || '',
     adminInherit: adm.adminInherit,
@@ -593,14 +610,14 @@ function openClone(row) {
     steps: (row.steps || []).map((s, i) => stepForm(s, i)),
     _cloneFrom: row.id,
   }
-  drawerTitle.value = '克隆群模板'
+  drawerTitle.value = groupsT('drawer.clone')
   drawer.value = true
 }
 
 function view(row) {
   readonly.value = true
   viewRow.value = row
-  drawerTitle.value = '查看群模板'
+  drawerTitle.value = groupsT('drawer.view')
   drawer.value = true
 }
 
@@ -609,7 +626,7 @@ function addStep() {
   const first = members.value[0]
   form.value.steps.push(
     stepForm({
-      title: '新步骤',
+      title: groupsT('steps.defaultTitle'),
       type: 'member',
       memberId: first?.id || null,
       flow,
@@ -623,19 +640,19 @@ function onStepMemberChange(step, memberId) {
   if (mem?.config?.refine?.enabled) step.refine = true
 }
 
-// —— 4.5 群模板批量绑成员（末班）：多选成员 → 每个成员生成一个步骤，可逐步炼化 ——
+// —— Batch bind members: multi-select members → one step each, refine per step ——
 function applyBatchMembers() {
   const flow = globalDefaultFlow()
   const selected = batchMemberIds.value
   if (!selected.length) {
-    ElMessage.warning('请先选择成员')
+    ElMessage.warning(groupsToast('batchPickFirst'))
     return
   }
   for (const id of selected) {
     const mem = members.value.find((m) => m.id === id)
     form.value.steps.push(
       stepForm({
-        title: mem?.display_name || '新步骤',
+        title: mem?.display_name || groupsT('steps.defaultTitle'),
         type: 'member',
         memberId: id,
         flow,
@@ -646,7 +663,7 @@ function applyBatchMembers() {
   batchMemberIds.value = []
   batchRefine.value = false
   showBatch.value = false
-  ElMessage.success(`已添加 ${selected.length} 个成员步骤`)
+  ElMessage.success(groupsBatchAdded(selected.length))
 }
 
 function move(i, d) {
@@ -659,7 +676,7 @@ function move(i, d) {
 async function save() {
   try {
     if (!form.value.title?.trim()) {
-      ElMessage.warning('请填写群名称')
+      ElMessage.warning(groupsToast('saveWarnTitle'))
       return
     }
     const body = {
@@ -684,18 +701,20 @@ async function save() {
     }
     drawer.value = false
     await load()
-    ElMessage.success('已保存')
+    ElMessage.success(groupsToast('saved'))
   } catch (e) {
     ElMessage.error(e.message)
   }
 }
 
 async function remove(row) {
-  await ElMessageBox.confirm(`删除群模板「${row.title}」？`, '删除', { type: 'warning' })
+  await ElMessageBox.confirm(groupsRemoveConfirmBody(row.title), groupsConfirm('removeTitle'), {
+    type: 'warning',
+  })
   try {
     await api.groups.remove(row.id)
     await load()
-    ElMessage.success('已删除')
+    ElMessage.success(groupsToast('removed'))
   } catch (e) {
     ElMessage.error(e.message)
   }
@@ -704,24 +723,24 @@ async function remove(row) {
 async function start(row) {
   try {
     const { value: mode } = await ElMessageBox.confirm(
-      '选择开聊模式：试运行只检查路径与命令，不真正执行成员。',
-      `开聊 · ${row.title}`,
+      groupsConfirm('startBody'),
+      groupsStartTitle(row.title),
       {
         distinguishCancelAndClose: true,
-        confirmButtonText: '正式开聊',
-        cancelButtonText: '试运行',
+        confirmButtonText: groupsConfirm('startLive'),
+        cancelButtonText: groupsConfirm('startDry'),
         type: 'info',
       },
     )
       .then(() => ({ value: 'live' }))
       .catch((action) => {
         if (action === 'cancel') return { value: 'dry' }
-        throw Object.assign(new Error('已取消'), { silent: true })
+        throw Object.assign(new Error(groupsToast('startCancelled')), { silent: true })
       })
     const s = await api.groups.startSession(row.id, {
       dryRun: mode === 'dry',
     })
-    ElMessage.success(mode === 'dry' ? '已开聊（试运行）' : '已开聊')
+    ElMessage.success(mode === 'dry' ? groupsToast('startedDry') : groupsToast('startedLive'))
     router.push(`/workbench/${s.id}`)
   } catch (e) {
     if (!e.silent) ElMessage.error(e.message)

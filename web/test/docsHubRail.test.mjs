@@ -10,6 +10,10 @@ const railSrc = fs.readFileSync(
   path.join(root, 'src/views/workbench/components/FlowRail.vue'),
   'utf8',
 )
+const docsPaneSrc = fs.readFileSync(
+  path.join(root, 'src/views/workbench/components/FlowRailDocsPane.vue'),
+  'utf8',
+)
 
 test('右侧栏群报告并进文档中心，不再单独占一个 Tab', () => {
   assert.match(railSrc, /isDocsHubTab/)
@@ -18,8 +22,8 @@ test('右侧栏群报告并进文档中心，不再单独占一个 Tab', () => {
   assert.doesNotMatch(railSrc, /announce-pane/)
   assert.doesNotMatch(railSrc, /announce-title/)
   assert.match(railSrc, /v-show="isDocsHubTab"/)
-  assert.match(railSrc, /white-space:\s*normal/)
-  assert.match(railSrc, /writing-mode:\s*horizontal-tb/)
+  assert.match(docsPaneSrc, /white-space:\s*normal/)
+  assert.match(docsPaneSrc, /writing-mode:\s*horizontal-tb/)
 })
 
 test('inferFurnaceAgent 认 furnaceAgent 与 cursor-agent 命令', () => {

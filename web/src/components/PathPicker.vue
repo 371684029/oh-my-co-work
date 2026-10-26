@@ -88,7 +88,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../api'
 
 const props = defineProps({

@@ -55,7 +55,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { GROK_BUILD_INSTALL } from '@acw/shared'
 
 const props = defineProps({

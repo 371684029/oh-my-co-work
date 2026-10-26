@@ -1,5 +1,5 @@
 import { ref, computed, h, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../api'
 import router from '../router'
 import {
@@ -11,7 +11,7 @@ import { fullscreenElement } from './fullscreen'
 import { useDesktopBridge } from './useDesktopBridge.js'
 import { loadNotificationPrefs } from './useNotificationPrefs.js'
 import { syncTrayStatus } from './syncTrayStatus.js'
-import { markInboxHandled } from './notificationInbox.js'
+import { markInboxHandled, loadNotificationInbox } from './notificationInbox.js'
 import {
   applyColorScheme,
   normalizeColorScheme,
@@ -134,6 +134,8 @@ export function useAppInit() {
     window.addEventListener('focus', clearTrayOnFocus)
     syncFullscreenState()
     void loadNotificationPrefs()
+    // NTF-06: 启动时从服务端拉取通知收件箱（localStorage 仅作离线缓存）
+    void loadNotificationInbox()
     refreshGrokGate().then(({ s }) => startupCheckUpdate(s))
   })
 

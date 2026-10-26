@@ -1,6 +1,6 @@
 import { useFlowStore } from '../../../stores/flow.js'
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import {
   inferFurnaceAgent,
   inferFurnaceCliBanner,

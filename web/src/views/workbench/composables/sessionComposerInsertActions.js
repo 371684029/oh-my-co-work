@@ -1,5 +1,5 @@
 /** Composer @ / # picker insert (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { useComposerStore } from '../../../stores/composer.js'
 import { stripTrailingHashTrigger } from './sessionComposerInput.js'
 import { hashItemEmptyInsertMessage } from './sessionWorkbenchFeedbackUi.js'

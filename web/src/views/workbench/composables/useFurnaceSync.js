@@ -1,5 +1,5 @@
 import { watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { isFurnaceMember } from '@acw/shared'
 import { syncFurnaceSpriteState } from '../../../composables/furnaceUi'
 import { isTerminalRunning } from '../../../composables/terminalStatus'

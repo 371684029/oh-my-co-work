@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const vueSrc = fs.readFileSync(
-  path.join(root, 'src/views/workbench/components/FlowRail.vue'),
+  path.join(root, 'src/views/workbench/components/FlowRailDocsPane.vue'),
   'utf8',
 )
 

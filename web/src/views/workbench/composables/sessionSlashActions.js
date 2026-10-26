@@ -1,5 +1,6 @@
 /** Slash command run handler (FE-01 extract from useSessionDetail). */
-import { ElMessage, ElMessageBox } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { extractCallArgsFromSlash, FURNACE_DISPLAY_NAME } from '@acw/shared'
 import { useComposerStore } from '../../../stores/composer.js'
 import {

@@ -51,7 +51,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 

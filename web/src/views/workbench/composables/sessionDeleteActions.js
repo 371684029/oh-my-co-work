@@ -1,5 +1,5 @@
 /** Session delete with confirm (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { resolveSessionId } from './sessionActionUi.js'
 import { shouldClearActiveSessionAfterDelete } from './sessionDeleteNavUi.js'
 import {

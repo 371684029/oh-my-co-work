@@ -1,38 +1,32 @@
+/**
+ * FE-03：设置/文档等非首屏路由懒加载，首屏只拉 Workbench（默认落地页，同步引入防白屏）。
+ */
 import { createRouter, createWebHistory } from 'vue-router'
 import Workbench from './views/Workbench.vue'
-import DocsHub from './views/docs/DocsHub.vue'
-import SettingsLayout from './views/settings/SettingsLayout.vue'
-import Members from './views/settings/Members.vue'
-import Groups from './views/settings/Groups.vue'
-import Support from './views/settings/Support.vue'
-import About from './views/settings/About.vue'
-import Shortcuts from './views/settings/Shortcuts.vue'
-import Prefs from './views/settings/Prefs.vue'
-import GrokSetup from './views/settings/GrokSetup.vue'
-import RestoreCenter from './views/settings/RestoreCenter.vue'
-import PromptSnippets from './views/settings/PromptSnippets.vue'
-import SetupWizard from './views/settings/SetupWizard.vue'
 
 const routes = [
   { path: '/', redirect: '/workbench' },
   { path: '/workbench', component: Workbench },
   { path: '/workbench/:sessionId', component: Workbench, props: true },
-  { path: '/docs', component: DocsHub },
+  {
+    path: '/docs',
+    component: () => import('./views/docs/DocsHub.vue'),
+  },
   {
     path: '/settings',
-    component: SettingsLayout,
+    component: () => import('./views/settings/SettingsLayout.vue'),
     redirect: '/settings/members',
     children: [
-      { path: 'members', component: Members },
-      { path: 'groups', component: Groups },
-      { path: 'shortcuts', component: Shortcuts },
-      { path: 'snippets', component: PromptSnippets },
-      { path: 'wizard', component: SetupWizard },
-      { path: 'prefs', component: Prefs },
-      { path: 'restore', component: RestoreCenter },
-      { path: 'grok', component: GrokSetup },
-      { path: 'support', component: Support },
-      { path: 'about', component: About },
+      { path: 'members', component: () => import('./views/settings/Members.vue') },
+      { path: 'groups', component: () => import('./views/settings/Groups.vue') },
+      { path: 'shortcuts', component: () => import('./views/settings/Shortcuts.vue') },
+      { path: 'snippets', component: () => import('./views/settings/PromptSnippets.vue') },
+      { path: 'wizard', component: () => import('./views/settings/SetupWizard.vue') },
+      { path: 'prefs', component: () => import('./views/settings/Prefs.vue') },
+      { path: 'restore', component: () => import('./views/settings/RestoreCenter.vue') },
+      { path: 'grok', component: () => import('./views/settings/GrokSetup.vue') },
+      { path: 'support', component: () => import('./views/settings/Support.vue') },
+      { path: 'about', component: () => import('./views/settings/About.vue') },
     ],
   },
 ]

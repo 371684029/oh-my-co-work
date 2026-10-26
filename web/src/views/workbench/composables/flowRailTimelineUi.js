@@ -14,6 +14,21 @@ export function flowRailTimelineCatLabel(cat) {
   return key ? t(key) : cat || ''
 }
 
+export function flowRailFormatTimelineAt(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString(undefined, {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return String(iso)
+  }
+}
+
 export function flowRailTimelineFilterOptions() {
   return [
     { value: 'all', label: t('workbench.flowRail.timeline.filterAll') },

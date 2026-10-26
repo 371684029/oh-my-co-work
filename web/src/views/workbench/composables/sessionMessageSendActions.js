@@ -1,5 +1,5 @@
 /** Composer message send / submit routing (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { useComposerStore } from '../../../stores/composer.js'
 import {
   composerScopeKey,

@@ -1,5 +1,5 @@
 /** Start chat / demo flow actions (FE-01 extract from useSessionDetail). */
-import { ElMessage } from 'element-plus'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { t } from '../../../i18n/index.js'
 import {
   parseStartTarget,

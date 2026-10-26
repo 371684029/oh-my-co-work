@@ -1,7 +1,12 @@
 /**
- * I18N-01: user-visible strings (Chinese primary; extend with en-US later).
+ * I18N-01: user-visible strings (Chinese primary; mirrored in en-US.js).
  */
 import { settingsPrefsZh } from './settingsPrefs.zh.js'
+import { settingsMembersZh } from './settingsMembers.zh.js'
+import { settingsGroupsZh } from './settingsGroups.zh.js'
+import { settingsShortcutsZh } from './settingsShortcuts.zh.js'
+import { settingsRestoreZh } from './settingsRestore.zh.js'
+import { settingsAboutZh } from './settingsAbout.zh.js'
 
 export const strings = {
   common: {
@@ -616,6 +621,11 @@ export const strings = {
     projectSection: '项目',
     metaSection: '其它',
     prefsPage: settingsPrefsZh,
+    membersPage: settingsMembersZh,
+    groupsPage: settingsGroupsZh,
+    shortcutsPage: settingsShortcutsZh,
+    restorePage: settingsRestoreZh,
+    aboutPage: settingsAboutZh,
   },
   docs: {
     colTitleGroup: '群模板',
