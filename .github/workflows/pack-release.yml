@@ -236,27 +236,22 @@ jobs:
           set -uo pipefail
           mkdir -p packages upload
           echo "[release] artifacts tree:"
-          find artifacts -maxdepth 3 -type f | head -50 || true
-          find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \;
-          find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \;
+          find artifacts -maxdepth 4 -type f 2>/dev/null | head -80 || true
+          find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \; 2>/dev/null || true
+          find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \; 2>/dev/null || true
+          # 兜底：从 zip 内 BUILD_INFO.json 提取旁证（Validate 以 zip 为权威，此处仅辅助）
           for z in packages/oh-my-co-work-v*.zip; do
             [ -f "$z" ] || continue
             side="${z%.zip}.build.json"
-            if [ ! -f "$side" ]; then
-              entry=$(unzip -Z1 "$z" | grep -E '(^|/)BUILD_INFO\.json$' | head -1 || true)
-              if [ -n "$entry" ]; then
-                unzip -p "$z" "$entry" > "$side"
-                echo "[release] extracted sidecar from zip: $side"
-              fi
+            entry=$(unzip -Z1 "$z" 2>/dev/null | grep -E '(^|/)BUILD_INFO\.json$' | head -1 || true)
+            if [ -n "$entry" ]; then
+              unzip -p "$z" "$entry" > "$side" 2>/dev/null || true
             fi
           done
           echo "[release] packages dir:"
-          ls -la packages/ || true
+          ls -la packages/ 2>/dev/null || true
           COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
-          SIDECAR=$(ls -1 packages/oh-my-co-work-v*.build.json 2>/dev/null | wc -l | tr -d ' ')
-          echo "[release] collected zip count=$COUNT sidecar count=$SIDECAR"
-          # Validate 脚本以 zip 内 BUILD_INFO 为权威，旁证缺失/不一致只 warn；
-          # 这里只要 3 个 zip 就放行，让 Validate 给出精确错误。
+          echo "[release] collected zip count=$COUNT"
           if [ "$COUNT" -lt 3 ]; then
             echo "::error::轻量包不足 3 个（当前 $COUNT），无法发布完整 Release" >&2
             exit 1
@@ -265,7 +260,17 @@ jobs:
       - name: Validate three platform packages
         env:
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
-        run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
+        run: |
+          set -uo pipefail
+          echo "[release] validate input packages:"
+          ls -la packages/*.zip packages/*.build.json 2>/dev/null || true
+          node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA" 2>&1 | tee /tmp/validate.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Validate failed (exit $status) — see /tmp/validate.log above"
+            exit "$status"
+          fi
+          echo "[release] validate ok"
 
       - name: Warn if desktop zip missing
         if: needs.pack-desktop-win.result != 'success'
