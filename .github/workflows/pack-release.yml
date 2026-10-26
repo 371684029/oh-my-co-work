@@ -222,6 +222,8 @@ jobs:
 
       # zip 不进 git（.gitignore packages/*.zip），必须从 matrix artifacts 拉取；
       # git 里只有 build.json/CURRENT.txt 元数据，不能当 zip 来源。
+      # build.json 也要从 artifact 取（pack 时新生成），不能用 git checkout 的旧版本，
+      # 否则 validate 会因 zip 内 BUILD_INFO 与 .build.json 不一致而失败。
       - name: Download platform artifacts
         uses: actions/download-artifact@v4
         with:
@@ -229,17 +231,19 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Collect zips from artifacts
+      - name: Collect zips + build.json from artifacts
         run: |
           set -euo pipefail
           mkdir -p packages upload
           # artifacts 里是 packages/*.zip + *.build.json（merge-multiple 平铺）
           find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \;
-          ls -la packages/*.zip
+          find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \;
+          ls -la packages/
           COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
-          echo "[release] collected zip count=$COUNT"
-          if [ "$COUNT" -lt 3 ]; then
-            echo "::error::轻量包不足 3 个（当前 $COUNT），无法发布完整 Release" >&2
+          SIDECAR=$(ls -1 packages/oh-my-co-work-v*.build.json 2>/dev/null | wc -l | tr -d ' ')
+          echo "[release] collected zip count=$COUNT sidecar count=$SIDECAR"
+          if [ "$COUNT" -lt 3 ] || [ "$SIDECAR" -lt 3 ]; then
+            echo "::error::轻量包/旁证不足（zip=$COUNT sidecar=$SIDECAR），无法发布完整 Release" >&2
             exit 1
           fi
 
