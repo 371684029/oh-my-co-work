@@ -132,6 +132,8 @@ jobs:
           node scripts/pack-release.mjs --manifest-only
           # 整目录暂存：大版本切换时 pack 会删除旧 major 的 zip/sidecar，
           # 必须把删除一并提交，否则三平台并行时 main 里新旧版本混存、validate 必挂
+          # 注意：.gitignore 有 packages/*.zip，必须 -f 强制加入，否则 release 拿不到 zip
+          git add -f packages/*.zip 2>/dev/null || true
           git add -A packages/
           if ! git diff --staged --quiet; then
             git commit -m "chore(packages): 更新 ${FILE} (${VER})"
@@ -140,6 +142,7 @@ jobs:
           for i in 1 2 3 4 5 6; do
             if ! git pull --rebase origin main; then
               node scripts/pack-release.mjs --manifest-only
+              git add -f packages/*.zip 2>/dev/null || true
               git add -A packages/ || true
               GIT_EDITOR=true git rebase --continue || true
             fi
@@ -217,31 +220,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync packages from main
+      # zip 不进 git（.gitignore packages/*.zip），必须从 matrix artifacts 拉取；
+      # git 里只有 build.json/CURRENT.txt 元数据，不能当 zip 来源。
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oh-my-co-work-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Collect zips from artifacts
         run: |
           set -euo pipefail
-          for i in 1 2 3 4 5 6 7 8; do
-            git pull origin main
-            COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
-            echo "[release] zip count=$COUNT"
-            if [ "$COUNT" -ge 3 ]; then
-              break
-            fi
-            sleep 15
-          done
+          mkdir -p packages upload
+          # artifacts 里是 packages/*.zip + *.build.json（merge-multiple 平铺）
+          find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \;
           ls -la packages/*.zip
+          COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
+          echo "[release] collected zip count=$COUNT"
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::轻量包不足 3 个（当前 $COUNT），无法发布完整 Release" >&2
+            exit 1
+          fi
 
       - name: Validate three platform packages
         env:
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
         run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
-
-      - name: Download Windows desktop zip
-        if: needs.pack-desktop-win.result == 'success'
-        uses: actions/download-artifact@v4
-        with:
-          name: oh-my-co-work-win32-x64-desktop
-          path: upload-desktop
 
       - name: Warn if desktop zip missing
         if: needs.pack-desktop-win.result != 'success'
@@ -254,11 +259,10 @@ jobs:
           DESKTOP_OK: ${{ needs.pack-desktop-win.result == 'success' }}
         run: |
           set -euo pipefail
-          mkdir -p upload
           cp -f packages/oh-my-co-work-v*.zip upload/
           DESKTOP_SECTION=""
           if [ "$DESKTOP_OK" = "true" ]; then
-            cp -f upload-desktop/*.zip upload/ || true
+            find artifacts -name '*-desktop.zip' -exec cp -f {} upload/ \;
             DESKTOP_SECTION="**Windows 桌面窗口（推荐）**：下载 \`*-win32-x64-desktop.zip\`，解压后双击 \`start.bat\`。
           包内含 Electron 与 Node，一般不用再装 Node.js。关窗藏托盘，托盘「退出」才停服务。
           （体积超过 GitHub 仓库 100MB 限制，不进 \`packages/\`。）"
