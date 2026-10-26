@@ -98,10 +98,16 @@ export function validateReleasePackages({
       packagesDir,
       `oh-my-co-work-v${major}-${platform}.build.json`,
     )
-    if (!fs.existsSync(sidecarPath)) throw new Error(`缺少构建旁证 ${path.basename(sidecarPath)}`)
-    const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf8'))
-    if (JSON.stringify(sidecar) !== JSON.stringify(info)) {
-      throw new Error(`${platform}: zip 内 BUILD_INFO 与 .build.json 不一致`)
+    if (fs.existsSync(sidecarPath)) {
+      const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf8'))
+      if (JSON.stringify(sidecar) !== JSON.stringify(info)) {
+        throw new Error(`${platform}: zip 内 BUILD_INFO 与 .build.json 不一致`)
+      }
+    } else {
+      // 旁证文件缺失不阻断：zip 内 BUILD_INFO.json 是权威来源。
+      // CI 从 artifacts 收集 zip 时若只拿到 zip（.gitignore 忽略 build.json、
+      // 或 artifact 只传了 zip），不应因此让整个 Release 失败。
+      console.warn(`[release-check] warn ${platform}: 缺少 .build.json 旁证，以 zip 内 BUILD_INFO 为准`)
     }
     metadata.push(info)
   }

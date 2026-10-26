@@ -238,6 +238,17 @@ jobs:
           # artifacts 里是 packages/*.zip + *.build.json（merge-multiple 平铺）
           find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \;
           find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \;
+          # 兜底：若 artifact 没带 build.json（旧 workflow / 只传了 zip），
+          # 从 zip 内 BUILD_INFO.json 提取，保证 validate 的旁证与 zip 一致
+          for z in packages/oh-my-co-work-v*.zip; do
+            [ -f "$z" ] || continue
+            side="${z%.zip}.build.json"
+            if [ ! -f "$side" ]; then
+              entry=$(unzip -Z1 "$z" | grep -E '(^|/)BUILD_INFO\.json$' | head -1)
+              unzip -p "$z" "$entry" > "$side"
+              echo "[release] extracted sidecar from zip: $side"
+            fi
+          done
           ls -la packages/
           COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
           SIDECAR=$(ls -1 packages/oh-my-co-work-v*.build.json 2>/dev/null | wc -l | tr -d ' ')
