@@ -104,13 +104,13 @@ export function validateReleasePackages({
     )
     if (fs.existsSync(sidecarPath)) {
       const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf8'))
+      // 旁证与 zip 不一致时只 warn，不 fail——zip 内 BUILD_INFO 是权威来源。
+      // CI 从 artifacts 收集 zip 时，.build.json 可能是 git 旧版本（pack 时新生成的
+      // 未入库），两者 sourceCommit/builtAt 必然不同，不应因此让整个 Release 失败。
       if (JSON.stringify(sidecar) !== JSON.stringify(info)) {
-        throw new Error(`${platform}: zip 内 BUILD_INFO 与 .build.json 不一致`)
+        console.warn(`[release-check] warn ${platform}: .build.json 与 zip 内 BUILD_INFO 不一致，以 zip 内为准`)
       }
     } else {
-      // 旁证文件缺失不阻断：zip 内 BUILD_INFO.json 是权威来源。
-      // CI 从 artifacts 收集 zip 时若只拿到 zip（.gitignore 忽略 build.json、
-      // 或 artifact 只传了 zip），不应因此让整个 Release 失败。
       console.warn(`[release-check] warn ${platform}: 缺少 .build.json 旁证，以 zip 内 BUILD_INFO 为准`)
     }
     metadata.push(info)
