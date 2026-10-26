@@ -3,6 +3,48 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-23 | M | web/src/** (40 files) | FE-03 ElMessage/ElMessageBox/ElConfigProvider 由 `element-plus` 桶入口改为 `element-plus/es/components/*/index.mjs` 按需深层导入，消除 929kB 整包进首屏
+2026-10-23 | M | web/vite.config.js | FE-03 去掉 element-plus 整包 manualChunks，只拆 locale/hooks/utils，让 message 等保持按需
+2026-10-23 | M | server/test/templatePack.test.js | REU-01 覆盖导入单测：成员/群 overwrite、字段保留、幂等
+2026-10-23 | M | web/vite.config.js | FE-03 Element Plus unplugin 按需 + vueuse/vue-vendor manualChunks
+2026-10-23 | M | web/src/router.js | FE-03 设置/文档路由懒加载，Workbench 保持同步首屏
+2026-10-23 | M | web/src/main.js | FE-03 去掉全量 ElementPlus/整包 CSS/全量图标，改 ElConfigProvider + 精简图标注册
+2026-10-23 | M | scripts/ci-e2e-smoke.mjs | QA-01 全站 E2E：设置导航+showDemo 保存往返、还原中心备份列表、docs 外壳、多会话 A→B→A 切换；playwright 可选缺失时 SKIP 浏览器步骤并 exit 0
+2026-10-23 | A | server/test/e2eSmokeCoverage.test.js | QA-01 冒烟脚本路由覆盖门控测试（设置/还原/docs/多会话 + SKIP 约定 + ACW_E2E_SMOKE）
+2026-10-23 | A | web/src/views/workbench/composables/flowRailNodeChange.js | FE-01 从 FlowRail.vue 抽出节点变更摘要/补丁纯函数
+2026-10-23 | A | web/src/views/workbench/composables/flowRailNodeDoc.js | FE-01 抽出节点台账 doc 路径映射与打开纯函数
+2026-10-23 | A | web/src/views/workbench/composables/flowRailDocLink.js | FE-01 抽出文档链接解析纯函数
+2026-10-23 | M | web/src/views/workbench/composables/flowRailTimelineUi.js | FE-01 新增 flowRailFormatTimelineAt 时间格式化纯函数
+2026-10-23 | A | web/src/views/workbench/composables/flowRailTimelineActions.js | FE-01 抽出时间线加载/审计/终端回放动作工厂（DI + notify 注入）
+2026-10-23 | A | web/src/views/workbench/composables/flowRailRevertActions.js | FE-01 抽出步骤回滚确认/应用动作工厂（DI + notify/messageBox 注入）
+2026-10-23 | A | web/src/views/workbench/composables/flowRailDocsRailActions.js | FE-01 抽出文档栏列表/阅读/导出动作工厂（DI + notify 注入）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailTabs.vue | FE-01 抽出右栏 Tab 切换块及对应 scoped 样式
+2026-10-23 | A | web/src/views/workbench/components/FlowRailNodeBadges.vue | FE-01 抽出节点标题台账按钮与标签链（fragment 根，DOM 不变）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailNodeCard.vue | FE-01 抽出流程节点卡片（标题/元信息/IO 展开/回滚入口）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailFlowPane.vue | FE-01 抽出流程面板（归档/离场提示、跳过组、当前栏）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailTimelinePane.vue | FE-01 抽出时间线面板与终端回放对话框
+2026-10-23 | A | web/src/views/workbench/components/FlowRailDocsPane.vue | FE-01 抽出文档中心面板（工具栏/正文渲染/列表订阅与路由接线）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailDocsFiles.vue | FE-01 抽出文档文件下拉与 pill 列表（含容器查询样式）
+2026-10-23 | A | web/src/views/workbench/components/FlowRailDocsNotes.vue | FE-01 抽出会话笔记保存块
+2026-10-23 | M | web/src/views/workbench/components/FlowRail.vue | FE-01 瘦身 1672→41 行薄壳；模板/样式随组件迁移，移除无引用死样式（flow-params/flow-empty 等）
+2026-10-23 | A | web/test/flowRailNodeChange.test.mjs | 覆盖 flowRailNodeChangeSummary/Patch 纯函数
+2026-10-23 | A | web/test/flowRailNodeDoc.test.mjs | 覆盖 flowRailNodeDocFile/OpenNodeJournal 纯函数
+2026-10-23 | A | web/test/flowRailDocLink.test.mjs | 覆盖 flowRailResolveDocLink 纯函数
+2026-10-23 | M | web/test/flowRailTimelineUi.test.mjs | 补 flowRailFormatTimelineAt 用例
+2026-10-23 | A | web/test/flowRailTimelineActions.test.mjs | 覆盖时间线动作工厂（注入 fake api/notify）
+2026-10-23 | A | web/test/flowRailRevertActions.test.mjs | 覆盖回滚动作工厂（注入 fake messageBox/notify）
+2026-10-23 | A | web/test/flowRailDocsRailActions.test.mjs | 覆盖文档栏动作工厂（注入 fake getDocsList/recordDocsOpen）
+2026-10-23 | A | web/src/components/terminal/composables/furnaceTurnCopy.js | FE-01 从 FurnaceWorkspace.vue 抽出对话复制动作工厂
+2026-10-23 | A | web/src/components/terminal/composables/furnaceAgentHotkeys.js | FE-01 抽出熔炉 Agent 快捷键 onKeyDown 工厂
+2026-10-23 | A | web/src/components/terminal/FurnaceBuddyPanel.vue | FE-01 抽出熔炉伙伴立绘面板（FurnaceAvatar + 版权文案）
+2026-10-23 | A | web/src/components/terminal/FurnaceChatThread.vue | FE-01 抽出熔炉对话流（欢迎块 + 回合列表组合层）
+2026-10-23 | A | web/src/components/terminal/FurnaceTuiSurface.vue | FE-01 抽出熔炉 TUI 台面（TerminalView + 历史抽屉）
+2026-10-23 | M | web/src/components/terminal/FurnaceWorkspace.vue | FE-01 瘦身 704→353 行薄壳；删除子组件 scoped 已覆盖的失效重复样式（turn/bubble/chip/tui-* 等）
+2026-10-23 | A | web/test/furnaceTurnCopy.test.mjs | 覆盖 copyTurn 空文本/成功/失败分支
+2026-10-23 | A | web/test/furnaceAgentHotkeys.test.mjs | 覆盖快捷键路由：根外/xterm 目标/无修饰键忽略
+2026-10-23 | M | web/test/docsHubRail.test.mjs | 表征断言改指 FlowRailDocsPane.vue（CSS 迁移）
+2026-10-23 | M | web/test/docsRailLayout.test.mjs | 表征断言改指 FlowRailDocsPane.vue（CSS 迁移）
+2026-10-23 | M | web/test/furnaceScroll.test.mjs | 表征断言改指 FurnaceChatThread/FurnaceTuiSurface/furnaceAgentHotkeys
 2026-10-22 | M | server/src/backup.js | listBackupsAsync 容忍备份子树 EACCES（对齐同步 dirBytes），避免备份列表接口 500
 2026-10-22 | M | server/test/backupRestore.test.js | 新增不可读备份子树回归测试（setpriv 丢 dac 能力模拟 EACCES）
 2026-10-22 | M | server/src/backup.js | SRV-01 异步备份与还原暂存清理、列表扫描及并发备份唯一命名

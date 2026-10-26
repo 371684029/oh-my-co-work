@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-4.9.1-409eff?style=flat-square" alt="version 4.9.1" />
+  <img src="https://img.shields.io/badge/version-5.3.0-409eff?style=flat-square" alt="version 5.3.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -155,8 +155,10 @@
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown；工作台并入文档中心 |
 | 文档中心 | 阅读样式参考飞书文档（正文大、标签小）；独立顶栏解耦只留 Logo；工作台第三栏内嵌文档中心（群报告 + 台账）；独立页面升级三栏分类布局；公告可编辑、全文搜索与按群导出 zip |
 | 炼化 | 成员/步骤勾选后**保存当下**改源脚本（`ACW-REFINE`：ACW 输入环境变量 + stdout 标题），规格写入 `config.refine.format`；群聊跑完再整理进文档中心 |
-| 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页提供**一键导入与一键导出**（导入备份包恢复数据，恢复前自动留快照可回退；导出为全量协同文档 ZIP）；关于页状态无缝联动 |
+| 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页提供**一键导入与一键导出**（导入备份包恢复数据，恢复前自动留快照可回退；导出为全量协同文档 ZIP）；备份/还原生产热路径全异步（integrity/checkpoint 走 worker）；关于页状态无缝联动 |
 | 会话治理 | 置顶、改名、删除（顶栏删除会从列表拿掉并清终端行）、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
+| 系统通知 | 分级（需要你/出错了/完成了）、点击深链直达会话/闸门；收件箱落库可回看；托盘待办菜单与暂停通知；Windows 任务栏角标/Dock 徽章；勿扰时段与前台抑制 |
+| 模板复用 | `.acw.json` 导出/导入，路径占位 `{{WORKSPACE}}`/`{{HOME}}`；冲突支持改名/跳过/**覆盖**（id 不变原地更新） |
 | JSONL Adapter | 可信侧通道提问转闸门、工具卡与结果写回；失败降级为真实终端 |
 | 本地数据 | SQLite + Markdown + 本地附件和日志 |
 
@@ -185,7 +187,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **4.9.1**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.3.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -275,8 +277,9 @@ packages/  可直接运行的三平台压缩包
 | [5.0.0 性能与交互优化（规划）](./docs/5.0.0-plan.md) | 内置 CLI / 熔炉精灵优化、性能基线、交互统一 |
 | [5.1.0 全量优化台账](./docs/5.1.0-plan.md) | CLI / 桌面壳 / 安全 / 发布；与 5.0 验收对齐 |
 | [5.2.0 全方位优化（进行中）](./docs/5.2.0-plan.md) | 熔炉 CLI 复制粘贴、炼化还原、文档中心入口 |
-| [5.3.0 可追溯与扩展（规划）](./docs/5.3.0-plan.md) | 还原中心、复用、命令面板等 |
-| [5.4.0 系统通知（规划）](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标 |
+| [5.3.0 可追溯与扩展](./docs/5.3.0-plan.md) | 步骤快照/回退、模板导入导出、命令面板、Agent 注册表 |
+| [5.4.0 系统通知](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
+| [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块；实机 QA 与三平台桌面包待补 |
 | [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -315,9 +318,12 @@ packages/  可直接运行的三平台压缩包
 - [x] 4.8.0：群聊第三栏 Cursor CLI / 熔炉双 Tab、独立 PTY；熔炉默认 TUI；桌面启动全屏；熔炉默认通用 Agent（审核/闸门更专业）
 - [x] 4.9.0：托盘与 `oh-my-co-work.exe` 用首页 Logo；第三栏只留文档中心；炼化 Skill 可复制；设置抽屉不被桌宠挡住
 - [x] 4.9.1：顶栏缩放；一键备份改为一键导入；文档中心飞书风阅读样式；熔炉精灵缩小约 1/3 且设置页可见；修复终端粘贴后无法输入
-- [ ] 5.0.0（规划）：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/5.0.0-plan.md](./docs/5.0.0-plan.md)
-- [ ] 5.1.0（进行中）：全量优化台账，5.1.0 首批已合 main，其余见 [docs/5.1.0-plan.md](./docs/5.1.0-plan.md)
-- [ ] 5.2.0（进行中）：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
+- [x] 5.0.0：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/5.0.0-plan.md](./docs/5.0.0-plan.md)
+- [x] 5.1.0：全量优化台账——CLI / 桌面壳 / 安全 / 发布，多数已合入，残留 bracket 见 [docs/5.1.0-plan.md](./docs/5.1.0-plan.md)
+- [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
+- [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/5.3.0-plan.md](./docs/5.3.0-plan.md)
+- [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
+- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分已落地；剩三平台桌面包、实机通知 QA、`useSessionDetail` 继续下沉，见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
 - [ ] 后续：macOS/Linux 桌面壳、无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
