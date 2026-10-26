@@ -38,6 +38,16 @@ import {
 } from './lib/server.mjs'
 import { releaseAllResources } from './lib/shutdown.mjs'
 import { createNotifier, parseNotificationDeepLink } from './lib/notifier.mjs'
+import {
+  isNotificationsPaused,
+  normalizeTrayStatus,
+  formatTrayTooltip,
+  formatTrayMenuHeader,
+  formatPauseEnd,
+  pauseForOneHour,
+  pauseUntilTomorrow,
+} from './lib/trayState.mjs'
+import { buildCountBadgeBitmap } from './lib/overlayBadge.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -46,6 +56,9 @@ let mainWindow = null
 const detachedWindows = new Map()
 let notifier = null
 let trayPendingCount = 0
+/** NTF-07: 托盘状态（idle/running/needs-you/error）与待处理条目（最多 5 条） */
+let trayStatus = 'idle'
+let trayItems = []
 let tray = null
 let trayOk = false
 let isQuitting = false
@@ -54,10 +67,12 @@ let appRoot = ''
 let port = 3780
 
 // DESK-03: persisted desktop preferences (close-to-tray behavior + one-time hint).
+// NTF-07: notificationsPausedUntil 暂停通知截止时间（epoch ms，0 = 未暂停）。
 const DEFAULT_DESKTOP_PREFS = {
   closeToTray: true,
   trayHintShown: false,
   mainWindowBounds: null,
+  notificationsPausedUntil: 0,
 }
 let desktopPrefs = { ...DEFAULT_DESKTOP_PREFS }
 
@@ -169,13 +184,7 @@ function ensureNotifier() {
       getMainWindow: () => mainWindow,
       Notification,
       onDeepLink(deepLink) {
-        const parsed = parseNotificationDeepLink(deepLink)
-        if (!parsed || !mainWindow) return
-        const url =
-          parsed.type === 'docs'
-            ? docsHubUrl(appOrigin(), parsed.sessionId, parsed.file)
-            : workbenchUrl(appOrigin(), parsed.sessionId)
-        mainWindow.loadURL(url).catch(() => {})
+        navigateToDeepLink(deepLink)
       },
       onNotificationAction(payload) {
         if (!mainWindow || mainWindow.isDestroyed()) return
@@ -195,15 +204,200 @@ function appIconPath() {
 
 function refreshTrayToolTip() {
   if (!tray) return
-  tray.setToolTip(
-    trayPendingCount > 0
-      ? `oh-my-co-work · ${trayPendingCount} 项待处理`
-      : 'oh-my-co-work',
-  )
+  try {
+    tray.setToolTip(
+      formatTrayTooltip({
+        state: trayStatus,
+        pending: trayPendingCount,
+        pausedUntil: desktopPrefs.notificationsPausedUntil,
+      }),
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 深链：显示主窗口并路由到会话/文档（托盘菜单与通知点击共用）。 */
+function navigateToDeepLink(deepLink) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const parsed = parseNotificationDeepLink(deepLink)
+  if (!parsed) return
+  const url =
+    parsed.type === 'docs'
+      ? docsHubUrl(appOrigin(), parsed.sessionId, parsed.file)
+      : workbenchUrl(appOrigin(), parsed.sessionId)
+  mainWindow.loadURL(url).catch(() => {})
+}
+
+function openDeepLink(deepLink) {
+  showMainWindow()
+  navigateToDeepLink(deepLink)
+}
+
+function truncateMenuLabel(text, max = 40) {
+  const s = String(text || '').trim()
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s
+}
+
+function pauseNotifications(until) {
+  desktopPrefs.notificationsPausedUntil = Number(until) || 0
+  saveDesktopPrefs()
+  refreshTrayToolTip()
+  refreshTrayMenu()
+}
+
+function resumeNotifications() {
+  pauseNotifications(0)
+}
+
+function buildTrayMenuTemplate() {
+  const pausedUntil = Number(desktopPrefs.notificationsPausedUntil) || 0
+  const paused = isNotificationsPaused(pausedUntil)
+  const pending = trayItems.slice(0, 5)
+  return [
+    // 状态分区：Electron MenuItem 无原生加粗，用标记字符 + 禁用项做视觉强调
+    {
+      label: formatTrayMenuHeader({
+        state: trayStatus,
+        pending: trayPendingCount,
+        pausedUntil,
+      }),
+      enabled: false,
+    },
+    {
+      label: '待处理（最多 5 条）',
+      submenu: pending.length
+        ? pending.map((it) => ({
+            label: truncateMenuLabel(it.title || it.id || '待处理项'),
+            click: () => openDeepLink(it.deepLink),
+          }))
+        : [{ label: '暂无待处理项', enabled: false }],
+    },
+    { type: 'separator' },
+    { label: '打开工作台', click: () => showMainWindow() },
+    {
+      label: '隐藏到托盘',
+      click: () => {
+        if (mainWindow) mainWindow.hide()
+      },
+    },
+    {
+      label: '关闭窗口时退出',
+      type: 'checkbox',
+      checked: !desktopPrefs.closeToTray,
+      click: (menuItem) => {
+        desktopPrefs.closeToTray = !menuItem.checked
+        saveDesktopPrefs()
+      },
+    },
+    { type: 'separator' },
+    ...(paused
+      ? [
+          {
+            label: `恢复通知（已暂停至 ${formatPauseEnd(pausedUntil)}）`,
+            click: () => resumeNotifications(),
+          },
+        ]
+      : [
+          {
+            label: '暂停通知 1 小时',
+            click: () => pauseNotifications(pauseForOneHour()),
+          },
+          {
+            label: '暂停通知到明天',
+            click: () => pauseNotifications(pauseUntilTomorrow()),
+          },
+        ]),
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: async () => {
+        if (trayPendingCount > 0) {
+          const { response } = await dialog.showMessageBox({
+            type: 'warning',
+            title: '仍有待处理事项',
+            message: `当前有 ${trayPendingCount} 项待处理通知/闸门，确定要退出吗？`,
+            buttons: ['取消', '仍要退出'],
+            defaultId: 0,
+            cancelId: 0,
+          })
+          if (response !== 1) return
+        }
+        isQuitting = true
+        app.quit()
+      },
+    },
+  ]
+}
+
+function refreshTrayMenu() {
+  if (!tray) return
+  try {
+    tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenuTemplate()))
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * NTF-08：任务栏/Dock 角标。win32 用运行时生成的数字角标图（无 .ico 资产，
+ * 失败回退 icon.ico）；macOS 保留 Dock badge。Linux 不做角标（仅 tooltip/菜单）。
+ */
+function buildOverlayIcon(count) {
+  try {
+    const { buffer, width, height } = buildCountBadgeBitmap(count)
+    const img = nativeImage.createFromBitmap(buffer, { width, height })
+    if (img && !img.isEmpty()) return img
+  } catch {
+    /* fall back to the app icon below */
+  }
+  return nativeImage.createFromPath(appIconPath())
+}
+
+function applyDesktopBadges() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const pending = Math.min(99, Math.max(0, trayPendingCount))
+  if (process.platform === 'darwin' && app.dock?.setBadge) {
+    try {
+      app.dock.setBadge(pending > 0 ? String(pending) : '')
+    } catch {
+      /* ignore */
+    }
+    return
+  }
+  if (process.platform === 'win32') {
+    try {
+      if (pending > 0 && typeof mainWindow.setOverlayIcon === 'function') {
+        mainWindow.setOverlayIcon(buildOverlayIcon(pending), `${pending} 项待处理`)
+      } else if (typeof mainWindow.setOverlayIcon === 'function') {
+        mainWindow.setOverlayIcon(null, '')
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** NTF-08：流程进度条；仅在 IPC 提供 progress 时驱动（null 清除）。 */
+function applyFlowProgress(progress) {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  try {
+    if (progress === null) {
+      mainWindow.setProgressBar(-1)
+      return
+    }
+    const v = Number(progress)
+    if (!Number.isFinite(v)) return
+    mainWindow.setProgressBar(Math.min(1, Math.max(0, v)))
+  } catch {
+    /* ignore */
+  }
 }
 
 function createTray() {
   if (tray) return
+  // NTF-07 限制：仅有一套图标资产（icon.png / icon.ico），无状态位图；状态通过
+  // tooltip + 菜单状态行区分，未生成额外二进制图标。
   const iconPath = appIconPath()
   if (!fs.existsSync(iconPath)) return
   try {
@@ -211,45 +405,7 @@ function createTray() {
     if (image.isEmpty()) return
     tray = new Tray(image)
     refreshTrayToolTip()
-    tray.setContextMenu(
-      Menu.buildFromTemplate([
-        { label: '打开工作台', click: () => showMainWindow() },
-        {
-          label: '隐藏到托盘',
-          click: () => {
-            if (mainWindow) mainWindow.hide()
-          },
-        },
-        {
-          label: '关闭窗口时退出',
-          type: 'checkbox',
-          checked: !desktopPrefs.closeToTray,
-          click: (menuItem) => {
-            desktopPrefs.closeToTray = !menuItem.checked
-            saveDesktopPrefs()
-          },
-        },
-        { type: 'separator' },
-        {
-          label: '退出',
-          click: async () => {
-            if (trayPendingCount > 0) {
-              const { response } = await dialog.showMessageBox({
-                type: 'warning',
-                title: '仍有待处理事项',
-                message: `当前有 ${trayPendingCount} 项待处理通知/闸门，确定要退出吗？`,
-                buttons: ['取消', '仍要退出'],
-                defaultId: 0,
-                cancelId: 0,
-              })
-              if (response !== 1) return
-            }
-            isQuitting = true
-            app.quit()
-          },
-        },
-      ]),
-    )
+    refreshTrayMenu()
     tray.on('double-click', () => showMainWindow())
     trayOk = true
   } catch {
@@ -393,8 +549,27 @@ async function loadWorkbench() {
 
 function registerIpc() {
   ipcMain.handle('acw:tray-status', (_evt, payload) => {
-    trayPendingCount = Math.max(0, Number(payload?.pending) || 0)
+    const p = payload && typeof payload === 'object' ? payload : {}
+    if (p.pending !== undefined) {
+      trayPendingCount = Math.max(0, Number(p.pending) || 0)
+    }
+    if (p.status !== undefined) {
+      trayStatus = normalizeTrayStatus(p.status)
+    }
+    if (Array.isArray(p.items)) {
+      trayItems = p.items
+        .slice(0, 5)
+        .map((it) => ({
+          id: String(it?.id || ''),
+          title: String(it?.title || '').slice(0, 80),
+          deepLink: String(it?.deepLink || ''),
+        }))
+        .filter((it) => it.title || it.deepLink)
+    }
+    if (p.progress !== undefined) applyFlowProgress(p.progress)
     refreshTrayToolTip()
+    refreshTrayMenu()
+    applyDesktopBadges()
     return true
   })
 
@@ -432,6 +607,13 @@ function registerIpc() {
     const deepLink = payload?.options?.deepLink
     const level = payload?.options?.level
     const sound = payload?.options?.sound
+    // NTF-07：暂停通知期间抑制非 action 级别（需要你的闸门仍会送达）
+    if (
+      isNotificationsPaused(desktopPrefs.notificationsPausedUntil) &&
+      String(level || 'action') !== 'action'
+    ) {
+      return false
+    }
     const shown = ensureNotifier().notify({ id, title, body, deepLink, level, sound })
     if (shown && mainWindow && !mainWindow.isDestroyed()) {
       if (!mainWindow.isFocused() || !mainWindow.isVisible()) {
@@ -444,10 +626,7 @@ function registerIpc() {
           }
         }, 4500)
       }
-      if (process.platform === 'darwin' && app.dock?.setBadge) {
-        const next = Math.min(99, trayPendingCount + 1)
-        app.dock.setBadge(String(next > 0 ? next : ''))
-      }
+      applyDesktopBadges()
     }
     return shown
   })
