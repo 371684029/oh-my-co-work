@@ -229,6 +229,50 @@ function unzipTo(zipPath, destDir) {
   execFileSync('unzip', ['-q', '-o', zipPath, '-d', destDir], { stdio: 'inherit' })
 }
 
+/**
+ * 交叉打包时，npm install --ignore-scripts 不会跑 prebuild-install，
+ * 需要对每个原生依赖单独拉取目标平台的预编译二进制。
+ * prebuild-install 本身在受限容器上也可能 SIGABRT，失败时降级为
+ * 不阻断打包（运行时仍有 node:sqlite / 无 PTY 的降级路径）。
+ */
+function fetchCrossPrebuilds(stage, target) {
+  const mods = ['better-sqlite3', 'node-pty']
+  for (const name of mods) {
+    const modDir = path.join(stage, 'node_modules', name)
+    if (!fs.existsSync(modDir)) {
+      console.warn(`[pack] 跳过 ${name}（未安装）`)
+      continue
+    }
+    const r = spawnSync(
+      'npx',
+      [
+        'prebuild-install',
+        '--platform',
+        target.platform,
+        '--arch',
+        target.arch,
+        '--verbose',
+      ],
+      {
+        cwd: modDir,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          npm_config_platform: target.platform,
+          npm_config_arch: target.arch,
+        },
+      },
+    )
+    if (r.status !== 0) {
+      console.warn(
+        `[pack] prebuild-install ${name} 失败（exit ${r.status}），继续打包；运行时将走降级路径`,
+      )
+    } else {
+      console.log(`[pack] prebuild-install ${name} ok`)
+    }
+  }
+}
+
 async function cachedDownload(urlOrUrls, cacheName, { minBytes = 1024 * 1024 } = {}) {
   const urls = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls]
   const cacheDir = path.join(OUT_ROOT, 'cache')
@@ -856,12 +900,14 @@ async function mainAsync() {
   )
 
   console.log('[pack] install runtime deps inside package (prebake node_modules)…')
-  // 交叉打包时，npm_config_* 让 prebuild-install 拉目标平台二进制；
-  // 同平台打包默认允许 node-gyp 重建（宿主可能没有 linux prebuilds）。
-  // ACW_PACK_IGNORE_NATIVE_SCRIPTS=1 时跳过 install 脚本（只用 prebuilds，适合 CI/无 Python 环境）。
-  const ignoreScripts = ['1', 'true', 'yes'].includes(
-    String(process.env.ACW_PACK_IGNORE_NATIVE_SCRIPTS || '').toLowerCase(),
-  )
+  // 交叉打包时强制跳过 install 脚本：prebuild-install / node-gyp 在受限容器
+  // （nproc=2、无 Python）上会 core dump（SIGABRT / exit 134），即使目标是拉
+  // 预编译二进制也会先跑宿主平台的脚本。改为 --ignore-scripts 后单独拉取。
+  const ignoreScripts =
+    target.cross ||
+    ['1', 'true', 'yes'].includes(
+      String(process.env.ACW_PACK_IGNORE_NATIVE_SCRIPTS || '').toLowerCase(),
+    )
   const installArgs = ['install', '--omit=dev', '--no-audit', '--no-fund']
   if (ignoreScripts) installArgs.push('--ignore-scripts')
   sh('npm', installArgs, {
@@ -875,6 +921,8 @@ async function mainAsync() {
   })
 
   if (target.cross) {
+    console.log('[pack] 交叉打包：单独拉取目标平台原生二进制（prebuild-install）…')
+    fetchCrossPrebuilds(stage, target)
     console.log('[pack] 交叉打包，核对原生模块架构（避免混入宿主平台二进制）…')
     pruneMismatchedNativeBuilds(stage, target.platform)
   }
