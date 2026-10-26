@@ -190,12 +190,17 @@ function writeStartBat(dest) {
   fs.writeFileSync(dest, windowsStartBat(), 'utf8')
 }
 
+const DOWNLOAD_TIMEOUT_MS = 90_000
+const DOWNLOAD_RETRIES = 3
+
 function downloadHttps(url, dest) {
   return new Promise((resolve, reject) => {
     const go = (u, hops = 0) => {
       if (hops > 8) return reject(new Error(`下载重定向过多: ${url}`))
-      https
-        .get(u, { headers: { 'User-Agent': 'oh-my-co-work-pack' } }, (res) => {
+      const req = https.get(
+        u,
+        { headers: { 'User-Agent': 'oh-my-co-work-pack' }, timeout: DOWNLOAD_TIMEOUT_MS },
+        (res) => {
           const loc = res.headers.location
           if (res.statusCode >= 300 && res.statusCode < 400 && loc) {
             res.resume()
@@ -210,8 +215,10 @@ function downloadHttps(url, dest) {
           res.pipe(out)
           out.on('finish', () => out.close((err) => (err ? reject(err) : resolve(dest))))
           out.on('error', reject)
-        })
-        .on('error', reject)
+        },
+      )
+      req.on('timeout', () => req.destroy(new Error(`下载超时: ${u}`)))
+      req.on('error', reject)
     }
     go(url)
   })
@@ -222,19 +229,33 @@ function unzipTo(zipPath, destDir) {
   execFileSync('unzip', ['-q', '-o', zipPath, '-d', destDir], { stdio: 'inherit' })
 }
 
-async function cachedDownload(url, cacheName) {
+async function cachedDownload(url, cacheName, { minBytes = 1024 * 1024 } = {}) {
   const cacheDir = path.join(OUT_ROOT, 'cache')
   const dest = path.join(cacheDir, cacheName)
-  if (fs.existsSync(dest) && fs.statSync(dest).size > 1024) {
+  if (fs.existsSync(dest) && fs.statSync(dest).size >= minBytes) {
     console.log('[pack] cache hit', cacheName)
     return dest
   }
   const tmp = dest + '.part'
+  let lastErr
+  for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
+    if (fs.existsSync(tmp)) fs.rmSync(tmp)
+    try {
+      console.log(`[pack] download (${attempt}/${DOWNLOAD_RETRIES})`, url)
+      await downloadHttps(url, tmp)
+      const size = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0
+      if (size < minBytes) {
+        throw new Error(`下载不完整: ${size} bytes < ${minBytes}: ${url}`)
+      }
+      fs.renameSync(tmp, dest)
+      return dest
+    } catch (e) {
+      lastErr = e
+      console.error(`[pack] download failed:`, e?.message || e)
+    }
+  }
   if (fs.existsSync(tmp)) fs.rmSync(tmp)
-  console.log('[pack] download', url)
-  await downloadHttps(url, tmp)
-  fs.renameSync(tmp, dest)
-  return dest
+  throw lastErr || new Error(`下载失败: ${url}`)
 }
 
 function copyElectronAppFiles(stage) {
@@ -256,6 +277,7 @@ async function embedWin32Desktop(stage) {
   const nodeZip = await cachedDownload(
     `https://nodejs.org/dist/v${PACK_NODE_VERSION}/node-v${PACK_NODE_VERSION}-win-x64.zip`,
     `node-v${PACK_NODE_VERSION}-win-x64.zip`,
+    { minBytes: 20 * 1024 * 1024 },
   )
   const nodeExtract = path.join(OUT_ROOT, 'cache', `node-v${PACK_NODE_VERSION}-win-x64-extract`)
   if (fs.existsSync(nodeExtract)) fs.rmSync(nodeExtract, { recursive: true, force: true })
@@ -275,6 +297,7 @@ async function embedWin32Desktop(stage) {
   const electronZip = await cachedDownload(
     `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
     `electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+    { minBytes: 80 * 1024 * 1024 },
   )
   const desktop = path.join(stage, 'desktop')
   if (fs.existsSync(desktop)) fs.rmSync(desktop, { recursive: true, force: true })
