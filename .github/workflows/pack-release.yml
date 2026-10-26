@@ -233,28 +233,32 @@ jobs:
 
       - name: Collect zips + build.json from artifacts
         run: |
-          set -euo pipefail
+          set -uo pipefail
           mkdir -p packages upload
-          # artifacts 里是 packages/*.zip + *.build.json（merge-multiple 平铺）
+          echo "[release] artifacts tree:"
+          find artifacts -maxdepth 3 -type f | head -50 || true
           find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \;
           find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \;
-          # 兜底：若 artifact 没带 build.json（旧 workflow / 只传了 zip），
-          # 从 zip 内 BUILD_INFO.json 提取，保证 validate 的旁证与 zip 一致
           for z in packages/oh-my-co-work-v*.zip; do
             [ -f "$z" ] || continue
             side="${z%.zip}.build.json"
             if [ ! -f "$side" ]; then
-              entry=$(unzip -Z1 "$z" | grep -E '(^|/)BUILD_INFO\.json$' | head -1)
-              unzip -p "$z" "$entry" > "$side"
-              echo "[release] extracted sidecar from zip: $side"
+              entry=$(unzip -Z1 "$z" | grep -E '(^|/)BUILD_INFO\.json$' | head -1 || true)
+              if [ -n "$entry" ]; then
+                unzip -p "$z" "$entry" > "$side"
+                echo "[release] extracted sidecar from zip: $side"
+              fi
             fi
           done
-          ls -la packages/
+          echo "[release] packages dir:"
+          ls -la packages/ || true
           COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
           SIDECAR=$(ls -1 packages/oh-my-co-work-v*.build.json 2>/dev/null | wc -l | tr -d ' ')
           echo "[release] collected zip count=$COUNT sidecar count=$SIDECAR"
-          if [ "$COUNT" -lt 3 ] || [ "$SIDECAR" -lt 3 ]; then
-            echo "::error::轻量包/旁证不足（zip=$COUNT sidecar=$SIDECAR），无法发布完整 Release" >&2
+          # Validate 脚本以 zip 内 BUILD_INFO 为权威，旁证缺失/不一致只 warn；
+          # 这里只要 3 个 zip 就放行，让 Validate 给出精确错误。
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::轻量包不足 3 个（当前 $COUNT），无法发布完整 Release" >&2
             exit 1
           fi
 
