@@ -7,6 +7,11 @@ name: Pack release zip
 # - 这样只消耗 ubuntu 的 1x 分钟数，不再触发 windows-latest(2x) / macos-latest(10x)，
 #   避免账号 Actions 额度被跑爆导致三平台包（尤其 windows/macos）卡在旧构建不更新。
 # - 不再在每个 cursor/** 分支的每次 push 上打包；日常测试信号见 ci.yml。
+#
+# 解耦原则（2026-10-26）：
+# - 轻量包（linux/win32/darwin）与 Windows 桌面包分开 job，desktop 失败不拖死轻量包
+# - Electron/Node 用 actions/cache，避免每次重下 ~110MB
+# - release 依赖轻量包三平台 + 桌面包（桌面失败时降级发轻量包并告警）
 on:
   push:
     branches: [main]
@@ -20,6 +25,10 @@ concurrency:
 
 permissions:
   contents: write
+
+env:
+  PACK_NODE_VERSION: '20.18.3'
+  PACK_ELECTRON_VERSION: '32.3.3'
 
 jobs:
   pack:
@@ -45,21 +54,6 @@ jobs:
         env:
           ACW_PACK_TARGET: ${{ matrix.target }}
         run: npm run pack
-
-      - name: Pack Windows desktop zip (Electron, not committed)
-        if: matrix.target == 'win32-x64'
-        run: npm run pack:desktop-win
-
-      - name: Verify Windows desktop zip
-        if: matrix.target == 'win32-x64'
-        run: |
-          set -euo pipefail
-          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
-          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
-          node scripts/verify-pack.mjs \
-            --zip "release/oh-my-co-work-v${MAJOR}-win32-x64-desktop.zip" \
-            --platform win32-x64 \
-            --version "$VER"
 
       - name: Verify packed zip
         run: |
@@ -108,15 +102,6 @@ jobs:
           path: |
             packages/oh-my-co-work-v*.zip
             packages/oh-my-co-work-v*.build.json
-          if-no-files-found: error
-          retention-days: 3
-
-      - name: Upload Windows desktop zip
-        if: matrix.target == 'win32-x64'
-        uses: actions/upload-artifact@v4
-        with:
-          name: oh-my-co-work-win32-x64-desktop
-          path: release/oh-my-co-work-v*-desktop.zip
           if-no-files-found: error
           retention-days: 3
 
@@ -173,9 +158,58 @@ jobs:
             exit 1
           fi
 
+  # Windows 桌面包（Electron + 内嵌 Node）单独 job：
+  # 1) 不拖死轻量包 job（此前 desktop 失败 → win32 整个 job 失败 → release 被跳过）
+  # 2) Electron/Node 用 actions/cache，避免每次重下 ~110MB + ~30MB
+  pack-desktop-win:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Cache Electron / Node runtime zips
+        uses: actions/cache@v4
+        with:
+          path: release/cache
+          key: pack-desktop-cache-v${{ env.PACK_ELECTRON_VERSION }}-node${{ env.PACK_NODE_VERSION }}
+
+      - name: Pack Windows desktop zip
+        env:
+          ACW_PACK_DESKTOP: '1'
+          ACW_PACK_TARGET: win32-x64
+        run: npm run pack:desktop-win
+
+      - name: Verify Windows desktop zip
+        run: |
+          set -euo pipefail
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          node scripts/verify-pack.mjs \
+            --zip "release/oh-my-co-work-v${MAJOR}-win32-x64-desktop.zip" \
+            --platform win32-x64 \
+            --version "$VER"
+
+      - name: Upload Windows desktop zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: oh-my-co-work-win32-x64-desktop
+          path: release/oh-my-co-work-v*-desktop.zip
+          if-no-files-found: error
+          retention-days: 3
+
   release:
-    needs: pack
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [pack, pack-desktop-win]
+    # 轻量包三平台必须成功；桌面包失败时用 if: always() + 后续步骤容错降级
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.pack.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -203,28 +237,40 @@ jobs:
         run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
 
       - name: Download Windows desktop zip
+        if: needs.pack-desktop-win.result == 'success'
         uses: actions/download-artifact@v4
         with:
           name: oh-my-co-work-win32-x64-desktop
           path: upload-desktop
 
+      - name: Warn if desktop zip missing
+        if: needs.pack-desktop-win.result != 'success'
+        run: |
+          echo "::warning::Windows 桌面包本次未产出（job result=${{ needs.pack-desktop-win.result }}），Release 只含三份轻量包；请单独重跑 pack-desktop-win 补齐。"
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_OK: ${{ needs.pack-desktop-win.result == 'success' }}
         run: |
           set -euo pipefail
           mkdir -p upload
           cp -f packages/oh-my-co-work-v*.zip upload/
-          cp -f upload-desktop/*.zip upload/ || true
+          DESKTOP_SECTION=""
+          if [ "$DESKTOP_OK" = "true" ]; then
+            cp -f upload-desktop/*.zip upload/ || true
+            DESKTOP_SECTION="**Windows 桌面窗口（推荐）**：下载 \`*-win32-x64-desktop.zip\`，解压后双击 \`start.bat\`。
+          包内含 Electron 与 Node，一般不用再装 Node.js。关窗藏托盘，托盘「退出」才停服务。
+          （体积超过 GitHub 仓库 100MB 限制，不进 \`packages/\`。）"
+          else
+            DESKTOP_SECTION="（本次 desktop 包未产出，请用 \`*-win32-x64.zip\` + 本机 Node.js ≥ 18，或重跑 pack-desktop-win）"
+          fi
           ls -la upload
           SHORT=$(git rev-parse --short HEAD)
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
-          NOTES=$(cat <<EOF
-          ## 运行包（打包产物，非源码）· v${VER}
+          NOTES="## 运行包（打包产物，非源码）· v${VER}
 
-          **Windows 桌面窗口（推荐）**：下载 \`*-win32-x64-desktop.zip\`，解压后双击 \`start.bat\`。
-          包内含 Electron 与 Node，一般不用再装 Node.js。关窗藏托盘，托盘「退出」才停服务。
-          （体积超过 GitHub 仓库 100MB 限制，不进 \`packages/\`。）
+          ${DESKTOP_SECTION}
 
           轻量运行包（需本机 Node.js ≥ 18，打开浏览器）：
           - \`*-win32-x64.zip\` → Windows
@@ -232,9 +278,7 @@ jobs:
           - \`*-darwin-*.zip\` → macOS
 
           仓库内同步目录：\`packages/\`
-          提交：\`${SHORT}\`
-          EOF
-          )
+          提交：\`${SHORT}\`"
           if gh release view latest >/dev/null 2>/dev/null; then
             gh release delete latest --yes --cleanup-tag
           fi

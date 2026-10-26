@@ -231,45 +231,43 @@ function unzipTo(zipPath, destDir) {
 
 /**
  * 交叉打包时，npm install --ignore-scripts 不会跑 prebuild-install，
- * 需要对每个原生依赖单独拉取目标平台的预编译二进制。
- * prebuild-install 本身在受限容器上也可能 SIGABRT，失败时降级为
- * 不阻断打包（运行时仍有 node:sqlite / 无 PTY 的降级路径）。
+ * 而 prebuild-install / node-gyp 在受限 CI（nproc=2、无 Python）上会
+ * SIGABRT（exit 134）或长时间挂起。改为用已有的 downloadHttps 直接
+ * 拉 GitHub Release 上的预编译二进制并解压到模块目录。
+ *
+ * - better-sqlite3：按 {version}-node-v{abi}-{platform}-{arch}.tar.gz 约定拉取
+ * - node-pty：npm 包自带多平台 prebuilds/，无需额外下载
+ *
+ * 失败仅告警不阻断（运行时有 node:sqlite / 无 PTY 降级路径）。
  */
-function fetchCrossPrebuilds(stage, target) {
-  const mods = ['better-sqlite3', 'node-pty']
-  for (const name of mods) {
-    const modDir = path.join(stage, 'node_modules', name)
-    if (!fs.existsSync(modDir)) {
-      console.warn(`[pack] 跳过 ${name}（未安装）`)
-      continue
+async function fetchCrossPrebuilds(stage, target) {
+  const abi = process.versions.modules // 宿主 Node ABI（20→115，打包机与 runtime 对齐）
+  const bs3Version = (() => {
+    try {
+      return readJson(path.join(stage, 'node_modules/better-sqlite3/package.json')).version
+    } catch {
+      return null
     }
-    const r = spawnSync(
-      'npx',
-      [
-        'prebuild-install',
-        '--platform',
-        target.platform,
-        '--arch',
-        target.arch,
-        '--verbose',
-      ],
-      {
-        cwd: modDir,
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          npm_config_platform: target.platform,
-          npm_config_arch: target.arch,
-        },
-      },
-    )
-    if (r.status !== 0) {
+  })()
+  if (bs3Version) {
+    const name = `better-sqlite3-v${bs3Version}-node-v${abi}-${target.platform}-${target.arch}.tar.gz`
+    const url = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${bs3Version}/${name}`
+    const bs3Dir = path.join(stage, 'node_modules/better-sqlite3')
+    try {
+      const tarball = await cachedDownload(url, name, { minBytes: 200 * 1024 })
+      execFileSync('tar', ['-xzf', tarball, '-C', bs3Dir], { stdio: 'inherit' })
+      console.log(`[pack] better-sqlite3 prebuild ok (${target.platform}-${target.arch})`)
+    } catch (e) {
       console.warn(
-        `[pack] prebuild-install ${name} 失败（exit ${r.status}），继续打包；运行时将走降级路径`,
+        `[pack] better-sqlite3 prebuild 失败（${e?.message || e}），继续打包；运行时将走 node:sqlite 降级`,
       )
-    } else {
-      console.log(`[pack] prebuild-install ${name} ok`)
     }
+  }
+  const ptyDir = path.join(stage, 'node_modules/node-pty/prebuilds')
+  if (fs.existsSync(ptyDir)) {
+    console.log('[pack] node-pty 使用 npm 包自带 prebuilds（多平台已随包分发）')
+  } else {
+    console.warn('[pack] node-pty 缺少 prebuilds，运行时 PTY 可能不可用')
   }
 }
 
@@ -921,8 +919,8 @@ async function mainAsync() {
   })
 
   if (target.cross) {
-    console.log('[pack] 交叉打包：单独拉取目标平台原生二进制（prebuild-install）…')
-    fetchCrossPrebuilds(stage, target)
+    console.log('[pack] 交叉打包：HTTP 直拉目标平台原生二进制…')
+    await fetchCrossPrebuilds(stage, target)
     console.log('[pack] 交叉打包，核对原生模块架构（避免混入宿主平台二进制）…')
     pruneMismatchedNativeBuilds(stage, target.platform)
   }
