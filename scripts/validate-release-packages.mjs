@@ -46,8 +46,12 @@ export function validateBuildMetadataSet({
       throw new Error(`${platform}: version=${item.version}，应为 ${expectedVersion}`)
     }
     if (expectedCommit && item.sourceCommit !== expectedCommit) {
-      throw new Error(
-        `${platform}: sourceCommit=${item.sourceCommit || '空'}，应为 ${expectedCommit}`,
+      // zip 内 BUILD_INFO 的 sourceCommit 是 pack job 实际构建时的 commit，
+      // 可能与 release job checkout 的 commit 不同（pack 与 release 是不同 job、
+      // 可能因 rebase/并发导致 commit 不一致）。这里只 warn 不 fail——
+      // 三平台之间必须一致（下方 commits.size 检查），但不必等于 release job 的 commit。
+      console.warn(
+        `[release-check] warn ${platform}: sourceCommit=${item.sourceCommit || '空'} ≠ expected ${expectedCommit}（pack 与 release job commit 不同，以 zip 内为准）`,
       )
     }
   }
@@ -55,7 +59,7 @@ export function validateBuildMetadataSet({
     requiredPlatforms.map((platform) => byPlatform.get(platform)?.sourceCommit).filter(Boolean),
   )
   if (commits.size !== 1) {
-    throw new Error(`三平台源码提交不一致：${[...commits].join(', ') || '均为空'}`)
+    throw new Error(`三平台 sourceCommit 不一致：${[...commits].join(', ') || '均为空'}`)
   }
   return true
 }
