@@ -21,7 +21,6 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
-const WORKER_URL = new URL('./sqliteIntegrityWorker.js', import.meta.url)
 const WORKER_FILE = fileURLToPath(import.meta.url)
 
 /**
