@@ -304,6 +304,18 @@ export function initDb() {
       started_at TEXT,
       finished_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS notification_inbox (
+      id TEXT PRIMARY KEY,
+      event_id TEXT,
+      level TEXT,
+      session_id TEXT,
+      title TEXT,
+      body TEXT,
+      deep_link TEXT,
+      read INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER
+    );
   `)
 
   const row = db.prepare('SELECT version FROM schema_version LIMIT 1').get()

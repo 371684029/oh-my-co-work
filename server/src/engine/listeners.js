@@ -1,6 +1,7 @@
 // 副作用监听：持久化与 WS 广播。由 engine.js 门面加载；重复 import 不会重复挂接。
 import { engineBus, ENGINE_EVENTS } from './events.js'
 import { emitSession, emitAll } from '../bus.js'
+import { attachNotificationIntentListeners } from '../notificationIntents.js'
 import {
   updateSession,
   persistNodeIo,
@@ -36,6 +37,8 @@ export function attachEngineListeners() {
   engineBus.on(ENGINE_EVENTS.UPDATE_MESSAGE, (messageId, content) => {
     updateMessageContent(messageId, content)
   })
+  // NTF-02: done-class 事件 → 通知意图（收件箱 + external.notify），须在 WS 广播之后挂接
+  attachNotificationIntentListeners()
 }
 
 export function engineListenersAttached() {

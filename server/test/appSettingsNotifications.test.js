@@ -9,3 +9,17 @@ test('defaultNotificationSettings enables action/error by default', () => {
   assert.equal(d.levels.error, true)
   assert.equal(d.levels.done, false)
 })
+
+test('allowActionButtons stays retired (NTF-18 choice b)', () => {
+  const d = defaultNotificationSettings()
+  assert.equal('allowActionButtons' in d, false)
+  assert.deepEqual(Object.keys(d).sort(), [
+    'enabled',
+    'levels',
+    'maxReminders',
+    'onlyWhenUnfocused',
+    'quietHours',
+    'remindIntervalMs',
+    'sound',
+  ])
+})

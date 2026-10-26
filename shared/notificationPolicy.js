@@ -100,3 +100,47 @@ export function canDeliverDesktopNotification(ctx) {
   if (ctx.dedupe) return { ok: false, reason: 'dedupe' }
   return { ok: true, reason: 'deliver' }
 }
+
+/**
+ * Server event → done-class notification intent (5.4.0 NTF-02 residual).
+ * Maps terminal states (session done/archived) and announcement updates to
+ * level `done` intents with stable ids for dedupe. Returns null for anything
+ * not done-class (gate / node / terminal failures keep living in the renderer
+ * intent layer). `docs-updated:<sessionId>` matches the renderer's existing
+ * stable id so the server intent and the renderer mapping dedupe into one.
+ */
+export function doneNotificationIntentForEvent(event, { sessionTitle = '' } = {}) {
+  const type = String(event?.type || '').trim()
+  const p = (event && event.payload) || {}
+  const sessionId = String(p.sessionId || p.session_id || '').trim()
+  if (!sessionId) return null
+  const title = String(sessionTitle || '').trim() || '会话'
+
+  if (type === 'announcement.updated') {
+    return {
+      id: `docs-updated:${sessionId}`,
+      level: 'done',
+      sessionId,
+      title: `「${title}」报告已更新`,
+      body: '群报告或台账已刷新 · 点击查看',
+      deepLink: `docs:${sessionId}:ANNOUNCEMENT.md`,
+    }
+  }
+
+  const status = String(p.status || '').trim()
+  const isTerminal =
+    type === 'session.archived' || (type === 'session.status' && (status === 'archived' || status === 'done'))
+  if (!isTerminal) return null
+  const state = type === 'session.archived' ? 'archived' : status
+  return {
+    id: `done:session:${sessionId}:${state}`,
+    level: 'done',
+    sessionId,
+    title: state === 'done' ? `「${title}」已完成` : `「${title}」已归档`,
+    body:
+      state === 'done'
+        ? '流程已全部跑完，点击查看结果'
+        : '流程已结束并归档，点击查看报告与台账',
+    deepLink: `session:${sessionId}`,
+  }
+}

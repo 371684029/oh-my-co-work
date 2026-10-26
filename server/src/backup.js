@@ -32,6 +32,9 @@ import {
 
 export { assertTreeNoSymlinks } from './backup/pathSafety.js'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
+import { checkIntegrityAsync, checkpointWalAsync } from './sqliteIntegrityWorker.js'
+
+export { checkIntegrityAsync } from './sqliteIntegrityWorker.js'
 
 /**
  * @returns {{ ok: boolean, detail: string }}
@@ -173,11 +176,16 @@ export function createBackup(opts = {}) {
   }
 }
 
-/** SRV-01: non-blocking backup for HTTP handlers (async tar + cp). */
+/** SRV-01: non-blocking backup for HTTP handlers (async tar + cp; integrity/checkpoint 在 worker 线程). */
 export async function createBackupAsync(opts = {}) {
+  // NO_DB 前置到 integrity 之前：文件缺失是明确错误，不该先耗一次完整性探测
+  const liveDb = resolveLiveDbPath()
+  if (!fs.existsSync(liveDb)) {
+    throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
+  }
   let integrity = { ok: true, detail: 'skipped' }
   if (!opts.skipIntegrity) {
-    integrity = runIntegrityCheck()
+    integrity = await checkIntegrityAsync(liveDb)
     if (!integrity.ok) {
       throw Object.assign(new Error(`SQLite integrity_check 失败：${integrity.detail}`), {
         code: 'INTEGRITY_FAIL',
@@ -186,10 +194,9 @@ export async function createBackupAsync(opts = {}) {
     }
   }
 
-  try {
-    getDb().pragma('wal_checkpoint(TRUNCATE)')
-  } catch (e) {
-    console.warn('[acw] wal_checkpoint', e?.message || e)
+  const checkpoint = await checkpointWalAsync(liveDb)
+  if (!checkpoint.ok) {
+    console.warn('[acw] wal_checkpoint', checkpoint.detail)
   }
 
   const outDir = opts.outDir || path.join(DATA_ROOT, 'backups')
@@ -199,11 +206,7 @@ export async function createBackupAsync(opts = {}) {
   await mkdir(work)
 
   try {
-    const liveDb = resolveLiveDbPath()
     const dbCopy = path.join(work, 'oh-my-co-work.sqlite')
-    if (!fs.existsSync(liveDb)) {
-      throw Object.assign(new Error(`找不到数据库文件: ${liveDb}`), { code: 'NO_DB' })
-    }
     await copyLiveSqliteAsync(liveDb, dbCopy)
     await stageJournalsAndUploadsAsync(work, DATA_ROOT, { includeUploads: opts.includeUploads })
 
@@ -377,7 +380,8 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
   }
 
   const initDbFn = deps.initDb || initDb
-  const checkSqlite = deps.checkSqliteFile || checkSqliteFile
+  // SRV-01：暂存库校验走 worker 线程（checkIntegrityAsync）；注入 checkSqliteFile 时保留同步语义
+  const checkSqlite = deps.checkSqliteFile || checkIntegrityAsync
   const applyLive = deps.applyLive || applyStagedToLiveAsync
 
   let pre = null
@@ -492,7 +496,7 @@ async function applyRestoreWorkAsync({ work, ownWork, entry, pre, initDbFn, chec
       throw Object.assign(new Error('备份内没有数据库文件'), { code: 'BAD_BACKUP' })
     }
     await assertRegularFileAsync(stagedDb, '备份库')
-    const check = checkSqlite(stagedDb)
+    const check = await checkSqlite(stagedDb)
     if (!check.ok) {
       throw Object.assign(new Error(`备份库 integrity_check 失败：${check.detail}`), {
         code: 'INTEGRITY_FAIL',

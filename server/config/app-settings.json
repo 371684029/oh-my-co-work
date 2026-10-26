@@ -62,8 +62,7 @@
       "end": "07:00"
     },
     "remindIntervalMs": 30000,
-    "maxReminders": 3,
-    "allowActionButtons": false
+    "maxReminders": 3
   },
   "ui": {
     "reduceEffects": false,

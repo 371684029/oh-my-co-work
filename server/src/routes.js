@@ -30,6 +30,7 @@ import settingsRoutes from './routes/settingsRoutes.js'
 import catalogRoutes from './routes/catalogRoutes.js'
 import sessionsRoutes from './routes/sessionsRoutes.js'
 import sessionsSystemRoutes from './routes/sessionsSystemRoutes.js'
+import notificationInboxRoutes from './routes/notificationInboxRoutes.js'
 
 const router = Router()
 
@@ -245,5 +246,6 @@ router.post('/slash-commands/:id/run', async (req, res) => {
 router.use(settingsRoutes)
 router.use(docsRoutes)
 router.use(updateRoutes)
+router.use(notificationInboxRoutes)
 
 export default router

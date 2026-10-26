@@ -8,6 +8,7 @@ import {
   shouldStopReminding,
   canDeliverDesktopNotification,
   notificationShouldBeSilent,
+  doneNotificationIntentForEvent,
 } from '@acw/shared'
 
 test('isWithinQuietHours handles wrap-around', () => {
@@ -85,4 +86,55 @@ test('notificationShouldBeSilent respects level and user sound pref', () => {
   assert.equal(notificationShouldBeSilent({ level: 'error', sound: true }), false)
   assert.equal(notificationShouldBeSilent({ level: 'done', sound: true }), true)
   assert.equal(notificationShouldBeSilent({ level: 'action', sound: false }), true)
+})
+
+test('doneNotificationIntentForEvent maps terminal session states with stable ids (NTF-02)', () => {
+  const archived = doneNotificationIntentForEvent(
+    { type: 'session.status', payload: { sessionId: 's1', status: 'archived' } },
+    { sessionTitle: '演示流' },
+  )
+  assert.equal(archived.level, 'done')
+  assert.equal(archived.id, 'done:session:s1:archived')
+  assert.equal(archived.deepLink, 'session:s1')
+  assert.match(archived.title, /演示流/)
+
+  const done = doneNotificationIntentForEvent(
+    { type: 'session.status', payload: { sessionId: 's1', status: 'done' } },
+    { sessionTitle: '演示流' },
+  )
+  assert.equal(done.level, 'done')
+  assert.equal(done.id, 'done:session:s1:done')
+
+  const archivedType = doneNotificationIntentForEvent(
+    { type: 'session.archived', payload: { sessionId: 's1' } },
+    { sessionTitle: '演示流' },
+  )
+  assert.equal(archivedType.id, 'done:session:s1:archived')
+
+  // stable: same event → same id (dedupe key)
+  assert.equal(archived.id, archivedType.id)
+})
+
+test('doneNotificationIntentForEvent maps announcement.updated and skips non-terminal', () => {
+  const announcement = doneNotificationIntentForEvent(
+    { type: 'announcement.updated', payload: { sessionId: 's2', path: 'a.md' } },
+    { sessionTitle: '周报' },
+  )
+  assert.equal(announcement.level, 'done')
+  assert.equal(announcement.id, 'docs-updated:s2')
+  assert.equal(announcement.deepLink, 'docs:s2:ANNOUNCEMENT.md')
+
+  assert.equal(
+    doneNotificationIntentForEvent({ type: 'session.status', payload: { sessionId: 's2', status: 'active' } }),
+    null,
+  )
+  assert.equal(
+    doneNotificationIntentForEvent({ type: 'session.status', payload: { sessionId: 's2', status: 'waiting_human', unarchived: true } }),
+    null,
+  )
+  assert.equal(
+    doneNotificationIntentForEvent({ type: 'gate.request', payload: { sessionId: 's2' } }),
+    null,
+  )
+  assert.equal(doneNotificationIntentForEvent({ type: 'announcement.updated', payload: {} }), null)
 })

@@ -278,8 +278,6 @@ export function defaultNotificationSettings() {
     quietHours: { enabled: false, start: '22:00', end: '07:00' },
     remindIntervalMs: 30_000,
     maxReminders: 3,
-    /** NTF-18: inline reply / action buttons on OS notifications (default off). */
-    allowActionButtons: false,
   }
 }
 
@@ -305,7 +303,6 @@ function normalizeNotifications(raw) {
     remindIntervalMs:
       Number(raw.remindIntervalMs) > 0 ? Number(raw.remindIntervalMs) : d.remindIntervalMs,
     maxReminders: Number(raw.maxReminders) > 0 ? Number(raw.maxReminders) : d.maxReminders,
-    allowActionButtons: raw.allowActionButtons === true,
   }
 }
 

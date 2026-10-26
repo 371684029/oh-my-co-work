@@ -2,7 +2,17 @@
  * 5.3.0 REU-01 — 配置级模板包（单 JSON），区别于整库备份。
  */
 import os from 'node:os'
-import { getMember, getGroup, createMember, createGroup, listMembers, listGroups } from './services.js'
+import { MEMBER_KIND } from '@acw/shared'
+import {
+  getMember,
+  getGroup,
+  createMember,
+  createGroup,
+  updateMember,
+  updateGroup,
+  listMembers,
+  listGroups,
+} from './services.js'
 
 export const TEMPLATE_PACK_VERSION = 1
 
@@ -121,6 +131,33 @@ function findNameConflict(kind, name, title) {
 }
 
 /**
+ * REU-01 覆盖导入：按包内定义的字段原地更新既有成员，未定义字段保留原值。
+ * 成员 id 不变，保证既有会话的 memberId 引用不失效。
+ */
+function overwriteMember(existing, body) {
+  const patch = {}
+  if (body.displayName !== undefined || body.display_name !== undefined) {
+    patch.displayName = body.displayName || body.display_name
+  }
+  if (body.kind !== undefined) patch.kind = body.kind
+  if (body.workFolder !== undefined || body.work_folder !== undefined) {
+    patch.workFolder = body.workFolder || body.work_folder || null
+  }
+  if (body.config !== undefined || body.script !== undefined) {
+    // 浅合并：包内定义的键覆盖，未定义的键保留
+    const config = { ...(existing.config || {}), ...(body.config || {}) }
+    if (body.script !== undefined) config.script = body.script
+    patch.config = config
+  }
+  const kind = patch.kind || existing.kind
+  const config = patch.config !== undefined ? patch.config : existing.config || {}
+  if (kind === MEMBER_KIND.SCRIPT && !config.script) {
+    throw new Error('脚本成员须配置运行方式')
+  }
+  return updateMember(existing.id, patch)
+}
+
+/**
  * @param {'rename'|'skip'|'overwrite'} onConflict
  */
 export function importTemplatePack(raw, { onConflict = 'rename', vars = null } = {}) {
@@ -145,12 +182,16 @@ export function importTemplatePack(raw, { onConflict = 'rename', vars = null } =
       if (body.sourceMemberId) memberIdMap.set(body.sourceMemberId, conflict.id)
       return { skipped: true, id: conflict.id, sourceMemberId: body.sourceMemberId }
     }
+    if (conflict && onConflict === 'overwrite') {
+      const existing = getMember(conflict.id)
+      const row = overwriteMember(existing, body)
+      if (body.sourceMemberId) memberIdMap.set(body.sourceMemberId, conflict.id)
+      created.members.push(row.id)
+      return { skipped: false, id: row.id, row, sourceMemberId: body.sourceMemberId }
+    }
     let useName = name
     if (conflict && onConflict === 'rename') {
       useName = `${name}_import_${Date.now()}`
-    }
-    if (conflict && onConflict === 'overwrite') {
-      throw new Error(`覆盖导入尚未支持: 成员 ${name}`)
     }
     const row = createMember({
       name: useName,
@@ -181,13 +222,6 @@ export function importTemplatePack(raw, { onConflict = 'rename', vars = null } =
     if (conflict && onConflict === 'skip') {
       return { ...created, skipped: true, primaryId: conflict.id, kind: 'group' }
     }
-    let useTitle = title
-    if (conflict && onConflict === 'rename') {
-      useTitle = `${title} (导入)`
-    }
-    if (conflict && onConflict === 'overwrite') {
-      throw new Error(`覆盖导入尚未支持: 群 ${title}`)
-    }
     const steps = (g.steps || []).map((s) => {
       const step = { ...s }
       if (step.memberId && memberIdMap.has(step.memberId)) {
@@ -195,7 +229,22 @@ export function importTemplatePack(raw, { onConflict = 'rename', vars = null } =
       }
       return step
     })
-
+    if (conflict && onConflict === 'overwrite') {
+      // REU-01 覆盖导入：群 id 不变，仅更新包内定义的字段；config 由 updateGroup 浅合并
+      const patch = {}
+      if (g.description !== undefined) patch.description = g.description
+      const workFolder = g.workFolder ?? g.work_folder
+      if (workFolder !== undefined) patch.workFolder = workFolder || null
+      if (g.steps !== undefined) patch.steps = steps
+      if (g.config !== undefined) patch.config = g.config
+      const row = updateGroup(conflict.id, patch)
+      created.groups.push(row.id)
+      return { ...created, primaryId: row.id, kind: 'group' }
+    }
+    let useTitle = title
+    if (conflict && onConflict === 'rename') {
+      useTitle = `${title} (导入)`
+    }
     const row = createGroup({
       title: useTitle,
       description: g.description,
