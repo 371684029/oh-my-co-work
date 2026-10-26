@@ -766,8 +766,19 @@ async function mainAsync() {
     target.cross ? `(cross-pack from ${platformTag()})` : '',
   )
 
-  console.log('[pack] build web…')
-  sh('npm', ['run', 'build', '-w', 'web'])
+  // ACW_PACK_SKIP_WEB_BUILD=1：复用已有 web/dist（本机 nproc 受限时可先单独 npm run build -w web）
+  const skipWeb = ['1', 'true', 'yes'].includes(
+    String(process.env.ACW_PACK_SKIP_WEB_BUILD || '').toLowerCase(),
+  )
+  if (skipWeb) {
+    if (!fs.existsSync(path.join(ROOT, 'web/dist/index.html'))) {
+      throw new Error('ACW_PACK_SKIP_WEB_BUILD=1 但 web/dist 不存在，请先 npm run build -w web')
+    }
+    console.log('[pack] skip web build (ACW_PACK_SKIP_WEB_BUILD)，复用 web/dist…')
+  } else {
+    console.log('[pack] build web…')
+    sh('npm', ['run', 'build', '-w', 'web'])
+  }
 
   if (fs.existsSync(stage)) fs.rmSync(stage, { recursive: true, force: true })
   fs.mkdirSync(path.join(stage, 'server', 'dist'), { recursive: true })
@@ -815,7 +826,15 @@ async function mainAsync() {
   )
 
   console.log('[pack] install runtime deps inside package (prebake node_modules)…')
-  sh('npm', ['install', '--omit=dev', '--no-audit', '--no-fund'], {
+  // 交叉打包时，npm_config_* 让 prebuild-install 拉目标平台二进制；
+  // 同平台打包默认允许 node-gyp 重建（宿主可能没有 linux prebuilds）。
+  // ACW_PACK_IGNORE_NATIVE_SCRIPTS=1 时跳过 install 脚本（只用 prebuilds，适合 CI/无 Python 环境）。
+  const ignoreScripts = ['1', 'true', 'yes'].includes(
+    String(process.env.ACW_PACK_IGNORE_NATIVE_SCRIPTS || '').toLowerCase(),
+  )
+  const installArgs = ['install', '--omit=dev', '--no-audit', '--no-fund']
+  if (ignoreScripts) installArgs.push('--ignore-scripts')
+  sh('npm', installArgs, {
     cwd: stage,
     env: target.cross
       ? {
