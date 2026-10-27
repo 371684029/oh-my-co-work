@@ -281,6 +281,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 | [5.4.0 系统通知](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
 | [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA（NTF-T3/T4） |
 | [5.6.0 需求文档](./docs/5.6.0-plan.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
+| [5.7.0 需求文档](./docs/5.7.0-plan.md) | 打包链路一劳永逸与发布治理：mac 符号链接、Linux 沙箱、配置迁出安装目录、产物出 git、严格发布校验、三平台桌面 CI 冒烟；剩运行时升级与签名 |
 | [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -326,6 +327,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
+- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10 已落地（三平台桌面包 CI、linux 真机启动冒烟、产物只发 Release、配置迁至数据目录、首屏 JS -16%）；剩 Node/Electron 运行时升级、macOS/Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
 - [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目

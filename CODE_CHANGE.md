@@ -3,6 +3,14 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-27 | A | docs/5.7.0-plan.md | 5.7.0 需求文档：打包链路剩余风险 PKG-01~14 / REPO-01 清单、DoD 与实施顺序
+2026-10-27 | M | README.md, docs/README.md | 文档索引与路线图补 5.7.0 条目
+2026-10-27 | M | web/src/main.js | PKG-06 vue-element-plus-x 改为只注册 BubbleList/Conversations/XSender，入口 chunk gzip 299KB→252KB
+2026-10-27 | M | web/vite.config.js, web/src/views/Workbench.vue, web/src/views/settings/RestoreCenter.vue | 去掉 element-plus 子模块 manualChunks（循环引用致 TDZ 白屏）；BubbleList 仅超 200 条启用虚拟滚动；还原中心无精修成员时隐藏区块
+2026-10-27 | M/A | scripts/pack-release.mjs, scripts/verify-pack.mjs, scripts/desktop-smoke.mjs, scripts/desktop-launch.mjs, electron/lib/splash.mjs, electron/test/{start-bat,packVersions}.test.mjs, server/test/verifyPack.test.js | PKG-01/02/07/09 桌面主进程 esbuild 打包、acwPack 版本单一来源、ABI 映射、镜像回退、mac zip -y、Linux 沙箱自适应、linux 真机启动冒烟
+2026-10-27 | M/A | server/src/{appSettings,slashCommands}.js, server/test/{appSettingsPath,terminalService}.test.js, scripts/ci-e2e-smoke.mjs | PKG-03 app-settings / slash-commands 迁到数据根，旧位置首启自动迁移
+2026-10-27 | M | scripts/validate-release-packages.mjs, server/test/releasePackages.test.js | PKG-05 commit / sidecar 不一致改为失败
+2026-10-27 | M/D | .github/workflows/{ci,pack-release}.yml, .gitignore, package.json, packages/** | PKG-04/08/10 三平台桌面矩阵 + Actions node24；产物只发 Release、packages/ 移出 git；latest 原地更新
 2026-10-27 | A | web/src/views/workbench/composables/sessionDetailState.js, sessionDetailLifecycleActions.js, sessionDetailComposerActions.js, sessionDetailSendGateActions.js + web/test/*.test.mjs | FE-01/ENG-04 useSessionDetail 拆分：状态与动作接线抽入 sessionDetail* 模块，主文件瘦至目标行数
 2026-10-27 | M | web/src/components/{NotificationInbox,PathPicker}.vue, web/src/views/workbench/components/{FlowRailTimelinePane,ComposerPanel}.vue, web/src/i18n/{zh-CN,en-US}.js | UX-03 无障碍：通知收件箱/路径选择器/时间线/附件列表补键盘导航与 aria，新增 a11y.* 文案
 2026-10-27 | M/A | server/src/appSettings.js, server/test/appSettingsNotifications.test.js, web/src/components/terminal/terminalPrefs.js, web/src/components/terminal/TerminalView.vue, web/src/views/settings/Prefs.vue, web/src/views/workbench/composables/{useSessionDetail,sessionDetailResetState}.js, web/src/i18n/settingsPrefs.{en,zh}.js, web/src/composables/terminalSelectToCopy.js, web/test/terminalSelectToCopy.test.mjs | CP-03 选中即复制：新增 selectToCopy 偏好（默认关）+ xterm.onSelectionChange 防抖自动复制
