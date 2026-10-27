@@ -71,6 +71,20 @@ function unzipHead(zipPath, entry, n = 4) {
   )
 }
 
+function unzipIsSymlink(zipPath, entry) {
+  const out = execFileSync(
+    'python3',
+    [
+      '-c',
+      'import zipfile,sys,stat; i=zipfile.ZipFile(sys.argv[1]).getinfo(sys.argv[2]); print(1 if stat.S_ISLNK(i.external_attr >> 16) else 0)',
+      zipPath,
+      entry,
+    ],
+    { encoding: 'utf8' },
+  )
+  return out.trim() === '1'
+}
+
 function platformOf(tag) {
   const m = String(tag).match(/^(win32|linux|darwin)-(x64|arm64)$/)
   if (!m) throw new Error(`未知平台标签: ${tag}`)
@@ -168,6 +182,15 @@ function verifyDesktopEntries(zipPath, entries, platform) {
       if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
         throw new Error(`${item.label} 不是 Windows PE（缺少 MZ 头）`)
       }
+    }
+  }
+  if (platform === 'darwin') {
+    const fw = entries.find((e) =>
+      /\/desktop\/Electron\.app\/Contents\/Frameworks\/Electron Framework\.framework\/Electron Framework$/.test(`/${e}`),
+    )
+    if (!fw) throw new Error('darwin 桌面包缺少 Electron Framework.framework')
+    if (!unzipIsSymlink(zipPath, fw)) {
+      throw new Error('Electron.app 内 framework 符号链接被展开成实体文件（打包需 zip -y），签名失效、无法启动')
     }
   }
   const mainEntry = entries.find((e) => /(^|\/)electron\/main\.js$/.test(e))

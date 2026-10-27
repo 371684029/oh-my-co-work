@@ -21,9 +21,10 @@ import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { windowsStartBat } from './windowsStartBat.mjs'
 
-/** 桌面包内嵌运行时（与 CI Node 20 ABI 对齐；win32 / linux / darwin × x64 / arm64） */
-const PACK_NODE_VERSION = '20.18.3'
-const PACK_ELECTRON_VERSION = '32.3.3'
+/** 桌面包内嵌运行时版本：唯一来源是根 package.json 的 acwPack（工作流缓存 key 也读它） */
+const { nodeVersion: PACK_NODE_VERSION, electronVersion: PACK_ELECTRON_VERSION } = JSON.parse(
+  fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).acwPack
 /** Node 主版本 → NODE_MODULE_VERSION；桌面包 better-sqlite3 必须按内嵌 runtime 的 ABI 取，而不是打包机 */
 const NODE_ABI_BY_MAJOR = { 18: '108', 20: '115', 22: '127', 24: '137' }
 function runtimeNodeAbi(nodeVersion = PACK_NODE_VERSION) {
@@ -257,10 +258,13 @@ async function fetchCrossPrebuilds(stage, target, { abi = process.versions.modul
   })()
   if (bs3Version) {
     const name = `better-sqlite3-v${bs3Version}-node-v${abi}-${target.platform}-${target.arch}.tar.gz`
-    const url = `https://github.com/WiseLibs/better-sqlite3/releases/download/v${bs3Version}/${name}`
+    const urls = [
+      `https://github.com/WiseLibs/better-sqlite3/releases/download/v${bs3Version}/${name}`,
+      `https://registry.npmmirror.com/-/binary/better-sqlite3/v${bs3Version}/${name}`,
+    ]
     const bs3Dir = path.join(stage, 'node_modules/better-sqlite3')
     try {
-      const tarball = await cachedDownload(url, name, { minBytes: 200 * 1024 })
+      const tarball = await cachedDownload(urls, name, { minBytes: 200 * 1024 })
       execFileSync('tar', ['-xzf', tarball, '-C', bs3Dir], { stdio: 'inherit' })
       console.log(`[pack] better-sqlite3 prebuild ok (${target.platform}-${target.arch})`)
     } catch (e) {
@@ -374,7 +378,10 @@ async function embedDesktop(stage, platform, arch) {
   const nodeDist = nodeDistName(platform, arch)
   const nodeArchive = `${nodeDist.name}.${nodeDist.ext}`
   const nodeZip = await cachedDownload(
-    `https://nodejs.org/dist/v${PACK_NODE_VERSION}/${nodeArchive}`,
+    [
+      `https://nodejs.org/dist/v${PACK_NODE_VERSION}/${nodeArchive}`,
+      `https://npmmirror.com/mirrors/node/v${PACK_NODE_VERSION}/${nodeArchive}`,
+    ],
     nodeArchive,
     { minBytes: 20 * 1024 * 1024 },
   )
@@ -1136,7 +1143,10 @@ async function mainAsync() {
       { stdio: 'inherit' },
     )
   } else {
-    execFileSync('zip', ['-r', '-q', zipPath, folderName], {
+    // -y 保留符号链接：Electron.app 的 *.framework 依赖 Versions/Current 等链接，展开成实体文件
+    // 会破坏代码签名，Apple Silicon 上直接被系统杀掉。win32 包不需要（解压工具也不认 symlink）。
+    const zipArgs = target.platform === 'win32' ? ['-r', '-q'] : ['-r', '-q', '-y']
+    execFileSync('zip', [...zipArgs, zipPath, folderName], {
       cwd: OUT_ROOT,
       stdio: 'inherit',
     })
