@@ -7,6 +7,7 @@ export const defaultTerminalPrefs = () => ({
   fontSize: 13,
   cursorBlink: true,
   pastePolicy: 'confirm',
+  selectToCopy: false,
   autoCollapseOnExit: false,
   scrollback: 5000,
 })
