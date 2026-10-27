@@ -1,6 +1,8 @@
 /**
- * Windows 桌面包启动器：用包内 node 拉起 electron.exe。
- * 不用 cmd 的 start（引号、%~dp0、chcp 65001 都容易把进程拉起来又立刻没窗口）。
+ * 桌面包启动器（win32 / linux / darwin）：用包内 node 拉起 Electron。
+ * win32 不用 cmd 的 start（引号、%~dp0、chcp 65001 都容易把进程拉起来又立刻没窗口）。
+ * darwin 保持 Electron.app 包结构，直接调 Electron.app/Contents/MacOS/Electron；
+ * macOS codesign/公证不在本范围（需要 Apple 开发者证书，包为未签名便携版）。
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -11,10 +13,30 @@ export function resolveAppRoot(fromUrl = import.meta.url) {
   return path.resolve(path.dirname(fileURLToPath(fromUrl)))
 }
 
-export function electronExe(appRoot) {
-  const branded = path.join(appRoot, 'desktop', 'oh-my-co-work.exe')
+/**
+ * 按当前平台解析桌面包内 Electron 可执行文件（platform 参数仅供测试注入）：
+ * - win32：desktop/oh-my-co-work.exe（品牌图标）→ 兜底 desktop/electron.exe（历史布局）
+ * - linux：desktop/oh-my-co-work（品牌名）→ 兜底 desktop/electron
+ * - darwin：desktop/oh-my-co-work.app/Contents/MacOS/Electron → 兜底 Electron.app/.../Electron
+ */
+export function electronExe(appRoot, platform = process.platform) {
+  if (platform === 'darwin') {
+    const branded = path.join(
+      appRoot,
+      'desktop',
+      'oh-my-co-work.app',
+      'Contents',
+      'MacOS',
+      'Electron',
+    )
+    if (fs.existsSync(branded)) return branded
+    return path.join(appRoot, 'desktop', 'Electron.app', 'Contents', 'MacOS', 'Electron')
+  }
+  const exeName = platform === 'win32' ? 'oh-my-co-work.exe' : 'oh-my-co-work'
+  const fallbackName = platform === 'win32' ? 'electron.exe' : 'electron'
+  const branded = path.join(appRoot, 'desktop', exeName)
   if (fs.existsSync(branded)) return branded
-  return path.join(appRoot, 'desktop', 'electron.exe')
+  return path.join(appRoot, 'desktop', fallbackName)
 }
 
 function appendLog(appRoot, line) {
@@ -59,7 +81,7 @@ async function main() {
   const exe = electronExe(appRoot)
   if (!fs.existsSync(exe)) {
     appendLog(appRoot, `missing ${exe}`)
-    console.error('desktop\\oh-my-co-work.exe (or electron.exe) not found')
+    console.error('desktop Electron binary not found (oh-my-co-work / electron / Electron.app)')
     process.exit(1)
   }
   appendLog(appRoot, `spawn ${exe} app=${appRoot}`)
@@ -67,7 +89,7 @@ async function main() {
   const alive = await waitAlive(child)
   if (alive !== true) {
     appendLog(appRoot, `electron exited early code=${alive.code} signal=${alive.signal}`)
-    console.error('Electron exited immediately. See data\\electron.log')
+    console.error('Electron exited immediately. See data/electron.log')
     process.exit(1)
   }
   appendLog(appRoot, `electron pid=${child.pid}`)

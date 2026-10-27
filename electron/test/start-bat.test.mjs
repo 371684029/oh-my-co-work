@@ -19,12 +19,43 @@ test('start.bat 用包内 node 拉 Electron，不用 cmd start', () => {
   assert.equal(bat.includes('pause'), true)
 })
 
-test('desktop-launch 优先带图标的 oh-my-co-work.exe', () => {
+test('desktop-launch 优先带图标的 oh-my-co-work.exe（win32）', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
   fs.mkdirSync(path.join(dir, 'desktop'))
   fs.writeFileSync(path.join(dir, 'desktop', 'oh-my-co-work.exe'), '')
   fs.writeFileSync(path.join(dir, 'desktop', 'electron.exe'), '')
-  assert.equal(electronExe(dir), path.join(dir, 'desktop', 'oh-my-co-work.exe'))
+  assert.equal(electronExe(dir, 'win32'), path.join(dir, 'desktop', 'oh-my-co-work.exe'))
+  // 兼容历史布局：只有 electron.exe 时也能解析
+  fs.rmSync(path.join(dir, 'desktop', 'oh-my-co-work.exe'))
+  assert.equal(electronExe(dir, 'win32'), path.join(dir, 'desktop', 'electron.exe'))
+})
+
+test('desktop-launch linux 解析 desktop/oh-my-co-work（兜底 electron）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
+  fs.mkdirSync(path.join(dir, 'desktop'))
+  fs.writeFileSync(path.join(dir, 'desktop', 'oh-my-co-work'), '')
+  fs.writeFileSync(path.join(dir, 'desktop', 'electron'), '')
+  assert.equal(electronExe(dir, 'linux'), path.join(dir, 'desktop', 'oh-my-co-work'))
+  fs.rmSync(path.join(dir, 'desktop', 'oh-my-co-work'))
+  assert.equal(electronExe(dir, 'linux'), path.join(dir, 'desktop', 'electron'))
+})
+
+test('desktop-launch darwin 解析 Electron.app 内二进制（保留 .app 包结构）', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
+  fs.mkdirSync(path.join(dir, 'desktop', 'Electron.app', 'Contents', 'MacOS'), { recursive: true })
+  assert.equal(
+    electronExe(dir, 'darwin'),
+    path.join(dir, 'desktop', 'Electron.app', 'Contents', 'MacOS', 'Electron'),
+  )
+  // 若未来改名 oh-my-co-work.app 也兼容
+  fs.mkdirSync(path.join(dir, 'desktop', 'oh-my-co-work.app', 'Contents', 'MacOS'), {
+    recursive: true,
+  })
+  fs.writeFileSync(path.join(dir, 'desktop', 'oh-my-co-work.app', 'Contents', 'MacOS', 'Electron'), '')
+  assert.equal(
+    electronExe(dir, 'darwin'),
+    path.join(dir, 'desktop', 'oh-my-co-work.app', 'Contents', 'MacOS', 'Electron'),
+  )
 })
 
 test('splash 页立刻能显示启动中', () => {

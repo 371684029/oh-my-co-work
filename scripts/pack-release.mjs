@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { windowsStartBat } from './windowsStartBat.mjs'
 
-/** Windows 桌面包内嵌运行时（与 CI Node 20 ABI、win32 原生模块对齐） */
+/** 桌面包内嵌运行时（与 CI Node 20 ABI 对齐；win32 / linux / darwin × x64 / arm64） */
 const PACK_NODE_VERSION = '20.18.3'
 const PACK_ELECTRON_VERSION = '32.3.3'
 /** GitHub 仓库文件硬限制 100MB；含 Electron 的桌面包只放 release/ 与 GitHub Release */
@@ -316,49 +316,112 @@ function copyElectronAppFiles(stage) {
   }
 }
 
-async function embedWin32Desktop(stage) {
+/**
+ * Node 官方 dist 的平台命名与压缩格式：
+ * win32 → win-{arch}.zip（zip 内根目录 node.exe + dll/exe）；
+ * linux → linux-{arch}.tar.xz（bin/node）；
+ * darwin → darwin-{arch}.tar.gz（bin/node）。
+ */
+function nodeDistName(platform, arch) {
+  const distPlat = platform === 'win32' ? 'win' : platform
+  const ext = platform === 'win32' ? 'zip' : platform === 'darwin' ? 'tar.gz' : 'tar.xz'
+  return { name: `node-v${PACK_NODE_VERSION}-${distPlat}-${arch}`, ext }
+}
+
+/** tar 包解压到目录（Node 运行时 linux/darwin 用；win32 的 zip 走 unzipTo） */
+function untarTo(tarPath, destDir) {
+  fs.mkdirSync(destDir, { recursive: true })
+  const flag = tarPath.endsWith('.gz') ? '-xzf' : '-xJf'
+  execFileSync('tar', [flag, tarPath, '-C', destDir], { stdio: 'inherit' })
+}
+
+/**
+ * 三平台桌面包（DESK-07）：下载并内嵌 Node 运行时 + Electron，按平台落位：
+ * - win32：electron.exe → desktop/oh-my-co-work.exe（盖 .ico）；runtime/node.exe（+dll/exe）
+ * - linux：electron → desktop/oh-my-co-work（chmod +x）；runtime/node（chmod +x）
+ * - darwin：保留 Electron.app（Electron.app/Contents/MacOS/Electron），不改名 .app；
+ *   desktop-launch.mjs 直接调用包内二进制路径。
+ *   macOS codesign / 公证不在本脚本范围（需要 Apple Developer 证书），包为未签名便携版。
+ * linux 不盖图标：electron/main.js 运行时用 electron/icon.png 设窗口/托盘图标。
+ * 二进制命名契约与 desktop-launch.mjs 的 electronExe()、electron/lib/server.mjs 的
+ * resolveNodeBin()（win32→runtime/node.exe，其余→runtime/node）保持一致。
+ */
+async function embedDesktop(stage, platform, arch) {
   copyElectronAppFiles(stage)
 
+  // 1) Node 运行时
+  const nodeDist = nodeDistName(platform, arch)
+  const nodeArchive = `${nodeDist.name}.${nodeDist.ext}`
   const nodeZip = await cachedDownload(
-    `https://nodejs.org/dist/v${PACK_NODE_VERSION}/node-v${PACK_NODE_VERSION}-win-x64.zip`,
-    `node-v${PACK_NODE_VERSION}-win-x64.zip`,
+    `https://nodejs.org/dist/v${PACK_NODE_VERSION}/${nodeArchive}`,
+    nodeArchive,
     { minBytes: 20 * 1024 * 1024 },
   )
-  const nodeExtract = path.join(OUT_ROOT, 'cache', `node-v${PACK_NODE_VERSION}-win-x64-extract`)
+  const nodeExtract = path.join(OUT_ROOT, 'cache', `${nodeDist.name}-extract`)
   if (fs.existsSync(nodeExtract)) fs.rmSync(nodeExtract, { recursive: true, force: true })
-  unzipTo(nodeZip, nodeExtract)
-  const nodeRoot = path.join(nodeExtract, `node-v${PACK_NODE_VERSION}-win-x64`)
+  if (nodeDist.ext === 'zip') unzipTo(nodeZip, nodeExtract)
+  else untarTo(nodeZip, nodeExtract)
+  const nodeRoot = path.join(nodeExtract, nodeDist.name)
   const runtime = path.join(stage, 'runtime')
   fs.mkdirSync(runtime, { recursive: true })
-  const nodeExe = path.join(nodeRoot, 'node.exe')
-  if (!fs.existsSync(nodeExe)) throw new Error('Node 官方 zip 内缺少 node.exe')
-  copyFile(nodeExe, path.join(runtime, 'node.exe'))
-  for (const extra of fs.readdirSync(nodeRoot)) {
-    if (!/\.(dll|exe)$/i.test(extra)) continue
-    if (extra.toLowerCase() === 'node.exe') continue
-    copyFile(path.join(nodeRoot, extra), path.join(runtime, extra))
+  if (platform === 'win32') {
+    const nodeExe = path.join(nodeRoot, 'node.exe')
+    if (!fs.existsSync(nodeExe)) throw new Error('Node 官方 zip 内缺少 node.exe')
+    copyFile(nodeExe, path.join(runtime, 'node.exe'))
+    for (const extra of fs.readdirSync(nodeRoot)) {
+      if (!/\.(dll|exe)$/i.test(extra)) continue
+      if (extra.toLowerCase() === 'node.exe') continue
+      copyFile(path.join(nodeRoot, extra), path.join(runtime, extra))
+    }
+  } else {
+    const nodeBin = path.join(nodeRoot, 'bin', 'node')
+    if (!fs.existsSync(nodeBin)) {
+      throw new Error(`Node 官方 tar 包内缺少 bin/node（${nodeDist.name}）`)
+    }
+    copyFile(nodeBin, path.join(runtime, 'node'))
+    fs.chmodSync(path.join(runtime, 'node'), 0o755)
+    console.log(`[pack] runtime/node ready (${platform}-${arch})`)
   }
 
+  // 2) Electron（win32/linux/darwin 官方发行物都是 zip）
+  const electronName = `electron-v${PACK_ELECTRON_VERSION}-${platform}-${arch}`
   const electronZip = await cachedDownload(
     [
       // 国内/受限网络优先镜像，失败再走官方 GitHub Release
-      `https://npmmirror.com/mirrors/electron/${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
-      `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+      `https://npmmirror.com/mirrors/electron/${PACK_ELECTRON_VERSION}/${electronName}.zip`,
+      `https://github.com/electron/electron/releases/download/v${PACK_ELECTRON_VERSION}/${electronName}.zip`,
     ],
-    `electron-v${PACK_ELECTRON_VERSION}-win32-x64.zip`,
+    `${electronName}.zip`,
     { minBytes: 80 * 1024 * 1024 },
   )
   const desktop = path.join(stage, 'desktop')
   if (fs.existsSync(desktop)) fs.rmSync(desktop, { recursive: true, force: true })
   unzipTo(electronZip, desktop)
-  const electronExe = path.join(desktop, 'electron.exe')
-  if (!fs.existsSync(electronExe)) throw new Error('Electron zip 内缺少 electron.exe')
-  const brandedExe = path.join(desktop, 'oh-my-co-work.exe')
-  fs.renameSync(electronExe, brandedExe)
-  const ico = path.join(ROOT, 'electron', 'icon.ico')
-  const { stampWinExeIcon } = await import('./win-exe-icon.mjs')
-  stampWinExeIcon(brandedExe, ico)
-  console.log('[pack] stamped icon onto desktop/oh-my-co-work.exe')
+
+  if (platform === 'win32') {
+    const electronExe = path.join(desktop, 'electron.exe')
+    if (!fs.existsSync(electronExe)) throw new Error('Electron zip 内缺少 electron.exe')
+    const brandedExe = path.join(desktop, 'oh-my-co-work.exe')
+    fs.renameSync(electronExe, brandedExe)
+    const ico = path.join(ROOT, 'electron', 'icon.ico')
+    const { stampWinExeIcon } = await import('./win-exe-icon.mjs')
+    stampWinExeIcon(brandedExe, ico)
+    console.log('[pack] stamped icon onto desktop/oh-my-co-work.exe')
+  } else if (platform === 'linux') {
+    const electronBin = path.join(desktop, 'electron')
+    if (!fs.existsSync(electronBin)) throw new Error('Electron zip 内缺少 electron 可执行文件')
+    fs.renameSync(electronBin, path.join(desktop, 'oh-my-co-work'))
+    fs.chmodSync(path.join(desktop, 'oh-my-co-work'), 0o755)
+    console.log('[pack] linux desktop binary ready (desktop/oh-my-co-work)')
+  } else {
+    // darwin：保持 Electron.app 包结构（改名 .app 需连动 Info.plist，收益低）。
+    // codesign / 公证需要 Apple Developer 证书，未签名便携版见 README 说明。
+    const appBin = path.join(desktop, 'Electron.app', 'Contents', 'MacOS', 'Electron')
+    if (!fs.existsSync(appBin)) {
+      throw new Error('Electron zip 内缺少 Electron.app/Contents/MacOS/Electron')
+    }
+    console.log('[pack] darwin desktop ready (Electron.app, unsigned)')
+  }
   copyFile(path.join(ROOT, 'scripts', 'desktop-launch.mjs'), path.join(stage, 'desktop-launch.mjs'))
 }
 
@@ -369,6 +432,12 @@ function writeStartSh(dest) {
       '#!/usr/bin/env bash',
       'set -euo pipefail',
       'cd "$(dirname "$0")"',
+      '# 桌面包（win32/linux/darwin 通用布局）：优先用包内 node 拉起桌面窗口',
+      'if [ -f desktop-launch.mjs ] && [ -x runtime/node ] && [ -d desktop ]; then',
+      '  echo "[acw] 正在启动 oh-my-co-work 桌面窗口…"',
+      '  echo "[acw] 提示：关闭窗口默认藏托盘，托盘「退出」才停服务"',
+      '  exec ./runtime/node desktop-launch.mjs',
+      'fi',
       'if ! command -v node >/dev/null 2>&1; then',
       '  echo "[acw] 未检测到 Node.js，请先安装 Node.js 18+ ：https://nodejs.org"',
       '  exit 1',
@@ -732,7 +801,7 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
     '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
     '',
-    'Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载 `*-win32-x64-desktop.zip`。',
+    '**桌面窗口包**（Windows / macOS / Linux，内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台的 `*-desktop.zip`（macOS 为未签名便携版）。',
     '',
     '## 版本策略',
     '',
@@ -752,7 +821,7 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '## 启动',
     '',
     '解压对应平台的 zip → Windows 双击 `start.bat`（浏览器）；macOS/Linux 运行 `./start.sh`。',
-    'Windows 桌面窗口请用 Release 里的 `*-win32-x64-desktop.zip`。',
+    '桌面窗口请用 Release 里对应平台的 `*-desktop.zip`。',
     '',
   ]
   fs.writeFileSync(path.join(PACKAGES_DIR, 'README.md'), lines.join('\n'), 'utf8')
@@ -817,9 +886,6 @@ async function mainAsync() {
   const builtAt = new Date().toISOString()
   const target = packTarget()
   const desktopPack = wantDesktopPack()
-  if (desktopPack && target.platform !== 'win32') {
-    throw new Error('ACW_PACK_DESKTOP=1 仅支持 ACW_PACK_TARGET=win32-x64')
-  }
   const plat = target.tag
   const folderName = desktopPack
     ? `oh-my-co-work-v${major}-${plat}-desktop`
@@ -930,10 +996,15 @@ async function mainAsync() {
   writeStartSh(path.join(stage, 'start.sh'))
 
   if (desktopPack) {
-    console.log('[pack] embed Windows desktop (Electron + Node runtime)…')
-    await embedWin32Desktop(stage)
+    console.log(`[pack] embed desktop (Electron + Node runtime) for ${plat}…`)
+    await embedDesktop(stage, target.platform, target.arch)
   }
 
+  const desktopOsName = plat.startsWith('win32')
+    ? 'Windows'
+    : plat.startsWith('darwin')
+      ? 'macOS'
+      : 'Linux'
   const userReadme = [
     '# oh-my-co-work 运行包',
     '',
@@ -943,22 +1014,33 @@ async function mainAsync() {
     '',
     '## 需要',
     '',
-    plat.startsWith('win32') && desktopPack
-      ? '- Windows x64。包内已带 Electron 窗口和 Node 运行时，**一般不用再装 Node.js**。'
+    desktopPack
+      ? `- ${desktopOsName}。包内已带 Electron 窗口和 Node 运行时，**一般不用再装 Node.js**。`
       : '- 本机已安装 Node.js ≥ 18（https://nodejs.org；推荐 Node 22+）',
     '- **通常不需要**再执行 npm install（依赖已打进包内）',
-    ...(plat.startsWith('win32') && desktopPack
+    ...(desktopPack
       ? []
       : ['- Node 22+：即使 better-sqlite3 与本机 Node 不匹配，也会自动用内置 sqlite 启动']),
+    ...(desktopPack && plat.startsWith('darwin')
+      ? [
+          '- **macOS 未签名便携版**：未经 Apple 公证，首次打开若被 Gatekeeper 拦截，请右键 → 打开，或执行 `xattr -dr com.apple.quarantine .`（代码签名/公证需 Apple 开发者证书，暂未提供）',
+        ]
+      : []),
     '',
     '## 启动',
     '',
     '| 系统 | 操作 |',
     '|------|------|',
-    desktopPack
-      ? '| Windows | 双击 start.bat（打开桌面窗口；关窗藏托盘，托盘「退出」才停服务） |'
-      : '| Windows | 双击 start.bat（需本机 Node.js；会打开浏览器） |',
-    '| macOS / Linux | ./start.sh 或 node start.mjs |',
+    ...(desktopPack
+      ? [
+          plat.startsWith('win32')
+            ? '| Windows | 双击 start.bat（打开桌面窗口；关窗藏托盘，托盘「退出」才停服务） |'
+            : `| ${desktopOsName} | ./start.sh（打开桌面窗口；或 ./runtime/node desktop-launch.mjs） |`,
+        ]
+      : [
+          '| Windows | 双击 start.bat（需本机 Node.js；会打开浏览器） |',
+          '| macOS / Linux | ./start.sh 或 node start.mjs |',
+        ]),
     '',
     desktopPack
       ? '关闭桌面窗口默认藏到托盘，不会停后台。请用托盘菜单「退出」。'
