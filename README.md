@@ -164,11 +164,11 @@
 
 ## 快速开始
 
-### Windows 桌面窗口（推荐）
+### 桌面窗口（推荐）
 
-下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里的 **`oh-my-co-work-v4-win32-x64-desktop.zip`**（内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。
+下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里对应平台的 **`oh-my-co-work-v5-<平台>-desktop.zip`**（`win32-x64` / `linux-x64` / `darwin-arm64`；内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。Linux / macOS 解压后运行 `./start.sh`；macOS 为未签名便携版，被 Gatekeeper 拦截时在解压目录执行 `xattr -dr com.apple.quarantine .`。
 
-解压后双击 `start.bat`（或 `desktop/oh-my-co-work.exe` 同目录下的启动脚本），应立刻出现全屏窗口（先显示 Logo 与「正在启动本机服务」，再进入工作台）。托盘与 exe 图标与首页 Logo 一致。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
+**Windows**：解压后双击 `start.bat`（或 `desktop/oh-my-co-work.exe` 同目录下的启动脚本），应立刻出现全屏窗口（先显示 Logo 与「正在启动本机服务」，再进入工作台）。托盘与 exe 图标与首页 Logo 一致。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
 
 请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 
@@ -179,7 +179,7 @@
 
 ### 轻量运行包（浏览器）
 
-在 [`packages/`](./packages/) 或 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台压缩包（**需本机 Node.js ≥ 18**，打开系统浏览器）：
+在 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台压缩包（**需本机 Node.js ≥ 18**，打开系统浏览器）：
 
 ```text
 Windows  → 解压后双击 start.bat
@@ -187,7 +187,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.3.0**。Windows 桌面窗口请用上面的 `*-desktop.zip`（体积超过 GitHub 仓库 100MB，不进 `packages/`）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.3.0**。桌面窗口请用上面的 `*-desktop.zip`。运行包只发布到 Release，不再提交进仓库（`packages/` 仅为本地 `npm run pack` 输出目录）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -255,7 +255,7 @@ web/       Vue 工作台与 xterm 终端
 server/    API、Workflow 引擎、PTY 与进程治理
 shared/    状态、参数和格式化约定
 docs/      产品、架构、存储与实施文档
-packages/  可直接运行的三平台压缩包
+packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 ```
 
 ## 文档

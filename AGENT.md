@@ -48,7 +48,7 @@ oh-my-co-work 是一个**本地优先的群聊式多智能体协同工作台**�
 ├── scripts/              # 维护脚本（backup / pack / selftest）
 ├── data/                 # 运行时数据（gitignore；见 docs/data-storage.md）
 ├── docs/                 # 产品、架构、数据与实施文档
-├── packages/             # 三平台压缩包（darwin-arm64 / linux-x64 / win32-x64）
+├── packages/             # 本地 npm run pack 输出（gitignore；正式产物只发 GitHub Release）
 ├── start.mjs             # 开发 / 压缩包通用入口
 ├── start.bat             # Windows 双击入口
 ├── start.sh              # macOS / Linux 双击入口
