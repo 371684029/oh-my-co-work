@@ -59,3 +59,22 @@ test('all platform packages must share the expected source commit and version', 
     /sourceCommit/,
   )
 })
+
+test('three consistent packages from a different commit than this build are rejected', () => {
+  const stale = 'c'.repeat(40)
+  const metadata = ['darwin-arm64', 'linux-x64', 'win32-x64'].map((platform) => ({
+    kind: 'runtime-bundle',
+    version: '3.7.0',
+    platform,
+    sourceCommit: stale,
+  }))
+  assert.throws(
+    () =>
+      validateBuildMetadataSet({
+        metadata,
+        expectedCommit: 'a'.repeat(40),
+        expectedVersion: '3.7.0',
+      }),
+    /应为本次构建/,
+  )
+})

@@ -46,12 +46,8 @@ export function validateBuildMetadataSet({
       throw new Error(`${platform}: version=${item.version}，应为 ${expectedVersion}`)
     }
     if (expectedCommit && item.sourceCommit !== expectedCommit) {
-      // zip 内 BUILD_INFO 的 sourceCommit 是 pack job 实际构建时的 commit，
-      // 可能与 release job checkout 的 commit 不同（pack 与 release 是不同 job、
-      // 可能因 rebase/并发导致 commit 不一致）。这里只 warn 不 fail——
-      // 三平台之间必须一致（下方 commits.size 检查），但不必等于 release job 的 commit。
-      console.warn(
-        `[release-check] warn ${platform}: sourceCommit=${item.sourceCommit || '空'} ≠ expected ${expectedCommit}（pack 与 release job commit 不同，以 zip 内为准）`,
+      throw new Error(
+        `${platform}: sourceCommit=${item.sourceCommit || '空'}，应为本次构建 ${expectedCommit}（混入了旧包？）`,
       )
     }
   }
@@ -104,11 +100,8 @@ export function validateReleasePackages({
     )
     if (fs.existsSync(sidecarPath)) {
       const sidecar = JSON.parse(fs.readFileSync(sidecarPath, 'utf8'))
-      // 旁证与 zip 不一致时只 warn，不 fail——zip 内 BUILD_INFO 是权威来源。
-      // CI 从 artifacts 收集 zip 时，.build.json 可能是 git 旧版本（pack 时新生成的
-      // 未入库），两者 sourceCommit/builtAt 必然不同，不应因此让整个 Release 失败。
       if (JSON.stringify(sidecar) !== JSON.stringify(info)) {
-        console.warn(`[release-check] warn ${platform}: .build.json 与 zip 内 BUILD_INFO 不一致，以 zip 内为准`)
+        throw new Error(`${platform}: .build.json 与 zip 内 BUILD_INFO 不一致（zip 与旁证不是同一次构建）`)
       }
     } else {
       console.warn(`[release-check] warn ${platform}: 缺少 .build.json 旁证，以 zip 内 BUILD_INFO 为准`)
