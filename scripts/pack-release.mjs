@@ -824,10 +824,10 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
   })
 
   const lines = [
-    '# oh-my-co-work 运行包（提交在 git）',
+    '# oh-my-co-work 运行包（本地打包输出，不进 git）',
     '',
     '这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。',
-    '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。',
+    '解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。正式下载请用 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest)。',
     '',
     '**桌面窗口包**（Windows / macOS / Linux，内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台的 `*-desktop.zip`（macOS 为未签名便携版）。',
     '',
@@ -838,7 +838,7 @@ function writePackagesManifest({ ver, major, sha, builtAt, plat, gitZipName, siz
     '- **多平台**：linux / win32 / darwin 各一份（当前大版本内互不覆盖）',
     '- **发布门禁**：三平台包内 `BUILD_INFO.json` 的版本、源码提交必须一致，并包含当前熔炉图集；任一不符则不发布 latest',
     '',
-    '## 仓库内文件',
+    '## 本目录文件',
     '',
     '| 平台 | 文件 | 大小 | 源码提交 | 构建时间 |',
     '|------|------|------|----------|----------|',

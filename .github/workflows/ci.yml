@@ -18,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
@@ -50,11 +50,17 @@ jobs:
       - name: E2E smoke (built web + server)
         run: node scripts/ci-e2e-smoke.mjs
 
+      - name: Read pinned runtime versions
+        id: ver
+        run: |
+          echo "node=$(node -p "require('./package.json').acwPack.nodeVersion")" >> "$GITHUB_OUTPUT"
+          echo "electron=$(node -p "require('./package.json').acwPack.electronVersion")" >> "$GITHUB_OUTPUT"
+
       - name: Cache Electron / Node runtime zips
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: release/cache
-          key: pack-desktop-cache-v32.3.3-node20.18.3
+          key: pack-desktop-cache-linux-x64-electron${{ steps.ver.outputs.electron }}-node${{ steps.ver.outputs.node }}
 
       # 桌面包：win32/darwin 只能交叉打包没法执行，但三平台共用 embedDesktop/bundleElectronApp，
       # 在 linux 上真把 Electron 窗口拉起来，抓「主进程 import 失败 / 原生模块 ABI 不符」这类

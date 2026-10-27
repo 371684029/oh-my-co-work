@@ -1,22 +1,19 @@
 name: Pack release zip
 
-# 只在 push 到 main 时打三平台包：
-# - 三个平台全部用 ubuntu-latest + ACW_PACK_TARGET 交叉打包（node-pty / better-sqlite3
-#   靠 prebuild-install 按 npm_config_platform/arch 拉对应平台预编译产物，不需要真实
-#   windows-latest / macos-latest 跑一遍）。
-# - 这样只消耗 ubuntu 的 1x 分钟数，不再触发 windows-latest(2x) / macos-latest(10x)，
-#   避免账号 Actions 额度被跑爆导致三平台包（尤其 windows/macos）卡在旧构建不更新。
-# - 不再在每个 cursor/** 分支的每次 push 上打包；日常测试信号见 ci.yml。
-#
-# 解耦原则（2026-10-26）：
-# - 轻量包（linux/win32/darwin）与 Windows 桌面包分开 job，desktop 失败不拖死轻量包
-# - Electron/Node 用 actions/cache，避免每次重下 ~110MB
-# - release 依赖轻量包三平台 + 桌面包（桌面失败时降级发轻量包并告警）
+# push 到 main 时打三平台轻量包 + 三平台桌面包，发布到 GitHub Release `latest`。
+# - 全部在 ubuntu-latest 上用 ACW_PACK_TARGET 交叉打包（原生模块按目标平台拉预编译），
+#   只消耗 1x 分钟数，不跑 windows-latest(2x) / macos-latest(10x)。
+# - 产物只走 artifact → Release，**不再提交进 git**（5.7.0 PKG-04）：此前每次 push 往 main
+#   推 ~72MB zip，三平台并行 rebase 推送是打包最常见的失败点，仓库也越滚越大。
+# - 桌面包 matrix 与轻量包分开，单个桌面平台失败不拖死发布（Release 只是缺那一份并告警）。
+# - 合并前的「能不能打出能启动的包」由 ci.yml 把关（含 linux 桌面包 xvfb 真机冒烟）。
 on:
   push:
     branches: [main]
     paths-ignore:
       - 'packages/**'
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 concurrency:
@@ -25,10 +22,6 @@ concurrency:
 
 permissions:
   contents: write
-
-env:
-  PACK_NODE_VERSION: '20.18.3'
-  PACK_ELECTRON_VERSION: '32.3.3'
 
 jobs:
   pack:
@@ -39,10 +32,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
@@ -65,9 +58,7 @@ jobs:
             --platform "${{ matrix.target }}" \
             --version "$VER"
 
-      # linux-x64 是唯一能在 ubuntu-latest 上真机跑起来的目标（win32/darwin 是交叉打包，
-      # 二进制格式对但换不了操作系统去执行）；借这个目标顺手做端到端烟雾测试，
-      # 确认打出来的包解压即用，不是只有文件格式对但实际起不来。
+      # linux-x64 是唯一能在 ubuntu-latest 上真机跑起来的目标；借它做端到端烟雾测试。
       - name: Smoke test packed zip (linux-x64 only)
         if: matrix.target == 'linux-x64'
         run: |
@@ -96,85 +87,29 @@ jobs:
           node -e "const h=require('/tmp/acw-pack-smoke-health.json'); if (!h.ok) { console.error('health ok=false'); process.exit(1); } console.log('[smoke] sqliteDriver=' + h.sqliteDriver);"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oh-my-co-work-${{ matrix.target }}
-          # 只传本平台：packages/ 里还有 git 检出的其它平台旧 zip，若用 v*.zip 通配，
-          # 三个 artifact 都含三份同名 zip，release 里 merge-multiple 并行解压会互相覆盖写坏
-          # （"start of central directory not found"），且可能拿到旧包。
+          # 只传本平台（packages/ 里可能有本地/历史残留的其它平台 zip，通配会让 release
+          # 合并 artifact 时同名 zip 并行覆盖写坏）
           path: |
             packages/oh-my-co-work-v*-${{ matrix.target }}.zip
             packages/oh-my-co-work-v*-${{ matrix.target }}.build.json
           if-no-files-found: error
           retention-days: 3
 
-      - name: Commit packages zip to git (main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PLAT: ${{ matrix.target }}
-        run: |
-          set -euo pipefail
-          git config user.name "wll"
-          git config user.email "371684029@qq.com"
-          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
-          FILE="oh-my-co-work-v${MAJOR}-${PLAT}.zip"
-          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
-          PUSHED=0
-          # 2026-09-01 修复：此前先 pull 后提交，脏工作树 + rebase/autostash 会把刚构建的
-          # zip 冲掉而文本清单留存，导致 win32 包连续多日未真正入库、release 校验必挂。
-          # 现改为：先自检 + 先把本平台 zip 提交成本地提交，再 rebase 追其它平台提交。
-          # 自检：zip 内 BUILD_INFO 必须来自本次构建的提交，宁可失败也不提交旧包。
-          BUILT_SHA="$(unzip -p "packages/${FILE}" '*/BUILD_INFO.json' \
-            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(String(JSON.parse(s).sourceCommit||'')))")"
-          if [ "$BUILT_SHA" != "$GITHUB_SHA" ]; then
-            echo "[pack] zip 内 sourceCommit=${BUILT_SHA} != 本次构建 ${GITHUB_SHA}，拒绝提交旧包" >&2
-            exit 1
-          fi
-          node scripts/pack-release.mjs --manifest-only
-          # 整目录暂存：大版本切换时 pack 会删除旧 major 的 zip/sidecar，
-          # 必须把删除一并提交，否则三平台并行时 main 里新旧版本混存、validate 必挂
-          # 注意：.gitignore 有 packages/*.zip，必须 -f 强制加入，否则 release 拿不到 zip
-          git add -f packages/*.zip 2>/dev/null || true
-          git add -A packages/
-          if ! git diff --staged --quiet; then
-            git commit -m "chore(packages): 更新 ${FILE} (${VER})"
-          fi
-          # 多平台并行：rebase 若与其它平台的共享清单冲突，按磁盘上的 zip 重写清单再继续
-          for i in 1 2 3 4 5 6; do
-            if ! git pull --rebase origin main; then
-              node scripts/pack-release.mjs --manifest-only
-              git add -f packages/*.zip 2>/dev/null || true
-              git add -A packages/ || true
-              GIT_EDITOR=true git rebase --continue || true
-            fi
-            # 清掉残留冲突标记后再提交
-            if grep -R -l '<<<<<<' packages/README.md packages/CURRENT.txt 2>/dev/null; then
-              node scripts/pack-release.mjs --manifest-only
-            fi
-            if git push origin HEAD:main; then
-              PUSHED=1
-              break
-            fi
-            sleep $((i * 4))
-          done
-          if [ "$PUSHED" -ne 1 ]; then
-            echo "[pack] failed to push ${FILE} after retries" >&2
-            exit 1
-          fi
-
-  # Windows 桌面包（Electron + 内嵌 Node）单独 job：
-  # 1) 不拖死轻量包 job（此前 desktop 失败 → win32 整个 job 失败 → release 被跳过）
-  # 2) Electron/Node 用 actions/cache，避免每次重下 ~110MB + ~30MB
-  pack-desktop-win:
+  pack-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [win32-x64, linux-x64, darwin-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
@@ -182,53 +117,55 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Read pinned runtime versions
+        id: ver
+        run: |
+          echo "node=$(node -p "require('./package.json').acwPack.nodeVersion")" >> "$GITHUB_OUTPUT"
+          echo "electron=$(node -p "require('./package.json').acwPack.electronVersion")" >> "$GITHUB_OUTPUT"
+
       - name: Cache Electron / Node runtime zips
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: release/cache
-          key: pack-desktop-cache-v${{ env.PACK_ELECTRON_VERSION }}-node${{ env.PACK_NODE_VERSION }}
+          key: pack-desktop-cache-${{ matrix.target }}-electron${{ steps.ver.outputs.electron }}-node${{ steps.ver.outputs.node }}
 
-      - name: Pack Windows desktop zip
+      - name: Pack desktop zip
         env:
           ACW_PACK_DESKTOP: '1'
-          ACW_PACK_TARGET: win32-x64
-        run: npm run pack:desktop-win
+          ACW_PACK_TARGET: ${{ matrix.target }}
+        run: npm run pack:desktop
 
-      - name: Verify Windows desktop zip
+      - name: Verify desktop zip
         run: |
           set -euo pipefail
           MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           node scripts/verify-pack.mjs \
-            --zip "release/oh-my-co-work-v${MAJOR}-win32-x64-desktop.zip" \
-            --platform win32-x64 \
+            --zip "release/oh-my-co-work-v${MAJOR}-${{ matrix.target }}-desktop.zip" \
+            --platform "${{ matrix.target }}" \
             --version "$VER"
 
-      - name: Upload Windows desktop zip
-        uses: actions/upload-artifact@v4
+      - name: Upload desktop zip
+        uses: actions/upload-artifact@v7
         with:
-          name: oh-my-co-work-win32-x64-desktop
-          path: release/oh-my-co-work-v*-desktop.zip
+          name: oh-my-co-work-${{ matrix.target }}-desktop
+          path: release/oh-my-co-work-v*-${{ matrix.target }}-desktop.zip
           if-no-files-found: error
           retention-days: 3
 
   release:
-    needs: [pack, pack-desktop-win]
-    # 轻量包三平台必须成功；桌面包失败时用 if: always() + 后续步骤容错降级
-    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.pack.result == 'success'
+    needs: [pack, pack-desktop]
+    # 轻量包三平台必须成功；桌面包任一平台失败时降级发布并告警
+    if: always() && github.ref == 'refs/heads/main' && needs.pack.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # zip 不进 git（.gitignore packages/*.zip），必须从 matrix artifacts 拉取；
-      # git 里只有 build.json/CURRENT.txt 元数据，不能当 zip 来源。
-      # build.json 也要从 artifact 取（pack 时新生成），不能用 git checkout 的旧版本，
-      # 否则 validate 会因 zip 内 BUILD_INFO 与 .build.json 不一致而失败。
       - name: Download platform artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: oh-my-co-work-*
           path: artifacts
@@ -236,84 +173,70 @@ jobs:
 
       - name: Collect zips + build.json from artifacts
         run: |
-          set -uo pipefail
-          mkdir -p packages upload
-          echo "[release] artifacts tree:"
-          find artifacts -maxdepth 4 -type f 2>/dev/null | head -80 || true
-          find artifacts -name 'oh-my-co-work-v*.zip' -exec cp -f {} packages/ \; 2>/dev/null || true
-          find artifacts -name 'oh-my-co-work-v*.build.json' -exec cp -f {} packages/ \; 2>/dev/null || true
-          # 兜底：从 zip 内 BUILD_INFO.json 提取旁证（Validate 以 zip 为权威，此处仅辅助）
-          for z in packages/oh-my-co-work-v*.zip; do
-            [ -f "$z" ] || continue
-            side="${z%.zip}.build.json"
-            entry=$(unzip -Z1 "$z" 2>/dev/null | grep -E '(^|/)BUILD_INFO\.json$' | head -1 || true)
-            if [ -n "$entry" ]; then
-              unzip -p "$z" "$entry" > "$side" 2>/dev/null || true
-            fi
+          set -euo pipefail
+          rm -rf packages upload && mkdir -p packages upload
+          find artifacts -maxdepth 4 -type f | sort
+          for f in artifacts/oh-my-co-work-v*.zip artifacts/oh-my-co-work-v*.build.json; do
+            case "$f" in *-desktop.zip) continue ;; esac
+            if [ -f "$f" ]; then cp -f "$f" packages/; fi
           done
-          echo "[release] packages dir:"
-          ls -la packages/ 2>/dev/null || true
-          COUNT=$(ls -1 packages/oh-my-co-work-v*.zip 2>/dev/null | wc -l | tr -d ' ')
-          echo "[release] collected zip count=$COUNT"
-          if [ "$COUNT" -lt 3 ]; then
-            echo "::error::轻量包不足 3 个（当前 $COUNT），无法发布完整 Release" >&2
-            exit 1
-          fi
+          ls -la packages/
 
       - name: Validate three platform packages
         env:
           EXPECTED_SOURCE_SHA: ${{ github.sha }}
-        run: |
-          set -uo pipefail
-          echo "[release] validate input packages:"
-          ls -la packages/*.zip packages/*.build.json 2>/dev/null || true
-          node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA" 2>&1 | tee /tmp/validate.log
-          status=${PIPESTATUS[0]}
-          if [ "$status" -ne 0 ]; then
-            echo "::error::Validate failed (exit $status) — see /tmp/validate.log above"
-            exit "$status"
-          fi
-          echo "[release] validate ok"
+        run: node scripts/validate-release-packages.mjs --expected-sha "$EXPECTED_SOURCE_SHA"
 
-      - name: Warn if desktop zip missing
-        if: needs.pack-desktop-win.result != 'success'
-        run: |
-          echo "::warning::Windows 桌面包本次未产出（job result=${{ needs.pack-desktop-win.result }}），Release 只含三份轻量包；请单独重跑 pack-desktop-win 补齐。"
-
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release (update in place)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DESKTOP_OK: ${{ needs.pack-desktop-win.result == 'success' }}
         run: |
           set -euo pipefail
           cp -f packages/oh-my-co-work-v*.zip upload/
-          DESKTOP_SECTION=""
-          if [ "$DESKTOP_OK" = "true" ]; then
-            find artifacts -name '*-desktop.zip' -exec cp -f {} upload/ \;
-            DESKTOP_SECTION="**Windows 桌面窗口（推荐）**：下载 \`*-win32-x64-desktop.zip\`，解压后双击 \`start.bat\`。
-          包内含 Electron 与 Node，一般不用再装 Node.js。关窗藏托盘，托盘「退出」才停服务。
-          （体积超过 GitHub 仓库 100MB 限制，不进 \`packages/\`。）"
-          else
-            DESKTOP_SECTION="（本次 desktop 包未产出，请用 \`*-win32-x64.zip\` + 本机 Node.js ≥ 18，或重跑 pack-desktop-win）"
+          MISSING=""
+          for t in win32-x64 linux-x64 darwin-arm64; do
+            if ls artifacts/oh-my-co-work-v*-"$t"-desktop.zip >/dev/null 2>&1; then
+              cp -f artifacts/oh-my-co-work-v*-"$t"-desktop.zip upload/
+            else
+              MISSING="$MISSING $t"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::warning::桌面包缺失:${MISSING}（对应 pack-desktop job 失败），Release 先发其余产物；可单独重跑补齐。"
           fi
           ls -la upload
           SHORT=$(git rev-parse --short HEAD)
           VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
           NOTES="## 运行包（打包产物，非源码）· v${VER}
 
-          ${DESKTOP_SECTION}
+          **桌面窗口（推荐）**：下载对应平台的 \`*-desktop.zip\`，内含 Electron 与 Node，不用再装 Node.js。
+          - Windows：解压后双击 \`start.bat\`
+          - Linux：\`./start.sh\`
+          - macOS（未签名便携版）：\`./start.sh\`；被 Gatekeeper 拦截时执行 \`xattr -dr com.apple.quarantine .\`
 
-          轻量运行包（需本机 Node.js ≥ 18，打开浏览器）：
-          - \`*-win32-x64.zip\` → Windows
-          - \`*-linux-x64.zip\` → Linux
-          - \`*-darwin-*.zip\` → macOS
+          关窗藏托盘，托盘「退出」才停服务。
 
-          仓库内同步目录：\`packages/\`
+          **轻量运行包**（需本机 Node.js ≥ 18，打开浏览器）：\`*-win32-x64.zip\` / \`*-linux-x64.zip\` / \`*-darwin-arm64.zip\`
+
           提交：\`${SHORT}\`"
-          if gh release view latest >/dev/null 2>/dev/null; then
-            gh release delete latest --yes --cleanup-tag
+          # 原地更新：不再先删后建（中间窗口期 latest 下载全部 404）
+          git tag -f latest "$GITHUB_SHA"
+          git push -f origin refs/tags/latest
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
+            gh release upload latest upload/*.zip --clobber
+            gh release view latest --json assets -q '.assets[].name' | while read -r a; do
+              if [ -f "upload/$a" ]; then continue; fi
+              keep=0
+              for t in $MISSING; do
+                case "$a" in *-"$t"-desktop.zip) keep=1 ;; esac
+              done
+              if [ "$keep" = 1 ]; then
+                echo "::warning::本次 ${a} 未产出，保留 Release 里的旧版本"
+                continue
+              fi
+              gh release delete-asset latest "$a" --yes
+            done
+          else
+            gh release create latest upload/*.zip --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
           fi
-          gh release create latest upload/*.zip \
-            --title "运行包（最新 · ${SHORT}）" \
-            --notes "$NOTES" \
-            --latest
