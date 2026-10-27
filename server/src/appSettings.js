@@ -1,13 +1,20 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { ROOT, getDb, parseJson } from './db.js'
+import { ROOT, DATA_ROOT, getDb, parseJson } from './db.js'
 import { killSessionProcesses } from './processRegistry.js'
 import { defaultStepFlow, normalizeFurnaceSurface } from '@acw/shared'
 import { normalizePromptSnippets } from './promptSnippets.js'
 
-const SETTINGS_PATH = process.env.ACW_APP_SETTINGS_PATH
+/**
+ * 用户设置落在数据目录：程序目录（server/config）在覆盖升级时会被新包替换，
+ * 且可能只读（macOS App Translocation、Program Files）。
+ */
+export const APP_SETTINGS_PATH = process.env.ACW_APP_SETTINGS_PATH
   ? path.resolve(process.env.ACW_APP_SETTINGS_PATH)
-  : path.join(ROOT, 'server/config/app-settings.json')
+  : path.join(DATA_ROOT, 'app-settings.json')
+/** 5.6 及以前的位置；仍随包分发，作为首次启动的种子 */
+export const LEGACY_APP_SETTINGS_PATH = path.join(ROOT, 'server/config/app-settings.json')
+const SETTINGS_PATH = APP_SETTINGS_PATH
 
 const DEMO_MEMBER_NAMES = new Set(['echo', 'script_cmd'])
 const DEMO_GROUP_TITLES = new Set(['演示流'])
@@ -230,6 +237,15 @@ function normalizeRedact(raw) {
 function ensureSettingsFile() {
   if (!fs.existsSync(SETTINGS_PATH)) {
     fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
+    if (SETTINGS_PATH !== LEGACY_APP_SETTINGS_PATH && fs.existsSync(LEGACY_APP_SETTINGS_PATH)) {
+      try {
+        JSON.parse(fs.readFileSync(LEGACY_APP_SETTINGS_PATH, 'utf8'))
+        fs.copyFileSync(LEGACY_APP_SETTINGS_PATH, SETTINGS_PATH)
+        return
+      } catch {
+        /* 旧文件损坏：落到下方默认值 */
+      }
+    }
     fs.writeFileSync(
       SETTINGS_PATH,
       JSON.stringify(

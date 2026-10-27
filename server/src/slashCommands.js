@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
-import { ROOT } from './db.js'
+import { ROOT, DATA_ROOT } from './db.js'
 import { getSessionDetail, getGroup, listMembers, createMember, updateMember } from './services.js'
 import {
   MEMBER_KIND,
@@ -21,7 +21,12 @@ import {
   extractScriptPathFromCommand,
 } from './runners.js'
 
-const CONFIG_PATH = path.join(ROOT, 'server/config/slash-commands.json')
+/** 与 app-settings 同理落数据目录；server/config 下的旧文件随包分发，仅作首次启动种子 */
+export const SLASH_COMMANDS_PATH = process.env.ACW_SLASH_COMMANDS_PATH
+  ? path.resolve(process.env.ACW_SLASH_COMMANDS_PATH)
+  : path.join(DATA_ROOT, 'slash-commands.json')
+const LEGACY_CONFIG_PATH = path.join(ROOT, 'server/config/slash-commands.json')
+const CONFIG_PATH = SLASH_COMMANDS_PATH
 
 function furnaceDefaultText() {
   return `【${FURNACE_DISPLAY_NAME}】收到。我是本机协同台的熔炉 Agent，可协助调度、核对流程与本机事项（完全本地）。`
@@ -166,12 +171,24 @@ export function ensureAdminMember() {
 function ensureConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
     fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true })
-    fs.writeFileSync(
-      CONFIG_PATH,
-      JSON.stringify({ commands: DEFAULT_COMMANDS }, null, 2),
-      'utf8',
-    )
-    return
+    let seeded = false
+    if (CONFIG_PATH !== LEGACY_CONFIG_PATH && fs.existsSync(LEGACY_CONFIG_PATH)) {
+      try {
+        JSON.parse(fs.readFileSync(LEGACY_CONFIG_PATH, 'utf8'))
+        fs.copyFileSync(LEGACY_CONFIG_PATH, CONFIG_PATH)
+        seeded = true
+      } catch {
+        /* 旧文件损坏：写默认 */
+      }
+    }
+    if (!seeded) {
+      fs.writeFileSync(
+        CONFIG_PATH,
+        JSON.stringify({ commands: DEFAULT_COMMANDS }, null, 2),
+        'utf8',
+      )
+      return
+    }
   }
   // 已有配置：若缺少熔炉首位指令，则插入到最前（不覆盖用户其它项）
   try {

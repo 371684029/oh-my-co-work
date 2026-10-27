@@ -3,13 +3,13 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { fileURLToPath } from 'node:url'
 
 const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-terminal-test-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
 const terminalService = await import('../src/terminal/terminalService.js')
 const bus = await import('../src/bus.js')
+const appSettings = await import('../src/appSettings.js')
 
 function terminalOptions(sessionId, script) {
   return {
@@ -91,7 +91,8 @@ test('attach flushes pending output before sending its snapshot', async () => {
 
 test('same-member keepAlive can replace an existing terminal under quota', async () => {
   const sessionId = 'quota-replace-same-member'
-  const settingsPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../config/app-settings.json')
+  appSettings.getAppSettings()
+  const settingsPath = appSettings.APP_SETTINGS_PATH
   const orig = fs.readFileSync(settingsPath, 'utf8')
   try {
     const json = JSON.parse(orig)
@@ -123,7 +124,8 @@ test('same-member keepAlive can replace an existing terminal under quota', async
 
 test('quota still blocks a different member when the session is full', async () => {
   const sessionId = 'quota-block-other-member'
-  const settingsPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../config/app-settings.json')
+  appSettings.getAppSettings()
+  const settingsPath = appSettings.APP_SETTINGS_PATH
   const orig = fs.readFileSync(settingsPath, 'utf8')
   try {
     const json = JSON.parse(orig)
