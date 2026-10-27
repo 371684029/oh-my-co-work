@@ -35,6 +35,10 @@
   "engines": {
     "node": ">=18"
   },
+  "acwPack": {
+    "nodeVersion": "20.18.3",
+    "electronVersion": "32.3.3"
+  },
   "devDependencies": {
     "electron": "^32.3.3",
     "esbuild": "^0.25.12",
