@@ -33,6 +33,16 @@
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台，右侧为 chatgpt-pets 李慕婉桌宠" width="100%" />
 <p align="center"><sub>三栏工作台：左会话、中对话与闸门、右流程轨</sub></p>
 
+## 当前开发策略：Windows 桌面端优先（2026-10-27 起）
+
+> **先保证项目最小可用。** 在 Windows 桌面端达到「下载即用」之前，以下规则优先于路线图与各版 plan：
+
+- **冻结**：Web 端、Linux 桌面端、macOS 桌面端**不再新增功能**，只接受阻断性 bug 修复（崩溃、白屏、数据丢失）。
+- **攻坚**：所有新开发集中在 **Windows 桌面端**（`oh-my-co-work.exe`）：安装 / 解压启动、服务端拉起、终端（node-pty）、SQLite、通知、托盘、退出与升级。
+- **最小可用标准**：Windows 10/11 x64 上从 Release 下载 `-desktop.zip` → 解压 → 双击 exe → 工作台加载 → 新建会话并跑通一条 Workflow（含终端节点）→ 关闭后重开数据仍在。
+- **CI 保持现状**：三平台打包与 linux 启动冒烟继续跑（只作回归护栏，不在其它平台上做新需求）。
+- 解冻条件：Windows 最小可用标准全部通过，并补上 Windows runner 启动冒烟（5.7.0 PKG-14）。
+
 ## 为什么做它
 
 很多自动化仍然散落在 BAT、PowerShell、CLI、TUI 和不同 Agent 里：执行在终端，决策在聊天，进度靠人脑记，出错后很难复盘。
