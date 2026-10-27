@@ -50,6 +50,28 @@ jobs:
       - name: E2E smoke (built web + server)
         run: node scripts/ci-e2e-smoke.mjs
 
+      - name: Cache Electron / Node runtime zips
+        uses: actions/cache@v4
+        with:
+          path: release/cache
+          key: pack-desktop-cache-v32.3.3-node20.18.3
+
+      # 桌面包：win32/darwin 只能交叉打包没法执行，但三平台共用 embedDesktop/bundleElectronApp，
+      # 在 linux 上真把 Electron 窗口拉起来，抓「主进程 import 失败 / 原生模块 ABI 不符」这类
+      # 只有启动时才暴露的问题（此前漏拷 lib/*.mjs、@acw/shared 不可解析都是用户先发现的）。
+      - name: Desktop pack + launch smoke (linux-x64, dry run)
+        env:
+          ACW_PACK_TARGET: linux-x64
+          ACW_PACK_SKIP_WEB_BUILD: '1'
+        run: |
+          set -euo pipefail
+          node scripts/pack-release.mjs --desktop
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          ZIP="release/oh-my-co-work-v${MAJOR}-linux-x64-desktop.zip"
+          node scripts/verify-pack.mjs --zip "$ZIP" --platform linux-x64 --version "$VER"
+          node scripts/desktop-smoke.mjs --zip "$ZIP" --port 3798
+
       # 合并前就抓「打不出可用包」：dry-run 打 linux-x64 包，验证结构 + 真机起服务，
       # 不 commit（本 job 的 packages/ 改动只存在于这次 runner 的临时工作区）。
       - name: Pack + smoke test (dry run, not committed)
