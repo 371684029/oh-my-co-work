@@ -199,7 +199,8 @@ async function main() {
         display_name: 'E2E Echo',
         kind: 'echo',
         workFolder: root,
-        config: { defaultText: 'ok' },
+        // 还原中心只列开了炼化的成员，下方 QA-01 (3) 要断言它出现在列表里
+        config: { defaultText: 'ok', refine: { enabled: true } },
       }),
     })
     assert.equal(memberRes.status, 201)

@@ -5,7 +5,7 @@
       {{ restoreT('lead') }}
     </p>
 
-    <section v-if="data?.members?.length" class="restore-section">
+    <section v-if="refineMembers.length" class="restore-section">
       <h3>{{ restoreT('membersHeading') }}</h3>
       <ul class="restore-list">
         <li v-for="m in refineMembers" :key="m.id">
