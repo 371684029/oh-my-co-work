@@ -3,7 +3,7 @@
 这是 **打包后的可运行压缩包**（前端 dist + 后端 bundle + 内置 node_modules），**不是源码**。
 解压后直接启动，**不需要再执行 npm install**（仍需本机安装 Node.js ≥ 18）。
 
-Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载 `*-win32-x64-desktop.zip`。
+**桌面窗口包**（Windows / macOS / Linux，内含 Electron + Node，一般不用装 Node.js）体积超过 GitHub 仓库 100MB 限制，不进本目录；请到 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 下载对应平台的 `*-desktop.zip`（macOS 为未签名便携版）。
 
 ## 版本策略
 
@@ -16,7 +16,7 @@ Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js�
 
 | 平台 | 文件 | 大小 | 源码提交 | 构建时间 |
 |------|------|------|----------|----------|
-| darwin-arm64 | [`oh-my-co-work-v5-darwin-arm64.zip`](./oh-my-co-work-v5-darwin-arm64.zip) | 24290889 | `0be987ada71f` | 2026-10-26T07:21:36.131Z |
+| darwin-arm64 | [`oh-my-co-work-v5-darwin-arm64.zip`](./oh-my-co-work-v5-darwin-arm64.zip) | 24305559 | `6c27a8314bf0` | 2026-10-27T07:12:47.953Z |
 | linux-x64 | [`oh-my-co-work-v5-linux-x64.zip`](./oh-my-co-work-v5-linux-x64.zip) | 24464220 | `0be987ada71f` | 2026-10-26T07:21:39.315Z |
 | win32-x64 | [`oh-my-co-work-v5-win32-x64.zip`](./oh-my-co-work-v5-win32-x64.zip) | 24284925 | `0be987ada71f` | 2026-10-26T07:21:37.027Z |
 
@@ -25,4 +25,4 @@ Windows **桌面窗口包**（内含 Electron + Node，一般不用装 Node.js�
 ## 启动
 
 解压对应平台的 zip → Windows 双击 `start.bat`（浏览器）；macOS/Linux 运行 `./start.sh`。
-Windows 桌面窗口请用 Release 里的 `*-win32-x64-desktop.zip`。
+桌面窗口请用 Release 里对应平台的 `*-desktop.zip`。
