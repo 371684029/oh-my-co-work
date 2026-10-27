@@ -161,6 +161,7 @@
               <BubbleList
                 :list="bubbleList"
                 max-height="100%"
+                :virtual="bubbleList.length > BUBBLE_VIRTUAL_MIN_ITEMS"
                 :auto-scroll="true"
                 :show-back-button="false"
                 :always-show-scrollbar="false"
@@ -365,6 +366,10 @@ import {
   nextChatSearchSeq,
   shouldApplyChatSearchResponse,
 } from './workbench/composables/workbenchChatSearchUi.js'
+
+// BubbleList 默认虚拟滚动；终端卡片与普通气泡高度差几倍，估高失准时自动触底会把可视区渲染成空白，
+// 只在超长会话才开启虚拟化
+const BUBBLE_VIRTUAL_MIN_ITEMS = 200
 
 const { isDesktop, openDetachedWindow } = useDesktopBridge()
 const detachWindowLabel = computed(() => t('desktop.openDetachedWindow'))
