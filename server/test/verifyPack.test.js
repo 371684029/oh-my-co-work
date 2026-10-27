@@ -5,7 +5,11 @@ import path from 'node:path'
 import test from 'node:test'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { verifyPackedZip, resolveLoadedNativeEntries } from '../../scripts/verify-pack.mjs'
+import {
+  verifyPackedZip,
+  resolveLoadedNativeEntries,
+  unresolvedElectronImports,
+} from '../../scripts/verify-pack.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SOURCE_SPRITESHEET = path.join(ROOT, 'web/src/assets/pets/li-muwan/spritesheet.webp')
@@ -30,6 +34,7 @@ function buildFixtureZip({
   nativeFiles,
   kind = 'runtime-bundle',
   omitDesktop,
+  mainJs,
 }) {
   const platform = platformTag.match(/^(win32|linux|darwin)-/)[1]
   const root = path.join(dir, platformTag)
@@ -66,13 +71,10 @@ function buildFixtureZip({
   }
   if (kind === 'desktop-bundle' && !omitDesktop) {
     fs.mkdirSync(path.join(root, 'electron'), { recursive: true })
-    fs.writeFileSync(path.join(root, 'electron/main.js'), 'export {}\n')
-    fs.writeFileSync(path.join(root, 'electron/preload.js'), 'export {}\n')
+    fs.writeFileSync(path.join(root, 'electron/main.js'), mainJs ?? "import { app } from 'electron'\n")
+    fs.writeFileSync(path.join(root, 'electron/preload.cjs'), "require('electron')\n")
     fs.writeFileSync(path.join(root, 'electron/icon.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]))
     fs.writeFileSync(path.join(root, 'electron/icon.ico'), Buffer.from([0, 0, 1, 0]))
-    fs.mkdirSync(path.join(root, 'electron/lib'), { recursive: true })
-    fs.writeFileSync(path.join(root, 'electron/lib/splash.mjs'), 'export {}\n')
-    fs.writeFileSync(path.join(root, 'electron/lib/windowState.mjs'), 'export {}\n')
     fs.writeFileSync(path.join(root, 'electron/bootstrap.cjs'), 'module.exports = {}\n')
     fs.writeFileSync(path.join(root, 'desktop-launch.mjs'), 'export {}\n')
     fs.mkdirSync(path.join(root, 'desktop/resources'), { recursive: true })
@@ -124,9 +126,45 @@ test('verifyPackedZip rejects a desktop-bundle missing Electron', () => {
     })
     assert.throws(
       () => verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' }),
-      /Windows 桌面包缺少/,
+      /win32 桌面包缺少/,
     )
   })
+})
+
+test('verifyPackedZip rejects a desktop-bundle whose electron/main.js still imports ./lib', () => {
+  withTmpDir((dir) => {
+    const spritesheetBytes = fs.existsSync(SOURCE_SPRITESHEET)
+      ? fs.readFileSync(SOURCE_SPRITESHEET)
+      : Buffer.from('fake-sprite')
+    const zipPath = buildFixtureZip({
+      dir,
+      platformTag: 'win32-x64',
+      spritesheetBytes,
+      kind: 'desktop-bundle',
+      mainJs: "import { app } from 'electron'\nimport { workbenchUrl } from './lib/urls.mjs'\n",
+    })
+    assert.throws(
+      () => verifyPackedZip({ zipPath, platformTag: 'win32-x64', expectedVersion: '3.7.0' }),
+      /不是自包含 bundle.*\.\/lib\/urls\.mjs/,
+    )
+  })
+})
+
+test('unresolvedElectronImports flags relative and workspace imports left in electron/main.js', () => {
+  const bundled = [
+    'import { app } from "electron";',
+    'import fs from "node:fs";',
+    'import path from "path";',
+    'const os = require("os");',
+    'const m = await import("node:url");',
+  ].join('\n')
+  assert.deepEqual(unresolvedElectronImports(bundled), [])
+  const copied = [
+    "import { app } from 'electron'",
+    "import { workbenchUrl } from './lib/urls.mjs'",
+    "import { shouldDedupeNotification } from '@acw/shared'",
+  ].join('\n')
+  assert.deepEqual(unresolvedElectronImports(copied), ['./lib/urls.mjs', '@acw/shared'])
 })
 
 test('verifyPackedZip rejects a package that leaks the runtime data directory (4.2.0)', () => {

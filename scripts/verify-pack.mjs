@@ -19,6 +19,7 @@
  * 用法：node scripts/verify-pack.mjs --zip packages/xxx.zip --platform win32-x64
  */
 import fs from 'node:fs'
+import { builtinModules } from 'node:module'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -110,6 +111,72 @@ export function resolveLoadedNativeEntries(entries, platformTag) {
   return loaded
 }
 
+const NODE_BUILTINS = new Set(builtinModules)
+
+/**
+ * 桌面包里的 electron/main.js 是 esbuild 单文件产物，运行时只能 import electron 与 Node 内置模块；
+ * 出现相对路径或第三方包说明打包退化成「拷文件」，用户端会报「无法加载主程序」。
+ * @param {string} source
+ */
+export function unresolvedElectronImports(source) {
+  const specs = new Set()
+  const re = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g
+  for (const m of source.matchAll(re)) specs.add(m[2])
+  return [...specs].filter((s) => {
+    if (s === 'electron' || s.startsWith('node:')) return false
+    return !NODE_BUILTINS.has(s.split('/')[0])
+  })
+}
+
+function desktopRequirements(platform) {
+  const common = [
+    { re: /\/electron\/main\.js$/, label: 'electron/main.js' },
+    { re: /\/electron\/bootstrap\.cjs$/, label: 'electron/bootstrap.cjs' },
+    { re: /\/electron\/preload\.cjs$/, label: 'electron/preload.cjs' },
+    { re: /\/electron\/icon\.png$/, label: 'electron/icon.png' },
+    { re: /\/desktop-launch\.mjs$/, label: 'desktop-launch.mjs' },
+  ]
+  if (platform === 'win32') {
+    return [
+      ...common,
+      { re: /\/electron\/icon\.ico$/, label: 'electron/icon.ico' },
+      { re: /\/desktop\/oh-my-co-work\.exe$/, label: 'desktop/oh-my-co-work.exe', pe: true },
+      { re: /\/desktop\/resources\/default_app\.asar$/, label: 'desktop/resources/default_app.asar' },
+      { re: /\/runtime\/node\.exe$/, label: 'runtime/node.exe', pe: true },
+    ]
+  }
+  if (platform === 'linux') {
+    return [
+      ...common,
+      { re: /\/desktop\/oh-my-co-work$/, label: 'desktop/oh-my-co-work' },
+      { re: /\/runtime\/node$/, label: 'runtime/node' },
+    ]
+  }
+  return [
+    ...common,
+    { re: /\/desktop\/Electron\.app\/Contents\/MacOS\/Electron$/, label: 'desktop/Electron.app' },
+    { re: /\/runtime\/node$/, label: 'runtime/node' },
+  ]
+}
+
+function verifyDesktopEntries(zipPath, entries, platform) {
+  for (const item of desktopRequirements(platform)) {
+    const hit = entries.find((e) => item.re.test(`/${e}`))
+    if (!hit) throw new Error(`${platform} 桌面包缺少 ${item.label}`)
+    if (item.pe) {
+      const bytes = unzipHead(zipPath, hit, 2)
+      if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
+        throw new Error(`${item.label} 不是 Windows PE（缺少 MZ 头）`)
+      }
+    }
+  }
+  const mainEntry = entries.find((e) => /(^|\/)electron\/main\.js$/.test(e))
+  const bad = unresolvedElectronImports(unzipBytes(zipPath, mainEntry).toString('utf8'))
+  if (bad.length) {
+    throw new Error(`electron/main.js 不是自包含 bundle，运行时无法解析: ${bad.join(', ')}`)
+  }
+}
+
 export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   if (!fs.existsSync(zipPath)) throw new Error(`找不到 zip: ${zipPath}`)
   const platform = platformOf(platformTag)
@@ -155,29 +222,7 @@ export function verifyPackedZip({ zipPath, platformTag, expectedVersion }) {
   }
 
   if (info.kind === 'desktop-bundle') {
-    const need = [
-      { re: /\/electron\/main\.js$/, label: 'electron/main.js' },
-      { re: /\/electron\/bootstrap\.cjs$/, label: 'electron/bootstrap.cjs' },
-      { re: /\/electron\/preload\.js$/, label: 'electron/preload.js' },
-      { re: /\/electron\/icon\.png$/, label: 'electron/icon.png' },
-      { re: /\/electron\/icon\.ico$/, label: 'electron/icon.ico' },
-      { re: /\/electron\/lib\/splash\.mjs$/, label: 'electron/lib/splash.mjs' },
-      { re: /\/electron\/lib\/windowState\.mjs$/, label: 'electron/lib/windowState.mjs' },
-      { re: /\/desktop-launch\.mjs$/, label: 'desktop-launch.mjs' },
-      { re: /\/desktop\/oh-my-co-work\.exe$/, label: 'desktop/oh-my-co-work.exe' },
-      { re: /\/desktop\/resources\/default_app\.asar$/, label: 'desktop/resources/default_app.asar' },
-      { re: /\/runtime\/node\.exe$/, label: 'runtime/node.exe' },
-    ]
-    for (const item of need) {
-      const hit = entries.find((e) => item.re.test(`/${e}`))
-      if (!hit) throw new Error(`Windows 桌面包缺少 ${item.label}`)
-      if (item.label.endsWith('.exe')) {
-        const bytes = unzipHead(zipPath, hit, 2)
-        if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) {
-          throw new Error(`${item.label} 不是 Windows PE（缺少 MZ 头）`)
-        }
-      }
-    }
+    verifyDesktopEntries(zipPath, entries, platform)
   }
 
   const nativeCheck = NATIVE_MAGIC_CHECK[platform]

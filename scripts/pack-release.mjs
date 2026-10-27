@@ -24,6 +24,13 @@ import { windowsStartBat } from './windowsStartBat.mjs'
 /** 桌面包内嵌运行时（与 CI Node 20 ABI 对齐；win32 / linux / darwin × x64 / arm64） */
 const PACK_NODE_VERSION = '20.18.3'
 const PACK_ELECTRON_VERSION = '32.3.3'
+/** Node 主版本 → NODE_MODULE_VERSION；桌面包 better-sqlite3 必须按内嵌 runtime 的 ABI 取，而不是打包机 */
+const NODE_ABI_BY_MAJOR = { 18: '108', 20: '115', 22: '127', 24: '137' }
+function runtimeNodeAbi(nodeVersion = PACK_NODE_VERSION) {
+  const abi = NODE_ABI_BY_MAJOR[Number(String(nodeVersion).split('.')[0])]
+  if (!abi) throw new Error(`未知 Node ${nodeVersion} 的 ABI，请补充 NODE_ABI_BY_MAJOR`)
+  return abi
+}
 /** GitHub 仓库文件硬限制 100MB；含 Electron 的桌面包只放 release/ 与 GitHub Release */
 const GIT_ZIP_MAX_BYTES = 95 * 1024 * 1024
 
@@ -240,8 +247,7 @@ function unzipTo(zipPath, destDir) {
  *
  * 失败仅告警不阻断（运行时有 node:sqlite / 无 PTY 降级路径）。
  */
-async function fetchCrossPrebuilds(stage, target) {
-  const abi = process.versions.modules // 宿主 Node ABI（20→115，打包机与 runtime 对齐）
+async function fetchCrossPrebuilds(stage, target, { abi = process.versions.modules, strict = false } = {}) {
   const bs3Version = (() => {
     try {
       return readJson(path.join(stage, 'node_modules/better-sqlite3/package.json')).version
@@ -258,6 +264,7 @@ async function fetchCrossPrebuilds(stage, target) {
       execFileSync('tar', ['-xzf', tarball, '-C', bs3Dir], { stdio: 'inherit' })
       console.log(`[pack] better-sqlite3 prebuild ok (${target.platform}-${target.arch})`)
     } catch (e) {
+      if (strict) throw new Error(`better-sqlite3 prebuild 失败（${e?.message || e}）`, { cause: e })
       console.warn(
         `[pack] better-sqlite3 prebuild 失败（${e?.message || e}），继续打包；运行时将走 node:sqlite 降级`,
       )
@@ -303,16 +310,30 @@ async function cachedDownload(urlOrUrls, cacheName, { minBytes = 1024 * 1024 } =
   throw lastErr || new Error(`下载失败: ${urls.join(' | ')}`)
 }
 
-function copyElectronAppFiles(stage) {
+/**
+ * Electron 主进程打成单文件 electron/main.js：lib/*.mjs 与 @acw/shared 等依赖由 esbuild
+ * 按 import 图收集，缺文件/解析失败在打包期直接报错，而不是用户启动时「无法加载主程序」。
+ * bootstrap.cjs / preload.cjs 只 require('electron')，原样拷贝。
+ */
+async function bundleElectronApp(stage) {
   const electronDest = path.join(stage, 'electron')
   fs.mkdirSync(electronDest, { recursive: true })
-  for (const name of ['main.js', 'preload.js', 'icon.png', 'icon.ico', 'bootstrap.cjs']) {
+  const esbuild = require('esbuild')
+  await esbuild.build({
+    entryPoints: [path.join(ROOT, 'electron', 'main.js')],
+    outfile: path.join(electronDest, 'main.js'),
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    target: 'node20',
+    external: ['electron'],
+    logLevel: 'warning',
+    banner: {
+      js: "import { createRequire as __acwCreateRequire } from 'node:module';const require = __acwCreateRequire(import.meta.url);",
+    },
+  })
+  for (const name of ['bootstrap.cjs', 'preload.cjs', 'icon.png', 'icon.ico']) {
     copyFile(path.join(ROOT, 'electron', name), path.join(electronDest, name))
-  }
-  const libDest = path.join(electronDest, 'lib')
-  fs.mkdirSync(libDest, { recursive: true })
-  for (const name of ['urls.mjs', 'server.mjs', 'splash.mjs', 'windowState.mjs']) {
-    copyFile(path.join(ROOT, 'electron', 'lib', name), path.join(libDest, name))
   }
 }
 
@@ -347,7 +368,7 @@ function untarTo(tarPath, destDir) {
  * resolveNodeBin()（win32→runtime/node.exe，其余→runtime/node）保持一致。
  */
 async function embedDesktop(stage, platform, arch) {
-  copyElectronAppFiles(stage)
+  await bundleElectronApp(stage)
 
   // 1) Node 运行时
   const nodeDist = nodeDistName(platform, arch)
@@ -984,9 +1005,15 @@ async function mainAsync() {
       : {},
   })
 
+  if (target.cross || desktopPack) {
+    // 桌面包由内嵌 runtime/node 跑服务端：即便同平台打包，也要覆盖成 runtime ABI 的二进制，
+    // 否则在 Node 22 机器上打出的包会带 ABI 127 的 .node，桌面端服务起不来
+    const abi = desktopPack ? runtimeNodeAbi() : process.versions.modules
+    console.log(`[pack] HTTP 直拉目标平台原生二进制（node ABI ${abi}）…`)
+    // 内嵌 Node 20 没有 node:sqlite 兜底，桌面包拉不到 better-sqlite3 必须失败
+    await fetchCrossPrebuilds(stage, target, { abi, strict: desktopPack })
+  }
   if (target.cross) {
-    console.log('[pack] 交叉打包：HTTP 直拉目标平台原生二进制…')
-    await fetchCrossPrebuilds(stage, target)
     console.log('[pack] 交叉打包，核对原生模块架构（避免混入宿主平台二进制）…')
     pruneMismatchedNativeBuilds(stage, target.platform)
   }

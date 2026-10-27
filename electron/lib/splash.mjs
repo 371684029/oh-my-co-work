@@ -4,13 +4,18 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// 源码在 electron/lib/，打包后被 esbuild 合进 electron/main.js，两处都要能找到图标
+const ICON_CANDIDATES = [path.join(__dirname, '../icon.png'), path.join(__dirname, 'icon.png')]
+
 function logoDataUri() {
-  try {
-    const png = fs.readFileSync(path.join(__dirname, '../icon.png'))
-    return 'data:image/png;base64,' + png.toString('base64')
-  } catch {
-    return ''
+  for (const p of ICON_CANDIDATES) {
+    try {
+      return 'data:image/png;base64,' + fs.readFileSync(p).toString('base64')
+    } catch {
+      /* try next */
+    }
   }
+  return ''
 }
 
 export function splashHtml(statusText = '正在启动本机服务，请稍候…') {
