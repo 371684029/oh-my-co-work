@@ -3,6 +3,13 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-10-27 | A | web/src/views/workbench/composables/sessionDetailState.js, sessionDetailLifecycleActions.js, sessionDetailComposerActions.js, sessionDetailSendGateActions.js + web/test/*.test.mjs | FE-01/ENG-04 useSessionDetail 拆分：状态与动作接线抽入 sessionDetail* 模块，主文件瘦至目标行数
+2026-10-27 | M | web/src/components/{NotificationInbox,PathPicker}.vue, web/src/views/workbench/components/{FlowRailTimelinePane,ComposerPanel}.vue, web/src/i18n/{zh-CN,en-US}.js | UX-03 无障碍：通知收件箱/路径选择器/时间线/附件列表补键盘导航与 aria，新增 a11y.* 文案
+2026-10-27 | M/A | server/src/appSettings.js, server/test/appSettingsNotifications.test.js, web/src/components/terminal/terminalPrefs.js, web/src/components/terminal/TerminalView.vue, web/src/views/settings/Prefs.vue, web/src/views/workbench/composables/{useSessionDetail,sessionDetailResetState}.js, web/src/i18n/settingsPrefs.{en,zh}.js, web/src/composables/terminalSelectToCopy.js, web/test/terminalSelectToCopy.test.mjs | CP-03 选中即复制：新增 selectToCopy 偏好（默认关）+ xterm.onSelectionChange 防抖自动复制
+2026-10-27 | M/A | web/package.json, web/src/views/docs/docsSanitize.js, web/src/views/workbench/composables/useDocsHub.js, web/src/views/workbench/components/FlowRailDocsPane.vue, web/src/views/docs/{docsCodeFence,docsHubSearchUi}.js, web/test/docsSanitize.test.mjs | SEC-01 DOMPurify：文档渲染 v-html 边界全量净化（用户/Agent 双来源内容防御纵深）
+2026-10-23 | A | docs/5.6.0-plan.md | 5.6.0 需求文档：汇总 5.0~5.5 未完成项与 bracket 残留为 P0/P1/P2 需求清单、非功能需求、版本 DoD 与实施顺序
+2026-10-23 | M | docs/README.md | 文档索引补 5.5.0-plan.md 与 5.6.0-plan.md 两行
+2026-10-23 | M | README.md | 文档表补 5.6.0 需求文档行；路线图新增 5.6.0 条目，「后续」去掉 macOS/Linux 桌面壳（并入 5.6.0 DESK-07）
 2026-10-23 | M | web/src/** (40 files) | FE-03 ElMessage/ElMessageBox/ElConfigProvider 由 `element-plus` 桶入口改为 `element-plus/es/components/*/index.mjs` 按需深层导入，消除 929kB 整包进首屏
 2026-10-23 | M | web/vite.config.js | FE-03 去掉 element-plus 整包 manualChunks，只拆 locale/hooks/utils，让 message 等保持按需
 2026-10-23 | M | server/test/templatePack.test.js | REU-01 覆盖导入单测：成员/群 overwrite、字段保留、幂等

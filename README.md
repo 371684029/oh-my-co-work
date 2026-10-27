@@ -279,7 +279,8 @@ packages/  可直接运行的三平台压缩包
 | [5.2.0 全方位优化（进行中）](./docs/5.2.0-plan.md) | 熔炉 CLI 复制粘贴、炼化还原、文档中心入口 |
 | [5.3.0 可追溯与扩展](./docs/5.3.0-plan.md) | 步骤快照/回退、模板导入导出、命令面板、Agent 注册表 |
 | [5.4.0 系统通知](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
-| [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块；实机 QA 与三平台桌面包待补 |
+| [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA（NTF-T3/T4） |
+| [5.6.0 需求文档](./docs/5.6.0-plan.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
 | [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -323,8 +324,9 @@ packages/  可直接运行的三平台压缩包
 - [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
 - [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/5.3.0-plan.md](./docs/5.3.0-plan.md)
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
-- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分已落地；剩三平台桌面包、实机通知 QA、`useSessionDetail` 继续下沉，见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
-- [ ] 后续：macOS/Linux 桌面壳、无边框/vibrancy、多终端标签治理、更多 CLI Adapter
+- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
+- [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
+- [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
 
