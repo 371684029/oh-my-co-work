@@ -13,7 +13,10 @@ import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import en from 'element-plus/es/locale/lang/en'
 import { getLocale } from './i18n/index.js'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import ElementPlusX from 'vue-element-plus-x'
+// 只注册实际用到的 3 个组件：app.use(ElementPlusX) 会把整库（~420KB）拖进首屏 index chunk
+import BubbleList from 'vue-element-plus-x/es/BubbleList/index.js'
+import Conversations from 'vue-element-plus-x/es/Conversations/index.js'
+import XSender from 'vue-element-plus-x/es/XSender/index.js'
 import 'vue-element-plus-x/styles/index.css'
 import App from './App.vue'
 import router from './router'
@@ -74,7 +77,9 @@ for (const [key, component] of Object.entries(usedIcons)) {
 }
 // 基础 UI：Element Plus 组件按需注册（unplugin resolver）；locale 经 ElConfigProvider
 app.use(pinia)
-app.use(ElementPlusX)
+app.component('BubbleList', BubbleList)
+app.component('Conversations', Conversations)
+app.component('XSender', XSender)
 app.use(router)
 app.mount('#app')
 
