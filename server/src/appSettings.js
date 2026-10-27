@@ -117,6 +117,7 @@ export function defaultTerminalSettings() {
     letterSpacing: 0.2,
     cursorBlink: true,
     pastePolicy: 'confirm',
+    selectToCopy: false,
     autoCollapseOnExit: false,
     scrollback: 5000,
     renderer: 'webgl',
@@ -175,7 +176,7 @@ function clampInt(v, fallback, min, max) {
   return Math.max(min, Math.min(max, Math.round(n)))
 }
 
-function normalizeTerminal(raw) {
+export function normalizeTerminal(raw) {
   const d = defaultTerminalSettings()
   if (!raw || typeof raw !== 'object') return d
   const theme = ['project-dark', 'native', 'high-contrast'].includes(raw.theme)
@@ -194,6 +195,7 @@ function normalizeTerminal(raw) {
     letterSpacing: clampNum(raw.letterSpacing, d.letterSpacing, -1, 4),
     cursorBlink: raw.cursorBlink !== false,
     pastePolicy,
+    selectToCopy: raw.selectToCopy === true,
     autoCollapseOnExit: !!raw.autoCollapseOnExit,
     scrollback: clampInt(raw.scrollback, d.scrollback, 200, 20000),
     renderer,

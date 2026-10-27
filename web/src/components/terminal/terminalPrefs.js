@@ -54,6 +54,7 @@ export function defaultTerminalPrefs() {
     letterSpacing: 0.2,
     cursorBlink: true,
     pastePolicy: 'confirm',
+    selectToCopy: false,
     autoCollapseOnExit: false,
     scrollback: 5000,
     renderer: 'webgl',

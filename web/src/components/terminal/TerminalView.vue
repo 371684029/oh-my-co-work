@@ -49,6 +49,10 @@ import {
   getTerminalCopyText,
 } from '../../composables/terminalClipboard.js'
 import {
+  shouldCopySelection,
+  createSelectToCopyDebouncer,
+} from '../../composables/terminalSelectToCopy.js'
+import {
   terminalOutputSubscribe,
   terminalOutputDrainPending,
 } from '../../composables/terminalOutputBridge.js'
@@ -136,6 +140,27 @@ async function copyText(text, okMsg) {
   if (ok) ElMessage.success(okMsg || terminalViewCopiedCharsMessage(t.length))
   else ElMessage.warning(terminalViewCopyFailedMessage())
 }
+
+// CP-03: 选中即复制（防抖；不清理选区，与 Ctrl+C 路径不同）
+let selectToCopyDisposable = null
+const selectToCopyDebouncer = createSelectToCopyDebouncer({
+  delayMs: 250,
+  onCopy: () => {
+    if (!xterm) return
+    // 与 onData 读 pastePolicy 同款：每次触发读当前 props，避免挂载时快照过期
+    if (
+      !shouldCopySelection({
+        selectToCopy: props.prefs?.selectToCopy === true,
+        hasSelection: xterm.hasSelection(),
+      })
+    ) {
+      return
+    }
+    const sel = getTerminalCopyText(xterm)
+    if (sel) void copyText(sel, terminalViewCopiedSelectionMessage())
+    // 故意不 clearSelection：用户需看到刚复制了什么
+  },
+})
 
 function ctxCopy() {
   closeCtxMenu()
@@ -367,6 +392,14 @@ onMounted(async () => {
     }
     return true
   })
+  // CP-03: 松开选区后防抖自动复制（开关关或无选区则不触发）
+  selectToCopyDisposable = xterm.onSelectionChange(() => {
+    if (props.prefs?.selectToCopy !== true) {
+      selectToCopyDebouncer.cancel()
+      return
+    }
+    selectToCopyDebouncer.schedule()
+  })
   host.value?.addEventListener('contextmenu', (ev) => {
     ev.preventDefault()
     const rect = host.value.getBoundingClientRect()
@@ -488,6 +521,9 @@ onBeforeUnmount(() => {
   host.value?.removeEventListener('paste', onHostPaste)
   document.removeEventListener('click', closeCtxMenu)
   window.clearTimeout(fitTimer)
+  selectToCopyDebouncer.cancel()
+  selectToCopyDisposable?.dispose()
+  selectToCopyDisposable = null
   unsubOutput?.()
   unsubOutput = null
   clearTerminalFocusRegistration(xterm?.textarea)

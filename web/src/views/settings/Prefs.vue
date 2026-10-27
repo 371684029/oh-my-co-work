@@ -350,6 +350,10 @@
             <el-option :label="prefsT('terminal.pasteAllow')" value="allow" />
           </el-select>
         </el-form-item>
+        <el-form-item :label="prefsT('terminal.selectToCopy')">
+          <el-switch v-model="terminal.selectToCopy" />
+          <p class="prefs-resolved">{{ prefsT('terminal.selectToCopyDesc') }}</p>
+        </el-form-item>
         <el-form-item :label="prefsT('terminal.autoCollapse')">
           <el-switch v-model="terminal.autoCollapseOnExit" />
         </el-form-item>
@@ -513,6 +517,7 @@ const terminal = ref({
   renderer: 'webgl',
   cursorBlink: true,
   pastePolicy: 'confirm',
+  selectToCopy: false,
   autoCollapseOnExit: false,
   scrollback: 5000,
 })
@@ -595,6 +600,7 @@ async function load() {
         renderer: s.terminal.renderer === 'dom' ? 'dom' : 'webgl',
         cursorBlink: s.terminal.cursorBlink !== false,
         pastePolicy: s.terminal.pastePolicy || 'confirm',
+        selectToCopy: s.terminal.selectToCopy === true,
         autoCollapseOnExit: !!s.terminal.autoCollapseOnExit,
         scrollback: s.terminal.scrollback || 5000,
       }

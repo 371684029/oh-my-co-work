@@ -136,6 +136,8 @@ export const settingsPrefsZh = {
     pastePolicy: '多行粘贴',
     pasteConfirm: '超过一行需确认',
     pasteAllow: '直接粘贴',
+    selectToCopy: '选中即复制',
+    selectToCopyDesc: '松开鼠标选中终端文字时自动复制到剪贴板（防抖；默认关闭）。',
     autoCollapse: '进程结束后收起工作区',
     save: '保存终端偏好',
   },

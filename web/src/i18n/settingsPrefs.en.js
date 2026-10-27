@@ -135,6 +135,8 @@ export const settingsPrefsEn = {
     pastePolicy: 'Multiline paste',
     pasteConfirm: 'Confirm when multiline',
     pasteAllow: 'Paste directly',
+    selectToCopy: 'Copy on select',
+    selectToCopyDesc: 'Automatically copy the selection to the clipboard when you release the mouse (debounced; off by default).',
     autoCollapse: 'Collapse workspace when process exits',
     save: 'Save terminal preferences',
   },
