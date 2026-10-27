@@ -18,6 +18,7 @@
       append-to-body
       destroy-on-close
       class="path-picker-dialog"
+      :aria-label="t('a11y.pathPickerDialog')"
       @opened="onOpened"
     >
       <div class="pp-toolbar">
@@ -31,12 +32,22 @@
         <code>{{ currentPath || '（选择根目录）' }}</code>
       </div>
 
-      <div v-if="showRoots" class="pp-list">
+      <div
+        v-if="showRoots"
+        ref="listRef"
+        class="pp-list"
+        role="listbox"
+        :aria-label="t('a11y.pathPickerList')"
+        @keydown="onListKeydown"
+      >
         <button
-          v-for="r in roots"
+          v-for="(r, i) in roots"
           :key="r.path"
           type="button"
           class="pp-item"
+          role="option"
+          :aria-selected="false"
+          @focus="activeIndex = i"
           @click="enter(r.path)"
           @dblclick="enter(r.path)"
         >
@@ -46,18 +57,29 @@
         </button>
       </div>
 
-      <div v-else class="pp-list" v-loading="loading">
+      <div
+        v-else
+        ref="listRef"
+        class="pp-list"
+        role="listbox"
+        :aria-label="t('a11y.pathPickerList')"
+        v-loading="loading"
+        @keydown="onListKeydown"
+      >
         <div v-if="!entries.length && !loading" class="pp-empty">空目录或无匹配项</div>
         <button
-          v-for="e in entries"
+          v-for="(e, i) in entries"
           :key="e.path + e.name"
           type="button"
           class="pp-item"
+          role="option"
+          :aria-selected="selected === e.path"
           :class="{
             'is-dir': e.type === 'dir',
             'is-file': e.type === 'file',
             'is-selected': selected === e.path,
           }"
+          @focus="activeIndex = i"
           @click="onClickEntry(e)"
           @dblclick="onDblEntry(e)"
         >
@@ -87,9 +109,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../api'
+import { t } from '../i18n/index.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -111,6 +134,10 @@ const currentPath = ref('')
 const parentPath = ref(null)
 const entries = ref([])
 const selected = ref('')
+const listRef = ref(null)
+const activeIndex = ref(-1)
+
+const listItems = computed(() => (showRoots.value ? roots.value : entries.value))
 
 const canConfirm = computed(() => {
   if (props.mode === 'folder') return !!(selected.value || currentPath.value)
@@ -131,8 +158,52 @@ async function open() {
   visible.value = true
 }
 
+function focusIndex(i) {
+  const items = listItems.value
+  if (!items.length) {
+    activeIndex.value = -1
+    return
+  }
+  const next = Math.max(0, Math.min(i, items.length - 1))
+  activeIndex.value = next
+  nextTick(() => {
+    const nodes = listRef.value?.querySelectorAll('.pp-item')
+    nodes?.[next]?.focus()
+  })
+}
+
+function onListKeydown(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault()
+    move(1)
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault()
+    move(-1)
+  } else if (e.key === 'Home') {
+    e.preventDefault()
+    focusIndex(0)
+  } else if (e.key === 'End') {
+    e.preventDefault()
+    focusIndex(listItems.value.length - 1)
+  } else if (e.key === 'Enter') {
+    e.preventDefault()
+    const it = listItems.value[activeIndex.value]
+    if (!it) return
+    if (showRoots.value) enter(it.path)
+    else onDblEntry(it)
+  } else if (e.key === 'Backspace') {
+    e.preventDefault()
+    goParent()
+  }
+}
+
+function move(delta) {
+  focusIndex(activeIndex.value + delta)
+}
+
 async function onOpened() {
   selected.value = ''
+  activeIndex.value = -1
   const start = (props.modelValue || '').trim()
   if (start) {
     try {
@@ -140,11 +211,13 @@ async function onOpened() {
       if (st.ok) {
         if (st.isDirectory) {
           await enter(st.path)
+          focusIndex(0)
           return
         }
         if (st.isFile) {
           selected.value = st.path
           await enter(parentOf(st.path) || st.path)
+          focusIndex(0)
           return
         }
       }
@@ -153,6 +226,7 @@ async function onOpened() {
     }
   }
   await loadRoots()
+  focusIndex(0)
 }
 
 function parentOf(p) {

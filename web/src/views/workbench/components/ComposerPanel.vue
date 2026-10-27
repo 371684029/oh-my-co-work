@@ -150,8 +150,13 @@
                 }}</span>
               </button>
             </div>
-            <div v-if="pendingFiles.length" class="attach-list">
-              <div v-for="(f, i) in pendingFiles" :key="f.id || i" class="attach-chip">
+            <div
+              v-if="pendingFiles.length"
+              class="attach-list"
+              role="list"
+              :aria-label="t('a11y.attachList')"
+            >
+              <div v-for="(f, i) in pendingFiles" :key="f.id || i" class="attach-chip" role="listitem">
                 <span class="attach-chip-icon">{{ fileIcon(f) }}</span>
                 <span class="attach-chip-body">
                   <span class="attach-chip-name" :title="f.name">{{ f.name }}</span>
@@ -161,6 +166,7 @@
                   type="button"
                   class="attach-chip-x"
                   :title="composerRemovePendingTitle()"
+                  :aria-label="t('a11y.attachRemove').replace('{name}', f.name || '')"
                   @click="removePending(i)"
                 >
                   ×

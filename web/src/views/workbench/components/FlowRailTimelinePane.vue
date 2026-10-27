@@ -5,6 +5,7 @@
         v-model="timelineFilter"
         size="small"
         style="width: 120px"
+        :aria-label="t('a11y.timelineFilter')"
         @change="loadSessionTimeline"
       >
         <el-option
@@ -22,9 +23,14 @@
       </el-button>
     </div>
     <p v-if="!activeId" class="timeline-hint">{{ flowRailTimelineSelectSessionFirst() }}</p>
-    <ul v-else-if="timelineEvents.length" class="timeline-list">
+    <ul v-else-if="timelineEvents.length" class="timeline-list" role="list" :aria-label="t('a11y.timelineList')">
       <li v-for="ev in timelineEvents" :key="ev.id">
-        <button type="button" class="timeline-item" @click="onTimelineEvent(ev)">
+        <button
+          type="button"
+          class="timeline-item"
+          :aria-label="timelineItemAria(ev)"
+          @click="onTimelineEvent(ev)"
+        >
           <span class="timeline-time">{{ flowRailFormatTimelineAt(ev.at) }}</span>
           <span class="timeline-cat">{{ flowRailTimelineCatLabel(ev.category) }}</span>
           <span class="timeline-title">{{ ev.title }}</span>
@@ -42,6 +48,8 @@
       :title="flowRailTerminalReplayTitle()"
       width="640px"
       append-to-body
+      :aria-label="t('a11y.timelineReplayDialog')"
+      aria-describedby="timeline-replay-content"
     >
       <p v-if="terminalReplayMeta" class="timeline-hint">
         {{ terminalReplayMeta.truncated ? flowRailReplayTruncatedHint() : '' }}
@@ -49,7 +57,10 @@
           terminalReplayMeta.bytes ? flowRailReplayBytesLabel(terminalReplayMeta.bytes) : ''
         }}
       </p>
-      <pre class="flow-io-pre flow-io-pre--diff terminal-replay-pre">{{ terminalReplayText }}</pre>
+      <pre
+        id="timeline-replay-content"
+        class="flow-io-pre flow-io-pre--diff terminal-replay-pre"
+      >{{ terminalReplayText }}</pre>
     </el-dialog>
   </div>
 </template>
@@ -76,6 +87,7 @@ import {
 import { createFlowRailTimelineActions } from '../composables/flowRailTimelineActions.js'
 import { flowRailOpenNodeJournal } from '../composables/flowRailNodeDoc.js'
 import { useFlowStore } from '../../../stores/flow.js'
+import { t } from '../../../i18n/index.js'
 import {
   activeId,
   detail,
@@ -107,6 +119,13 @@ const { loadSessionTimeline, downloadSessionAudit, onTimelineEvent } =
     openNodeJournal: (n) => flowRailOpenNodeJournal(n, { openDocsHub }),
     api,
   })
+
+function timelineItemAria(ev) {
+  return t('a11y.timelineItem')
+    .replace('{time}', flowRailFormatTimelineAt(ev.at))
+    .replace('{category}', flowRailTimelineCatLabel(ev.category))
+    .replace('{title}', ev.title || '')
+}
 
 watch(
   () => [flowStore.rightTab, activeId.value],

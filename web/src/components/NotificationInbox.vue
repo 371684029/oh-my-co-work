@@ -2,7 +2,7 @@
   <el-popover placement="bottom-end" :width="380" trigger="click" @show="onOpen">
     <template #reference>
       <el-badge :value="unreadInboxCount || undefined" :hidden="!unreadInboxCount" class="inbox-badge">
-        <el-button size="default" text bg aria-label="通知收件箱">
+        <el-button size="default" text bg :aria-label="t('a11y.notificationInbox')">
           <AcwIcon name="bell" :size="18" />
         </el-button>
       </el-badge>
@@ -17,13 +17,22 @@
       </div>
       <p v-if="startupHint" class="inbox-hint">{{ startupHint }}</p>
       <div v-if="!items.length" class="inbox-empty">暂无通知记录</div>
-      <ul v-else class="inbox-list">
+      <ul v-else class="inbox-list" role="list" :aria-label="t('a11y.notificationList')">
         <li
           v-for="it in items"
           :key="it.id"
           class="inbox-item"
           :class="{ 'is-unread': !it.read, [`level-${it.level}`]: true }"
+          tabindex="0"
+          :aria-label="
+            t(it.read ? 'a11y.notificationItem' : 'a11y.notificationItemUnread').replace(
+              '{title}',
+              it.title || '',
+            )
+          "
           @click="openItem(it)"
+          @keydown.enter.prevent="openItem(it)"
+          @keydown.space.prevent="openItem(it)"
         >
           <div class="inbox-item-title">{{ it.title }}</div>
           <div v-if="it.body" class="inbox-item-body">{{ it.body }}</div>
@@ -46,6 +55,7 @@ import {
   inboxSummarySince,
 } from '../composables/notificationInbox.js'
 import { parseNotificationDeepLink } from '../composables/notificationDeepLink.js'
+import { t } from '../i18n/index.js'
 import AcwIcon from './icons/AcwIcon.vue'
 
 const router = useRouter()
