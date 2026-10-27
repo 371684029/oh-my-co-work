@@ -50,6 +50,8 @@ const child = spawn(process.execPath, ['server/src/index.js'], {
   env: {
     ...process.env,
     ACW_DATA_ROOT: dataRoot,
+    // 应用设置默认写 server/config/app-settings.json（不跟 ACW_DATA_ROOT 走），隔离到临时目录免得改脏仓库
+    ACW_APP_SETTINGS_PATH: path.join(dataRoot, 'app-settings.json'),
     ACW_PORT: String(port),
     ACW_E2E_SMOKE: '1',
   },
