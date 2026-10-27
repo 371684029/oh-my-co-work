@@ -11,6 +11,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
+import { pathToFileURL } from 'node:url'
 import { fetchHealth } from '../electron/lib/server.mjs'
 
 function argValue(name, fallback = '') {
@@ -42,8 +43,11 @@ async function main() {
   const home = path.join(work, 'home')
   fs.mkdirSync(home, { recursive: true })
 
-  // CI 容器里没有 SUID chrome-sandbox / user namespace，必须 --no-sandbox
-  const child = spawn('xvfb-run', ['-a', exe, '--no-sandbox', appRoot], {
+  // 用包内 desktop-launch 的同一套沙箱判断，测到的就是用户机器上会走的路径
+  const { electronSandboxArgs } = await import(pathToFileURL(path.join(appRoot, 'desktop-launch.mjs')).href)
+  const sandboxArgs = electronSandboxArgs(appRoot)
+  console.log(`[desktop-smoke] electron args: ${sandboxArgs.join(' ') || '(sandbox on)'}`)
+  const child = spawn('xvfb-run', ['-a', exe, ...sandboxArgs, appRoot], {
     cwd: appRoot,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],

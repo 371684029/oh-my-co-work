@@ -45,12 +45,59 @@ function appendLog(appRoot, line) {
   fs.appendFileSync(path.join(dir, 'desktop-launch.log'), `[${new Date().toISOString()}] ${line}\n`)
 }
 
-export function spawnElectron(appRoot, spawnImpl = spawn) {
+function readProcFlag(p) {
+  try {
+    return fs.readFileSync(p, 'utf8').trim()
+  } catch {
+    return null
+  }
+}
+
+function probeLinuxSandbox(appRoot) {
+  let suidHelper = false
+  try {
+    const st = fs.statSync(path.join(appRoot, 'desktop', 'chrome-sandbox'))
+    suidHelper = st.uid === 0 && (st.mode & 0o4000) !== 0
+  } catch {
+    /* 没有 helper */
+  }
+  const usernsBlocked =
+    readProcFlag('/proc/sys/kernel/apparmor_restrict_unprivileged_userns') === '1' ||
+    readProcFlag('/proc/sys/kernel/unprivileged_userns_clone') === '0' ||
+    readProcFlag('/proc/sys/user/max_user_namespaces') === '0'
+  return { suidHelper, usernsBlocked }
+}
+
+/**
+ * Linux 上 Chromium 沙箱要么靠 SUID root 的 chrome-sandbox，要么靠非特权 user namespace。
+ * zip 解压后 chrome-sandbox 必然丢了 SUID；Ubuntu 23.10+ 默认又用 AppArmor 禁了 userns，
+ * 两条都不通时 Electron 启动即崩（"The SUID sandbox helper binary was found, but is not
+ * configured correctly"），只能 --no-sandbox。渲染进程只加载本机 127.0.0.1 工作台。
+ * ACW_ELECTRON_NO_SANDBOX=1 可强制关闭。
+ */
+export function electronSandboxArgs(
+  appRoot,
+  { platform = process.platform, env = process.env, probe = probeLinuxSandbox } = {},
+) {
+  if (platform !== 'linux') return []
+  if (['1', 'true', 'yes'].includes(String(env.ACW_ELECTRON_NO_SANDBOX || '').toLowerCase())) {
+    return ['--no-sandbox']
+  }
+  const { suidHelper, usernsBlocked } = probe(appRoot)
+  return !suidHelper && usernsBlocked ? ['--no-sandbox'] : []
+}
+
+export function spawnElectron(
+  appRoot,
+  spawnImpl = spawn,
+  { extraArgs = electronSandboxArgs(appRoot) } = {},
+) {
   const exe = electronExe(appRoot)
   const logPath = path.join(appRoot, 'data', 'electron.log')
   fs.mkdirSync(path.dirname(logPath), { recursive: true })
   const logFd = fs.openSync(logPath, 'a')
-  const child = spawnImpl(exe, [appRoot], {
+  if (extraArgs.length) appendLog(appRoot, `electron args ${extraArgs.join(' ')}`)
+  const child = spawnImpl(exe, [...extraArgs, appRoot], {
     cwd: appRoot,
     detached: true,
     stdio: ['ignore', logFd, logFd],

@@ -6,7 +6,7 @@ import path from 'node:path'
 import { windowsStartBat } from '../../scripts/windowsStartBat.mjs'
 import { splashDataUrl, splashHtml } from '../lib/splash.mjs'
 import { applyDesktopOpenState } from '../lib/windowState.mjs'
-import { electronExe, spawnElectron } from '../../scripts/desktop-launch.mjs'
+import { electronExe, electronSandboxArgs, spawnElectron } from '../../scripts/desktop-launch.mjs'
 
 test('start.bat 用包内 node 拉 Electron，不用 cmd start', () => {
   const bat = windowsStartBat()
@@ -67,10 +67,14 @@ test('splash 页立刻能显示启动中', () => {
 test('desktop-launch 把解压目录作为 Electron 的应用路径', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
   const calls = []
-  spawnElectron(dir, (exe, args, opts) => {
-    calls.push({ exe, args, opts })
-    return { once() {}, unref() {} }
-  })
+  spawnElectron(
+    dir,
+    (exe, args, opts) => {
+      calls.push({ exe, args, opts })
+      return { once() {}, unref() {} }
+    },
+    { extraArgs: [] },
+  )
   assert.equal(calls.length, 1)
   assert.equal(calls[0].exe, electronExe(dir))
   assert.deepEqual(calls[0].args, [dir])
@@ -79,6 +83,31 @@ test('desktop-launch 把解压目录作为 Electron 的应用路径', () => {
   assert.equal(calls[0].opts.windowsHide, false)
   assert.equal(typeof calls[0].opts.stdio[1], 'number')
   assert.equal(calls[0].opts.stdio[2], calls[0].opts.stdio[1])
+})
+
+test('linux 沙箱：SUID helper 与 userns 都不可用时才加 --no-sandbox', () => {
+  const args = (probe, extra = {}) =>
+    electronSandboxArgs('/x', { platform: 'linux', env: {}, probe: () => probe, ...extra })
+  assert.deepEqual(args({ suidHelper: false, usernsBlocked: true }), ['--no-sandbox'])
+  assert.deepEqual(args({ suidHelper: true, usernsBlocked: true }), [])
+  assert.deepEqual(args({ suidHelper: false, usernsBlocked: false }), [])
+  assert.deepEqual(
+    args({ suidHelper: true, usernsBlocked: false }, { env: { ACW_ELECTRON_NO_SANDBOX: '1' } }),
+    ['--no-sandbox'],
+  )
+  assert.deepEqual(
+    electronSandboxArgs('/x', { platform: 'win32', probe: () => ({ suidHelper: false, usernsBlocked: true }) }),
+    [],
+  )
+})
+
+test('spawnElectron 把沙箱参数放在应用路径之前', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-launch-'))
+  const calls = []
+  spawnElectron(dir, (exe, args) => (calls.push(args), { once() {}, unref() {} }), {
+    extraArgs: ['--no-sandbox'],
+  })
+  assert.deepEqual(calls[0], ['--no-sandbox', dir])
 })
 
 test('桌面窗口打开时最大化并进入系统全屏', () => {
