@@ -27,11 +27,9 @@ export default defineConfig({
           if (id.includes('node_modules/pinia') || id.includes('node_modules/vue-router')) {
             return 'vue-vendor'
           }
-          // 不要把整个 element-plus 归并成单个 chunk：
-          // message/message-box 等按需入口会被拖进首屏。只合并 locale 等零散子路径。
-          if (id.includes('node_modules/element-plus/es/locale')) return 'element-plus-locale'
-          if (id.includes('node_modules/element-plus/es/hooks')) return 'element-plus-hooks'
-          if (id.includes('node_modules/element-plus/es/utils')) return 'element-plus-utils'
+          // element-plus 一律交给 rollup 自动分包：es/hooks ↔ es/utils ↔ 组件之间有循环 import，
+          // 手工拆成独立 chunk 会打乱初始化顺序，生产包首屏直接
+          // "Cannot access 'xx' before initialization" 白屏（dev 模式不复现）。
         },
       },
     },
