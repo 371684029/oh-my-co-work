@@ -1,5 +1,6 @@
 /** Fenced code blocks for docs hub (5.2.0 DOC-02). Node + browser safe. */
 import hljs from 'highlight.js/lib/core'
+import { sanitizeDocsHtml } from './docsSanitize.js'
 import bash from 'highlight.js/lib/languages/bash'
 import css from 'highlight.js/lib/languages/css'
 import javascript from 'highlight.js/lib/languages/javascript'
@@ -183,7 +184,7 @@ export async function handleDocsProseClick(e, handlers = {}) {
     const nextLines = !block.classList.contains('docs-code-block--lines')
     const html = renderDocsFence(plainCodeFromBase64(b64), langRaw, { lineNumbers: nextLines })
     const wrap = document.createElement('div')
-    wrap.innerHTML = html.trim()
+    wrap.innerHTML = sanitizeDocsHtml(html.trim())
     const next = wrap.firstElementChild
     if (next) block.replaceWith(next)
     return true

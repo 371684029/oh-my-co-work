@@ -1,4 +1,5 @@
 /** Search hit snippet highlighting for DocsHub (FE-01). */
+import { sanitizeDocsHtml } from './docsSanitize.js'
 
 export function highlightSearchSnippet(snippet, query) {
   if (!snippet || !query) return snippet || ''
@@ -7,5 +8,6 @@ export function highlightSearchSnippet(snippet, query) {
   if (!q) return escaped
   const words = q.split(/\s+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const re = new RegExp(`(${words.join('|')})`, 'gi')
-  return escaped.replace(re, '<mark>$1</mark>')
+  // SEC-01: output feeds v-html — sanitize as defense-in-depth (keeps <mark>, escapes rest)
+  return sanitizeDocsHtml(escaped.replace(re, '<mark>$1</mark>'))
 }

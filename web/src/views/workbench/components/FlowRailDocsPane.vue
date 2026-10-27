@@ -98,6 +98,7 @@ import EmptyState from '../../../components/ui/EmptyState.vue'
 import { api } from '../../../api'
 import '../../docs/docProse.css'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { sanitizeDocsHtml } from '../../docs/docsSanitize.js'
 import { handleDocsProseClick, readDocsCodeLineNumbers } from '../../docs/docsCodeFence.js'
 import { getDocsList, subscribeDocsList } from '../../docs/docsListStore.js'
 import {
@@ -171,11 +172,14 @@ const railReadingStyle = docsReadingStyle(railReadingPrefs)
 
 const renderedDocHtml = computed(() => {
   if (!selectedDocContent.value) return ''
-  return md.value.render(selectedDocContent.value, {
-    docCodeLineNumbers: readDocsCodeLineNumbers(),
-    docSessionId: activeId.value,
-    docRelName: selectedDocName.value,
-  })
+  // SEC-01: sanitize before the v-html boundary
+  return sanitizeDocsHtml(
+    md.value.render(selectedDocContent.value, {
+      docCodeLineNumbers: readDocsCodeLineNumbers(),
+      docSessionId: activeId.value,
+      docRelName: selectedDocName.value,
+    }),
+  )
 })
 
 let stopDocsListSub = null

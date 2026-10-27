@@ -3,6 +3,7 @@ import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../../api'
 import { createDocsMarkdown } from '../../docs/markdownRenderer'
+import { sanitizeDocsHtml } from '../../docs/docsSanitize.js'
 import { getCachedDocHtml, setCachedDocHtml } from '../../../composables/docsRenderCache.js'
 import { outlineWithUniqueSlugs } from '../../docs/docOutline.js'
 import {
@@ -254,11 +255,14 @@ const renderedHtml = computed(() => {
   const md = createDocsMarkdown({
     workFolders: [workFolder].filter(Boolean),
   })
-  const html = md.render(file.value.content, {
-    docCodeLineNumbers: codeLineNumbers.value,
-    docSessionId: current.value?.sessionId,
-    docRelName: current.value?.name,
-  })
+  // SEC-01: sanitize before caching so cached entries are already clean
+  const html = sanitizeDocsHtml(
+    md.render(file.value.content, {
+      docCodeLineNumbers: codeLineNumbers.value,
+      docSessionId: current.value?.sessionId,
+      docRelName: current.value?.name,
+    }),
+  )
   setCachedDocHtml(cacheKey, html)
   return html
 })
@@ -292,11 +296,14 @@ const draftPreviewHtml = computed(() => {
   const md = createDocsMarkdown({
     workFolders: [currentSession.value?.workFolder].filter(Boolean),
   })
-  return md.render(draft.value || '', {
-    docCodeLineNumbers: codeLineNumbers.value,
-    docSessionId: current.value?.sessionId,
-    docRelName: current.value?.name,
-  })
+  // SEC-01: human-authored draft still passes the v-html boundary
+  return sanitizeDocsHtml(
+    md.render(draft.value || '', {
+      docCodeLineNumbers: codeLineNumbers.value,
+      docSessionId: current.value?.sessionId,
+      docRelName: current.value?.name,
+    }),
+  )
 })
 
 // ===== 工具函数 =====
