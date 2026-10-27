@@ -99,9 +99,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: oh-my-co-work-${{ matrix.target }}
+          # 只传本平台：packages/ 里还有 git 检出的其它平台旧 zip，若用 v*.zip 通配，
+          # 三个 artifact 都含三份同名 zip，release 里 merge-multiple 并行解压会互相覆盖写坏
+          # （"start of central directory not found"），且可能拿到旧包。
           path: |
-            packages/oh-my-co-work-v*.zip
-            packages/oh-my-co-work-v*.build.json
+            packages/oh-my-co-work-v*-${{ matrix.target }}.zip
+            packages/oh-my-co-work-v*-${{ matrix.target }}.build.json
           if-no-files-found: error
           retention-days: 3
 
