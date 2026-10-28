@@ -337,7 +337,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
-- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10 已落地（三平台桌面包 CI、linux 真机启动冒烟、产物只发 Release、配置迁至数据目录、首屏 JS -16%）；剩 Node/Electron 运行时升级、macOS/Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
+- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10 已落地（三平台桌面包 CI、linux 真机启动冒烟、产物只发 Release、配置迁至数据目录、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Windows 启动冒烟（PKG-14）、Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
 - [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目
