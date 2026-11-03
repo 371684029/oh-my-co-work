@@ -48,7 +48,6 @@
                   text
                   bg
                   :aria-label="workbenchSearchChatAria()"
-                  @click="chatSearchOpen = !chatSearchOpen"
                 >
                   {{ workbenchSearchChatLabel() }}
                 </el-button>
@@ -465,13 +464,15 @@ onUnmounted(() => {
 <style scoped>
 /* —— 会话顶栏（mac 标题栏气质） —— */
 .wb-chat-header {
-  height: 52px;
+  min-height: 52px;
   flex-shrink: 0;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  gap: 6px 12px;
+  padding: 6px 20px;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -515,19 +516,28 @@ onUnmounted(() => {
 
 .header-left {
   display: flex;
+  flex: 1 1 260px;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
+}
+
+.header-left > :deep(.el-tag),
+.human-attention-pill {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .title-input {
-  width: min(380px, 46vw);
+  flex: 0 1 380px;
+  min-width: 72px;
 }
 
 .title-input :deep(.el-input__wrapper) {
