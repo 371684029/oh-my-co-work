@@ -17,7 +17,7 @@ import {
   createSessionFromMember,
 } from '../services.js'
 import { restoreMemberRefine, restoreSourceByManifest, listMemberSourceHistory } from '../refineRestore.js'
-import { collectAdaptSourcePaths, createAdaptBackup } from '../adaptBackup.js'
+import { assessAdaptFiles, collectAdaptSourcePaths, createAdaptBackup } from '../adaptBackup.js'
 import { exportMemberTemplate, exportGroupTemplate, importTemplatePack } from '../templatePack.js'
 import { planRefineOnMemberSave } from '../refineSource.js'
 
@@ -99,9 +99,29 @@ router.post('/members/:id/source-backup', (req, res) => {
       ? req.body.files.map((f) => path.resolve(String(f)))
       : collectAdaptSourcePaths(m)
     if (!rawFiles.length) return res.status(400).json({ error: '没有可备份的源文件（请传 --files）' })
+    const workRoot = path.resolve(
+      String(m.config?.script?.scriptWorkDir || m.config?.script?.scriptDir || m.work_folder || ''),
+    )
+    if (workRoot) {
+      for (const f of rawFiles) {
+        const rel = path.relative(workRoot, f)
+        if (rel.startsWith('..') || path.isAbsolute(rel)) {
+          return res.status(400).json({ error: `源文件必须在成员工作目录（${workRoot}）内: ${f}` })
+        }
+      }
+    }
+    const assess = assessAdaptFiles(rawFiles)
+    if (!assess.ok) {
+      return res.status(400).json({ error: `源文件校验未通过（${assess.reason}）`, reason: assess.reason })
+    }
     const kind = req.body?.kind === 'adapt' ? 'adapt' : 'refine'
-    const b = createAdaptBackup({ files: rawFiles, memberId: m.id, kind })
-    res.status(201).json({ ok: true, zipPath: b.zipPath, manifestPath: b.manifestPath, files: rawFiles })
+    const b = createAdaptBackup({ files: assess.files, memberId: m.id, kind })
+    res.status(201).json({
+      ok: true,
+      zipPath: b.zipPath,
+      manifestPath: b.manifestPath,
+      files: assess.files.map((f) => f.path),
+    })
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

@@ -228,6 +228,9 @@ async function main() {
     const existing = (await api('GET', '/members')).find(
       (m) => m.display_name === payload.displayName || m.name === payload.displayName,
     )
+    if (existing) {
+      payload.config = { ...(existing.config || {}), ...(payload.config || {}) }
+    }
     const out = existing
       ? await api('PATCH', `/members/${existing.id}`, payload)
       : await api('POST', '/members', payload)
@@ -248,7 +251,9 @@ async function main() {
       pipe: flags.pipe ?? (target.config?.script?.executionMode === 'pipe' ? 'true' : 'false'),
       keepalive: flags.keepalive ?? (target.config?.script?.waitForExit === false ? 'true' : 'false'),
     }
-    const out = await api('PATCH', `/members/${target.id}`, buildMemberPayload(mergedFlags))
+    const nextPayload = buildMemberPayload(mergedFlags)
+    nextPayload.config = { ...(target.config || {}), ...(nextPayload.config || {}) }
+    const out = await api('PATCH', `/members/${target.id}`, nextPayload)
     console.log(JSON.stringify({ action: 'updated', member: out }, null, 2))
     return
   }

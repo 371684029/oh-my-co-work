@@ -106,6 +106,16 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
   assert.match(memEntry.history[0].files[0].diff, /-\s*console\.log\("v1"\)/)
   assert.match(memEntry.history[0].files[0].diff, /\+\s*console\.log\("v2"\)/)
 
+  // 越界路径（不在成员工作目录内）应被拒绝
+  const outsideFile = path.join(dataRoot, 'outside.txt')
+  fs.writeFileSync(outsideFile, 'secret\n', 'utf8')
+  const escapeRes = await fetch(`${base}/api/members/${created.member.id}/source-backup`, {
+    method: 'POST',
+    headers: { 'X-ACW-Token': tk, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: [outsideFile] }),
+  })
+  assert.equal(escapeRes.status, 400)
+
   const restoreRes = await fetch(`${base}/api/members/${created.member.id}/refine/restore`, {
     method: 'POST',
     headers: { 'X-ACW-Token': tk, 'Content-Type': 'application/json' },

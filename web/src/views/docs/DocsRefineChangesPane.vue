@@ -184,7 +184,7 @@ async function restoreMember(member, manifestId = '') {
     ElMessage.success('已还原源文件')
     await load()
   } catch (e) {
-    if (String(e?.message || '').includes('改动')) {
+    if (e?.status === 409 || e?.data?.code === 'RESTORE_CONFLICT' || String(e?.message || '').includes('改动')) {
       try {
         await ElMessageBox.confirm(
           `${e.message}。是否强制覆盖还原？`,
@@ -226,7 +226,24 @@ async function revertNode(sessionId, node) {
     ElMessage.success('已回退到该步骤执行前的代码状态')
     await load()
   } catch (e) {
-    if (e !== 'cancel' && e !== 'close') ElMessage.error(e?.message || '回退失败')
+    if (e === 'cancel' || e === 'close') return
+    if (e?.status === 409 || e?.data?.code === 'CONFLICT') {
+      try {
+        await ElMessageBox.confirm(
+          `${e.message || '工作区存在后续改动'}。是否强制覆盖回退？`,
+          '工作区有后续改动',
+          { type: 'warning', confirmButtonText: '强制回退', cancelButtonText: '取消' },
+        )
+        await api.sessions.applyStepRevert(sessionId, node.id, { force: true })
+        ElMessage.success('已强制回退到该步骤执行前的代码状态')
+        await load()
+        return
+      } catch (e2) {
+        if (e2 !== 'cancel' && e2 !== 'close') ElMessage.error(e2?.message || '回退失败')
+        return
+      }
+    }
+    ElMessage.error(e?.message || '回退失败')
   } finally {
     restoringKey.value = ''
   }

@@ -175,8 +175,24 @@ export function listMemberSourceHistory(memberId) {
 
 /** 按指定 manifest 还原某一次炼化/适配改过的源文件 */
 export function restoreSourceByManifest(memberId, manifestId, { force = false } = {}) {
+  const member = getMember(memberId)
+  if (!member) throw Object.assign(new Error('成员不存在'), { code: 'NOT_FOUND' })
   const list = listMemberSourceHistory(memberId)
   const hit = list.find((x) => x.id === manifestId || x.manifestPath === manifestId)
   if (!hit) throw Object.assign(new Error('找不到对应的备份记录'), { code: 'NOT_FOUND' })
-  return restoreAdaptManifest(hit.manifestPath, { force })
+  const r = restoreAdaptManifest(hit.manifestPath, { force })
+  if (hit.kind === 'refine' && member.config?.refine) {
+    updateMember(memberId, {
+      config: {
+        ...(member.config || {}),
+        refine: {
+          ...member.config.refine,
+          enabled: false,
+          restoredAt: new Date().toISOString(),
+          patchReason: 'restored',
+        },
+      },
+    })
+  }
+  return { ok: true, restored: r.restored, memberId, manifestId: hit.id }
 }
