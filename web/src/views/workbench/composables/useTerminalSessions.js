@@ -21,6 +21,7 @@ import {
   terminalOutputAppend,
   terminalOutputReset,
   terminalOutputGetReplay,
+  terminalOutputGetSeq,
 } from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
 import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
@@ -170,6 +171,7 @@ function maybeNotifyFurnaceCliState(terminal, sessionId) {
 // notifying the user when gaps keep happening.
 let lastGapAt = 0
 let gapStreak = 0
+const truncatedToastShown = new Set()
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -222,6 +224,10 @@ function sendTerminalMessage(message) {
 
 function openTerminal(terminalId) {
   activeTerminalId.value = terminalId
+  // 内存里已连续跟上该终端的 seq 时，切换 Tab 只显示已有 xterm，不重新拉 snapshot
+  const current = terminalSessions.value.find((item) => item.id === terminalId)
+  const localSeq = terminalOutputGetSeq(terminalId)
+  if (localSeq > 0 && current && Number(current.seq || 0) <= localSeq) return
   sendTerminalMessage({ type: 'terminal.attach', terminalId })
 }
 
@@ -381,10 +387,11 @@ function reattachForGap(terminalId) {
   const id = terminalId || activeTerminalId.value
   if (!id) return
   const now = Date.now()
+  if (now - lastGapAt < 800) return
   gapStreak = now - lastGapAt < 4000 ? gapStreak + 1 : 1
   lastGapAt = now
   sendTerminalMessage({ type: 'terminal.attach', terminalId: id })
-  if (gapStreak >= 2) ElMessage.info('部分输出未回放，正在重新附着')
+  if (gapStreak === 2) ElMessage.info('部分输出未回放，正在重新附着')
 }
 
 function onTerminalSeqGap() {
@@ -476,10 +483,19 @@ function bindWs(sessionId) {
         return
       }
       if (ev.type === 'terminal.snapshot') {
-        if (ev.payload?.truncated) {
+        const tid = ev.payload?.terminalId
+        const snapSeq = Number(ev.payload?.seq || 0)
+        const localSeq = terminalOutputGetSeq(tid)
+        gapStreak = 0
+        // 本地 xterm 已经完整跟到最新 seq，不必再用截断后的 snapshot 清屏重灌
+        if (localSeq > 0 && localSeq >= snapSeq) {
+          upsertTerminal({ ...(ev.payload?.terminal || {}), id: tid, seq: snapSeq })
+          return
+        }
+        if (ev.payload?.truncated && tid && !truncatedToastShown.has(tid)) {
+          truncatedToastShown.add(tid)
           ElMessage.info('回放已截断，仅显示最近输出')
         }
-        gapStreak = 0
         terminalOutputReset(
           ev.payload?.terminalId,
           ev.payload?.data || '',
@@ -631,6 +647,7 @@ function bindWs(sessionId) {
 function resetTerminals() {
   activeTerminalId.value = null
   terminalSessions.value = []
+  truncatedToastShown.clear()
 }
 
 function closeWs() {

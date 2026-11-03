@@ -85,6 +85,7 @@
         v-if="tuiEverShown"
         v-show="surface === 'tui'"
         :terminal="terminal"
+        :terminals="furnaceTerminals"
         :prefs="prefs"
         :session-id="sessionId"
         :active="surface === 'tui'"
@@ -154,6 +155,13 @@ watch(
     activeAgent.value = inferFurnaceAgent(props.terminal)
   },
 )
+const furnaceTerminals = computed(() => {
+  const list = Array.isArray(props.terminals)
+    ? props.terminals.filter((t) => t?.id && (t.furnaceAgent || t.id === props.terminal?.id))
+    : []
+  if (props.terminal?.id && !list.some((t) => t.id === props.terminal.id)) list.push(props.terminal)
+  return list
+})
 const agentLabel = computed(() => furnaceAgentDisplayLabel(activeAgent.value))
 const tuiHistoryOpen = ref(false)
 

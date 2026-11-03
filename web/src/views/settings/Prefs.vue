@@ -374,7 +374,7 @@
           <el-input-number v-model="quota.maxLogMiB" :min="1" :max="200" />
         </el-form-item>
         <el-form-item :label="prefsT('quota.maxReplayKiB')">
-          <el-input-number v-model="quota.maxReplayKiB" :min="32" :max="2048" />
+          <el-input-number v-model="quota.maxReplayKiB" :min="32" :max="32768" :step="512" />
         </el-form-item>
         <el-form-item :label="prefsT('quota.redact')">
           <el-switch v-model="redact.enabled" />
@@ -533,7 +533,7 @@ const terminal = ref({
 const quota = ref({
   maxConcurrentTerminals: 8,
   maxLogMiB: 10,
-  maxReplayKiB: 256,
+  maxReplayKiB: 8192,
 })
 const redact = ref({ enabled: true, patternsText: '' })
 const colorSchemeOptions = computed(() => prefsColorSchemeOptions())
@@ -641,7 +641,7 @@ async function load() {
       quota.value = {
         maxConcurrentTerminals: s.quota.maxConcurrentTerminals || 8,
         maxLogMiB: s.quota.maxLogMiB || 10,
-        maxReplayKiB: s.quota.maxReplayKiB || 256,
+        maxReplayKiB: s.quota.maxReplayKiB || 8192,
       }
     }
     if (s.redact) {

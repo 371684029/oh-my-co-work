@@ -166,7 +166,7 @@ export function defaultQuotaSettings() {
   return {
     maxConcurrentTerminals: 8,
     maxLogMiB: 10,
-    maxReplayKiB: 256,
+    maxReplayKiB: 8192,
   }
 }
 
@@ -221,7 +221,8 @@ function normalizeQuota(raw) {
   return {
     maxConcurrentTerminals: clampInt(raw.maxConcurrentTerminals, d.maxConcurrentTerminals, 1, 32),
     maxLogMiB: clampInt(raw.maxLogMiB, d.maxLogMiB, 1, 200),
-    maxReplayKiB: clampInt(raw.maxReplayKiB, d.maxReplayKiB, 32, 2048),
+    // 旧版默认 256KiB 会在长跑 TUI 切 Tab 时截断；升级后未手工改过的自动提到 8MiB
+    maxReplayKiB: clampInt(raw.maxReplayKiB === 256 ? d.maxReplayKiB : raw.maxReplayKiB, d.maxReplayKiB, 32, 32768),
   }
 }
 

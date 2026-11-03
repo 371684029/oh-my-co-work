@@ -19,12 +19,20 @@ export function unsubscribe(ws) {
     if (set.size === 0) sessionSubs.delete(sid)
   }
   ws._ecwAttachedTerminalId = null
+  ws._ecwAttachedTerminalIds = null
 }
 
-/** Only the terminal the client last attached receives high-volume output (CLI-14). */
+/**
+ * 记录该连接已订阅的终端（Set）：同一会话下 Grok / Cursor 等多个终端切换 Tab 时，
+ * 旧 Tab 在后台继续收流，切回来不再丢帧重刷 snapshot。
+ */
 export function setWsTerminalAttach(ws, terminalId) {
   if (!ws) return
-  ws._ecwAttachedTerminalId = terminalId ? String(terminalId) : null
+  const tid = terminalId ? String(terminalId) : null
+  ws._ecwAttachedTerminalId = tid
+  if (!tid) return
+  if (!(ws._ecwAttachedTerminalIds instanceof Set)) ws._ecwAttachedTerminalIds = new Set()
+  ws._ecwAttachedTerminalIds.add(tid)
 }
 
 export function emitTerminalOutput(sessionId, terminalId, event) {
@@ -34,7 +42,8 @@ export function emitTerminalOutput(sessionId, terminalId, event) {
   const raw = JSON.stringify(event)
   for (const ws of set) {
     if (ws.readyState !== 1) continue
-    if (ws._ecwAttachedTerminalId !== tid) continue
+    const attached = ws._ecwAttachedTerminalIds
+    if (attached instanceof Set ? !attached.has(tid) : ws._ecwAttachedTerminalId !== tid) continue
     if (Number(ws.bufferedAmount || 0) > WS_TERMINAL_BACKPRESSURE_BYTES) {
       try {
         ws.send(

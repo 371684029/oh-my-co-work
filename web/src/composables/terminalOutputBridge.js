@@ -19,7 +19,7 @@ export function terminalOutputAppend(terminalId, { seq, data }) {
   const nextSeq = Number(seq || 0)
   const chunk = String(data || '')
   if (chunk) {
-    e.replay = `${e.replay}${chunk}`.slice(-256_000)
+    e.replay = `${e.replay}${chunk}`.slice(-8_388_608)
     e.pending.push({ seq: nextSeq, data: chunk })
   }
   e.seq = Math.max(e.seq, nextSeq)
@@ -67,6 +67,10 @@ export function terminalOutputDrainPending(terminalId, afterSeq) {
 
 export function terminalOutputGetReplay(terminalId) {
   return entries.get(String(terminalId || ''))?.replay ?? ''
+}
+
+export function terminalOutputGetSeq(terminalId) {
+  return entries.get(String(terminalId || ''))?.seq ?? 0
 }
 
 /** Test helper */

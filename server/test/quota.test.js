@@ -6,7 +6,7 @@ test('quotaLimits applies defaults', () => {
   const q = quotaLimits({ quota: {} })
   assert.equal(q.maxConcurrent, 8)
   assert.equal(q.maxLogBytes, 10 * 1024 * 1024)
-  assert.equal(q.maxReplayChars, 256 * 1024)
+  assert.equal(q.maxReplayChars, 8192 * 1024)
 })
 
 test('quotaLimits reads custom MiB/KiB', () => {

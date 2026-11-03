@@ -38,7 +38,7 @@
   "quota": {
     "maxConcurrentTerminals": 8,
     "maxLogMiB": 10,
-    "maxReplayKiB": 256
+    "maxReplayKiB": 8192
   },
   "redact": {
     "enabled": true,

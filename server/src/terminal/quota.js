@@ -6,7 +6,7 @@ export function quotaLimits(settings = getAppSettings()) {
   return {
     maxConcurrent: Number(q.maxConcurrentTerminals) || 8,
     maxLogBytes: Math.max(1, Number(q.maxLogMiB) || 10) * 1024 * 1024,
-    maxReplayChars: Math.max(32, Number(q.maxReplayKiB) || 256) * 1024,
+    maxReplayChars: Math.max(32, Number(q.maxReplayKiB) || 8192) * 1024,
   }
 }
 

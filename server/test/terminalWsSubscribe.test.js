@@ -53,3 +53,25 @@ test('emitTerminalOutput signals backpressure instead of buffering forever', () 
   assert.equal(got.length, 1)
   assert.equal(got[0].type, 'terminal.backpressure')
 })
+
+test('switching between Grok and Cursor tabs keeps both terminals subscribed on the same WebSocket', () => {
+  const got = []
+  const ws = {
+    readyState: 1,
+    bufferedAmount: 0,
+    send: (raw) => got.push(JSON.parse(raw)),
+  }
+  subscribe('sess-multi', ws)
+  setWsTerminalAttach(ws, 'term-grok')
+  setWsTerminalAttach(ws, 'term-cursor')
+  emitTerminalOutput('sess-multi', 'term-grok', {
+    type: 'terminal.output',
+    payload: { terminalId: 'term-grok', seq: 10, data: 'grok still streaming' },
+  })
+  emitTerminalOutput('sess-multi', 'term-cursor', {
+    type: 'terminal.output',
+    payload: { terminalId: 'term-cursor', seq: 20, data: 'cursor streaming' },
+  })
+  unsubscribe(ws)
+  assert.deepEqual(got.map((e) => e.payload.terminalId), ['term-grok', 'term-cursor'])
+})
