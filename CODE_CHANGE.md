@@ -3,6 +3,8 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-03 | A/M | scripts/lib/archive.mjs, server/test/archive.test.js, scripts/{pack-release,verify-pack,validate-release-packages,desktop-smoke}.mjs | PKG-15 纯 Node zip/tar.gz：打包链路不再依赖 zip/unzip/tar/python3/PowerShell；缓存完整性校验；EBUSY 重试；冒烟支持 Windows
+2026-11-03 | M | .github/workflows/{ci,pack-release}.yml, docs/5.7.0-plan.md | PKG-14/16 Windows runner 原生打包+启动冒烟；Release 缺 win32 桌面包即失败；上传逐文件重试
 2026-10-27 | M | README.md, docs/5.7.0-plan.md | 开发策略：冻结 Web/Linux/macOS 功能，全力攻坚 Windows 桌面端最小可用
 2026-10-27 | A | docs/5.7.0-plan.md | 5.7.0 需求文档：打包链路剩余风险 PKG-01~14 / REPO-01 清单、DoD 与实施顺序
 2026-10-27 | M | README.md, docs/README.md | 文档索引与路线图补 5.7.0 条目

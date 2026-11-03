@@ -5,7 +5,9 @@ name: Pack release zip
 #   只消耗 1x 分钟数，不跑 windows-latest(2x) / macos-latest(10x)。
 # - 产物只走 artifact → Release，**不再提交进 git**（5.7.0 PKG-04）：此前每次 push 往 main
 #   推 ~72MB zip，三平台并行 rebase 推送是打包最常见的失败点，仓库也越滚越大。
-# - 桌面包 matrix 与轻量包分开，单个桌面平台失败不拖死发布（Release 只是缺那一份并告警）。
+# - 桌面包 matrix 与轻量包分开：win32 桌面包是主力产物，缺了就不发布（保留上一版 latest）；
+#   linux / darwin 桌面包失败只告警、保留 Release 里的旧版本。
+# - 上传逐个文件带重试，网络抖动不再让整次发布失败。
 # - 合并前的「能不能打出能启动的包」由 ci.yml 把关（含 linux 桌面包 xvfb 真机冒烟）。
 on:
   push:
@@ -201,6 +203,10 @@ jobs:
               MISSING="$MISSING $t"
             fi
           done
+          case " $MISSING " in *" win32-x64 "*)
+            echo "::error::Windows 桌面包缺失（pack-desktop win32-x64 失败），不发布，latest 保持上一版" >&2
+            exit 1 ;;
+          esac
           if [ -n "$MISSING" ]; then
             echo "::warning::桌面包缺失:${MISSING}（对应 pack-desktop job 失败），Release 先发其余产物；可单独重跑补齐。"
           fi
@@ -219,12 +225,23 @@ jobs:
           **轻量运行包**（需本机 Node.js ≥ 18，打开浏览器）：\`*-win32-x64.zip\` / \`*-linux-x64.zip\` / \`*-darwin-arm64.zip\`
 
           提交：\`${SHORT}\`"
+          retry() {
+            local n
+            for n in 1 2 3 4 5; do
+              "$@" && return 0
+              echo "::warning::第 ${n} 次失败，$((n * 10))s 后重试: $*"
+              sleep $((n * 10))
+            done
+            return 1
+          }
           # 原地更新：不再先删后建（中间窗口期 latest 下载全部 404）
           git tag -f latest "$GITHUB_SHA"
-          git push -f origin refs/tags/latest
+          retry git push -f origin refs/tags/latest
           if gh release view latest >/dev/null 2>&1; then
-            gh release edit latest --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
-            gh release upload latest upload/*.zip --clobber
+            retry gh release edit latest --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
+            for f in upload/*.zip; do
+              retry gh release upload latest "$f" --clobber
+            done
             gh release view latest --json assets -q '.assets[].name' | while read -r a; do
               if [ -f "upload/$a" ]; then continue; fi
               keep=0
@@ -235,8 +252,11 @@ jobs:
                 echo "::warning::本次 ${a} 未产出，保留 Release 里的旧版本"
                 continue
               fi
-              gh release delete-asset latest "$a" --yes
+              retry gh release delete-asset latest "$a" --yes
             done
           else
-            gh release create latest upload/*.zip --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
+            retry gh release create latest --title "运行包（最新 · ${SHORT}）" --notes "$NOTES" --latest
+            for f in upload/*.zip; do
+              retry gh release upload latest "$f" --clobber
+            done
           fi

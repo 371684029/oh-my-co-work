@@ -110,3 +110,48 @@ jobs:
             exit 1
           fi
           cat /tmp/acw-ci-pack-smoke-health.json
+
+  # Windows 桌面端是当前唯一攻坚目标：在真 Windows 上原生打包（与本地 `npm run pack:desktop`
+  # 同一路径，不依赖 zip/unzip/tar/python）并双击级启动冒烟，Windows 特有的问题合并前就报红。
+  windows-desktop:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Read pinned runtime versions
+        id: ver
+        run: |
+          echo "node=$(node -p "require('./package.json').acwPack.nodeVersion")" >> "$GITHUB_OUTPUT"
+          echo "electron=$(node -p "require('./package.json').acwPack.electronVersion")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Electron / Node runtime zips
+        uses: actions/cache@v6
+        with:
+          path: release/cache
+          key: pack-desktop-cache-win32-x64-electron${{ steps.ver.outputs.electron }}-node${{ steps.ver.outputs.node }}
+
+      - name: Desktop pack (native Windows, same as local pack:desktop)
+        run: npm run pack:desktop
+
+      - name: Verify + launch smoke (win32-x64)
+        run: |
+          set -euo pipefail
+          MAJOR="$(node -p "String(require('./package.json').version).split('.')[0]")"
+          VER="$(node -p "JSON.parse(require('fs').readFileSync('server/config/about.json','utf8')).version")"
+          ZIP="release/oh-my-co-work-v${MAJOR}-win32-x64-desktop.zip"
+          node scripts/verify-pack.mjs --zip "$ZIP" --platform win32-x64 --version "$VER"
+          node scripts/desktop-smoke.mjs --zip "$ZIP" --port 3797 --timeout-ms 150000
