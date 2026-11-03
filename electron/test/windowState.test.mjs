@@ -32,3 +32,18 @@ test('applyStoredWindowBounds uses setBounds', () => {
   assert.equal(ok, true)
   assert.equal(calls[0][0], 'bounds')
 })
+
+test('上次退出时处于全屏，重启只恢复最大化，不再盖住任务栏', () => {
+  const calls = []
+  const win = {
+    setBounds: (b) => calls.push(['bounds', b]),
+    setFullScreen: (v) => calls.push(['fs', v]),
+    maximize: () => calls.push(['max']),
+  }
+  applyStoredWindowBounds(
+    win,
+    { x: 0, y: 0, width: 1920, height: 1080, isMaximized: true, isFullScreen: true },
+    { x: 0, y: 0, width: 1920, height: 1040 },
+  )
+  assert.deepEqual(calls, [['max']])
+})

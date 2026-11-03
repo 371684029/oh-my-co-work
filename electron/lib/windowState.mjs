@@ -59,16 +59,15 @@ export function applyStoredWindowBounds(win, stored, workArea) {
   } else if (typeof win.setBounds === 'function') {
     win.setBounds(clamped)
   }
-  if (stored.isFullScreen && typeof win.setFullScreen === 'function') {
-    win.setFullScreen(true)
-  }
   return true
 }
 
-/** First run: maximize + fullscreen (legacy DESK behavior). */
+/**
+ * 首次打开：最大化到工作区（保留 Windows 任务栏 / macOS Dock）。
+ * 不进系统全屏，启动时也不恢复上次的全屏——全屏只由用户手动切换。
+ */
 export function applyDesktopOpenState(win) {
   if (!win) return false
   if (typeof win.maximize === 'function') win.maximize()
-  if (typeof win.setFullScreen === 'function') win.setFullScreen(true)
   return true
 }

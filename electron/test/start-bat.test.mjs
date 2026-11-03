@@ -110,12 +110,12 @@ test('spawnElectron 把沙箱参数放在应用路径之前', () => {
   assert.deepEqual(calls[0], ['--no-sandbox', dir])
 })
 
-test('桌面窗口打开时最大化并进入系统全屏', () => {
+test('桌面窗口打开时只最大化，不进系统全屏（保留任务栏）', () => {
   const calls = []
   const win = {
     maximize: () => calls.push('maximize'),
     setFullScreen: (v) => calls.push(`fullscreen:${v}`),
   }
   assert.equal(applyDesktopOpenState(win), true)
-  assert.deepEqual(calls, ['maximize', 'fullscreen:true'])
+  assert.deepEqual(calls, ['maximize'])
 })
