@@ -49,7 +49,11 @@ async function main() {
   const { electronSandboxArgs } = await import(pathToFileURL(path.join(appRoot, 'desktop-launch.mjs')).href)
   const sandboxArgs = electronSandboxArgs(appRoot)
   console.log(`[desktop-smoke] electron args: ${sandboxArgs.join(' ') || '(sandbox on)'}`)
-  const [cmd, args] = isWin ? [exe, [appRoot]] : ['xvfb-run', ['-a', exe, ...sandboxArgs, appRoot]]
+  const chromiumLog = path.join(work, 'chromium.log')
+  const logArgs = ['--enable-logging=file', `--log-file=${chromiumLog}`]
+  const [cmd, args] = isWin
+    ? [exe, [...logArgs, appRoot]]
+    : ['xvfb-run', ['-a', exe, ...sandboxArgs, ...logArgs, appRoot]]
   const child = spawn(cmd, args, {
     cwd: appRoot,
     detached: !isWin,
@@ -57,8 +61,8 @@ async function main() {
     env: {
       ...process.env,
       ACW_PORT: String(port),
-      HOME: home,
-      ...(isWin ? { APPDATA: home, LOCALAPPDATA: home, USERPROFILE: home } : {}),
+      // Windows 不改 USERPROFILE / APPDATA：与用户双击启动的环境一致，runner 本身是一次性的
+      ...(isWin ? {} : { HOME: home }),
       ELECTRON_ENABLE_LOGGING: '1',
     },
   })
@@ -91,6 +95,7 @@ async function main() {
     console.error('[desktop-smoke] FAIL', e?.message || e)
     console.error('--- data/electron.log ---\n' + readIf(electronLog))
     console.error('--- data/desktop-server.log ---\n' + readIf(path.join(appRoot, 'data', 'desktop-server.log')))
+    console.error('--- chromium.log (tail) ---\n' + readIf(chromiumLog).split('\n').slice(-60).join('\n'))
     console.error('--- electron stdout/stderr (tail) ---\n' + stdout.split('\n').slice(-40).join('\n'))
     process.exitCode = 1
   } finally {
