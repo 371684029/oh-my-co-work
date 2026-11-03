@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * linux-x64 桌面包真机冒烟：解压 → xvfb 下启动 Electron → 等 /api/health 与「workbench loaded」。
+ * 桌面包真机冒烟（linux-x64 走 xvfb，win32-x64 在 Windows runner 上直接起窗口）：
+ * 解压 → 启动 Electron → 等 /api/health 与「workbench loaded」。
  * 只看 verify-pack 的文件清单抓不到「文件都在但主进程 import 失败 / 原生模块 ABI 不对」这类问题，
- * 必须真把窗口拉起来。win32/darwin 交叉打包产物没法在 ubuntu runner 上执行，共用同一套打包逻辑，
- * 由 linux 这份代为把关。
+ * 必须真把窗口拉起来。
  *
  * 用法：node scripts/desktop-smoke.mjs --zip release/oh-my-co-work-v5-linux-x64-desktop.zip [--port 3799]
  */
@@ -11,6 +11,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync, spawn } from 'node:child_process'
+import { extractZip } from './lib/archive.mjs'
 import { pathToFileURL } from 'node:url'
 import { fetchHealth } from '../electron/lib/server.mjs'
 
@@ -36,9 +37,10 @@ async function main() {
   if (!fs.existsSync(zip)) throw new Error(`找不到 zip: ${zip}`)
 
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-desktop-smoke-'))
-  execFileSync('unzip', ['-q', zip, '-d', work])
+  extractZip(zip, work)
   const appRoot = path.join(work, path.basename(zip, '.zip'))
-  const exe = path.join(appRoot, 'desktop', 'oh-my-co-work')
+  const isWin = process.platform === 'win32'
+  const exe = path.join(appRoot, 'desktop', isWin ? 'oh-my-co-work.exe' : 'oh-my-co-work')
   if (!fs.existsSync(exe)) throw new Error(`桌面包缺少 ${exe}`)
   const home = path.join(work, 'home')
   fs.mkdirSync(home, { recursive: true })
@@ -47,11 +49,18 @@ async function main() {
   const { electronSandboxArgs } = await import(pathToFileURL(path.join(appRoot, 'desktop-launch.mjs')).href)
   const sandboxArgs = electronSandboxArgs(appRoot)
   console.log(`[desktop-smoke] electron args: ${sandboxArgs.join(' ') || '(sandbox on)'}`)
-  const child = spawn('xvfb-run', ['-a', exe, ...sandboxArgs, appRoot], {
+  const [cmd, args] = isWin ? [exe, [appRoot]] : ['xvfb-run', ['-a', exe, ...sandboxArgs, appRoot]]
+  const child = spawn(cmd, args, {
     cwd: appRoot,
-    detached: true,
+    detached: !isWin,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, ACW_PORT: String(port), HOME: home, ELECTRON_ENABLE_LOGGING: '1' },
+    env: {
+      ...process.env,
+      ACW_PORT: String(port),
+      HOME: home,
+      ...(isWin ? { APPDATA: home, LOCALAPPDATA: home, USERPROFILE: home } : {}),
+      ELECTRON_ENABLE_LOGGING: '1',
+    },
   })
   let stdout = ''
   child.stdout.on('data', (d) => (stdout += d))
@@ -85,15 +94,31 @@ async function main() {
     console.error('--- electron stdout/stderr (tail) ---\n' + stdout.split('\n').slice(-40).join('\n'))
     process.exitCode = 1
   } finally {
-    try {
-      process.kill(-child.pid, 'SIGKILL')
-    } catch {
-      /* already gone */
-    }
-    try {
-      execFileSync('pkill', ['-9', '-f', appRoot])
-    } catch {
-      /* nothing left */
+    if (isWin) {
+      try {
+        execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+      } catch {
+        /* already gone */
+      }
+      // 服务端是 runtime/node.exe 子进程树，按镜像路径兜底清理
+      try {
+        execFileSync('powershell', ['-NoProfile', '-Command',
+          `Get-Process | Where-Object { $_.Path -like '${appRoot.replace(/'/g, "''")}*' } | Stop-Process -Force`],
+        { stdio: 'ignore' })
+      } catch {
+        /* nothing left */
+      }
+    } else {
+      try {
+        process.kill(-child.pid, 'SIGKILL')
+      } catch {
+        /* already gone */
+      }
+      try {
+        execFileSync('pkill', ['-9', '-f', appRoot])
+      } catch {
+        /* nothing left */
+      }
     }
   }
 }

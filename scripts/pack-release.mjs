@@ -5,7 +5,7 @@
  * - 后端 esbuild 打成 server/dist/index.js（不含 server/src）
  * - 在包内预装 better-sqlite3 等运行依赖（用户不必再 npm install）
  *
- * 产物（提交进 git）：
+ * 产物（本地输出，CI 只发 GitHub Release，不进 git）：
  *   packages/oh-my-co-work-v{MAJOR}-{platform}-{arch}.zip
  *   · 同大版本 + 同平台：覆盖替换（小版本即最新）
  *   · 仓库只保留当前大版本：打新大版本时删除旧大版本全部 zip
@@ -20,6 +20,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { windowsStartBat } from './windowsStartBat.mjs'
+import { archiveLooksValid, createZip, extractTarGz, extractZip } from './lib/archive.mjs'
 
 /** 桌面包内嵌运行时版本：唯一来源是根 package.json 的 acwPack（工作流缓存 key 也读它） */
 const { nodeVersion: PACK_NODE_VERSION, electronVersion: PACK_ELECTRON_VERSION } = JSON.parse(
@@ -232,9 +233,9 @@ function downloadHttps(url, dest) {
   })
 }
 
-function unzipTo(zipPath, destDir) {
-  fs.mkdirSync(destDir, { recursive: true })
-  execFileSync('unzip', ['-q', '-o', zipPath, '-d', destDir], { stdio: 'inherit' })
+/** Windows 上杀软 / 资源管理器 / 上次没退干净的桌面包常短暂占用文件，rm 直接 EBUSY */
+function rmrf(p) {
+  if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 })
 }
 
 /**
@@ -265,7 +266,7 @@ async function fetchCrossPrebuilds(stage, target, { abi = process.versions.modul
     const bs3Dir = path.join(stage, 'node_modules/better-sqlite3')
     try {
       const tarball = await cachedDownload(urls, name, { minBytes: 200 * 1024 })
-      execFileSync('tar', ['-xzf', tarball, '-C', bs3Dir], { stdio: 'inherit' })
+      extractTarGz(tarball, bs3Dir)
       console.log(`[pack] better-sqlite3 prebuild ok (${target.platform}-${target.arch})`)
     } catch (e) {
       if (strict) throw new Error(`better-sqlite3 prebuild 失败（${e?.message || e}）`, { cause: e })
@@ -286,15 +287,19 @@ async function cachedDownload(urlOrUrls, cacheName, { minBytes = 1024 * 1024 } =
   const urls = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls]
   const cacheDir = path.join(OUT_ROOT, 'cache')
   const dest = path.join(cacheDir, cacheName)
-  if (fs.existsSync(dest) && fs.statSync(dest).size >= minBytes) {
-    console.log('[pack] cache hit', cacheName)
-    return dest
+  if (fs.existsSync(dest)) {
+    if (fs.statSync(dest).size >= minBytes && archiveLooksValid(dest)) {
+      console.log('[pack] cache hit', cacheName)
+      return dest
+    }
+    console.warn('[pack] 缓存文件损坏或不完整，重新下载', cacheName)
+    fs.rmSync(dest, { force: true })
   }
   const tmp = dest + '.part'
   let lastErr
   for (let attempt = 1; attempt <= DOWNLOAD_RETRIES; attempt++) {
     for (const url of urls) {
-      if (fs.existsSync(tmp)) fs.rmSync(tmp)
+      fs.rmSync(tmp, { force: true })
       try {
         console.log(`[pack] download (${attempt}/${DOWNLOAD_RETRIES})`, url)
         await downloadHttps(url, tmp)
@@ -302,6 +307,7 @@ async function cachedDownload(urlOrUrls, cacheName, { minBytes = 1024 * 1024 } =
         if (size < minBytes) {
           throw new Error(`下载不完整: ${size} bytes < ${minBytes}: ${url}`)
         }
+        if (!archiveLooksValid(tmp)) throw new Error(`下载内容不是完整压缩包: ${url}`)
         fs.renameSync(tmp, dest)
         return dest
       } catch (e) {
@@ -344,20 +350,13 @@ async function bundleElectronApp(stage) {
 /**
  * Node 官方 dist 的平台命名与压缩格式：
  * win32 → win-{arch}.zip（zip 内根目录 node.exe + dll/exe）；
- * linux → linux-{arch}.tar.xz（bin/node）；
+ * linux → linux-{arch}.tar.gz（bin/node；不用 .tar.xz：Node 内置 zlib 不支持 xz）；
  * darwin → darwin-{arch}.tar.gz（bin/node）。
  */
 function nodeDistName(platform, arch) {
   const distPlat = platform === 'win32' ? 'win' : platform
-  const ext = platform === 'win32' ? 'zip' : platform === 'darwin' ? 'tar.gz' : 'tar.xz'
+  const ext = platform === 'win32' ? 'zip' : 'tar.gz'
   return { name: `node-v${PACK_NODE_VERSION}-${distPlat}-${arch}`, ext }
-}
-
-/** tar 包解压到目录（Node 运行时 linux/darwin 用；win32 的 zip 走 unzipTo） */
-function untarTo(tarPath, destDir) {
-  fs.mkdirSync(destDir, { recursive: true })
-  const flag = tarPath.endsWith('.gz') ? '-xzf' : '-xJf'
-  execFileSync('tar', [flag, tarPath, '-C', destDir], { stdio: 'inherit' })
 }
 
 /**
@@ -386,9 +385,9 @@ async function embedDesktop(stage, platform, arch) {
     { minBytes: 20 * 1024 * 1024 },
   )
   const nodeExtract = path.join(OUT_ROOT, 'cache', `${nodeDist.name}-extract`)
-  if (fs.existsSync(nodeExtract)) fs.rmSync(nodeExtract, { recursive: true, force: true })
-  if (nodeDist.ext === 'zip') unzipTo(nodeZip, nodeExtract)
-  else untarTo(nodeZip, nodeExtract)
+  rmrf(nodeExtract)
+  if (nodeDist.ext === 'zip') extractZip(nodeZip, nodeExtract)
+  else extractTarGz(nodeZip, nodeExtract, { filter: (n) => n.endsWith('/bin/node') })
   const nodeRoot = path.join(nodeExtract, nodeDist.name)
   const runtime = path.join(stage, 'runtime')
   fs.mkdirSync(runtime, { recursive: true })
@@ -423,8 +422,8 @@ async function embedDesktop(stage, platform, arch) {
     { minBytes: 80 * 1024 * 1024 },
   )
   const desktop = path.join(stage, 'desktop')
-  if (fs.existsSync(desktop)) fs.rmSync(desktop, { recursive: true, force: true })
-  unzipTo(electronZip, desktop)
+  rmrf(desktop)
+  extractZip(electronZip, desktop)
 
   if (platform === 'win32') {
     const electronExe = path.join(desktop, 'electron.exe')
@@ -946,7 +945,7 @@ async function mainAsync() {
     sh('npm', ['run', 'build', '-w', 'web'])
   }
 
-  if (fs.existsSync(stage)) fs.rmSync(stage, { recursive: true, force: true })
+  rmrf(stage)
   fs.mkdirSync(path.join(stage, 'server', 'dist'), { recursive: true })
   fs.mkdirSync(path.join(stage, 'web'), { recursive: true })
 
@@ -1132,25 +1131,12 @@ async function mainAsync() {
   if (fs.existsSync(zipPath)) fs.rmSync(zipPath)
 
   console.log('[pack] zip…', zipPath)
-  if (process.platform === 'win32') {
-    execFileSync(
-      'powershell',
-      [
-        '-NoProfile',
-        '-Command',
-        `Compress-Archive -Path '${stage.replace(/'/g, "''")}\\*' -DestinationPath '${zipPath.replace(/'/g, "''")}' -Force`,
-      ],
-      { stdio: 'inherit' },
-    )
-  } else {
-    // -y 保留符号链接：Electron.app 的 *.framework 依赖 Versions/Current 等链接，展开成实体文件
-    // 会破坏代码签名，Apple Silicon 上直接被系统杀掉。win32 包不需要（解压工具也不认 symlink）。
-    const zipArgs = target.platform === 'win32' ? ['-r', '-q'] : ['-r', '-q', '-y']
-    execFileSync('zip', [...zipArgs, zipPath, folderName], {
-      cwd: OUT_ROOT,
-      stdio: 'inherit',
-    })
-  }
+  // 纯 Node 写 zip：三平台宿主产物一致（顶层目录 + unix 权限 + 符号链接，等价 `zip -r -y`），
+  // 不依赖本机 zip / PowerShell Compress-Archive。Windows 宿主读不到可执行位，按清单补。
+  createZip(stage, zipPath, {
+    prefix: folderName,
+    executables: ['start.sh', 'runtime/node', 'desktop/oh-my-co-work', 'desktop/chrome_crashpad_handler', 'desktop/chrome-sandbox'],
+  })
 
   fs.mkdirSync(PACKAGES_DIR, { recursive: true })
   const size = fs.statSync(zipPath).size

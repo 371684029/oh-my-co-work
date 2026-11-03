@@ -21,7 +21,7 @@
 import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { listZip, readZipEntry } from './lib/archive.mjs'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -44,45 +44,28 @@ function normalizeEntry(entry) {
   return String(entry || '').replaceAll('\\', '/').replace(/^\.\/+/, '')
 }
 
+const zipIndex = new Map()
+function zipEntries(zipPath) {
+  if (!zipIndex.has(zipPath)) zipIndex.set(zipPath, listZip(zipPath))
+  return zipIndex.get(zipPath)
+}
+
 function unzipList(zipPath) {
-  return execFileSync('python3', [
-    '-c',
-    'import zipfile,sys; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))',
-    zipPath,
-  ], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 })
-    .split(/\r?\n/)
-    .filter(Boolean)
+  return zipEntries(zipPath).map((e) => e.name)
 }
 
 function unzipBytes(zipPath, entry) {
-  return execFileSync('unzip', ['-p', zipPath, entry], { maxBuffer: 1024 * 1024 * 64 })
+  const data = readZipEntry(zipPath, entry, zipEntries(zipPath))
+  if (!data) throw new Error(`zip 内找不到 ${entry}`)
+  return data
 }
 
 function unzipHead(zipPath, entry, n = 4) {
-  return execFileSync(
-    'python3',
-    [
-      '-c',
-      'import zipfile,sys; z=zipfile.ZipFile(sys.argv[1]); sys.stdout.buffer.write(z.open(sys.argv[2]).read(int(sys.argv[3])))',
-      zipPath,
-      entry,
-      String(n),
-    ],
-  )
+  return unzipBytes(zipPath, entry).subarray(0, n)
 }
 
 function unzipIsSymlink(zipPath, entry) {
-  const out = execFileSync(
-    'python3',
-    [
-      '-c',
-      'import zipfile,sys,stat; i=zipfile.ZipFile(sys.argv[1]).getinfo(sys.argv[2]); print(1 if stat.S_ISLNK(i.external_attr >> 16) else 0)',
-      zipPath,
-      entry,
-    ],
-    { encoding: 'utf8' },
-  )
-  return out.trim() === '1'
+  return Boolean(zipEntries(zipPath).find((e) => e.name === entry)?.isSymlink)
 }
 
 function platformOf(tag) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { listZip, readZipEntry } from './lib/archive.mjs'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -61,13 +61,13 @@ export function validateBuildMetadataSet({
 }
 
 function unzipList(zipPath) {
-  return execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
-    .split(/\r?\n/)
-    .filter(Boolean)
+  return listZip(zipPath).map((e) => e.name)
 }
 
 function unzipText(zipPath, entry) {
-  return execFileSync('unzip', ['-p', zipPath, entry], { encoding: 'utf8' })
+  const data = readZipEntry(zipPath, entry)
+  if (!data) throw new Error(`zip 内找不到 ${entry}`)
+  return data.toString('utf8')
 }
 
 function argValue(name) {
