@@ -117,6 +117,7 @@ let fitAddon = null
 let resizeObserver = null
 let lastSeq = 0
 let fitTimer = 0
+let lastDpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1
 let unsubOutput = null
 let searchAddon = null
 let webglAddon = null
@@ -281,9 +282,19 @@ function scheduleFit() {
   fitTimer = window.setTimeout(() => fit(), 120)
 }
 
-function fit() {
+function clearAtlasAndRefresh() {
+  try {
+    xterm?.clearTextureAtlas?.()
+    if (xterm?.rows) xterm.refresh?.(0, xterm.rows - 1)
+  } catch {
+    /* ignore */
+  }
+}
+
+function fit(forceAtlasClear = false) {
   if (!xterm || !fitAddon || !host.value?.isConnected) return
   if (props.active === false) return
+  if (host.value.offsetParent === null) return
   const rect = host.value.getBoundingClientRect()
   if (rect.width < 80 || rect.height < 80) return
   try {
@@ -291,6 +302,11 @@ function fit() {
     const cols = Number(xterm.cols)
     const rows = Number(xterm.rows)
     if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols < 20 || rows < 8) return
+    const dpr = typeof window !== 'undefined' ? window.devicePixelRatio : lastDpr
+    if (forceAtlasClear || dpr !== lastDpr) {
+      lastDpr = dpr
+      clearAtlasAndRefresh()
+    }
     emit('resize', { cols, rows })
   } catch {
     /* 容器切换动画期间尺寸可能暂不可用 */
@@ -316,7 +332,9 @@ onMounted(async () => {
     fontFamily: prefs.fontFamily || defaultTerminalPrefs().fontFamily,
     fontSize: Number(prefs.fontSize) || 13,
     lineHeight: Number(prefs.lineHeight) > 0 ? Number(prefs.lineHeight) : 1.35,
-    letterSpacing: Number.isFinite(Number(prefs.letterSpacing)) ? Number(prefs.letterSpacing) : 0.2,
+    letterSpacing: Number.isFinite(Number(prefs.letterSpacing)) ? Math.round(Number(prefs.letterSpacing)) : 0,
+    rescaleOverlappingGlyphs: true,
+    customGlyphs: true,
     scrollback: Number(prefs.scrollback) > 0 ? Number(prefs.scrollback) : 5000,
     smoothScrollDuration: 120,
     macOptionClickForcesSelection: true,
@@ -347,6 +365,12 @@ onMounted(async () => {
     searchAddon = null
   }
   xterm.open(host.value)
+  try {
+    await document.fonts?.ready
+  } catch {
+    /* ignore */
+  }
+  if (!host.value?.isConnected || !xterm) return
   if (prefs.renderer !== 'dom') {
     try {
       webglAddon = new WebglAddon()
@@ -500,7 +524,7 @@ watch(
   (on) => {
     if (!on) return
     nextTick(() => {
-      fit()
+      fit(true)
       xterm?.focus()
       emit('focus-change', true)
     })

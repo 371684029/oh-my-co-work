@@ -119,9 +119,9 @@ export function defaultTerminalSettings() {
     theme: 'project-dark',
     fontSize: 13,
     fontFamily:
-      "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace",
+      "Consolas, 'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', monospace",
     lineHeight: 1.35,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
     cursorBlink: true,
     pastePolicy: 'confirm',
     selectToCopy: false,
@@ -194,12 +194,22 @@ export function normalizeTerminal(raw) {
   return {
     theme,
     fontSize: clampInt(raw.fontSize, d.fontSize, 10, 22),
+    // 旧版把 Microsoft YaHei UI 排在 Consolas 前面且 letterSpacing=0.2：未装 Cascadia 的 Windows
+    // 机器会用非等宽的雅黑度量单元格，切换 Tab 重刷 WebGL 纹理后整屏散成「p l a n . m d」
     fontFamily:
-      typeof raw.fontFamily === 'string' && raw.fontFamily.trim()
+      typeof raw.fontFamily === 'string' &&
+      raw.fontFamily.trim() &&
+      raw.fontFamily.trim() !==
+        "'Cascadia Code', 'JetBrains Mono', 'SFMono-Regular', 'Microsoft YaHei UI', Consolas, monospace"
         ? raw.fontFamily.trim()
         : d.fontFamily,
     lineHeight: clampNum(raw.lineHeight, d.lineHeight, 1, 2),
-    letterSpacing: clampNum(raw.letterSpacing, d.letterSpacing, -1, 4),
+    letterSpacing: clampNum(
+      raw.letterSpacing === 0.2 ? 0 : raw.letterSpacing,
+      d.letterSpacing,
+      -1,
+      4,
+    ),
     cursorBlink: raw.cursorBlink !== false,
     pastePolicy,
     selectToCopy: raw.selectToCopy === true,

@@ -333,7 +333,7 @@
           <el-input-number v-model="terminal.lineHeight" :min="1" :max="2" :step="0.05" />
         </el-form-item>
         <el-form-item :label="prefsT('terminal.letterSpacing')">
-          <el-input-number v-model="terminal.letterSpacing" :min="-1" :max="4" :step="0.1" />
+          <el-input-number v-model="terminal.letterSpacing" :min="-1" :max="4" :step="1" />
         </el-form-item>
         <el-form-item :label="prefsT('terminal.renderer')">
           <el-select v-model="terminal.renderer" style="width: 100%">
@@ -522,7 +522,7 @@ const terminal = ref({
   fontSize: 13,
   fontFamily: '',
   lineHeight: 1.35,
-  letterSpacing: 0.2,
+  letterSpacing: 0,
   renderer: 'webgl',
   cursorBlink: true,
   pastePolicy: 'confirm',
@@ -606,7 +606,7 @@ async function load() {
         fontSize: s.terminal.fontSize || 13,
         fontFamily: s.terminal.fontFamily || '',
         lineHeight: s.terminal.lineHeight ?? 1.35,
-        letterSpacing: s.terminal.letterSpacing ?? 0.2,
+        letterSpacing: s.terminal.letterSpacing ?? 0,
         renderer: s.terminal.renderer === 'dom' ? 'dom' : 'webgl',
         cursorBlink: s.terminal.cursorBlink !== false,
         pastePolicy: s.terminal.pastePolicy || 'confirm',
