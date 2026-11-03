@@ -56,6 +56,11 @@ export function ensureFurnaceWorkspace() {
     if (fs.existsSync(seed)) fs.copyFileSync(seed, dest)
     else fs.writeFileSync(dest, `# ${file}\n`, 'utf8')
   }
+  const ctlSrc = path.join(ROOT, 'server/config/furnace/acw-ctl.mjs')
+  const ctlDest = path.join(home, 'acw-ctl.mjs')
+  if (fs.existsSync(ctlSrc)) {
+    fs.copyFileSync(ctlSrc, ctlDest)
+  }
   const readme = path.join(home, 'README.md')
   if (!fs.existsSync(readme)) {
     fs.writeFileSync(

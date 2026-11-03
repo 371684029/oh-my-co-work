@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-03 | A/M | server/config/furnace/acw-ctl.mjs, server/config/furnace/prompts/session.md, server/src/{furnaceContext,furnaceGrokInject}.js, server/test/acwCtl.test.js | 熔炉工作区预置 acw-ctl.mjs（通过本机 HTTP API 增删改查成员/群模板/步骤）并写入 AGENTS.md 与主持 prompt，禁止熔炉直接改 sqlite
 2026-11-03 | M | README.md, web/src/components/terminal/{TerminalView.vue,terminalPrefs.js}, server/src/appSettings.js, server/config/app-settings.json, server/test/appSettingsNotifications.test.js | 终端字体栈 Consolas 优先于雅黑、letterSpacing 默认 0、Tab 激活时清 WebGL 纹理图集，解决切换 Tab 后字符错位/乱码；同步 README
 2026-11-03 | M | server/src/{bus,appSettings}.js, server/src/terminal/quota.js, server/config/app-settings.json, server/test/{terminalWsSubscribe,quota}.test.js, web/src/components/terminal/{FurnaceTuiSurface,FurnaceWorkspace}.vue, web/src/composables/terminalOutputBridge.js, web/src/views/workbench/composables/useTerminalSessions.js, web/src/views/settings/Prefs.vue | 熔炉 Grok/Cursor 切换 Tab 保活不销毁 xterm、WebSocket 多终端同时订阅后台收流、回放缓冲默认 256KiB→8MiB（上限 32MiB）
 2026-11-03 | M | README.md, server/src/{backup,routes}.js, server/src/routes/updateRoutes.js, server/test/backupRoutes.test.js, web/src/{api.js,views/Workbench.vue,views/settings/Prefs.vue,views/workbench/components/FlowRailTabs.vue,i18n/settingsPrefs.*}, electron/lib/windowState.mjs, electron/test/* | 窗口默认最大化不盖任务栏；右栏标签与「需人工处理」单行；修搜索聊天弹层；备份导入/导出统一 ZIP；同步 README

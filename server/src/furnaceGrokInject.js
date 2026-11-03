@@ -166,6 +166,12 @@ function composeAgentsInner(pack) {
     `本轮侧重：${pack?.label || '主持'}（${pack?.role || ''}）。默认能做用户交代的任何事；系统审核、闸门、流程地图更专业。`,
     '用户拥有最高指导权。节点一览是地图，默认盯当前格；用户要你做别的，照做。',
     '菜单和模型在 TUI。需要细节再读 ACTIVE.md，不要把全文贴进对话。',
+    '【管理成员 / 群模板 / 工作流步骤】必须直接执行当前目录下的 `node acw-ctl.mjs`（调本机 HTTP API，自带完整校验与默认字段），严禁直接读写 sqlite 数据库文件或去翻项目源码猜表结构：',
+    '  - 查现有成员/群：`node acw-ctl.mjs members` · `node acw-ctl.mjs groups`',
+    '  - 添加或更新脚本成员：`node acw-ctl.mjs add-member --name "成员名" --cmd "命令 #1 #2" --cwd "脚本所在目录"`（或 `--file "脚本路径"`；常驻 TUI 加 `--keepalive`；静默后台加 `--pipe`；同名自动更新）',
+    '  - 建群并编排步骤：`node acw-ctl.mjs add-group --title "群名" --cwd "工作目录" --steps "human:输入参数,成员名:步骤标题,成员名:步骤标题:gate"`（`:gate` 表示跑完需人工确认）',
+    '  - 往已有群追加步骤：`node acw-ctl.mjs append-step --group "群名" --member "成员名" --title "步骤标题" [--gate]`',
+    '  - 更多参数：`node acw-ctl.mjs help`',
     sit ? `此刻：${sit}` : '',
     // 官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起
     // 写进来，交给 grok 自己按目录发现（见本文件头注释），不再经命令行传。
@@ -193,6 +199,10 @@ export function maybeInjectGrokFurnace(pack, overrides = {}) {
   const sessionRule = path.join(cwd, '.grok', 'rules', 'session.md')
   const furnaceHome = path.resolve(furnaceHomeDir())
   const sameAsFurnace = path.resolve(cwd) === furnaceHome
+  const ctlSrc = path.join(furnaceHome, 'acw-ctl.mjs')
+  if (!sameAsFurnace && fs.existsSync(ctlSrc)) {
+    fs.copyFileSync(ctlSrc, path.join(cwd, 'acw-ctl.mjs'))
+  }
   if (!sameAsFurnace && pack?.text) {
     fs.writeFileSync(path.join(cwd, 'ACTIVE.md'), pack.text, 'utf8')
   }
