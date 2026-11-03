@@ -158,14 +158,15 @@ export const settingsPrefsZh = {
     importBadge: '恢复',
     importTitle: '一键导入',
     importDesc:
-      '选择备份包（.tar.gz）一键恢复数据库、台账与上传文件。导入前会自动保留当前数据的快照，可回退。',
-    importBtn: '一键导入备份包',
+      '选择备份包（.zip，也兼容旧版 .tar.gz）一键恢复数据库、台账与上传文件。导入前会自动保留当前数据的快照，可回退。',
+    importBtn: '一键导入备份包 (ZIP)',
     importLast: '最近导入：{time}',
-    exportBadge: '文档',
+    exportBadge: '导出',
     exportTitle: '一键导出',
     exportDesc:
-      '聚合所有群模板与会话下的群报告（ANNOUNCEMENT.md）、会话索引与节点台账，一键打包为 ZIP 文件直接下载到本地。',
+      '支持一键导出整库备份包（.zip，可由左侧「一键导入」完整恢复），或仅导出全部会话协同文档为 ZIP。',
     exportBtn: '一键导出全部文档 (ZIP)',
+    exportBackupBtn: '一键导出备份包 (ZIP)',
     exportLast: '最近导出：{time}',
   },
   purge: {
@@ -184,6 +185,7 @@ export const settingsPrefsZh = {
     quotaSaved: '已保存配额与脱敏',
     importOk: '导入成功，即将刷新页面',
     importFail: '一键导入失败',
+    exportBackupOk: '备份包已生成，ZIP 已开始下载',
     exportOk: '一键导出成功，ZIP 压缩包已开始下载',
     exportFail: '一键导出失败',
     furnaceSaved: '已保存熔炉配置',

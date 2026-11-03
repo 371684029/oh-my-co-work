@@ -112,9 +112,10 @@ router.get('/runtime', (_req, res) => {
 })
 
 /** M01：一键备份（也可 npm run backup） */
-router.post('/backup', async (_req, res) => {
+router.post('/backup', async (req, res) => {
   try {
-    const result = await createBackupAsync({ includeUploads: true })
+    const format = req.query.format === 'zip' || req.body?.format === 'zip' ? 'zip' : 'tar.gz'
+    const result = await createBackupAsync({ includeUploads: true, format })
     res.status(201).json(result)
   } catch (e) {
     res.status(400).json({ error: e.message, code: e.code, detail: e.detail })
@@ -129,7 +130,7 @@ router.get('/backup/download', async (req, res) => {
     if (requested) {
       filename = path.basename(requested)
     } else {
-      const backups = (await listBackupsAsync()).filter((b) => b.format !== 'dir' && b.filename.endsWith('.tar.gz'))
+      const backups = (await listBackupsAsync()).filter((b) => b.format !== 'dir' && BACKUP_DOWNLOAD_RE.test(b.filename))
       if (!backups.length) {
         return res.status(404).json({ error: '暂无可下载的压缩包备份文件' })
       }
@@ -151,7 +152,7 @@ router.get('/backup/download', async (req, res) => {
       return res.status(400).json({ error: '拒绝下载符号链接' })
     }
     if (!lstat.isFile()) {
-      return res.status(400).json({ error: '该备份为目录格式，请使用 tar.gz 压缩包格式进行下载' })
+      return res.status(400).json({ error: '该备份为目录格式，请使用压缩包格式进行下载' })
     }
     const contentType = filename.endsWith('.tar.gz') || filename.endsWith('.gz')
       ? 'application/gzip'

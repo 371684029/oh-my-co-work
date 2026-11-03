@@ -31,6 +31,7 @@ import {
 } from './backup/pathSafety.js'
 
 export { assertTreeNoSymlinks } from './backup/pathSafety.js'
+import { extractTarGz, extractZip, createZip } from '../../scripts/lib/archive.mjs'
 import { getDb, DATA_ROOT, ROOT, closeDb, checkSqliteFile, initDb } from './db.js'
 import { checkIntegrityAsync, checkpointWalAsync } from './sqliteIntegrityWorker.js'
 
@@ -50,19 +51,29 @@ export function runIntegrityCheck() {
 }
 
 /** True when the file starts with the gzip magic bytes (0x1f 0x8b). */
-export function isGzipFile(absPath) {
+function readMagic(absPath) {
   try {
     const fd = fs.openSync(absPath, 'r')
     try {
-      const buf = Buffer.alloc(2)
-      const n = fs.readSync(fd, buf, 0, 2, 0)
-      return n >= 2 && buf[0] === 0x1f && buf[1] === 0x8b
+      const buf = Buffer.alloc(4)
+      const n = fs.readSync(fd, buf, 0, 4, 0)
+      return buf.subarray(0, n)
     } finally {
       fs.closeSync(fd)
     }
   } catch {
-    return false
+    return Buffer.alloc(0)
   }
+}
+
+export function isGzipFile(absPath) {
+  const b = readMagic(absPath)
+  return b.length >= 2 && b[0] === 0x1f && b[1] === 0x8b
+}
+
+export function isZipFile(absPath) {
+  const b = readMagic(absPath)
+  return b.length >= 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 3 && b[3] === 4
 }
 
 function stamp() {
@@ -148,10 +159,15 @@ export function createBackup(opts = {}) {
   }
   fs.writeFileSync(path.join(work, 'backup-meta.json'), JSON.stringify(meta, null, 2), 'utf8')
 
-  const archivePath = path.join(outDir, `${name}.tar.gz`)
+  const wantTar = opts.format !== 'zip'
+  const archivePath = path.join(outDir, `${name}.${wantTar ? 'tar.gz' : 'zip'}`)
   try {
-    const entries = fs.readdirSync(work)
-    execFileSync('tar', ['-czf', archivePath, '-C', work, ...entries], { stdio: 'pipe' })
+    if (wantTar) {
+      const entries = fs.readdirSync(work)
+      execFileSync('tar', ['-czf', archivePath, '-C', work, ...entries], { stdio: 'pipe' })
+    } else {
+      createZip(work, archivePath)
+    }
   } catch (e) {
     const dirBackup = path.join(outDir, name)
     if (fs.existsSync(dirBackup)) fs.rmSync(dirBackup, { recursive: true, force: true })
@@ -170,7 +186,7 @@ export function createBackup(opts = {}) {
   return {
     ok: true,
     path: archivePath,
-    format: 'tar.gz',
+    format: wantTar ? 'tar.gz' : 'zip',
     bytes: size,
     integrity: integrity.detail,
   }
@@ -224,10 +240,15 @@ export async function createBackupAsync(opts = {}) {
     throw e
   }
 
-  const archivePath = path.join(outDir, `${name}.tar.gz`)
+  const wantTar = opts.format !== 'zip'
+  const archivePath = path.join(outDir, `${name}.${wantTar ? 'tar.gz' : 'zip'}`)
   try {
-    const entries = await readdir(work)
-    await tarCreateArchive(archivePath, work, entries, { async: true })
+    if (wantTar) {
+      const entries = await readdir(work)
+      await tarCreateArchive(archivePath, work, entries, { async: true })
+    } else {
+      createZip(work, archivePath)
+    }
   } catch (e) {
     const dirBackup = path.join(outDir, name)
     await rm(dirBackup, { recursive: true, force: true })
@@ -246,14 +267,14 @@ export async function createBackupAsync(opts = {}) {
   return {
     ok: true,
     path: archivePath,
-    format: 'tar.gz',
+    format: wantTar ? 'tar.gz' : 'zip',
     bytes: size,
     integrity: integrity.detail,
   }
 }
 
-const BACKUP_NAME_RE = /^acw-backup-[A-Za-z0-9._-]+(?:\.tar\.gz)?$/
-export const BACKUP_DOWNLOAD_RE = /^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/
+const BACKUP_NAME_RE = /^acw-backup-[A-Za-z0-9._-]+(?:\.(?:zip|tar\.gz))?$/
+export const BACKUP_DOWNLOAD_RE = /^acw-backup-[A-Za-z0-9._-]+\.(?:zip|tar\.gz)$/
 let restoreInFlight = false
 const LIVE_RELS = [
   'oh-my-co-work.sqlite',
@@ -282,19 +303,23 @@ function dirBytes(p) {
 
 function resolveBackupEntry(name) {
   const dir = path.join(DATA_ROOT, 'backups')
-  if (name.endsWith('.tar.gz')) {
-    const archive = path.join(dir, name)
-    if (fs.existsSync(archive) && fs.statSync(archive).isFile()) {
-      return { kind: 'tar', path: archive, id: name }
+  for (const ext of ['.zip', '.tar.gz']) {
+    if (name.endsWith(ext)) {
+      const archive = path.join(dir, name)
+      if (fs.existsSync(archive) && fs.statSync(archive).isFile()) {
+        return { kind: ext === '.zip' ? 'zip' : 'tar', path: archive, id: name }
+      }
+      return null
     }
-  } else {
-    const folder = path.join(dir, name)
-    if (fs.existsSync(folder) && fs.statSync(folder).isDirectory()) {
-      return { kind: 'dir', path: folder, id: name }
-    }
-    const archive = path.join(dir, `${name}.tar.gz`)
+  }
+  const folder = path.join(dir, name)
+  if (fs.existsSync(folder) && fs.statSync(folder).isDirectory()) {
+    return { kind: 'dir', path: folder, id: name }
+  }
+  for (const ext of ['.zip', '.tar.gz']) {
+    const archive = path.join(dir, `${name}${ext}`)
     if (fs.existsSync(archive) && fs.statSync(archive).isFile()) {
-      return { kind: 'tar', path: archive, id: `${name}.tar.gz` }
+      return { kind: ext === '.zip' ? 'zip' : 'tar', path: archive, id: `${name}${ext}` }
     }
   }
   return null
@@ -333,13 +358,31 @@ export function restoreBackup(filename, deps = {}) {
 
 /** SRV-01: shared sync tar extract (CLI restore + tests). */
 export function tarExtractSync(archivePath, destDir) {
-  execFileSync('tar', ['-xzf', archivePath, '-C', destDir], { stdio: 'pipe' })
+  if (isZipFile(archivePath) || archivePath.endsWith('.zip')) {
+    extractZip(archivePath, destDir)
+    return
+  }
+  try {
+    extractTarGz(archivePath, destDir)
+  } catch {
+    execFileSync('tar', ['-xzf', archivePath, '-C', destDir], { stdio: 'pipe' })
+  }
 }
 
 function tarExtractArchive(archivePath, destDir, { async = false } = {}) {
+  if (isZipFile(archivePath) || archivePath.endsWith('.zip')) {
+    extractZip(archivePath, destDir)
+    return Promise.resolve()
+  }
+  try {
+    extractTarGz(archivePath, destDir)
+    return Promise.resolve()
+  } catch {
+    /* fallback to system tar */
+  }
   const args = ['-xzf', archivePath, '-C', destDir]
   if (!async) {
-    tarExtractSync(archivePath, destDir)
+    execFileSync('tar', args, { stdio: 'pipe' })
     return Promise.resolve()
   }
   return new Promise((resolve, reject) => {
@@ -397,7 +440,7 @@ async function restoreBackupUnlockedAsync(filename, deps = {}) {
 
   let work = null
   let ownWork = false
-  if (entry.kind === 'tar') {
+  if (entry.kind === 'tar' || entry.kind === 'zip') {
     work = await mkdtemp(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
@@ -574,7 +617,7 @@ function restoreBackupUnlocked(filename, deps = {}) {
 
   let work = null
   let ownWork = false
-  if (entry.kind === 'tar') {
+  if (entry.kind === 'tar' || entry.kind === 'zip') {
     work = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-restore-'))
     ownWork = true
     try {
@@ -609,9 +652,9 @@ export function listBackups() {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith('.')) continue
     const abs = path.join(dir, e.name)
-    if (e.isFile() && /^acw-backup-[A-Za-z0-9._-]+\.tar\.gz$/.test(e.name)) {
+    if (e.isFile() && BACKUP_DOWNLOAD_RE.test(e.name)) {
       const st = fs.statSync(abs)
-      items.push({ filename: e.name, bytes: st.size, mtimeMs: st.mtimeMs, format: 'tar.gz' })
+      items.push({ filename: e.name, bytes: st.size, mtimeMs: st.mtimeMs, format: e.name.endsWith('.zip') ? 'zip' : 'tar.gz' })
     } else if (e.isDirectory() && /^acw-backup-[A-Za-z0-9._-]+$/.test(e.name)) {
       const st = fs.statSync(abs)
       items.push({ filename: e.name, bytes: dirBytes(abs), mtimeMs: st.mtimeMs, format: 'dir' })
@@ -655,7 +698,7 @@ export async function listBackupsAsync() {
     try {
       if (e.isFile() && BACKUP_DOWNLOAD_RE.test(e.name)) {
         const info = await stat(abs)
-        items.push({ filename: e.name, bytes: info.size, mtimeMs: info.mtimeMs, format: 'tar.gz' })
+        items.push({ filename: e.name, bytes: info.size, mtimeMs: info.mtimeMs, format: e.name.endsWith('.zip') ? 'zip' : 'tar.gz' })
       } else if (e.isDirectory() && BACKUP_NAME_RE.test(e.name)) {
         const info = await stat(abs)
         items.push({ filename: e.name, bytes: await dirBytesAsync(abs), mtimeMs: info.mtimeMs, format: 'dir' })

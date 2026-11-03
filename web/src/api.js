@@ -337,9 +337,9 @@ export const api = {
       }),
   },
   backup: Object.assign(
-    () => req('/backup', { method: 'POST', body: '{}' }),
+    (format) => req('/backup', { method: 'POST', body: JSON.stringify(format ? { format } : {}) }),
     {
-      create: () => req('/backup', { method: 'POST', body: '{}' }),
+      create: (format) => req('/backup', { method: 'POST', body: JSON.stringify(format ? { format } : {}) }),
       import: async (file) => {
         const token = await accessToken()
         const res = await fetch(`${BASE}/backup/import`, {
@@ -362,7 +362,7 @@ export const api = {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = filename || `acw-backup-${new Date().toISOString().slice(0, 10)}.tar.gz`
+        a.download = filename || `acw-backup-${new Date().toISOString().slice(0, 10)}.zip`
         a.click()
         URL.revokeObjectURL(url)
         return { ok: true }

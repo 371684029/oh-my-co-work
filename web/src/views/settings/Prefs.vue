@@ -412,7 +412,7 @@
             <input
               ref="importInput"
               type="file"
-              accept=".gz,.tar.gz,application/gzip"
+              accept=".zip,.gz,.tar.gz,application/zip,application/gzip"
               style="display: none"
               @change="onImportFile"
             />
@@ -430,6 +430,15 @@
           </div>
           <p class="be-card-desc">{{ prefsT('backup.exportDesc') }}</p>
           <div class="be-card-actions">
+            <el-button
+              type="primary"
+              size="default"
+              plain
+              :loading="exportingBackup"
+              @click="onOneClickExportBackup"
+            >
+              {{ prefsT('backup.exportBackupBtn') }}
+            </el-button>
             <el-button
               type="success"
               size="default"
@@ -542,6 +551,7 @@ const savingQuota = ref(false)
 const importing = ref(false)
 const importInput = ref(null)
 const lastImportTime = ref('')
+const exportingBackup = ref(false)
 const exportingDocs = ref(false)
 const lastExportTime = ref('')
 const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'tui' })
@@ -801,6 +811,21 @@ async function onImportFile(ev) {
     ElMessage.error(e?.message || prefsToast('importFail'))
   } finally {
     importing.value = false
+  }
+}
+
+async function onOneClickExportBackup() {
+  exportingBackup.value = true
+  try {
+    const r = await api.backup.create('zip')
+    const filename = String(r?.path || '').split(/[/\\]/).pop()
+    await api.backup.download(filename)
+    lastExportTime.value = new Date().toLocaleTimeString()
+    ElMessage.success(prefsToast('exportBackupOk'))
+  } catch (e) {
+    ElMessage.error(e?.message || prefsToast('exportFail'))
+  } finally {
+    exportingBackup.value = false
   }
 }
 

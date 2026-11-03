@@ -8,6 +8,7 @@ import {
   restoreBackupAsync,
   listBackupsAsync,
   isGzipFile,
+  isZipFile,
 } from '../backup.js'
 
 const router = Router()
@@ -45,8 +46,8 @@ router.post('/backup/import', (req, res) => {
   }
   const dir = path.resolve(DATA_ROOT, 'backups')
   fs.mkdirSync(dir, { recursive: true })
-  const name = `acw-backup-imported-${Date.now()}.tar.gz`
-  const target = path.join(dir, name)
+  const stamp = Date.now()
+  let target = path.join(dir, `.acw-import-${stamp}.tmp`)
   let received = 0
   let settled = false
 
@@ -83,10 +84,15 @@ router.post('/backup/import', (req, res) => {
   })
   out.on('finish', async () => {
     if (settled) return
-    if (!isGzipFile(target)) {
-      fail(400, { error: '请选择 .tar.gz 备份包' })
+    const zip = isZipFile(target)
+    if (!zip && !isGzipFile(target)) {
+      fail(400, { error: '请选择 .zip 或 .tar.gz 备份包' })
       return
     }
+    const name = `acw-backup-imported-${stamp}.${zip ? 'zip' : 'tar.gz'}`
+    const finalPath = path.join(dir, name)
+    fs.renameSync(target, finalPath)
+    target = finalPath
     try {
       const result = await restoreBackupAsync(name)
       settled = true

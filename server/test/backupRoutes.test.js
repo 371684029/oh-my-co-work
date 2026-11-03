@@ -54,6 +54,25 @@ test('HTTP backup list, download and restore work with isolated data', async (t)
     body: JSON.stringify({ filename: 'not-a-backup.tar.gz' }),
   })
   assert.equal(invalid.status, 400)
+  // ZIP 格式：导出备份包 → 下载 → 一键导入恢复（与设置页一致）
+  const zipCreated = await fetch(`${base}/api/backup?format=zip`, { method: 'POST', headers })
+  assert.equal(zipCreated.status, 201)
+  const zipBackup = await zipCreated.json()
+  assert.equal(zipBackup.format, 'zip')
+  const zipFilename = path.basename(zipBackup.path)
+  assert.match(zipFilename, /\.zip$/)
+  const zipDownload = await fetch(`${base}/api/backup/download?filename=${zipFilename}`, { headers })
+  assert.equal(zipDownload.status, 200)
+  const zipBytes = Buffer.from(await zipDownload.arrayBuffer())
+  assert.deepEqual([...zipBytes.subarray(0, 4)], [0x50, 0x4b, 3, 4])
+  const imported = await fetch(`${base}/api/backup/import`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/octet-stream' },
+    body: zipBytes,
+  })
+  assert.equal(imported.status, 200)
+  assert.match((await imported.json()).restoredFrom, /\.zip$/)
+
   const restored = await fetch(`${base}/api/update/restore`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
