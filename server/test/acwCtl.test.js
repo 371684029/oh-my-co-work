@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
-import { execFileSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 
 test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API', async (t) => {
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-ctl-test-'))
@@ -37,14 +37,23 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
 
   const base = `http://127.0.0.1:${server.address().port}`
   const runCtl = (args) =>
-    execFileSync(process.execPath, [ctlPath, ...args], {
-      encoding: 'utf8',
-      env: { ...process.env, ACW_API_URL: base, ACW_API_TOKEN: '' },
+    new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [ctlPath, ...args], {
+        env: { ...process.env, ACW_API_URL: base, ACW_API_TOKEN: '' },
+      })
+      let out = ''
+      let err = ''
+      child.stdout.on('data', (c) => (out += c))
+      child.stderr.on('data', (c) => (err += c))
+      child.on('error', reject)
+      child.on('close', (code) =>
+        code === 0 ? resolve(out) : reject(new Error(err || `exit ${code}`)),
+      )
     })
 
   // 1) add-member 创建脚本成员（自动补 scriptWorkDir / executionMode / waitForExit）
   const created = JSON.parse(
-    runCtl(['add-member', '--name', 'newBranch', '--cmd', 'node index.mjs #1 #2', '--cwd', toolDir]),
+    await runCtl(['add-member', '--name', 'newBranch', '--cmd', 'node index.mjs #1 #2', '--cwd', toolDir]),
   )
   assert.equal(created.action, 'created')
   assert.equal(created.member.display_name, 'newBranch')
@@ -55,7 +64,7 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
 
   // 2) 同名再次 add-member 自动走更新，不重复建
   const updated = JSON.parse(
-    runCtl(['add-member', '--name', 'newBranch', '--cmd', 'node index.mjs #1 #2 #3', '--cwd', toolDir]),
+    await runCtl(['add-member', '--name', 'newBranch', '--cmd', 'node index.mjs #1 #2 #3', '--cwd', toolDir]),
   )
   assert.equal(updated.action, 'updated')
   assert.equal(updated.member.id, created.member.id)
@@ -63,7 +72,7 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
 
   // 3) add-group 按成员名编排步骤（含人工首步与 :gate 人工确认）
   const groupOut = JSON.parse(
-    runCtl([
+    await runCtl([
       'add-group',
       '--title',
       '前端开发流水线',

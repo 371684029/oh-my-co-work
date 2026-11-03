@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process, fetch, console */
+/* global process, console, URL, Buffer */
 /**
  * 熔炉管理协同台的官方 CLI（写到 data/furnace/acw-ctl.mjs，并在 AGENTS.md 声明）。
  *
@@ -7,42 +7,72 @@
  * 既慢又容易写错 config_json（缺 scriptWorkDir、写错 kind/executionMode）。
  * 现在统一调本机 HTTP API，走与前端设置页完全同一套校验、参数补全与炼化逻辑。
  */
+import http from 'node:http'
+import https from 'node:https'
 import path from 'node:path'
 
 const BASE = (process.env.ACW_API_URL || `http://127.0.0.1:${process.env.ACW_PORT || 3780}`).replace(/\/+$/, '')
 
+function httpJson(method, fullUrl, headers = {}, body) {
+  const u = new URL(fullUrl)
+  const lib = u.protocol === 'https:' ? https : http
+  const payload = body !== undefined ? Buffer.from(JSON.stringify(body), 'utf8') : null
+  return new Promise((resolve, reject) => {
+    const req = lib.request(
+      u,
+      {
+        method,
+        headers: {
+          ...headers,
+          ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': String(payload.length) } : {}),
+        },
+        timeout: 15000,
+      },
+      (res) => {
+        const chunks = []
+        res.on('data', (c) => chunks.push(c))
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8')
+          resolve({ status: res.statusCode || 0, text })
+        })
+      },
+    )
+    req.on('timeout', () => req.destroy(new Error(`请求超时: ${fullUrl}`)))
+    req.on('error', reject)
+    if (payload) req.write(payload)
+    req.end()
+  })
+}
+
 let cachedToken = process.env.ACW_API_TOKEN || ''
 async function token() {
   if (cachedToken) return cachedToken
-  const r = await fetch(`${BASE}/api/bootstrap`, {
-    headers: { Origin: BASE },
-  })
-  if (!r.ok) throw new Error(`获取本地令牌失败 (${r.status})，请确认 oh-my-co-work 服务正在运行 (${BASE})`)
-  const j = await r.json()
-  cachedToken = j.token || ''
+  const r = await httpJson('GET', `${BASE}/api/bootstrap`, { Origin: BASE })
+  if (r.status !== 200) {
+    throw new Error(`获取本地令牌失败 (${r.status})，请确认 oh-my-co-work 服务正在运行 (${BASE})`)
+  }
+  cachedToken = JSON.parse(r.text || '{}').token || ''
   return cachedToken
 }
 
 async function api(method, urlPath, body) {
   const tk = await token()
-  const r = await fetch(`${BASE}/api${urlPath}`, {
+  const r = await httpJson(
     method,
-    headers: {
-      'X-ACW-Token': tk,
-      Origin: BASE,
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+    `${BASE}/api${urlPath}`,
+    { 'X-ACW-Token': tk, Origin: BASE },
+    body,
+  )
   if (r.status === 204) return { ok: true }
-  const text = await r.text()
   let data
   try {
-    data = text ? JSON.parse(text) : {}
+    data = r.text ? JSON.parse(r.text) : {}
   } catch {
-    data = { raw: text }
+    data = { raw: r.text }
   }
-  if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}: ${text}`)
+  if (r.status < 200 || r.status >= 300) {
+    throw new Error(data?.error || `HTTP ${r.status}: ${r.text}`)
+  }
   return data
 }
 
