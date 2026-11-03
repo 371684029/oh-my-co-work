@@ -40,8 +40,8 @@
 - **冻结**：Web 端、Linux 桌面端、macOS 桌面端**不再新增功能**，只接受阻断性 bug 修复（崩溃、白屏、数据丢失）。
 - **攻坚**：所有新开发集中在 **Windows 桌面端**（`oh-my-co-work.exe`）：安装 / 解压启动、服务端拉起、终端（node-pty）、SQLite、通知、托盘、退出与升级。
 - **最小可用标准**：Windows 10/11 x64 上从 Release 下载 `-desktop.zip` → 解压 → 双击 exe → 工作台加载 → 新建会话并跑通一条 Workflow（含终端节点）→ 关闭后重开数据仍在。
-- **CI 保持现状**：三平台打包与 linux 启动冒烟继续跑（只作回归护栏，不在其它平台上做新需求）。
-- 解冻条件：Windows 最小可用标准全部通过，并补上 Windows runner 启动冒烟（5.7.0 PKG-14）。
+- **CI 护栏**：每次提交都在真 Windows（`windows-latest`）上原生打包并双击级启动冒烟（5.7.0 PKG-14 已上线）；三平台打包与 linux 启动冒烟继续跑，只作回归护栏。
+- 解冻条件：Windows 最小可用标准在实机全部通过。
 
 ## 为什么做它
 
@@ -291,7 +291,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 | [5.4.0 系统通知](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
 | [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA（NTF-T3/T4） |
 | [5.6.0 需求文档](./docs/5.6.0-plan.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
-| [5.7.0 需求文档](./docs/5.7.0-plan.md) | 打包链路一劳永逸与发布治理：mac 符号链接、Linux 沙箱、配置迁出安装目录、产物出 git、严格发布校验、三平台桌面 CI 冒烟；剩运行时升级与签名 |
+| [5.7.0 需求文档](./docs/5.7.0-plan.md) | 打包链路一劳永逸与发布治理：纯 Node 压缩、Windows 原生打包+启动冒烟、发布重试、配置迁出安装目录、产物出 git、备份导入/导出统一 ZIP；剩运行时升级与签名 |
 | [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
 | [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
 | [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
@@ -337,7 +337,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
-- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10 已落地（三平台桌面包 CI、linux 真机启动冒烟、产物只发 Release、配置迁至数据目录、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Windows 启动冒烟（PKG-14）、Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
+- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10、14~16 已落地（纯 Node zip/tar 去系统工具依赖、Windows runner 原生打包+真机启动冒烟、Release 缺 win32 包即阻断+上传 5 次重试、产物只发 Release、配置迁至数据目录、备份导入/导出统一 ZIP、桌面窗口不盖任务栏、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
 - [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目

@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-03 | M | README.md, server/src/{backup,routes}.js, server/src/routes/updateRoutes.js, server/test/backupRoutes.test.js, web/src/{api.js,views/Workbench.vue,views/settings/Prefs.vue,views/workbench/components/FlowRailTabs.vue,i18n/settingsPrefs.*}, electron/lib/windowState.mjs, electron/test/* | 窗口默认最大化不盖任务栏；右栏标签与「需人工处理」单行；修搜索聊天弹层；备份导入/导出统一 ZIP；同步 README
 2026-11-03 | A/M | scripts/lib/archive.mjs, server/test/archive.test.js, scripts/{pack-release,verify-pack,validate-release-packages,desktop-smoke}.mjs | PKG-15 纯 Node zip/tar.gz：打包链路不再依赖 zip/unzip/tar/python3/PowerShell；缓存完整性校验；EBUSY 重试；冒烟支持 Windows
 2026-11-03 | M | .github/workflows/{ci,pack-release}.yml, docs/5.7.0-plan.md | PKG-14/16 Windows runner 原生打包+启动冒烟；Release 缺 win32 桌面包即失败；上传逐文件重试
 2026-10-27 | M | README.md, docs/5.7.0-plan.md | 开发策略：冻结 Web/Linux/macOS 功能，全力攻坚 Windows 桌面端最小可用
