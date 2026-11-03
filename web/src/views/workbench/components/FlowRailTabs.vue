@@ -14,7 +14,7 @@
       @click="flowStore.rightTab = 'flow'"
     >
       <span class="wb-right-tab-icon" aria-hidden="true">⚡</span>
-      {{ flowRailTabFlow() }}
+      <span class="wb-right-tab-label">{{ flowRailTabFlow() }}</span>
     </button>
     <button
       type="button"
@@ -26,7 +26,7 @@
       @click="flowStore.rightTab = 'timeline'"
     >
       <span class="wb-right-tab-icon" aria-hidden="true">🕐</span>
-      {{ flowRailTabTimeline() }}
+      <span class="wb-right-tab-label">{{ flowRailTabTimeline() }}</span>
     </button>
     <button
       type="button"
@@ -38,7 +38,7 @@
       @click="flowStore.rightTab = 'docs'"
     >
       <span class="wb-right-tab-icon" aria-hidden="true">📄</span>
-      {{ flowRailTabDocs() }}
+      <span class="wb-right-tab-label">{{ flowRailTabDocs() }}</span>
       <span v-if="flowStore.docsUnread > 0" class="wb-right-tab-badge">{{
         flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
       }}</span>
@@ -71,13 +71,19 @@ const isDocsHubTab = computed(
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.05);
   box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.04);
+  container-type: inline-size;
 }
 
 .wb-right-tab {
   flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   border: none;
   background: transparent;
-  padding: 7px 10px;
+  padding: 7px 6px;
   border-radius: 8px;
   font-size: 12.5px;
   font-weight: 550;
@@ -106,7 +112,21 @@ const isDocsHubTab = computed(
 }
 
 .wb-right-tab-icon {
+  flex-shrink: 0;
   margin-right: 4px;
+}
+
+.wb-right-tab-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 右栏较窄时三段装不下「图标 + 文字」：先去图标，保证文字单行 */
+@container (max-width: 300px) {
+  .wb-right-tab-icon {
+    display: none;
+  }
 }
 
 .wb-right-tab-badge {
