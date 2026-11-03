@@ -7,6 +7,14 @@
       </div>
       <div class="docs-rail-actions">
         <el-button
+          size="small"
+          :type="railRefineOpen ? 'primary' : 'default'"
+          plain
+          @click="railRefineOpen = !railRefineOpen"
+        >
+          {{ railRefineOpen ? '返回文档' : '节点炼化' }}
+        </el-button>
+        <el-button
           type="primary"
           size="small"
           :disabled="!activeId"
@@ -49,7 +57,11 @@
       </div>
     </div>
 
-    <div v-if="detail && activeId" class="docs-rail-body">
+    <div v-if="railRefineOpen" class="docs-rail-body">
+      <DocsRefineChangesPane :session-id="activeId || ''" compact />
+    </div>
+
+    <div v-else-if="detail && activeId" class="docs-rail-body">
       <!-- 文件选项列表 -->
       <FlowRailDocsFiles
         :files="railDocFiles"
@@ -135,6 +147,7 @@ import {
   rebuildAnnouncement,
   sessionGroupFolder,
 } from '../composables/useSessionDetail'
+import DocsRefineChangesPane from '../../docs/DocsRefineChangesPane.vue'
 import FlowRailDocsFiles from './FlowRailDocsFiles.vue'
 import FlowRailDocsNotes from './FlowRailDocsNotes.vue'
 
@@ -145,6 +158,7 @@ const selectedDocName = ref('')
 const selectedDocContent = ref('')
 const selectedDocLoading = ref(false)
 const exportingRailDocs = ref(false)
+const railRefineOpen = ref(false)
 
 const { loadRailDocs, onSelectRailDoc, onExportRailGroupDocs } = createFlowRailDocsRailActions({
   activeId,

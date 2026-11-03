@@ -25,6 +25,7 @@ import {
   resolveWorkDirFromNode,
 } from '../stepRevert.js'
 import { buildSessionTimeline, filterTimelineEvents } from '../sessionTimeline.js'
+import { listMemberSourceHistory } from '../refineRestore.js'
 import { buildSessionAuditMarkdown } from '../auditExport.js'
 import { readJournalRelative, readSessionAnnouncement } from '../journal.js'
 import { killSessionProcesses, listSessionProcesses } from '../processRegistry.js'
@@ -139,19 +140,25 @@ router.get('/sessions/:id/timeline', (req, res) => {
 })
 
 router.get('/restore-center', (req, res) => {
+  const filterSid = req.query.sessionId ? String(req.query.sessionId) : ''
   const members = listMembers().map((m) => {
     const cfg = m.config || {}
     const refine = cfg.refine || {}
+    const history = listMemberSourceHistory(m.id)
     return {
       id: m.id,
       name: m.display_name,
-      refineBackup: refine.refineBackup || null,
-      refineBackupManifest: refine.refineBackupManifest || null,
+      refineBackup: refine.refineBackup || history[0]?.zipPath || null,
+      refineBackupManifest: refine.refineBackupManifest || history[0]?.manifestPath || null,
       refineEnabled: !!refine.enabled,
+      patched: refine.patched || [],
+      history,
     }
   })
-  const sessions = listSessions({ status: 'active' })
-    .slice(0, 30)
+  const sessionList = filterSid
+    ? [getSessionDetail(filterSid)?.session].filter(Boolean)
+    : listSessions().slice(0, 30)
+  const sessions = sessionList
     .map((s) => {
       const d = getSessionDetail(s.id)
       const nodes = (d?.nodes || [])
@@ -160,8 +167,16 @@ router.get('/restore-center', (req, res) => {
           id: n.id,
           title: n.title,
           stepIndex: n.step_index,
+          memberId: n.member_id || null,
           summary: n.output.changeSnapshot.stat || '',
+          insertions: n.output.changeSnapshot.insertions || 0,
+          deletions: n.output.changeSnapshot.deletions || 0,
           filesChanged: n.output.changeSnapshot.filesChanged,
+          fromHead: n.output.changeSnapshot.fromHead || null,
+          toHead: n.output.changeSnapshot.toHead || null,
+          capturedAt: n.output.changeSnapshot.capturedAt || null,
+          patch: String(n.output.changeSnapshot.patch || '').slice(0, 24000),
+          patchTruncated: !!n.output.changeSnapshot.patchTruncated,
         }))
       return nodes.length
         ? { sessionId: s.id, title: s.title, nodes }

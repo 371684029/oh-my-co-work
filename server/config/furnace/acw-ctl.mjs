@@ -192,6 +192,9 @@ const HELP = `用法：node acw-ctl.mjs <动作> [参数]
   update-member --id <mem_id|名称> [--name ..] [--cmd ..] [--cwd ..] [--pipe|--terminal]
   delete-member --id <mem_id|名称>
 
+源码备份（改成员脚本前必须先调，文档中心「节点炼化与还原」可查看 diff 并一键还原）：
+  backup-source --member <mem_id|名称> [--files "D:/work/a.js,D:/work/b.js"] [--kind refine|adapt]
+
 群模板 / 工作流（Group）：
   groups                                     列出全部群模板及步骤
   add-group --title "群名称" [--desc "简介"] [--cwd "D:\\work"] --steps "human:输入参数,newBranch:新建分支,cursor:完成开发:gate"
@@ -247,6 +250,24 @@ async function main() {
     }
     const out = await api('PATCH', `/members/${target.id}`, buildMemberPayload(mergedFlags))
     console.log(JSON.stringify({ action: 'updated', member: out }, null, 2))
+    return
+  }
+  if (cmd === 'backup-source') {
+    const key = flags.member || flags.id || pos[1]
+    const list = await api('GET', '/members')
+    const target = list.find((m) => m.id === key || m.display_name === key || m.name === key)
+    if (!target) throw new Error(`找不到成员：${key}`)
+    const files = flags.files
+      ? String(flags.files)
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+      : []
+    const out = await api('POST', `/members/${target.id}/source-backup`, {
+      files,
+      kind: flags.kind || 'refine',
+    })
+    console.log(JSON.stringify(out, null, 2))
     return
   }
   if (cmd === 'delete-member') {

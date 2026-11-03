@@ -1,5 +1,15 @@
 <template>
   <aside class="dh-col dh-col-groups">
+    <button
+      type="button"
+      class="dh-group-item dh-refine-entry"
+      :class="{ active: refineOpen }"
+      @click="$emit('update:refineOpen', !refineOpen)"
+    >
+      <span class="dh-group-item-icon" aria-hidden="true">🛠️</span>
+      <span class="dh-group-item-name">节点炼化与还原</span>
+    </button>
+
     <div class="dh-col-head">
       <span class="dh-col-title">{{ docsHubColTitle(sort) }}</span>
       <el-button
@@ -97,9 +107,10 @@ defineProps({
   listLoading: { type: Boolean, default: false },
   exportingAll: { type: Boolean, default: false },
   totalSessionsCount: { type: Number, default: 0 },
+  refineOpen: { type: Boolean, default: false },
 })
 
-defineEmits(['update:selectedGroupId', 'update:selectedTimeRange', 'export-all', 'export-group'])
+defineEmits(['update:selectedGroupId', 'update:selectedTimeRange', 'update:refineOpen', 'export-all', 'export-group'])
 
 function groupKey(g) {
   return docsGroupKey(g)
@@ -116,6 +127,13 @@ function sessionCount(g) {
   min-width: 200px;
   max-width: 240px;
   padding: 12px 10px;
+}
+
+.dh-refine-entry {
+  margin-bottom: 10px;
+  border: 1px solid rgba(0, 122, 255, 0.22);
+  background: rgba(0, 122, 255, 0.06);
+  font-weight: 600;
 }
 
 .dh-col-head {

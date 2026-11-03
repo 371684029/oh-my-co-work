@@ -171,6 +171,7 @@ function composeAgentsInner(pack) {
     '  - 添加或更新脚本成员：`node acw-ctl.mjs add-member --name "成员名" --cmd "命令 #1 #2" --cwd "脚本所在目录"`（或 `--file "脚本路径"`；常驻 TUI 加 `--keepalive`；静默后台加 `--pipe`；同名自动更新）',
     '  - 建群并编排步骤：`node acw-ctl.mjs add-group --title "群名" --cwd "工作目录" --steps "human:输入参数,成员名:步骤标题,成员名:步骤标题:gate"`（`:gate` 表示跑完需人工确认）',
     '  - 往已有群追加步骤：`node acw-ctl.mjs append-step --group "群名" --member "成员名" --title "步骤标题" [--gate]`',
+    '  - 炼化/适配要改成员原代码前，先备份：`node acw-ctl.mjs backup-source --member "成员名" [--files "路径1,路径2"]`（备份后用户可在「文档中心 → 节点炼化与还原」看修改对比并一键还原）',
     '  - 更多参数：`node acw-ctl.mjs help`',
     sit ? `此刻：${sit}` : '',
     // 官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起

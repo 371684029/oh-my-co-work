@@ -51,6 +51,9 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
       )
     })
 
+  const scriptFile = path.join(toolDir, 'index.mjs')
+  fs.writeFileSync(scriptFile, 'console.log("v1")\n', 'utf8')
+
   // 1) add-member 创建脚本成员（自动补 scriptWorkDir / executionMode / waitForExit）
   const created = JSON.parse(
     await runCtl(['add-member', '--name', 'newBranch', '--cmd', 'node index.mjs #1 #2', '--cwd', toolDir]),
@@ -88,4 +91,26 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
   assert.equal(groupOut.group.steps[0].captureParams, true)
   assert.equal(groupOut.group.steps[1].memberId, created.member.id)
   assert.equal(groupOut.group.steps[1].gate, true)
+
+  // 4) backup-source → 改源脚本 → /restore-center 看到 diff → 按 manifestId 一键还原到 v1
+  const bakOut = JSON.parse(await runCtl(['backup-source', '--member', 'newBranch', '--files', scriptFile]))
+  assert.equal(bakOut.ok, true)
+  fs.writeFileSync(scriptFile, '// ACW-REFINE\nconsole.log("v2")\n', 'utf8')
+
+  const tk = (await (await fetch(`${base}/api/bootstrap`, { headers: { Origin: base } })).json()).token
+  const rc = await (
+    await fetch(`${base}/api/restore-center`, { headers: { 'X-ACW-Token': tk } })
+  ).json()
+  const memEntry = rc.members.find((m) => m.id === created.member.id)
+  assert.ok(memEntry.history.length >= 1)
+  assert.match(memEntry.history[0].files[0].diff, /-\s*console\.log\("v1"\)/)
+  assert.match(memEntry.history[0].files[0].diff, /\+\s*console\.log\("v2"\)/)
+
+  const restoreRes = await fetch(`${base}/api/members/${created.member.id}/refine/restore`, {
+    method: 'POST',
+    headers: { 'X-ACW-Token': tk, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ force: true, manifestId: memEntry.history[0].id }),
+  })
+  assert.equal(restoreRes.status, 200)
+  assert.equal(fs.readFileSync(scriptFile, 'utf8'), 'console.log("v1")\n')
 })

@@ -118,7 +118,8 @@ export const api = {
       }`),
   },
   restoreCenter: {
-    list: () => req('/restore-center'),
+    list: (sessionId) =>
+      req(`/restore-center${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ''}`),
   },
   diagnostics: () => req('/diagnostics'),
   system: {

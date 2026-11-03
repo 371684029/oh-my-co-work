@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import path from 'node:path'
 import {
   listMembers,
   getMember,
@@ -15,7 +16,8 @@ import {
   createSessionFromGroup,
   createSessionFromMember,
 } from '../services.js'
-import { restoreMemberRefine } from '../refineRestore.js'
+import { restoreMemberRefine, restoreSourceByManifest, listMemberSourceHistory } from '../refineRestore.js'
+import { collectAdaptSourcePaths, createAdaptBackup } from '../adaptBackup.js'
 import { exportMemberTemplate, exportGroupTemplate, importTemplatePack } from '../templatePack.js'
 import { planRefineOnMemberSave } from '../refineSource.js'
 
@@ -84,10 +86,34 @@ router.post('/members/refine/plan', (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
+router.get('/members/:id/source-history', (req, res) => {
+  const m = getMember(req.params.id)
+  if (!m) return res.status(404).json({ error: '成员不存在' })
+  res.json({ memberId: m.id, history: listMemberSourceHistory(m.id) })
+})
+router.post('/members/:id/source-backup', (req, res) => {
+  try {
+    const m = getMember(req.params.id)
+    if (!m) return res.status(404).json({ error: '成员不存在' })
+    const rawFiles = Array.isArray(req.body?.files) && req.body.files.length
+      ? req.body.files.map((f) => path.resolve(String(f)))
+      : collectAdaptSourcePaths(m)
+    if (!rawFiles.length) return res.status(400).json({ error: '没有可备份的源文件（请传 --files）' })
+    const kind = req.body?.kind === 'adapt' ? 'adapt' : 'refine'
+    const b = createAdaptBackup({ files: rawFiles, memberId: m.id, kind })
+    res.status(201).json({ ok: true, zipPath: b.zipPath, manifestPath: b.manifestPath, files: rawFiles })
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
 router.post('/members/:id/refine/restore', (req, res) => {
   try {
     const force = !!(req.body && req.body.force)
-    res.json(restoreMemberRefine(req.params.id, { force }))
+    const manifestId = req.body?.manifestId ? String(req.body.manifestId) : ''
+    const out = manifestId
+      ? restoreSourceByManifest(req.params.id, manifestId, { force })
+      : restoreMemberRefine(req.params.id, { force })
+    res.json(out)
   } catch (e) {
     const status =
       e.code === 'NOT_FOUND'
