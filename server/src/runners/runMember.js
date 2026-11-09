@@ -134,7 +134,7 @@ export async function runMember(
     let furnaceLaunch = null
     let furnaceAgent = null
     if (isFurnaceMember(member)) {
-      const fx = applyFurnaceGrokRuntime({
+      const fx = await applyFurnaceGrokRuntime({
         member,
         sessionId,
         command,

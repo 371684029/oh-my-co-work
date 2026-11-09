@@ -10,7 +10,7 @@ import {
   normalizeFurnaceAgent,
   stepTypeLabel,
 } from '@acw/shared'
-import { probeCursorStatus } from './grokStatus.js'
+import { resolveCursorCommandAsync } from './grokStatus.js'
 import {
   activateFurnaceRole,
   currentFurnaceRole,
@@ -203,15 +203,19 @@ export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
   }
 }
 
-export function applyFurnaceGrokRuntime({ member, sessionId, command, furnaceAgent } = {}) {
+/**
+ * 5.x 性能修复：改为 async。旧实现在熔炉 spawn 路径上同步跑 `where`/
+ * `which`（spawnSync，最长 1.5s），每次开/新开熔炉都会把事件循环卡住一下。
+ * 现在走共享的异步缓存解析器，探测在后台完成。
+ */
+export async function applyFurnaceGrokRuntime({ member, sessionId, command, furnaceAgent } = {}) {
   if (!isFurnaceMember(member)) return null
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
   const agent = normalizeFurnaceAgent(furnaceAgent)
   const grok = getAppSettings().grok || {}
   let rawCmd
   if (agent === 'cursor') {
-    const probe = probeCursorStatus({ command: grok.cursorCommand })
-    rawCmd = String(probe.command || grok.cursorCommand || 'cursor-agent').trim() || 'cursor-agent'
+    rawCmd = await resolveCursorCommandAsync({ command: grok.cursorCommand })
   } else {
     rawCmd = String(command || grok.command || 'grok').trim() || 'grok'
   }

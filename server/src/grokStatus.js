@@ -124,6 +124,20 @@ async function probeCursorLogin(binPath) {
 }
 
 /**
+ * Resolve the cursor CLI command name via the cached async resolver.
+ * No login probe, no event-loop blocking — used on the furnace spawn path
+ * where we only need "which executable to launch".
+ */
+export async function resolveCursorCommandAsync({ command } = {}) {
+  const { candidates, requested } = cursorCandidates(command)
+  for (const name of candidates) {
+    const r = await resolveCommand(name)
+    if (r.path) return name
+  }
+  return requested || 'cursor-agent'
+}
+
+/**
  * Async cursor probe (CLI-04): resolves the CLI via the shared async resolver and
  * actually checks login state so the UI can guide "go log in" instead of letting
  * the user meet the CLI's own error inside the terminal.
