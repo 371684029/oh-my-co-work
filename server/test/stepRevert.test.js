@@ -11,7 +11,7 @@ function runGit(cwd, args) {
   execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' })
 }
 
-test('applyStepRevert restores worktree to step start', () => {
+test('applyStepRevert restores worktree to step start', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-revert-'))
   runGit(root, ['init'])
   runGit(root, ['config', 'user.email', 't@acw.local'])
@@ -19,15 +19,15 @@ test('applyStepRevert restores worktree to step start', () => {
   fs.writeFileSync(path.join(root, 'a.txt'), 'one\n')
   runGit(root, ['add', 'a.txt'])
   runGit(root, ['commit', '-m', 'init'])
-  const before = captureStepSnapshot(root)
+  const before = await captureStepSnapshot(root)
   fs.writeFileSync(path.join(root, 'a.txt'), 'two\n')
-  const stored = summarizeStepChange(before, root)
+  const stored = await summarizeStepChange(before, root)
   assert.ok(stored.filesChanged >= 1)
-  applyStepRevert(stored, root, { force: false })
+  await applyStepRevert(stored, root, { force: false })
   assert.equal(fs.readFileSync(path.join(root, 'a.txt'), 'utf8'), 'one\n')
 })
 
-test('previewStepRevert detects drift after step', () => {
+test('previewStepRevert detects drift after step', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-revert-drift-'))
   runGit(root, ['init'])
   runGit(root, ['config', 'user.email', 't@acw.local'])
@@ -35,11 +35,11 @@ test('previewStepRevert detects drift after step', () => {
   fs.writeFileSync(path.join(root, 'a.txt'), 'one\n')
   runGit(root, ['add', 'a.txt'])
   runGit(root, ['commit', '-m', 'init'])
-  const before = captureStepSnapshot(root)
+  const before = await captureStepSnapshot(root)
   fs.writeFileSync(path.join(root, 'a.txt'), 'two\n')
-  const stored = summarizeStepChange(before, root)
+  const stored = await summarizeStepChange(before, root)
   fs.writeFileSync(path.join(root, 'a.txt'), 'three\n')
-  const preview = previewStepRevert(stored, root)
+  const preview = await previewStepRevert(stored, root)
   assert.equal(preview.ok, true)
   assert.equal(preview.needsForce, true)
 })

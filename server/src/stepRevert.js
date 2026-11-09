@@ -1,16 +1,24 @@
 /**
  * Revert git worktree to step-start HEAD (5.3.0 TRC-02).
+ *
+ * Perf fix (5.x): git calls are async execFile. The old implementation ran
+ * execFileSync inside HTTP handlers (reset/clean, up to 30s timeout), so a
+ * single revert click could freeze the whole server for half a minute.
+ * Routes still return the same result, just without blocking other requests.
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { summarizeStepChange } from './stepSnapshot.js'
 
 function git(cwd, args) {
-  return execFileSync('git', ['-C', cwd, ...args], {
-    encoding: 'utf8',
-    timeout: 30_000,
-    maxBuffer: 8_000_000,
+  return new Promise((resolve, reject) => {
+    execFile(
+      'git',
+      ['-C', cwd, ...args],
+      { encoding: 'utf8', timeout: 30_000, maxBuffer: 8_000_000, windowsHide: true },
+      (error, stdout) => (error ? reject(error) : resolve(String(stdout || ''))),
+    )
   })
 }
 
@@ -33,8 +41,8 @@ export function resolveWorkDirFromNode(node, group) {
   return raw ? path.resolve(raw) : ''
 }
 
-/** @returns {{ ok: boolean, code?: string, workDir?: string, stored?: object, current?: object, needsForce?: boolean, message?: string }} */
-export function previewStepRevert(changeSnapshot, workDir) {
+/** @returns {Promise<{ ok: boolean, code?: string, workDir?: string, stored?: object, current?: object, needsForce?: boolean, message?: string }>} */
+export async function previewStepRevert(changeSnapshot, workDir) {
   const cs = changeSnapshot
   if (!cs || cs.mode !== 'git' || !cs.fromHead) {
     return { ok: false, code: 'NO_SNAPSHOT', message: '该节点没有可回退的 git 快照' }
@@ -46,7 +54,7 @@ export function previewStepRevert(changeSnapshot, workDir) {
   if (!cs.filesChanged) {
     return { ok: false, code: 'NO_CHANGES', message: '本步未记录文件改动' }
   }
-  const current = summarizeStepChange({ mode: 'git', head: cs.fromHead }, cwd)
+  const current = await summarizeStepChange({ mode: 'git', head: cs.fromHead }, cwd)
   const needsForce = fingerprint(current) !== fingerprint(cs)
   return {
     ok: true,
@@ -60,8 +68,8 @@ export function previewStepRevert(changeSnapshot, workDir) {
   }
 }
 
-export function applyStepRevert(changeSnapshot, workDir, { force = false } = {}) {
-  const preview = previewStepRevert(changeSnapshot, workDir)
+export async function applyStepRevert(changeSnapshot, workDir, { force = false } = {}) {
+  const preview = await previewStepRevert(changeSnapshot, workDir)
   if (!preview.ok) {
     const err = new Error(preview.message || '无法回退')
     err.code = preview.code
@@ -75,9 +83,9 @@ export function applyStepRevert(changeSnapshot, workDir, { force = false } = {})
   }
   const cwd = preview.workDir
   const fromHead = changeSnapshot.fromHead
-  git(cwd, ['reset', '--hard', fromHead])
-  git(cwd, ['clean', '-fd'])
-  const after = summarizeStepChange({ mode: 'git', head: fromHead }, cwd)
+  await git(cwd, ['reset', '--hard', fromHead])
+  await git(cwd, ['clean', '-fd'])
+  const after = await summarizeStepChange({ mode: 'git', head: fromHead }, cwd)
   return {
     ok: true,
     fromHead,

@@ -79,17 +79,17 @@ router.get('/sessions/:id/nodes/:nodeId/journal', (req, res) => {
   })
 })
 
-router.get('/sessions/:id/nodes/:nodeId/step-revert/preview', (req, res) => {
+router.get('/sessions/:id/nodes/:nodeId/step-revert/preview', async (req, res) => {
   const d = getSessionDetail(req.params.id)
   if (!d) return res.status(404).json({ error: 'not found' })
   const node = d.nodes.find((n) => n.id === req.params.nodeId)
   if (!node) return res.status(404).json({ error: 'node not found' })
   const cs = node.output?.changeSnapshot
   const workDir = resolveWorkDirFromNode(node, d.group)
-  res.json(previewStepRevert(cs, workDir))
+  res.json(await previewStepRevert(cs, workDir))
 })
 
-router.post('/sessions/:id/nodes/:nodeId/step-revert', (req, res) => {
+router.post('/sessions/:id/nodes/:nodeId/step-revert', async (req, res) => {
   try {
     const d = getSessionDetail(req.params.id)
     if (!d) return res.status(404).json({ error: 'not found' })
@@ -98,7 +98,7 @@ router.post('/sessions/:id/nodes/:nodeId/step-revert', (req, res) => {
     const cs = node.output?.changeSnapshot
     const workDir = resolveWorkDirFromNode(node, d.group)
     const force = !!req.body?.force
-    const result = applyStepRevert(cs, workDir, { force })
+    const result = await applyStepRevert(cs, workDir, { force })
     res.json(result)
   } catch (e) {
     if (e.code === 'CONFLICT') {
