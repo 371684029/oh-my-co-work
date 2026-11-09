@@ -424,7 +424,8 @@ export async function advance(sessionId) {
         : {}),
     }
     const stepWorkFolder = memberInput.workFolder
-    const stepSnapBefore = captureStepSnapshot(stepWorkFolder)
+    // 异步 git 快照：不再阻塞事件循环（熔炉/终端输出在节点边界保持流畅）
+    const stepSnapBefore = await captureStepSnapshot(stepWorkFolder)
 
     engineEmit('persist_node_io', sessionId, node.id, {
       input: memberInput,
@@ -539,7 +540,7 @@ export async function advance(sessionId) {
             refineFormatted: refineOut.formatted,
           }
         : memberInput
-    const changeSnapshot = summarizeStepChange(stepSnapBefore, stepWorkFolder)
+    const changeSnapshot = await summarizeStepChange(stepSnapBefore, stepWorkFolder)
     engineEmit('persist_node_io', sessionId, node.id, {
       input: refineInput,
       output: { ...result, changeSnapshot, runTrace },

@@ -1,19 +1,35 @@
 /**
  * Step-level worktree snapshots (5.3.0 TRC-01 foundation).
  * Git repos: record HEAD + diff against step start; non-git dirs deferred.
+ *
+ * Perf fix (5.x): all git calls are async execFile. The old execFileSync ran up
+ * to 6 blocking git processes (15s timeout each) on every node boundary,
+ * freezing the event loop — furnace TUI, WebSocket and REST all stalled, which
+ * was a main cause of the "randomly freezes" reports. Snapshots still complete
+ * at node boundaries, just without blocking everything else.
  */
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
 export const STEP_PATCH_MAX_BYTES = 120_000
+/** Max bytes of a single untracked file folded into the patch (keeps large binaries out of memory). */
+const UNTRACKED_FILE_MAX_BYTES = 64_000
 
-function git(cwd, args, opts = {}) {
-  return execFileSync('git', ['-C', cwd, ...args], {
-    encoding: 'utf8',
-    timeout: 15_000,
-    maxBuffer: STEP_PATCH_MAX_BYTES + 64_000,
-    ...opts,
+/** Async git; resolves null on any error/timeout so callers can degrade gracefully. */
+function runGit(cwd, args) {
+  return new Promise((resolve) => {
+    execFile(
+      'git',
+      ['-C', cwd, ...args],
+      {
+        encoding: 'utf8',
+        timeout: 15_000,
+        maxBuffer: STEP_PATCH_MAX_BYTES + 64_000,
+        windowsHide: true,
+      },
+      (error, stdout) => resolve(error ? null : String(stdout || '')),
+    )
   })
 }
 
@@ -39,14 +55,8 @@ function parseDiffStat(statText) {
   return { filesChanged, insertions, deletions, stat: statText.trim() }
 }
 
-function countUntrackedFiles(cwd) {
-  const out = git(cwd, ['ls-files', '--others', '--exclude-standard']).trim()
-  if (!out) return 0
-  return out.split('\n').filter(Boolean).length
-}
-
 /** Lightweight marker at node start (git HEAD only). */
-export function captureStepSnapshot(workDir) {
+export async function captureStepSnapshot(workDir) {
   const cwd = path.resolve(String(workDir || '').trim())
   if (!cwd || !fs.existsSync(cwd)) {
     return { mode: 'none', reason: 'missing_dir' }
@@ -54,67 +64,81 @@ export function captureStepSnapshot(workDir) {
   if (!fs.existsSync(path.join(cwd, '.git'))) {
     return { mode: 'none', reason: 'no_git' }
   }
-  try {
-    const head = git(cwd, ['rev-parse', 'HEAD']).trim()
-    return { mode: 'git', head, capturedAt: new Date().toISOString() }
-  } catch (e) {
-    return { mode: 'none', reason: 'git_error', error: e?.message || String(e) }
+  const head = await runGit(cwd, ['rev-parse', 'HEAD'])
+  if (head == null) {
+    return { mode: 'none', reason: 'git_error' }
   }
+  return { mode: 'git', head: head.trim(), capturedAt: new Date().toISOString() }
 }
 
 /** Diff from step-start HEAD to working tree after the node finishes. */
-export function summarizeStepChange(before, workDir) {
+export async function summarizeStepChange(before, workDir) {
   const cwd = path.resolve(String(workDir || '').trim())
   if (!before || before.mode !== 'git' || !cwd || !fs.existsSync(cwd)) {
     return { mode: 'none', reason: before?.reason || 'no_git' }
   }
-  try {
-    const statText = git(cwd, ['diff', '--stat', before.head]).trim()
-    let { filesChanged, insertions, deletions, stat } = parseDiffStat(statText)
-    const untracked = countUntrackedFiles(cwd)
-    if (untracked > 0) {
-      filesChanged += untracked
-      stat = [stat, `${untracked} untracked file(s)`].filter(Boolean).join('\n')
+  const statText = await runGit(cwd, ['diff', '--stat', before.head])
+  if (statText == null) {
+    return { mode: 'none', reason: 'git_error' }
+  }
+  let { filesChanged, insertions, deletions, stat } = parseDiffStat(statText.trim())
+  // One ls-files call serves both the count and the patch body
+  // (the old implementation ran the same command twice)
+  const untrackedListRaw = await runGit(cwd, ['ls-files', '--others', '--exclude-standard'])
+  if (untrackedListRaw == null) {
+    return { mode: 'none', reason: 'git_error' }
+  }
+  const untrackedList = untrackedListRaw.trim()
+  const untrackedFiles = untrackedList ? untrackedList.split('\n').filter(Boolean) : []
+  if (untrackedFiles.length > 0) {
+    filesChanged += untrackedFiles.length
+    stat = [stat, `${untrackedFiles.length} untracked file(s)`].filter(Boolean).join('\n')
+  }
+  let patch = ''
+  let patchTruncated = false
+  if (filesChanged > 0) {
+    const diffText = await runGit(cwd, ['diff', before.head])
+    if (diffText == null) {
+      return { mode: 'none', reason: 'git_error' }
     }
-    let patch = ''
-    let patchTruncated = false
-    if (filesChanged > 0) {
-      patch = git(cwd, ['diff', before.head])
-      const untrackedList = git(cwd, ['ls-files', '--others', '--exclude-standard']).trim()
-      if (untrackedList) {
-        for (const rel of untrackedList.split('\n').filter(Boolean)) {
-          try {
-            const abs = path.join(cwd, rel)
-            const body = fs.readFileSync(abs, 'utf8')
-            patch += `\n\n--- /dev/null\n+++ b/${rel}\n${body
-              .split('\n')
-              .map((l) => `+${l}`)
-              .join('\n')}\n`
-          } catch {
-            patch += `\n\n(untracked ${rel})\n`
-          }
+    patch = diffText
+    for (const rel of untrackedFiles) {
+      try {
+        const abs = path.join(cwd, rel)
+        const st = fs.statSync(abs)
+        if (st.size > UNTRACKED_FILE_MAX_BYTES) {
+          patch += `\n\n(untracked ${rel}: ${st.size} bytes, skipped)\n`
+          continue
         }
-      }
-      if (patch.length > STEP_PATCH_MAX_BYTES) {
-        patch = patch.slice(0, STEP_PATCH_MAX_BYTES)
-        patchTruncated = true
+        const body = fs.readFileSync(abs, 'utf8')
+        patch += `\n\n--- /dev/null\n+++ b/${rel}\n${body
+          .split('\n')
+          .map((l) => `+${l}`)
+          .join('\n')}\n`
+      } catch {
+        patch += `\n\n(untracked ${rel})\n`
       }
     }
-    const afterHead = git(cwd, ['rev-parse', 'HEAD']).trim()
-    return {
-      mode: 'git',
-      fromHead: before.head,
-      toHead: afterHead,
-      filesChanged,
-      insertions,
-      deletions,
-      stat,
-      patch,
-      patchTruncated,
-      capturedAt: new Date().toISOString(),
+    if (patch.length > STEP_PATCH_MAX_BYTES) {
+      patch = patch.slice(0, STEP_PATCH_MAX_BYTES)
+      patchTruncated = true
     }
-  } catch (e) {
-    return { mode: 'none', reason: 'git_error', error: e?.message || String(e) }
+  }
+  const afterHead = await runGit(cwd, ['rev-parse', 'HEAD'])
+  if (afterHead == null) {
+    return { mode: 'none', reason: 'git_error' }
+  }
+  return {
+    mode: 'git',
+    fromHead: before.head,
+    toHead: afterHead.trim(),
+    filesChanged,
+    insertions,
+    deletions,
+    stat,
+    patch,
+    patchTruncated,
+    capturedAt: new Date().toISOString(),
   }
 }
 

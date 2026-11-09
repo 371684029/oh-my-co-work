@@ -14,7 +14,7 @@ function runGit(cwd, args) {
   execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' })
 }
 
-test('captureStepSnapshot + summarizeStepChange on temp git repo', () => {
+test('captureStepSnapshot + summarizeStepChange on temp git repo', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-trc-'))
   runGit(root, ['init'])
   runGit(root, ['config', 'user.email', 't@acw.local'])
@@ -22,18 +22,35 @@ test('captureStepSnapshot + summarizeStepChange on temp git repo', () => {
   fs.writeFileSync(path.join(root, 'a.txt'), 'one\n')
   runGit(root, ['add', 'a.txt'])
   runGit(root, ['commit', '-m', 'init'])
-  const before = captureStepSnapshot(root)
+  const before = await captureStepSnapshot(root)
   assert.equal(before.mode, 'git')
   fs.writeFileSync(path.join(root, 'a.txt'), 'two\n')
   fs.writeFileSync(path.join(root, 'b.txt'), 'new\n')
   runGit(root, ['add', '.'])
-  const change = summarizeStepChange(before, root)
+  const change = await summarizeStepChange(before, root)
   assert.equal(change.mode, 'git')
   assert.ok(change.filesChanged >= 1)
   assert.match(formatChangeSummary(change), /文件/)
 })
 
-test('non-git directory returns no_git', () => {
+test('non-git directory returns no_git', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-trc-plain-'))
-  assert.equal(captureStepSnapshot(root).reason, 'no_git')
+  assert.equal((await captureStepSnapshot(root)).reason, 'no_git')
+})
+
+test('oversized untracked files are skipped instead of read into memory', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-trc-big-'))
+  runGit(root, ['init'])
+  runGit(root, ['config', 'user.email', 't@acw.local'])
+  runGit(root, ['config', 'user.name', 'acw'])
+  fs.writeFileSync(path.join(root, 'a.txt'), 'one\n')
+  runGit(root, ['add', 'a.txt'])
+  runGit(root, ['commit', '-m', 'init'])
+  const before = await captureStepSnapshot(root)
+  // 远超 64KB 上限的未跟踪文件：计入 filesChanged，但正文跳过
+  fs.writeFileSync(path.join(root, 'big.bin'), 'x'.repeat(128 * 1024))
+  const change = await summarizeStepChange(before, root)
+  assert.equal(change.mode, 'git')
+  assert.ok(change.filesChanged >= 1)
+  assert.match(change.patch, /\(untracked big\.bin: .*skipped\)/)
 })
