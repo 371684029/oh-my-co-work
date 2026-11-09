@@ -22,6 +22,7 @@ import {
   terminalOutputReset,
   terminalOutputGetReplay,
   terminalOutputGetSeq,
+  terminalOutputForgetAll,
 } from '../../../composables/terminalOutputBridge.js'
 import { api, connectSessionWs } from '../../../api'
 import { notificationPrefsRef, shouldNotifyLevel } from '../../../composables/useNotificationPrefs.js'
@@ -113,6 +114,8 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
   if (!delivery.ok) return
   notifyLastSentAt.set(notifyId, now)
   notifyRemindCount.set(notifyId, (notifyRemindCount.get(notifyId) || 0) + 1)
+  capIterableState(notifyLastSentAt)
+  capIterableState(notifyRemindCount)
   const desktop = window.__ACW_DESKTOP_API__
   if (desktop?.notify) {
     desktop.notify(t, {
@@ -144,6 +147,7 @@ function maybeNotifyFurnaceCliState(terminal, sessionId) {
   if (banner && notifyKinds.has(banner.kind)) {
     if (furnaceCliNotifyKind.get(terminal.id) === banner.kind) return
     furnaceCliNotifyKind.set(terminal.id, banner.kind)
+    capIterableState(furnaceCliNotifyKind)
     const title = detail.value?.session?.title || '熔炉'
     pushDesktopNotification(`[${title}] ${banner.title}`, banner.hint, {
       id: `furnace-cli:${terminal.id}:${banner.kind}`,
@@ -157,6 +161,7 @@ function maybeNotifyFurnaceCliState(terminal, sessionId) {
   })
   if (est.percent >= 85 && !furnaceContextWarned.has(terminal.id)) {
     furnaceContextWarned.add(terminal.id)
+    capIterableState(furnaceContextWarned)
     const title = detail.value?.session?.title || '熔炉'
     pushDesktopNotification(`[${title}] 上下文接近上限`, formatFurnaceContextHint(est), {
       id: `furnace-ctx:${terminal.id}`,
@@ -174,6 +179,20 @@ let gapStreak = 0
 const truncatedToastShown = new Set()
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// 5.x 内存修复：这些 Map/Set 以通知 id 为键（部分含 Date.now()，永不重复），
+// 长会话下无界增长。超过上限后淘汰最旧的一半。
+const NOTIFY_STATE_CAP = 800
+
+function capIterableState(target) {
+  if (target.size <= NOTIFY_STATE_CAP) return
+  let drop = target.size - Math.floor(NOTIFY_STATE_CAP / 2)
+  for (const key of target.keys()) {
+    if (drop <= 0) break
+    target.delete(key)
+    drop -= 1
+  }
+}
 
 const activeTerminal = computed(
   () => terminalSessions.value.find((terminal) => terminal.id === activeTerminalId.value) || null,
@@ -648,6 +667,8 @@ function resetTerminals() {
   activeTerminalId.value = null
   terminalSessions.value = []
   truncatedToastShown.clear()
+  // 会话切换：释放所有终端的 replay 缓冲（重进时由服务端 snapshot 重建）
+  terminalOutputForgetAll()
 }
 
 function closeWs() {
