@@ -70,7 +70,13 @@ export function emitSession(sessionId, event) {
   if (!set) return
   const raw = JSON.stringify(event)
   for (const ws of set) {
-    if (ws.readyState === 1) ws.send(raw)
+    if (ws.readyState !== 1) continue
+    // 单个濒死 socket 抛错不能冲进 engineEmit/advance 主循环（emitTerminalOutput 同理已容错）
+    try {
+      ws.send(raw)
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -78,7 +84,12 @@ export function emitAll(event) {
   const raw = JSON.stringify(event)
   for (const set of sessionSubs.values()) {
     for (const ws of set) {
-      if (ws.readyState === 1) ws.send(raw)
+      if (ws.readyState !== 1) continue
+      try {
+        ws.send(raw)
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
