@@ -281,6 +281,7 @@ export const strings = {
       ctxCopyVisible: '复制可见区域',
       ctxClear: '清屏（仅显示）',
       processEnded: '进程已结束，无法继续输入',
+      restart: '重新拉起进程',
       copyEmpty: '没有可复制的内容',
       copyFailed: '复制失败，请检查剪贴板权限',
       copiedSelection: '已复制选区',
