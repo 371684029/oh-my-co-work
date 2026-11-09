@@ -6,6 +6,7 @@ import {
   isCopyForceShortcut,
   isPasteShortcut,
   shouldHandlePasteShortcut,
+  createFurnaceInterruptGuard,
 } from '../src/composables/terminalClipboard.js'
 
 test('copy when selection exists on Ctrl+C', () => {
@@ -35,4 +36,32 @@ test('Ctrl+Shift+C always copies on mac and win', () => {
 test('Ctrl+Shift+V is paste shortcut', () => {
   const ev = { key: 'v', ctrlKey: true, shiftKey: true, metaKey: false, altKey: false }
   assert.equal(shouldHandlePasteShortcut(ev, 'Win32'), true)
+})
+
+test('createFurnaceInterruptGuard requires double press within window to interrupt', () => {
+  let currentTime = 1000
+  const guard = createFurnaceInterruptGuard({ windowMs: 1500, now: () => currentTime })
+
+  // First press: intercepted to prevent accidental exit
+  const first = guard.check()
+  assert.equal(first.allowInterrupt, false)
+  assert.equal(first.isFirstAttempt, true)
+
+  // Second press 500ms later: within 1500ms, allowed
+  currentTime = 1500
+  const second = guard.check()
+  assert.equal(second.allowInterrupt, true)
+  assert.equal(second.isFirstAttempt, false)
+
+  // Third press after reset: treated as fresh first attempt
+  currentTime = 2000
+  const third = guard.check()
+  assert.equal(third.allowInterrupt, false)
+  assert.equal(third.isFirstAttempt, true)
+
+  // Fourth press 2000ms later (> windowMs): expired, treated as first attempt
+  currentTime = 4100
+  const fourth = guard.check()
+  assert.equal(fourth.allowInterrupt, false)
+  assert.equal(fourth.isFirstAttempt, true)
 })
