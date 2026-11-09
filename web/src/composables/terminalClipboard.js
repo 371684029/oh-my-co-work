@@ -44,6 +44,35 @@ export function shouldHandlePasteShortcut(ev, platform) {
   return isPasteShortcut(ev, platform)
 }
 
+/**
+ * 熔炉 Ctrl+C 防误杀机制 (FURNACE-INTERRUPT-GUARD)：
+ * 在熔炉运行态，若用户没有选中文本而按下 Ctrl+C，极有可能是试图复制或误触。
+ * 如果直接把 \x03 发到 Windows ConPTY 会引发 STATUS_CONTROL_C_EXIT (0xC000013A)，
+ * 导致整个 Grok / Cursor 进程瞬间崩溃退出黑屏。
+ * 提供防误杀保护器：需在 windowMs（默认 1500ms）内连续按两次 Ctrl+C 才允许发送中断信号。
+ */
+export function createFurnaceInterruptGuard({ windowMs = 1500, now = () => Date.now() } = {}) {
+  let lastAttemptAt = 0
+
+  return {
+    /**
+     * @returns {{ allowInterrupt: boolean, isFirstAttempt: boolean }}
+     */
+    check() {
+      const current = now()
+      if (lastAttemptAt > 0 && current - lastAttemptAt <= windowMs) {
+        lastAttemptAt = 0
+        return { allowInterrupt: true, isFirstAttempt: false }
+      }
+      lastAttemptAt = current
+      return { allowInterrupt: false, isFirstAttempt: true }
+    },
+    reset() {
+      lastAttemptAt = 0
+    },
+  }
+}
+
 // eslint-disable-next-line no-control-regex -- strip terminal escape sequences from copied text
 const ANSI_RE = /\u001b(?:[@-_][0-?]*[ -/]*[@-~]|\[[0-?]*[ -/]*[@-~])/g
 // eslint-disable-next-line no-control-regex -- OSC sequences

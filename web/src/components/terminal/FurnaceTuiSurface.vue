@@ -14,6 +14,7 @@
         @resize="item.id === terminal.id && $emit('resize', $event)"
         @gap="item.id === terminal.id && $emit('gap', $event)"
         @focus-change="item.id === terminal.id && $emit('focus-change', $event)"
+        @reopen="$emit('reopen', $event)"
       />
     </div>
     <FurnaceTuiDrawer
@@ -48,5 +49,5 @@ const tuiTerminals = computed(() => {
   }
   return list
 })
-defineEmits(['input', 'resize', 'gap', 'focus-change', 'copy-turn', 'update:history-open'])
+defineEmits(['input', 'resize', 'gap', 'focus-change', 'copy-turn', 'update:history-open', 'reopen'])
 </script>

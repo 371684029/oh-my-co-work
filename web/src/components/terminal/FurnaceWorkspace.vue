@@ -98,6 +98,7 @@
         @focus-change="onFocusChange"
         @update:history-open="tuiHistoryOpen = $event"
         @copy-turn="copyTurn"
+        @reopen="emit('reopen', { agent: activeAgent })"
       />
 
       <footer class="furnace-foot">

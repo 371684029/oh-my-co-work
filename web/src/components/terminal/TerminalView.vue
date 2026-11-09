@@ -21,9 +21,19 @@
       <button type="button" role="menuitem" @click="ctxClear">{{ terminalViewCtxClear() }}</button>
     </div>
     <div v-if="!isRunning" class="terminal-dead-overlay">
-      <div class="terminal-dead-text">
-        <span class="terminal-dead-icon" aria-hidden="true">⏻</span>
-        {{ terminalViewProcessEnded() }}
+      <div class="terminal-dead-box">
+        <div class="terminal-dead-text">
+          <span class="terminal-dead-icon" aria-hidden="true">⏻</span>
+          <span>{{ terminalDeadStatusLine }}</span>
+        </div>
+        <button
+          v-if="pasteContext === 'furnace'"
+          type="button"
+          class="terminal-restart-btn"
+          @click="$emit('reopen')"
+        >
+          {{ terminalViewRestartLabel() }}
+        </button>
       </div>
     </div>
   </div>
@@ -46,6 +56,8 @@ import { createInputSequencer } from '../../composables/terminalInput'
 import {
   shouldCopyInsteadOfInterrupt,
   shouldHandlePasteShortcut,
+  isInterruptShortcut,
+  createFurnaceInterruptGuard,
   getTerminalCopyText,
 } from '../../composables/terminalClipboard.js'
 import {
@@ -89,6 +101,7 @@ import {
   terminalViewNeedSessionForFilesMessage,
   terminalViewPathsWrittenMessage,
   terminalViewProcessEnded,
+  terminalViewRestartLabel,
   terminalViewSearchCancelButton,
   terminalViewSearchConfirmButton,
   terminalViewSearchNotFoundMessage,
@@ -110,7 +123,15 @@ const props = defineProps({
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
 
-const emit = defineEmits(['input', 'resize', 'gap', 'focus-change'])
+const terminalDeadStatusLine = computed(() => {
+  const code = props.terminal?.exitCode
+  if (code !== undefined && code !== null && String(code) !== '0') {
+    return `${terminalViewProcessEnded()} (exit ${code})`
+  }
+  return terminalViewProcessEnded()
+})
+
+const emit = defineEmits(['input', 'resize', 'gap', 'focus-change', 'reopen'])
 const host = ref(null)
 let xterm = null
 let fitAddon = null
@@ -125,6 +146,7 @@ const forceSelection = ref(false)
 const ctxMenu = ref({ open: false, x: 0, y: 0 })
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
 const sequencer = createInputSequencer()
+const furnaceInterruptGuard = createFurnaceInterruptGuard({ windowMs: 1500 })
 let imeComposing = false
 
 function closeCtxMenu() {
@@ -374,19 +396,16 @@ onMounted(async () => {
   if (prefs.renderer !== 'dom') {
     try {
       webglAddon = new WebglAddon()
-      webglAddon.onContextLoss(() => {
+        webglAddon.onContextLoss((e) => {
+          e?.preventDefault?.()
         try {
           webglAddon?.dispose()
         } catch {
           /* ignore */
         }
         webglAddon = null
-        try {
-          webglAddon = new WebglAddon()
-          xterm.loadAddon(webglAddon)
-        } catch {
-          /* fall back to canvas/DOM */
-        }
+          // WebGL 丢失后回退到 DOM/Canvas 渲染并触发全量重绘，杜绝渲染黑屏
+          clearAtlasAndRefresh()
       })
       xterm.loadAddon(webglAddon)
     } catch {
@@ -406,6 +425,15 @@ onMounted(async () => {
       if (sel) void copyText(sel, terminalViewCopiedCharsMessage(sel.length))
       xterm.clearSelection()
       return false
+    }
+    // 熔炉防误杀：在 furnace 模式下，若未选区按下 Ctrl+C，要求 1.5 秒内双击 Ctrl+C 才允许发送 SIGINT
+    if (props.pasteContext === 'furnace' && isInterruptShortcut(ev)) {
+      const check = furnaceInterruptGuard.check()
+      if (!check.allowInterrupt) {
+        ev.preventDefault()
+        ElMessage.warning('再次按 Ctrl+C 中断熔炉进程')
+        return false
+      }
     }
     if (shouldHandlePasteShortcut(ev)) {
       void readClipboardText().then((text) => {
@@ -606,29 +634,48 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding-bottom: 14px;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(23, 25, 31, 0) 0%,
-    rgba(23, 25, 31, 0.55) 70%,
-    rgba(23, 25, 31, 0.7) 100%
-  );
+  pointer-events: auto;
+  background: rgba(23, 25, 31, 0.75);
+  backdrop-filter: blur(2px);
+  z-index: 20;
+}
+
+.terminal-dead-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #23262f;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
 .terminal-dead-text {
-  font-size: 12px;
-  color: #9097a5;
-  padding: 5px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  backdrop-filter: blur(4px);
+  font-size: 13px;
+  color: #d1d5db;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.terminal-restart-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 16px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.terminal-restart-btn:hover {
+  background: #2563eb;
 }
 
 .terminal-dead-icon {
