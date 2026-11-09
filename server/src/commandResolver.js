@@ -217,3 +217,26 @@ export function resolveCommandSync(
 export function invalidateCommandCache() {
   cache.clear()
 }
+
+/**
+ * Peek the TTL cache without probing. Lets hot paths (e.g. PTY spawn on
+ * Windows) reuse an existing resolution instead of paying a sync `where`.
+ * @returns {{ path: string|null, kind: string|null, source?: string }|null}
+ */
+export function peekResolvedCommand(command, { platform = process.platform } = {}) {
+  const cmd = String(command || '').trim()
+  if (!cmd) return null
+  const hit = cache.get(`${platform}:${cmd}`)
+  return hit && Date.now() - hit.at < CACHE_TTL_MS ? hit.value : null
+}
+
+/** Seed the TTL cache with an already-resolved value (no probe). */
+export function warmResolvedCommand(
+  command,
+  value,
+  { platform = process.platform } = {},
+) {
+  const cmd = String(command || '').trim()
+  if (!cmd || !value?.path) return
+  cache.set(`${platform}:${cmd}`, { at: Date.now(), value })
+}

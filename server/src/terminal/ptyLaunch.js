@@ -1,11 +1,20 @@
 import { spawnSync } from 'node:child_process'
-import { pickWindowsMatch } from '../commandResolver.js'
+import {
+  pickWindowsMatch,
+  peekResolvedCommand,
+  warmResolvedCommand,
+} from '../commandResolver.js'
 
 /**
  * 很多全局 CLI（grok、npm 装的工具等）在 Windows 上其实是 grok.exe / xxx.cmd，
  * 裸名 "grok" 直接扔给 pty.spawn（shell:false）会报 "File not found: "——
  * JS 侧 `where grok` 却能找到，两边判断不一致。这里在真正 spawn 前，用同一套
  * `where` 解析出带扩展名的绝对路径，node-pty 收到绝对路径就不会走那段裸名搜索。
+ *
+ * 5.x 性能修复：生产默认 runner 复用 commandResolver 的 30s TTL 缓存——
+ * 否则每次开熔炉/终端都要付一次同步 `where`（AV 环境下可达秒级）。
+ * 仅当 run 是默认 spawnSync（生产路径）时读写缓存；测试注入的 runner 必须
+ * 看到每一次调用，不能被缓存短路。
  */
 const WINDOWS_WHERE_TIMEOUT_MS = 1500
 
@@ -13,11 +22,25 @@ export function resolveWindowsExecutable(cmd, { platform = process.platform, run
   if (platform !== 'win32') return cmd
   const raw = String(cmd || '').trim()
   if (!raw || raw.includes('/') || raw.includes('\\')) return cmd
+  const production = run === spawnSync
+  if (production) {
+    const cached = peekResolvedCommand(raw, { platform: 'win32' })
+    if (cached?.path) return cached.path
+  }
   try {
     const r = run('where', [raw], { encoding: 'utf8', timeout: WINDOWS_WHERE_TIMEOUT_MS })
     if (r?.status === 0) {
       const picked = pickWindowsMatch(r.stdout, process.env.PATHEXT)
-      if (picked.path) return picked.path
+      if (picked.path) {
+        if (production) {
+          warmResolvedCommand(
+            raw,
+            { path: picked.path, kind: picked.kind, source: 'path' },
+            { platform: 'win32' },
+          )
+        }
+        return picked.path
+      }
     }
   } catch {
     /* 找不到就保留原样，交给 pty 报错，不掩盖问题 */
