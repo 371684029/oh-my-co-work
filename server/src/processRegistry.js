@@ -194,13 +194,14 @@ export function cleanupArchivedSessionPidFiles(sessionIds) {
 
 /**
  * 同一会话内同一成员只保留一个脚本进程：启动新 bat 前先清掉该成员旧进程（含控制窗）
- * @param {{ includeDetach?: boolean }} [opts] includeDetach=true 时连「仅唤起」窗口一并杀（新开前清旧）
+ * @param {{ includeDetach?: boolean, syncKill?: boolean }} [opts] includeDetach=true 时连「仅唤起」窗口一并杀（新开前清旧）
  */
 export function killMemberProcesses(sessionId, memberId, opts = {}) {
   if (!sessionId || !memberId) return { killed: 0, pids: [] }
   const map = bySession.get(sessionId)
   if (!map || map.size === 0) return { killed: 0, pids: [] }
   const includeDetach = opts.includeDetach === true
+  const sync = opts.syncKill === true
 
   const pids = []
   for (const [id, entry] of [...map.entries()]) {
@@ -208,7 +209,7 @@ export function killMemberProcesses(sessionId, memberId, opts = {}) {
     // 默认保留 detach 窗口，避免节点「已打开」后立刻被杀掉闪退
     if (entry.detach && !includeDetach) continue
     pids.push(entry.pid)
-    killEntry(entry)
+    killEntry(entry, { sync })
     map.delete(id)
     forgetSessionPid(sessionId, entry.pid)
   }
@@ -216,26 +217,33 @@ export function killMemberProcesses(sessionId, memberId, opts = {}) {
   return { killed: pids.length, pids, scope: 'member', memberId }
 }
 
-/** 杀掉单个 PID 的进程树（Windows: taskkill /T /F，同步尽力） */
-export function killProcessTree(pid) {
+/** 杀掉单个 PID 的进程树（Windows: taskkill /T /F）。
+ * 5.x 性能修复：默认非阻塞（detached spawn）。taskkill /T /F 单次可达数秒，
+ * 每个节点开始/结束都会走这里，旧的 execFileSync 会把事件循环整段卡住，
+ * 是熔炉「动不动就卡死」的主因之一。退出清理路径传 { sync: true } 确保杀完再退。 */
+export function killProcessTree(pid, { sync = false } = {}) {
   if (!pid || pid <= 0) return
   if (process.platform === 'win32') {
-    try {
-      execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
-        windowsHide: true,
-        stdio: 'ignore',
-        timeout: 8000,
-      })
-    } catch {
+    if (sync) {
       try {
-        spawn('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
           windowsHide: true,
           stdio: 'ignore',
-          detached: true,
-        }).unref()
+          timeout: 8000,
+        })
+        return
       } catch {
-        /* ignore */
+        /* fall through to async attempt */
       }
+    }
+    try {
+      spawn('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        windowsHide: true,
+        stdio: 'ignore',
+        detached: true,
+      }).unref()
+    } catch {
+      /* ignore */
     }
     return
   }
@@ -254,7 +262,7 @@ export function killProcessTree(pid) {
   }
 }
 
-function killEntry(entry) {
+function killEntry(entry, { sync = false } = {}) {
   if (!entry) return
   try {
     if (entry.child && !entry.child.killed) {
@@ -267,16 +275,17 @@ function killEntry(entry) {
   } catch {
     /* ignore */
   }
-  killProcessTree(entry.pid)
+  killProcessTree(entry.pid, { sync })
 }
 
 /**
  * 释放资源：结束会话进程（内存表 + 磁盘 pid 清单）
  * 归档 / 超时归档 / 手动释放 均走此入口
  * @param {string} sessionId
- * @param {{ runId?: string, includeDetach?: boolean }} [opts]
+ * @param {{ runId?: string, includeDetach?: boolean, syncKill?: boolean }} [opts]
  *   runId：只杀本次运行及其控制窗
  *   includeDetach：默认 true；false 时保留「仅唤起」窗口（待确认归档用）
+ *   syncKill：默认 false（非阻塞）；退出清理路径传 true 确保杀完再退
  */
 export function killSessionProcesses(sessionId, opts = {}) {
   if (!sessionId) return { killed: 0, pids: [] }
@@ -284,6 +293,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
   const pids = []
   const runId = opts.runId
   const includeDetach = opts.includeDetach !== false
+  const sync = opts.syncKill === true
   const seen = new Set()
   /** @type {Set<number>} */
   const preservePids = new Set()
@@ -292,7 +302,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
     if (!pid || pid <= 0 || seen.has(pid) || preservePids.has(pid)) return
     seen.add(pid)
     pids.push(pid)
-    killProcessTree(pid)
+    killProcessTree(pid, { sync })
   }
 
   if (runId) {
@@ -306,7 +316,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
           continue
         }
         addKillPid(entry.pid)
-        killEntry(entry)
+        killEntry(entry, { sync })
         map.delete(key)
         forgetSessionPid(sessionId, entry.pid)
       }
@@ -334,7 +344,7 @@ export function killSessionProcesses(sessionId, opts = {}) {
         continue
       }
       addKillPid(entry.pid)
-      killEntry(entry)
+      killEntry(entry, { sync })
       map.delete(id)
     }
     if (map.size === 0) bySession.delete(sessionId)

@@ -219,7 +219,8 @@ setExitHandler((reason) => {
       .all()
     for (const r of rows) {
       try {
-        killSessionProcesses(r.id)
+        // 退出路径用同步杀：确保 taskkill 在进程退出前完成（平时走非阻塞）
+        killSessionProcesses(r.id, { syncKill: true })
       } catch {
         /* ignore */
       }
