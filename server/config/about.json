@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "5.3.0",
+  "version": "5.3.1",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,18 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "5.3.1",
+      "date": "2026-11-06",
+      "title": "5.3.1：熔炉卡死修复与内存防泄漏",
+      "items": [
+        "节点快照与步骤回退的 git 调用全部改异步：旧实现每个节点边界最多 6 次同步 git（execFileSync）卡住事件循环，熔炉 TUI、终端与接口全体冻结。",
+        "Windows taskkill 默认非阻塞（detached spawn），退出清理仍同步确保杀完再退。",
+        "PTY spawn 复用 30 秒命令解析缓存；熔炉 Cursor 命令探测改异步，开炉不再卡顿。",
+        "终端回放缓冲加上限淘汰与会话切换清理；通知去重 Map 封顶，长会话内存有界。",
+        "未跟踪文件快照读取限 64KB，超大文件不再整读进内存。"
+      ]
+    },
     {
       "version": "5.3.0",
       "date": "2026-10-21",

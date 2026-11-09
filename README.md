@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-5.3.0-409eff?style=flat-square" alt="version 5.3.0" />
+  <img src="https://img.shields.io/badge/version-5.3.1-409eff?style=flat-square" alt="version 5.3.1" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -197,7 +197,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.3.0**。桌面窗口请用上面的 `*-desktop.zip`。运行包只发布到 Release，不再提交进仓库（`packages/` 仅为本地 `npm run pack` 输出目录）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.3.1**。桌面窗口请用上面的 `*-desktop.zip`。运行包只发布到 Release，不再提交进仓库（`packages/` 仅为本地 `npm run pack` 输出目录）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
@@ -334,6 +334,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 5.1.0：全量优化台账——CLI / 桌面壳 / 安全 / 发布，多数已合入，残留 bracket 见 [docs/5.1.0-plan.md](./docs/5.1.0-plan.md)
 - [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
 - [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/5.3.0-plan.md](./docs/5.3.0-plan.md)
+- [x] 5.3.1：熔炉卡死修复——节点快照/步骤回退 git 全异步（旧 execFileSync 每节点最多 6 次同步 git 卡事件循环）、Windows taskkill 非阻塞、PTY spawn 命令缓存、终端回放缓冲与通知 Map 防泄漏
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
