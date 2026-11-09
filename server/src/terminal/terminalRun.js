@@ -260,6 +260,7 @@ export function runTerminalPty(
         cwd,
         env: childEnv,
         useConpty: process.platform === 'win32',
+        useConptyDll: process.platform === 'win32',
       })
       entry.pid = entry.process.pid
       entry.status = 'running'

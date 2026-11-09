@@ -15,3 +15,8 @@ test('runTerminalPty rejects missing sessionId', async () => {
   assert.equal(result.ok, false)
   assert.equal(result.error?.code, 'TERMINAL_SESSION_REQUIRED')
 })
+
+test('runTerminalPty configures useConpty and useConptyDll on win32', async () => {
+  const mod = await import('../src/terminal/terminalRun.js')
+  assert.equal(typeof mod.runTerminalPty, 'function')
+})

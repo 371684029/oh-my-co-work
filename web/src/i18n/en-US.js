@@ -281,6 +281,7 @@ export const strings = {
       ctxCopyVisible: 'Copy visible region',
       ctxClear: 'Clear screen (display only)',
       processEnded: 'Process ended; input disabled',
+      restart: 'Restart Process',
       copyEmpty: 'Nothing to copy',
       copyFailed: 'Copy failed; check clipboard permissions',
       copiedSelection: 'Selection copied',

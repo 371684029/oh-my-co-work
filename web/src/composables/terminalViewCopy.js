@@ -29,6 +29,10 @@ export function terminalViewProcessEnded() {
   return t('terminal.view.processEnded')
 }
 
+export function terminalViewRestartLabel() {
+  return t('terminal.view.restart')
+}
+
 export function terminalViewCopyEmptyMessage() {
   return t('terminal.view.copyEmpty')
 }
