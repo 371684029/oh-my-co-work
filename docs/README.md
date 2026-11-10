@@ -45,6 +45,7 @@
 
 | 文档 | 用途 |
 |------|------|
+| [tech-architecture-map.md](./tech-architecture-map.md) | **架构图 / 代码结构图**：全局运行拓扑、引擎状态机、执行体与终端链路、前端分层、数据落盘、读码路线（新人第一份） |
 | [tech-design.md](./tech-design.md) | 完整技术设计（含后置能力） |
 | [tech-data-storage.md](./tech-data-storage.md) | **数据怎么存（SQLite / MD / 文件）** 当前实现说明 |
 | [tech-data-and-ops.md](./tech-data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4；**§9 待改进 backlog**（含脚本上下文注入） |

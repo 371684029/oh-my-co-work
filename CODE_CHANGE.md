@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-10 | A/M | docs/tech-architecture-map.md, docs/README.md | 新增《架构图 / 代码结构图》：全局运行拓扑、引擎 DAG 与 advance 主循环、执行体与 PTY 链路、前端三栏分层、数据落盘与迁移链、REST/WS 契约、读码路线与术语表；docs 索引 tech- 分组登记
 2026-11-10 | M | README.md | 5.3.2 徽章/源码版本/路线图/文档表/内嵌 TUI 能力说明
 2026-11-10 | A/M | web/src/composables/{terminalWriteScheduler,terminalOutputBridge,useFurnaceWorkspace}.js, web/src/components/terminal/{TerminalView,FurnaceTuiSurface,terminalPrefs}.js, web/src/views/workbench/composables/useTerminalSessions.js, server/src/terminal/clientMessage.js, electron/main.js, docs/5.8.0-plan.md, scripts/selftest-furnace-perf.mjs, web/test/{terminalWriteScheduler,terminalOutputBridge}.test.mjs, server/test/terminalClientMessage.test.js, */package.json, server/config/about.json | 5.3.2 熔炉/CLI 性能 II：rAF 输出合并、分片 replay、WebGL 兜底、Vue replay 解耦、GUI 解析节流、单 xterm、attach tail 512KB、背压提示、Electron 后台不节流
 2026-11-09 | R | docs/（38 份）：plan-{4.7.0,4.8.0,4.9.0,5.0.0,5.1.0,5.2.0,5.3.0,5.4.0,5.5.0,5.6.0,5.7.0,tui-2x,crucible-3x,refactor-3.8,docs-4x,refine-search-4x}.md ← 原 *-plan.md；tech-{design,tui-2x,crucible-3x,crucible-3.2,crucible-3.3,crucible-3.5,crucible-3.7,crucible-grok-client,crucible-gui-plain,data-storage,data-and-ops}.md；spec-{selftest,qa-checklist,qa-notification,directory-structure,frontend-components}.md；guide-{demo,script,release-user}.md；product-{mvp,ai-case-blog,brand-logo}.md | 文档命名规范化：五类前缀 plan 版本类 / tech 技术类 / spec 规范类 / guide 指南类 / product 产品类，全小写 kebab-case
