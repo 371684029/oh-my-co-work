@@ -425,6 +425,8 @@ function browserWindowOptions() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Keep WS + terminal output flowing when the window is hidden to tray (PERF-E1).
+      backgroundThrottling: false,
     },
   }
 }

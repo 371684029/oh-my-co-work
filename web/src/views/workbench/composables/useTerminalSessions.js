@@ -138,7 +138,12 @@ function pushDesktopNotification(title, body, { id, deepLink, level = 'action', 
 
 function maybeNotifyFurnaceCliState(terminal, sessionId) {
   if (!terminal || !isFurnaceTuiContext(terminal)) return
-  const banner = inferFurnaceCliBanner(terminal.replay || '', {
+  const now = Date.now()
+  const last = furnaceNotifyAt.get(terminal.id) || 0
+  if (now - last < FURNACE_NOTIFY_MS) return
+  furnaceNotifyAt.set(terminal.id, now)
+  const replay = terminalOutputGetReplay(terminal.id) || terminal.replay || ''
+  const banner = inferFurnaceCliBanner(replay, {
     status: terminal.status,
     exitCode: terminal.exitCode,
     lastError: terminal.lastError || terminal.error?.message,
@@ -156,7 +161,7 @@ function maybeNotifyFurnaceCliState(terminal, sessionId) {
       sessionId,
     })
   }
-  const est = estimateFurnaceContext(terminal.replay || '', {
+  const est = estimateFurnaceContext(replay, {
     profile: terminal.furnaceAgent === 'cursor' ? 'cursor' : 'grok',
   })
   if (est.percent >= 85 && !furnaceContextWarned.has(terminal.id)) {
@@ -177,6 +182,11 @@ function maybeNotifyFurnaceCliState(terminal, sessionId) {
 let lastGapAt = 0
 let gapStreak = 0
 const truncatedToastShown = new Set()
+const previewReplayAt = new Map()
+const furnaceNotifyAt = new Map()
+const backpressureToastAt = new Map()
+const PREVIEW_REPLAY_MS = 500
+const FURNACE_NOTIFY_MS = 2000
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -474,6 +484,12 @@ function bindWs(sessionId) {
       }
       if (ev.type === 'terminal.backpressure') {
         const terminalId = ev.payload?.terminalId || activeTerminalId.value
+        const now = Date.now()
+        const lastBp = backpressureToastAt.get(terminalId) || 0
+        if (terminalId && now - lastBp > 5000) {
+          backpressureToastAt.set(terminalId, now)
+          ElMessage.warning('终端输出过快，已跳过部分广播；正在重新同步')
+        }
         if (terminalId) reattachForGap(terminalId)
         return
       }
@@ -488,16 +504,19 @@ function bindWs(sessionId) {
           }
           const data = ev.payload.data || ''
           terminalOutputAppend(terminalId, { seq: nextSeq, data })
-          const replay = terminalOutputGetReplay(terminalId)
-          const next = {
+          const patch = {
             ...current,
             seq: ev.payload.seq,
-            replay,
-            previewReplay: replay.slice(-12_000),
             lastChunk: data,
           }
-          upsertTerminal(next)
-          maybeNotifyFurnaceCliState(next, sessionId)
+          const prevPreviewAt = previewReplayAt.get(terminalId) || 0
+          const now = Date.now()
+          if (now - prevPreviewAt >= PREVIEW_REPLAY_MS) {
+            previewReplayAt.set(terminalId, now)
+            patch.previewReplay = terminalOutputGetReplay(terminalId).slice(-12_000)
+          }
+          upsertTerminal(patch)
+          maybeNotifyFurnaceCliState(patch, sessionId)
         }
         return
       }

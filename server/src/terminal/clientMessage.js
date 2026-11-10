@@ -46,14 +46,21 @@ export function handleTerminalClientMessage(deps, ws, sessionId, raw) {
       if (entry.flushTimer) clearTimeout(entry.flushTimer)
       flushOutput(entry)
     }
+    const ATTACH_REPLAY_MAX = 512 * 1024
+    let attachReplay = entry.replay
+    let attachTruncated = !!entry.replayTruncated
+    if (attachReplay.length > ATTACH_REPLAY_MAX) {
+      attachReplay = attachReplay.slice(-ATTACH_REPLAY_MAX)
+      attachTruncated = true
+    }
     sendWs(ws, {
       type: 'terminal.snapshot',
       payload: {
         terminalId,
         terminal: publicTerminal(entry),
         seq: entry.seq,
-        data: entry.replay,
-        truncated: entry.replayTruncated,
+        data: attachReplay,
+        truncated: attachTruncated,
       },
     })
     return true

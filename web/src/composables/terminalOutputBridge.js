@@ -40,7 +40,8 @@ export function terminalOutputAppend(terminalId, { seq, data }) {
   e.seq = Math.max(e.seq, nextSeq)
   for (const fn of e.listeners) {
     try {
-      fn({ seq: nextSeq, data: chunk, replay: e.replay })
+      // Omit full replay on each chunk — listeners use drain API or getReplay (PERF-A2).
+      fn({ seq: nextSeq, data: chunk })
     } catch {
       /* ignore */
     }

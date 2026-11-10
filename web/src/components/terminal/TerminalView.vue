@@ -55,7 +55,12 @@ import {
 import {
   terminalOutputSubscribe,
   terminalOutputDrainPending,
+  terminalOutputGetReplay,
 } from '../../composables/terminalOutputBridge.js'
+import {
+  createTerminalWriteFlusher,
+  writeReplayInChunks,
+} from '../../composables/terminalWriteScheduler.js'
 import {
   clearTerminalFocusRegistration,
   registerTerminalFocus,
@@ -121,6 +126,10 @@ let lastDpr = typeof window !== 'undefined' ? window.devicePixelRatio : 1
 let unsubOutput = null
 let searchAddon = null
 let webglAddon = null
+let webglDisabled = false
+let writeFlusher = null
+let replayWriteGen = 0
+const REPLAY_CHUNK_THRESHOLD = 256 * 1024
 const forceSelection = ref(false)
 const ctxMenu = ref({ open: false, x: 0, y: 0 })
 // CLI-08: keeps keystroke order while a multi-line paste confirmation is open.
@@ -313,11 +322,69 @@ function fit(forceAtlasClear = false) {
   }
 }
 
-function resetToReplay(value) {
+function loadWebglAddon(prefs) {
+  if (webglDisabled || prefs.renderer === 'dom' || !xterm) return
+  try {
+    webglAddon = new WebglAddon()
+    webglAddon.onContextLoss(() => {
+      try {
+        webglAddon?.dispose()
+      } catch {
+        /* ignore */
+      }
+      webglAddon = null
+      clearAtlasAndRefresh()
+      if (webglDisabled) return
+      try {
+        webglAddon = new WebglAddon()
+        webglAddon.onContextLoss(() => {
+          webglDisabled = true
+          try {
+            webglAddon?.dispose()
+          } catch {
+            /* ignore */
+          }
+          webglAddon = null
+          clearAtlasAndRefresh()
+          ElMessage.warning('终端 GPU 渲染失效，已切换为兼容模式')
+        })
+        xterm.loadAddon(webglAddon)
+        clearAtlasAndRefresh()
+      } catch {
+        webglDisabled = true
+        clearAtlasAndRefresh()
+      }
+    })
+    xterm.loadAddon(webglAddon)
+  } catch {
+    webglDisabled = true
+    webglAddon = null
+  }
+}
+
+async function resetToReplay(value) {
   if (!xterm) return
   const text = String(value || '')
-  xterm.reset()
-  if (text) xterm.write(text)
+  const gen = ++replayWriteGen
+  writeFlusher?.clearPending()
+  if (!text) {
+    xterm.reset()
+    lastSeq = Number(props.terminal.seq || 0)
+    return
+  }
+  if (text.length <= REPLAY_CHUNK_THRESHOLD) {
+    xterm.reset()
+    xterm.write(text)
+  } else {
+    await writeReplayInChunks(xterm, text, {
+      signal: {
+        get cancelled() {
+          return gen !== replayWriteGen
+        },
+      },
+    })
+  }
+  if (gen !== replayWriteGen) return
   lastSeq = Number(props.terminal.seq || 0)
 }
 
@@ -371,28 +438,18 @@ onMounted(async () => {
     /* ignore */
   }
   if (!host.value?.isConnected || !xterm) return
-  if (prefs.renderer !== 'dom') {
-    try {
-      webglAddon = new WebglAddon()
-      webglAddon.onContextLoss(() => {
-        try {
-          webglAddon?.dispose()
-        } catch {
-          /* ignore */
-        }
-        webglAddon = null
-        try {
-          webglAddon = new WebglAddon()
-          xterm.loadAddon(webglAddon)
-        } catch {
-          /* fall back to canvas/DOM */
-        }
-      })
-      xterm.loadAddon(webglAddon)
-    } catch {
-      webglAddon = null
-    }
-  }
+  loadWebglAddon(prefs)
+  writeFlusher = createTerminalWriteFlusher({
+    write: (chunk) => {
+      if (!xterm || !props.active) return
+      try {
+        xterm.write(chunk)
+      } catch {
+        /* ignore */
+      }
+    },
+    isActive: () => props.active !== false,
+  })
   xterm.attachCustomKeyEventHandler((ev) => {
     if (ev.type !== 'keydown') return true
     if ((ev.ctrlKey || ev.metaKey) && String(ev.key || '').toLowerCase() === 'f') {
@@ -488,21 +545,24 @@ onMounted(async () => {
     emit('focus-change', true)
   })
   xterm.textarea?.addEventListener('blur', () => emit('focus-change', false))
-  resetToReplay(props.terminal.replay)
+  void resetToReplay(
+    terminalOutputGetReplay(props.terminal.id) || props.terminal.replay || '',
+  )
   for (const chunk of terminalOutputDrainPending(props.terminal.id, lastSeq)) {
-    if (chunk.data) xterm.write(chunk.data)
+    if (chunk.data) writeFlusher.enqueue(chunk.data)
     lastSeq = Math.max(lastSeq, chunk.seq)
   }
+  writeFlusher.flushPending({ force: true })
   unsubOutput = terminalOutputSubscribe(props.terminal.id, ({ seq, data, reset, replay }) => {
     if (!xterm) return
     if (reset) {
-      resetToReplay(replay)
+      void resetToReplay(replay ?? terminalOutputGetReplay(props.terminal.id))
       return
     }
     if (!data) return
     const nextSeq = Number(seq || 0)
     if (nextSeq > lastSeq + 1) emit('gap', { from: lastSeq, to: nextSeq })
-    xterm.write(data)
+    writeFlusher.enqueue(data)
     lastSeq = Math.max(lastSeq, nextSeq)
   })
   resizeObserver = new ResizeObserver(() => scheduleFit())
@@ -516,7 +576,11 @@ onMounted(async () => {
 
 watch(
   () => props.terminal.snapshotKey,
-  () => resetToReplay(props.terminal.replay),
+  () => {
+    void resetToReplay(
+      terminalOutputGetReplay(props.terminal.id) || props.terminal.replay || '',
+    )
+  },
 )
 
 watch(
@@ -524,6 +588,11 @@ watch(
   (on) => {
     if (!on) return
     nextTick(() => {
+      for (const chunk of terminalOutputDrainPending(props.terminal.id, lastSeq)) {
+        if (chunk.data) writeFlusher?.enqueue(chunk.data)
+        lastSeq = Math.max(lastSeq, chunk.seq)
+      }
+      writeFlusher?.flushPending({ force: true })
       fit(true)
       xterm?.focus()
       emit('focus-change', true)
@@ -550,6 +619,8 @@ onBeforeUnmount(() => {
   selectToCopyDisposable = null
   unsubOutput?.()
   unsubOutput = null
+  writeFlusher?.dispose()
+  writeFlusher = null
   clearTerminalFocusRegistration(xterm?.textarea)
   resizeObserver?.disconnect()
   resizeObserver = null

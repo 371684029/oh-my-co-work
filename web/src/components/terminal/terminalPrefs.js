@@ -58,5 +58,7 @@ export function defaultTerminalPrefs() {
     autoCollapseOnExit: false,
     scrollback: 5000,
     renderer: 'webgl',
+    /** GUI 模式解析熔炉 replay 的最小间隔（毫秒） */
+    guiTranscriptThrottleMs: 400,
   }
 }

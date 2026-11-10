@@ -33,6 +33,38 @@ test('terminal.attach returns snapshot for known terminal', () => {
   assert.equal(sent[0].payload.data, 'hello')
 })
 
+test('terminal.attach tails replay when attach payload would exceed 512KiB', () => {
+  const sent = []
+  const big = 'x'.repeat(600 * 1024)
+  const entry = {
+    id: 't1',
+    sessionId: 's1',
+    seq: 9,
+    replay: big,
+    replayTruncated: false,
+    status: 'running',
+    cols: 80,
+    rows: 24,
+  }
+  const ws = { readyState: 1, send: (raw) => sent.push(JSON.parse(raw)) }
+  handleTerminalClientMessage(
+    {
+      getEntry: (id) => (id === 't1' ? entry : null),
+      setWsTerminalAttach: () => {},
+      flushOutput: () => {},
+      publicTerminal: (e) => ({ id: e.id, status: e.status }),
+      killTerminal: () => {},
+    },
+    ws,
+    's1',
+    JSON.stringify({ type: 'terminal.attach', terminalId: 't1' }),
+  )
+  assert.equal(sent[0].type, 'terminal.snapshot')
+  assert.equal(sent[0].payload.truncated, true)
+  assert.equal(sent[0].payload.data.length, 512 * 1024)
+  assert.ok(sent[0].payload.data.endsWith('x'))
+})
+
 test('terminal.input rejects oversize payload', () => {
   const sent = []
   const entry = {

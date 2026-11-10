@@ -1,4 +1,8 @@
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import {
+  terminalOutputGetReplay,
+  terminalOutputSubscribe,
+} from './terminalOutputBridge.js'
 import {
   buildFurnacePtyAttachText,
   furnaceGuiTranscript,
@@ -60,6 +64,29 @@ export function useFurnaceWorkspace(props, emit, refs) {
   const uploading = ref(false)
   const uploadError = ref('')
   const stickBottom = ref(true)
+  const transcriptReplay = shallowRef('')
+  let transcriptUnsub = null
+  let transcriptThrottleTimer = 0
+  const transcriptThrottleMs = Math.max(
+    100,
+    Number(props.prefs?.guiTranscriptThrottleMs) || 400,
+  )
+
+  function refreshTranscriptReplay() {
+    const id = props.terminal?.id
+    if (!id) return
+    transcriptReplay.value =
+      terminalOutputGetReplay(id) || String(props.terminal.replay || '')
+  }
+
+  function scheduleTranscriptReplay() {
+    if (surface.value !== 'chat') return
+    if (transcriptThrottleTimer) return
+    transcriptThrottleTimer = window.setTimeout(() => {
+      transcriptThrottleTimer = 0
+      refreshTranscriptReplay()
+    }, transcriptThrottleMs)
+  }
 
   const { addLocalFiles, onFileInputChange, removePending } = useLocalUploads({
     pendingFiles,
@@ -85,14 +112,15 @@ export function useFurnaceWorkspace(props, emit, refs) {
   )
   const furnaceAgentKind = computed(() => inferFurnaceAgent(props.terminal))
 
-  const liveText = computed(() =>
-    furnaceGuiTranscript(props.terminal.replay || '', {
+  const liveText = computed(() => {
+    if (surface.value !== 'chat') return ''
+    return furnaceGuiTranscript(transcriptReplay.value || '', {
       cols: props.terminal.cols || 120,
       rows: props.terminal.rows || 40,
       maxLines: 2000,
       profile: furnaceAgentKind.value === 'cursor' ? 'cursor' : 'grok',
-    }),
-  )
+    })
+  })
   const showBody = computed(() => furnaceGuiReadable(liveText.value) || chatTurns.value.length > 0)
   const showFail = computed(() => isStopped.value && !showBody.value)
   const showWelcome = computed(() => !showBody.value && !showFail.value)
@@ -111,11 +139,14 @@ export function useFurnaceWorkspace(props, emit, refs) {
   )
 
   const cliBanner = computed(() =>
-    inferFurnaceCliBanner(props.terminal.replay || '', {
-      status: props.terminal.status,
-      exitCode: props.terminal.exitCode,
-      lastError: props.terminal.lastError || props.terminal.error?.message,
-    }),
+    inferFurnaceCliBanner(
+      transcriptReplay.value || props.terminal.previewReplay || props.terminal.replay || '',
+      {
+        status: props.terminal.status,
+        exitCode: props.terminal.exitCode,
+        lastError: props.terminal.lastError || props.terminal.error?.message,
+      },
+    ),
   )
 
   /** 干活面换表情：交互中用工作态，等人/结束用等待态，其余闲置 */
@@ -335,23 +366,41 @@ export function useFurnaceWorkspace(props, emit, refs) {
   )
 
   watch(liveText, () => {
+    if (surface.value !== 'chat') return
     syncAssistantFromTranscript()
     nextTick(scrollLog)
   })
 
   watch(
     () => props.terminal.id,
-    () => {
+    (id) => {
       chatTurns.value = []
       sent.value = []
-      nextTick(() => syncAssistantFromTranscript())
+      transcriptUnsub?.()
+      transcriptUnsub = null
+      if (transcriptThrottleTimer) {
+        clearTimeout(transcriptThrottleTimer)
+        transcriptThrottleTimer = 0
+      }
+      refreshTranscriptReplay()
+      if (id) {
+        transcriptUnsub = terminalOutputSubscribe(id, () => scheduleTranscriptReplay())
+      }
+      nextTick(() => {
+        if (surface.value === 'chat') syncAssistantFromTranscript()
+      })
     },
+    { immediate: true },
   )
 
   watch(surface, (mode) => {
     if (mode === 'tui') tuiEverShown.value = true
     if (mode === 'chat') {
-      nextTick(() => resolveFurnaceComposerEl(composerEl)?.focus?.())
+      refreshTranscriptReplay()
+      nextTick(() => {
+        syncAssistantFromTranscript()
+        resolveFurnaceComposerEl(composerEl)?.focus?.()
+      })
     }
     // FUR-02: switching GUI/TUI must not resize the live PTY; fit on next frame only.
     nextTick(() => window.dispatchEvent(new Event('resize')))
@@ -386,6 +435,12 @@ export function useFurnaceWorkspace(props, emit, refs) {
 
   onUnmounted(() => {
     furnaceWorkspaceOpen.value = false
+    transcriptUnsub?.()
+    transcriptUnsub = null
+    if (transcriptThrottleTimer) {
+      clearTimeout(transcriptThrottleTimer)
+      transcriptThrottleTimer = 0
+    }
   })
 
   return {
