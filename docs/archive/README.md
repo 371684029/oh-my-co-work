@@ -4,16 +4,18 @@
 
 ## 当前开发线（活跃）
 
-- [5.0.0-plan.md](../5.0.0-plan.md) · [5.1.0-plan.md](../5.1.0-plan.md) · [5.2.0-plan.md](../5.2.0-plan.md) · [5.3.0-plan.md](../5.3.0-plan.md) · [5.4.0-plan.md](../5.4.0-plan.md)
+- [plan-5.5.0.md](../plan-5.5.0.md) · [plan-5.6.0.md](../plan-5.6.0.md) · [plan-5.7.0.md](../plan-5.7.0.md)
 
 ## 历史线（只读，勿再勾选验收）
 
 | 文档 | 说明 |
 |------|------|
-| tui-2x-plan.md | 2.x 内嵌 TUI 实施计划（已合入主线能力） |
-| crucible-3x-plan.md | 3.x 熔炉计划（已封板） |
-| refactor-3.8-plan.md | 3.8 重构（已实施，人工冒烟待补） |
-| docs-4x-plan.md | 4.x 文档中心/更新计划 |
-| 4.7.0 / 4.8.0 / 4.9.0-plan.md | 4.x 末段发布线 |
+| plan-tui-2x.md | 2.x 内嵌 TUI 实施计划（已合入主线能力） |
+| plan-crucible-3x.md | 3.x 熔炉计划（已封板） |
+| plan-refactor-3.8.md | 3.8 重构（已实施，人工冒烟待补） |
+| plan-docs-4x.md | 4.x 文档中心/更新计划 |
+| plan-refine-search-4x.md | 4.5 炼化 / 4.6 模糊搜索计划（已实施核心） |
+| plan-4.7.0 / plan-4.8.0 / plan-4.9.0.md | 4.x 末段发布线 |
+| plan-5.0.0 ～ plan-5.4.0.md | 5.x 已发布版本计划（性能交互 / 全量优化 / 复制粘贴与通知 / 可追溯扩展 / 系统通知） |
 
 版本号单一来源：仓库根 `package.json` + `scripts/sync-docs-version.mjs` → `docs/README.md`。

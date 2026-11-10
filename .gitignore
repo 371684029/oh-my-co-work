@@ -10,3 +10,6 @@ web/dist/
 server/data/
 *.sqlite
 *.sqlite-journal
+opencode.jsonc
+opencode.jsonc.bak-*
+.omo/

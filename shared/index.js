@@ -80,7 +80,7 @@ export const GROK_BUILD_INSTALL = {
   configPathUnix: '~/.grok/config.toml',
   configPathWindows: '%USERPROFILE%\\.grok\\config.toml',
 }
-/** 熔炉角色壳：一次只装一套；情境包另见 crucible-3.2.md */
+/** 熔炉角色壳：一次只装一套；情境包另见 tech-crucible-3.2.md */
 export const FURNACE_ROLE = {
   SESSION: 'session',
   MEMBER_ADAPT: 'member_adapt',

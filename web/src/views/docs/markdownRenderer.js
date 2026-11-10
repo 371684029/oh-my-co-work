@@ -1,5 +1,5 @@
 // 文档中心 Markdown 渲染工厂（4.0）——纯逻辑，node 可直测。
-// 安全底线：html:false（MD 内嵌 HTML 一律转义）；链接三类行为见 docs-4x-plan.md §3.4。
+// 安全底线：html:false（MD 内嵌 HTML 一律转义）；链接三类行为见 plan-docs-4x.md §3.4。
 // 路径识别基于「原始文本」：markdown 会把 D:\work\a 的 \b 当转义吞掉，
 // 所以必须用 markdown-it 自定义规则在原始 text token 上做，不能渲染后补链接。
 import MarkdownIt from 'markdown-it'

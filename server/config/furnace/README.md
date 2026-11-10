@@ -2,7 +2,7 @@
 
 角色壳各一份 prompt、一份记忆种子。运行时装入当前侧重的一套，并拼上会话情境，写成 `data/furnace/ACTIVE.md`。默认是通用 Agent；系统审核与闸门更专业，不是能力上限。
 
-设计见 [docs/crucible-3.2.md](../../../docs/crucible-3.2.md)。
+设计见 [docs/tech-crucible-3.2.md](../../../docs/tech-crucible-3.2.md)。
 
 | 文件 | 作用 |
 | --- | --- |

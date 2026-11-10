@@ -589,15 +589,15 @@ function registerIpc() {
     if (platform === 'darwin') {
       hint =
         'macOS：在「系统设置 → 通知」中允许本应用；未签名/未公证包的通知行为可能受限。'
-      docPath = 'docs/NOTIFICATION-MANUAL-QA.md#macos-intel-或-apple-silicon'
+      docPath = 'docs/spec-qa-notification.md#macos-intel-或-apple-silicon'
     } else if (platform === 'linux') {
       hint = supported
         ? 'Linux：通知依赖 libnotify 与 DBus（GNOME/KDE 通常已具备）。'
         : 'Linux：未检测到可用通知通道。请安装 libnotify 并确保 DBus 会话运行（可试 notify-send）。'
-      docPath = 'docs/NOTIFICATION-MANUAL-QA.md#linux-gnome--kde'
+      docPath = 'docs/spec-qa-notification.md#linux-gnome--kde'
     } else if (platform === 'win32') {
       hint = 'Windows：若未弹出通知，请检查系统通知权限与专注助手；开发态需 AppUserModelID。'
-      docPath = 'docs/NOTIFICATION-MANUAL-QA.md#windows-10--11'
+      docPath = 'docs/spec-qa-notification.md#windows-10--11'
     }
     return { supported, platform, hint, docPath }
   })

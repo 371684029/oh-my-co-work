@@ -67,7 +67,7 @@
 - **面向谁**：需要把多步脚本与 Agent 串起来、关键点必须人拍板的个人开发者和小团队。单机优先，不替代 Cursor / Grok 本体。
 - **AI 放在哪一层**：**L3 流程嵌入**为主（群聊节点 + 人工闸门）；熔炉 Grok 提供 L2 代理；不做 L4 无人值守全自治。
 
-对外案例口径（标题、标签、层级、提效、规划）见 [案例博客](./docs/ai-case-blog.md)。
+对外案例口径（标题、标签、层级、提效、规划）见 [案例博客](./docs/product-ai-case-blog.md)。
 
 ## 使用场景
 
@@ -119,7 +119,7 @@
 
 点右侧桌宠「开熔炉」（或点两下头像）。本机已装且已登录 Grok 时直接铺满干活面；否则弹出 **Grok Build 教程**。
 
-熔炉 **没有** 自研一套 Grok HTTP 客户端：工作台用 node-pty 托管本机官方 `grok` CLI。原理见 [熔炉 Grok 客户端](./docs/crucible-grok-client.md)。
+熔炉 **没有** 自研一套 Grok HTTP 客户端：工作台用 node-pty 托管本机官方 `grok` CLI。原理见 [熔炉 Grok 客户端](./docs/tech-crucible-grok-client.md)。
 
 <img src="./docs/assets/screenshots/furnace-grok-guide.webp" alt="点熔炉桌宠后弹出的 Grok Build 教程" width="100%" />
 
@@ -270,35 +270,69 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 
 ## 文档
 
+文档按类别前缀命名（`plan-` 版本类 · `tech-` 技术类 · `spec-` 规范类 · `guide-` 指南类 · `product-` 产品类），规范详见 [docs/README.md](./docs/README.md)。
+
+**产品（product-）**
+
 | 文档 | 内容 |
 |------|------|
-| [案例博客](./docs/ai-case-blog.md) | 对外案例单一事实源：痛点、场景、AI 层级、提效与规划（对齐 4.2.0） |
-| [2.x TUI 设计](./docs/tui-2x.md) | 产品形态、PTY 架构、协议、安全与平台兼容 |
-| [2.x 实施计划](./docs/tui-2x-plan.md) | 2.0～2.3 阶段、测试、风险与完成定义 |
-| [3.x 熔炉设计](./docs/crucible-3x.md) | Grok Agent + 提示词适配；加人改代码 / 加适配节点；桌面亦名熔炉 |
-| [3.x 熔炉计划](./docs/crucible-3x-plan.md) | 3.0～3.7 阶段与完成定义 |
-| [3.5 熔炉 GUI / TUI](./docs/crucible-3.5.md) | 铺满干活面、缩小回三栏、GUI 与 TUI 同一进程 |
-| [3.7 熔炉封板](./docs/crucible-3.7.md) | 3.x 最终封板：chatgpt-pets 桌宠图集、头像、GUI 附件、PTY 宿主 |
-| [熔炉 GUI 可读正文](./docs/crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
-| [3.8 重构与加固计划](./docs/refactor-3.8-plan.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（已实施） |
-| [自测体系](./docs/selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
-| [4.x 协同文档中心计划](./docs/docs-4x-plan.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0）；检索导出（4.1.0）；更新检查与备份恢复（4.2.0） |
-| [4.8.0 双引擎 TUI](./docs/4.8.0-plan.md) | Cursor CLI + 熔炉、默认 TUI、桌面全屏；文内落地跟踪 |
-| [5.0.0 性能与交互优化（规划）](./docs/5.0.0-plan.md) | 内置 CLI / 熔炉精灵优化、性能基线、交互统一 |
-| [5.1.0 全量优化台账](./docs/5.1.0-plan.md) | CLI / 桌面壳 / 安全 / 发布；与 5.0 验收对齐 |
-| [5.2.0 全方位优化（进行中）](./docs/5.2.0-plan.md) | 熔炉 CLI 复制粘贴、炼化还原、文档中心入口 |
-| [5.3.0 可追溯与扩展](./docs/5.3.0-plan.md) | 步骤快照/回退、模板导入导出、命令面板、Agent 注册表 |
-| [5.4.0 系统通知](./docs/5.4.0-plan.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
-| [5.5.0 收尾 5.x 未完成项](./docs/5.5.0-plan.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA（NTF-T3/T4） |
-| [5.6.0 需求文档](./docs/5.6.0-plan.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
-| [5.7.0 需求文档](./docs/5.7.0-plan.md) | 打包链路一劳永逸与发布治理：纯 Node 压缩、Windows 原生打包+启动冒烟、发布重试、配置迁出安装目录、产物出 git、备份导入/导出统一 ZIP；剩运行时升级与签名 |
-| [5.8.0 熔炉/CLI 性能 II](./docs/5.8.0-plan.md) | 5.3.2 已落地项台账与后续增量 parse / 性能 HUD |
-| [4.9.0 文档中心与桌面图标](./docs/4.9.0-plan.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
-| [熔炉 Grok 客户端原理](./docs/crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
-| [脚本接入指南](./docs/script-guide.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
-| [数据存储](./docs/data-storage.md) | SQLite、Markdown、附件、日志与备份 |
-| [技术设计](./docs/technical-design.md) | Workflow、会话、节点、闸门与扩展设计 |
-| [演示指南](./docs/demo.md) | 从启动到跑通演示流 |
+| [案例博客](./docs/product-ai-case-blog.md) | 对外案例单一事实源：痛点、场景、AI 层级、提效与规划（对齐 4.2.0） |
+| [产品宗旨与验收](./docs/product-mvp.md) | MVP 做没做、验什么；各版本封板记录 |
+| [Logo 与品牌资产](./docs/product-brand-logo.md) | Logo 含义（左人 · 中文档 · 右机）与资产清单 |
+
+**指南（guide-）**
+
+| 文档 | 内容 |
+|------|------|
+| [演示指南](./docs/guide-demo.md) | 从启动到跑通演示流 |
+| [脚本接入指南](./docs/guide-script.md) | BAT / PowerShell / CLI、参数、cwd 与终端模式 |
+| [压缩包用户说明](./docs/guide-release-user.md) | 一键启动、平台要求与故障排查 |
+
+**技术（tech-）**
+
+| 文档 | 内容 |
+|------|------|
+| [技术设计](./docs/tech-design.md) | Workflow、会话、节点、闸门与扩展设计 |
+| [数据存储](./docs/tech-data-storage.md) | SQLite、Markdown、附件、日志与备份 |
+| [数据与工程清单](./docs/tech-data-and-ops.md) | 数据分层原则、稳定与扩展 P0–P4、待改进 backlog |
+| [2.x TUI 设计](./docs/tech-tui-2x.md) | 产品形态、PTY 架构、协议、安全与平台兼容 |
+| [3.x 熔炉设计](./docs/tech-crucible-3x.md) | Grok Agent + 提示词适配；加人改代码 / 加适配节点；桌面亦名熔炉 |
+| [3.5 熔炉 GUI / TUI](./docs/tech-crucible-3.5.md) | 铺满干活面、缩小回三栏、GUI 与 TUI 同一进程 |
+| [3.7 熔炉封板](./docs/tech-crucible-3.7.md) | 3.x 最终封板：chatgpt-pets 桌宠图集、头像、GUI 附件、PTY 宿主 |
+| [熔炉 GUI 可读正文](./docs/tech-crucible-gui-plain.md) | GUI 去 TUI 框线/底栏，只留能读的字 |
+| [熔炉 Grok 客户端原理](./docs/tech-crucible-grok-client.md) | 不调 Chat API；PTY 里跑官方 grok CLI |
+
+**规范（spec-）**
+
+| 文档 | 内容 |
+|------|------|
+| [自测体系](./docs/spec-selftest.md) | 测什么、怎么跑、表征测试/依赖注入/轮询等待三套路、发布闸门 |
+| [实机检查清单](./docs/spec-qa-checklist.md) | 三平台复制/粘贴/IME/缩放/通知勾选（5.2.0 TEST-07） |
+| [通知实机检查清单](./docs/spec-qa-notification.md) | 三平台通知权限、深链、托盘角标、勿扰（5.4.0 NTF-T3） |
+| [前端组件与 UI 约定](./docs/spec-frontend-components.md) | 优先 Element-Plus-X + UI 布局/氛围约定 |
+| [目录与模块边界](./docs/spec-directory-structure.md) | 仓库目录约定（对齐代码） |
+
+**版本计划（plan-）**
+
+| 文档 | 内容 |
+|------|------|
+| [2.x 实施计划](./docs/plan-tui-2x.md) | 2.0～2.3 阶段、测试、风险与完成定义 |
+| [3.x 熔炉计划](./docs/plan-crucible-3x.md) | 3.0～3.7 阶段与完成定义 |
+| [3.8 重构与加固计划](./docs/plan-refactor-3.8.md) | 引擎拆分、工作台拆分、ESLint 与令牌收紧（已实施） |
+| [4.x 协同文档中心计划](./docs/plan-docs-4x.md) | 聚合群报告/节点台账，左菜单右渲染，公告可编辑，链接可点（4.0.0）；检索导出（4.1.0）；更新检查与备份恢复（4.2.0） |
+| [4.5/4.6 炼化与搜索计划](./docs/plan-refine-search-4x.md) | 熔炉炼化与全局模糊搜索实施计划（已实施核心） |
+| [4.7～5.x 总纲](./docs/plan-4.7.0.md) | 早期演进大纲（4.8/4.9 细节见下两份） |
+| [4.8.0 双引擎 TUI](./docs/plan-4.8.0.md) | Cursor CLI + 熔炉、默认 TUI、桌面全屏；文内落地跟踪 |
+| [4.9.0 文档中心与桌面图标](./docs/plan-4.9.0.md) | Logo 托盘/exe、炼化 Skill、群报告并入文档中心；文内落地跟踪 |
+| [5.0.0 性能与交互优化](./docs/plan-5.0.0.md) | 内置 CLI / 熔炉精灵优化、性能基线、交互统一 |
+| [5.1.0 全量优化台账](./docs/plan-5.1.0.md) | CLI / 桌面壳 / 安全 / 发布；与 5.0 验收对齐 |
+| [5.2.0 全方位优化](./docs/plan-5.2.0.md) | 熔炉 CLI 复制粘贴、炼化还原、文档中心入口 |
+| [5.3.0 可追溯与扩展](./docs/plan-5.3.0.md) | 步骤快照/回退、模板导入导出、命令面板、Agent 注册表 |
+| [5.4.0 系统通知](./docs/plan-5.4.0.md) | 桌面通知分级、深链、托盘角标、任务栏/Dock |
+| [5.5.0 收尾 5.x 未完成项](./docs/plan-5.5.0.md) | 备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA（NTF-T3/T4） |
+| [5.6.0 需求文档](./docs/plan-5.6.0.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
+| [5.7.0 需求文档](./docs/plan-5.7.0.md) | 打包链路一劳永逸与发布治理：纯 Node 压缩、Windows 原生打包+启动冒烟、发布重试、配置迁出安装目录、产物出 git、备份导入/导出统一 ZIP；剩运行时升级与签名 |
+| [5.8.0 熔炉/CLI 性能 II](./docs/plan-5.8.0.md) | 5.3.2 已落地项台账与后续增量 parse / 性能 HUD |
 
 ## 路线图
 
@@ -331,16 +365,16 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 4.8.0：群聊第三栏 Cursor CLI / 熔炉双 Tab、独立 PTY；熔炉默认 TUI；桌面启动全屏；熔炉默认通用 Agent（审核/闸门更专业）
 - [x] 4.9.0：托盘与 `oh-my-co-work.exe` 用首页 Logo；第三栏只留文档中心；炼化 Skill 可复制；设置抽屉不被桌宠挡住
 - [x] 4.9.1：顶栏缩放；一键备份改为一键导入；文档中心飞书风阅读样式；熔炉精灵缩小约 1/3 且设置页可见；修复终端粘贴后无法输入
-- [x] 5.0.0：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/5.0.0-plan.md](./docs/5.0.0-plan.md)
-- [x] 5.1.0：全量优化台账——CLI / 桌面壳 / 安全 / 发布，多数已合入，残留 bracket 见 [docs/5.1.0-plan.md](./docs/5.1.0-plan.md)
-- [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/5.2.0-plan.md](./docs/5.2.0-plan.md)
-- [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/5.3.0-plan.md](./docs/5.3.0-plan.md)
+- [x] 5.0.0：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/plan-5.0.0.md](./docs/plan-5.0.0.md)
+- [x] 5.1.0：全量优化台账——CLI / 桌面壳 / 安全 / 发布，多数已合入，残留 bracket 见 [docs/plan-5.1.0.md](./docs/plan-5.1.0.md)
+- [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/plan-5.2.0.md](./docs/plan-5.2.0.md)
+- [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/plan-5.3.0.md](./docs/plan-5.3.0.md)
 - [x] 5.3.1：熔炉卡死修复——节点快照/步骤回退 git 全异步（旧 execFileSync 每节点最多 6 次同步 git 卡事件循环）、Windows taskkill 非阻塞、PTY spawn 命令缓存、终端回放缓冲与通知 Map 防泄漏
-- [x] 5.3.2：熔炉与内置 CLI 性能 II——xterm 按帧合并写入、大块 replay 分片灌入、WebGL 黑屏兜底、WS 输出不再每包刷新 Vue replay、熔炉 GUI 解析节流、单 xterm 切换 Agent、attach 回放 tail 512KB，见 [docs/5.8.0-plan.md](./docs/5.8.0-plan.md)
-- [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/5.4.0-plan.md](./docs/5.4.0-plan.md)
-- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/5.5.0-plan.md](./docs/5.5.0-plan.md)
-- [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/5.6.0-plan.md](./docs/5.6.0-plan.md)
-- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10、14~16 已落地（纯 Node zip/tar 去系统工具依赖、Windows runner 原生打包+真机启动冒烟、Release 缺 win32 包即阻断+上传 5 次重试、产物只发 Release、配置迁至数据目录、备份导入/导出统一 ZIP、熔炉预置 acw-ctl.mjs 管理 CLI、文档中心新增「节点炼化与还原」（源码 diff 与一键还原）、桌面窗口不盖任务栏、熔炉 Grok/Cursor 切换保活不截断且等宽字体/WebGL 图集对齐不乱码、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/5.7.0-plan.md](./docs/5.7.0-plan.md)
+- [x] 5.3.2：熔炉与内置 CLI 性能 II——xterm 按帧合并写入、大块 replay 分片灌入、WebGL 黑屏兜底、WS 输出不再每包刷新 Vue replay、熔炉 GUI 解析节流、单 xterm 切换 Agent、attach 回放 tail 512KB，见 [docs/plan-5.8.0.md](./docs/plan-5.8.0.md)
+- [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/plan-5.4.0.md](./docs/plan-5.4.0.md)
+- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/plan-5.5.0.md](./docs/plan-5.5.0.md)
+- [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/plan-5.6.0.md](./docs/plan-5.6.0.md)
+- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10、14~16 已落地（纯 Node zip/tar 去系统工具依赖、Windows runner 原生打包+真机启动冒烟、Release 缺 win32 包即阻断+上传 5 次重试、产物只发 Release、配置迁至数据目录、备份导入/导出统一 ZIP、熔炉预置 acw-ctl.mjs 管理 CLI、文档中心新增「节点炼化与还原」（源码 diff 与一键还原）、桌面窗口不盖任务栏、熔炉 Grok/Cursor 切换保活不截断且等宽字体/WebGL 图集对齐不乱码、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/plan-5.7.0.md](./docs/plan-5.7.0.md)
 - [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
 
 ## 参与项目

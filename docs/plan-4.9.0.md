@@ -1,0 +1,70 @@
+# 4.9.0 计划：文档中心、炼化 Skill、桌面图标
+
+> 文档位置：`docs/plan-4.9.0.md`（随版本维护，对照落地）
+
+## 落地跟踪（对照实现）
+
+### 已落地
+
+- 托盘、窗口、启动 splash 使用首页 Logo（`electron/icon.png` / `icon.ico`，由 `web/public/logo-mark.jpg` 生成）
+- Windows 桌面包入口改为 `desktop/oh-my-co-work.exe`（不再裸 `electron.exe`），打包时写入 ICO
+- `skills/agent-refine-skill/`：外部 Agent 可手动把输入/diff/结论写回文档中心
+- 成员抽屉「炼化 skills」：复制 Skill 指令；群步骤可继承成员炼化
+- 第三栏去掉独立「群报告」栏，只留 **文档中心**（备注 / 系统打开 MD / 刷新报告仍在此）
+- 文档中心窄栏标题横排、自然换行（不再单字竖排）
+- 设置抽屉 `append-to-body`，炼化勾选不被桌宠挡住
+- **勾选炼化并保存**：立刻改源脚本（`ACW-REFINE` 契约：ACW 输入环境变量 + stdout 标题），备份到 `data/backups/refine`；跑完再写入文档中心
+
+### 仍待
+
+- macOS / Linux 桌面壳与同套图标策略
+- 外部 Agent 炼化 skill 的更完整台账模板与自动化触发（现以手动复制指令为主）
+- 无边框窗口 / 原生 vibrancy 等桌面材质（见 `docs/plan-4.8.0.md` 仍待）
+
+---
+
+## 原文规划（保留备查）
+
+## 核心目标
+
+1. **EXE 启动脚本与统一应用图标**：
+   - 完善 `.exe` 格式启动脚本（或 packaging 策略），统一系统托盘（System Tray）与 EXE 文件图标，直接复用首页默认应用 Logo（`web/src/assets/logo.svg` / `electron/icon.png`）。
+2. **agent 炼化 skill 特色技能 (手动主动同步)**：
+   - 在根目录 `skills/agent-refine-skill/` 下提供特色技能。
+   - 当使用第三方 Agent（如 Cursor CLI 等非 cowork 后台可实时监控的外部 Agent）时，第三方 Agent 可通过手动/命令行方式调用此技能，主动将本次改动的输入、输出及结论传输并同步至文档中心。
+   - 成员管理中添加“炼化 skills”选项，并提供一键复制技能 Prompt / 调起指令功能。
+3. **文档中心与群报告功能合并**：
+   - 统一合并“群报告”与“文档中心”视图，统称为 **文档中心**。
+   - 优化右侧栏与文档中心 UI，解决狭窄宽度下文字出现单字竖排的问题，支持整行自然换行与弹性缩放。
+
+## 模块规划详情
+
+### 1. 桌面端应用图标与启动打包策略 (Launcher & Icon Unification)
+
+- **图标统一**：将 Electron 托盘 (Tray)、主窗口及打包 `.exe` 图标统一映射至应用默认的主 Logo 图标。
+- **启动支持**：优化 Windows 下通过脚本/EXE 直接启动服务与 Electron 外壳流程。
+
+### 2. 特色 Skill：agent 炼化 skill (`skills/agent-refine-skill/SKILL.md`)
+
+- **功能定位**：外部第三方 Agent 炼化与主动同步技能。
+- **使用场景**：第三方 Agent 运行在 cowork 后台监听范围之外，通过手动调用此 skill 主动上报。
+- **工作机制**：
+  1. 外部 Agent 执行时，读取/调用本 skill 的指令。
+  2. 提取本次外部 Agent 的用户输入、改动代码 diff 及阶段性输出结论。
+  3. 格式化生成“外部 Agent 炼化台账”并写回文档中心。
+- **成员配置扩展**：成员编辑抽屉中增加“炼化 skills”选项，提供一键复制技能指令文本。
+
+### 3. 文档中心与群报告合并 UI 优化 (Unified Docs Hub UI)
+
+- **功能合并**：在 Workbench 第三栏（右侧栏）将原来的“群报告”与“文档中心”合并为一个“文档中心”选项卡。
+- **UI 排版排查与美化**：
+  - 修复 `.docs-rail-title`、`.announce-title` 在窄屏下垂直单字竖排问题（明确 `writing-mode: horizontal-tb; white-space: normal; word-break: break-word;`）。
+  - 改善按钮与工具栏排版布局，确保在不同窗口分辨率下整行排版清晰自然。
+
+## 验收（4.9）
+
+- [x] 托盘与 `oh-my-co-work.exe` 图标为首页 Logo
+- [x] 第三栏只有文档中心，不再并排「群报告」
+- [x] 成员可复制炼化 Skill 指令
+- [x] 窄栏标题不竖排
+- [x] 设置里炼化 / 内嵌终端抽屉可操作

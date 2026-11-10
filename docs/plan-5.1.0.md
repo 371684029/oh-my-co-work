@@ -1,0 +1,209 @@
+# 5.1.0 计划：全量优化清单（桌面端优先）
+
+> 本文是 **5.1.0 的唯一优化台账**：此前审查出的全部问题，加上本轮补充的新问题，统一归入 5.1.0。
+> 与 `docs/plan-5.0.0.md` 的关系：5.0.0 定目标与验收（性能 / 交互达到"能用"），本文列具体到文件的问题、优先级与状态；5.0.0 做不完的项顺延到这里。
+> 维护方式：每条带编号，修复后把 `[ ]` 改成 `[x]` 并写上版本号；新增问题追加到对应章节末尾。审查基线：`main` @ 4.9.1。
+>
+> **落地记录（2026-10-14，首批）**：CLI-01/03/04/05/07/08/13/17、DESK-01/02/03、SRV-02、PET-01 已改并加测试（server 219 通过、web 48、electron 17）。CLI-01/DESK-01 属 [待实机验证]，仍需 Windows/macOS 桌面复验。详见 `CODE_CHANGE.md`。
+>
+> 标注说明：
+> - **[代码确认]** 通过阅读代码可直接确认。
+> - **[待实机验证]** 逻辑上很可能成立，但依赖 Windows / macOS 桌面环境，需要实机复现后再改。
+> - 优先级：**P0** 阻断使用；**P1** 明显影响体验；**P2** 打磨项。
+
+---
+
+## 一、内置 CLI（cursor-cli / grok）——最不好用的部分
+
+涉及：`web/src/components/terminal/*`、`web/src/views/workbench/composables/useTerminalSessions.js`、`server/src/terminal/terminalService.js`、`server/src/furnaceSituation.js`、`server/src/grokStatus.js`。
+
+### 1.1 能不能启动
+
+- [x] **CLI-01 P0 [待实机验证 · 5.1.0 已改 PATHEXT 选择] Windows 上 `where` 取第一条结果可能是无扩展名的 shell 脚本**
+  `resolveWindowsExecutable()`（`terminalService.js`）直接取 `where` 输出第一行。npm/官方安装的全局命令通常同时存在 `cursor-agent`（sh 脚本）、`cursor-agent.cmd`、`cursor-agent.ps1`，`where` 会把无扩展名文件排在前面，交给 `node-pty` 会启动失败（"File not found" 或无法执行）。
+  建议：只在结果里挑扩展名属于 `PATHEXT`（`.exe/.cmd/.bat`）的条目，优先 `.exe`；`.cmd/.bat` 走 `cmd.exe /d /s /c`；`.ps1` 走 `powershell -NoProfile -File`。补单测覆盖多结果顺序。
+- [x] **CLI-02 P0 [待实机验证 · 5.2.0 已改 PATH 增补] macOS 桌面包从 Finder/Dock 启动时 PATH 不含用户 shell 的 PATH**
+  Electron GUI 进程不继承登录 shell 的 PATH，`cursor-agent` / `grok` 常装在 `~/.local/bin`、`~/.cursor/bin`、homebrew 目录，探测会误报"未安装"。
+  建议：服务端启动时补齐常见目录到 `PATH`（或一次性 `$SHELL -ilc 'echo $PATH'` 取回并缓存），设置页允许填写绝对路径并提供"测试启动"按钮。
+- [x] **CLI-03 P1 [代码确认 · 5.1.0] 探测与启动逻辑重复且同步阻塞**
+  `commandOnPath()`（`grokStatus.js`）、`resolveWindowsExecutable()`（`terminalService.js`）都用 `spawnSync` 调 `where/which`，在服务端主线程上阻塞，每次状态探测/开终端都会触发。
+  建议：合并为单一"命令解析器"，异步执行并缓存（带 TTL，设置变更时失效）；超时与错误信息回传给 UI。
+- [x] **CLI-04 P1 [代码确认 · 5.1.0] Cursor CLI 的"已登录"永远是 `false`，且没有就绪检查**
+  `probeCursorStatus()` 硬编码 `loggedIn: false`、`ready = installed`，用户未登录时进入终端只会看到 CLI 自己的报错。
+  建议：启动前探测登录态（如 `agent status`）或在终端首屏检测到未登录关键字后，在界面顶部给出"去登录"引导。
+- [x] **CLI-05 P1 [代码确认 · 5.1.0] 启动失败信息只写进终端回放，界面无结构化提示**
+  `catch` 里仅 `queueOutput('启动失败：…')`，用户容易以为是"卡住"。建议终端卡片顶部显示失败原因、命令全文、cwd、可复制的诊断信息，并提供"重试 / 打开设置 / 复制诊断"。
+
+### 1.2 能不能输入（粘贴、大文本、焦点）
+
+- [x] **CLI-06 P0 粘贴后无法再输入**——`window.confirm` 抢走焦点。4.9.1 已改为非阻塞确认并恢复焦点。**仍需补回归用例**（见 CLI-09）。
+- [x] **CLI-07 P0 [代码确认 · 5.1.0 客户端分块 + 服务端结构化报错] 大段粘贴会被服务端直接拒绝**
+  服务端 `MAX_INPUT_CHARS = 16_384`，超限返回 `INPUT_TOO_LARGE` 且**整段丢弃**；客户端一次 `onData` 就整段发送。向 CLI 粘贴长提示词/日志很容易超限，表现为"粘贴没反应"。
+  建议：客户端按 1～4KB 分块并带小间隔顺序发送（ConPTY 对一次性大写入也不稳定），服务端对超限给出明确 toast，必要时提高上限并改为按字节节流而不是整段拒绝。
+- [x] **CLI-08 P1 [代码确认 · 5.1.0] 粘贴确认期间的输入顺序与丢失**
+  4.9.1 的确认框是异步的：确认前用户继续敲的字符会先发出，确认后粘贴内容才发出，**顺序被打乱**；取消时则静默丢弃。
+  建议：确认期间缓冲后续输入并按序放行；或默认关闭"多行粘贴确认"，改用 bracketed paste（CLI 自己区分粘贴与回车），仅在内容含危险模式（如 `rm -rf`）时提示。
+- [x] **CLI-09 P1 [代码确认 · 5.2.0 终端焦点守卫 composable + 粘贴确认恢复] 终端焦点缺少统一守卫**
+  弹窗、抽屉、精灵点击、标签切换后的焦点恢复分散在各处（`TerminalView.vue` 里 `watch(active)`、确认框 `finally`）。建议抽出"终端焦点守卫"：记录最后一个活动终端，任何浮层关闭/路由回到工作台时恢复焦点；补前端测试（至少模拟 `focus-change` 事件序列）。
+- [x] **CLI-10 P2 [5.2.0 CP-18 组合输入守卫] IME（中文输入法）与快捷键**
+  需实机验证组合输入时的光标位置、`Ctrl/Cmd+C/V`、右键菜单复制粘贴、选区复制是否一致；Windows 下 `Ctrl+C` 在有选区时应复制而不是中断进程。
+
+### 1.3 输出是否流畅、是否丢内容
+
+- [x] **CLI-11 P1 [代码确认 · 5.2.0 terminalOutputBridge] 前端每个输出块都重写整个终端对象，字符串反复拼接/截断**
+  `useTerminalSessions.js` 的 `terminal.output` 分支每次都：拼接 `replay`（256K 再 `slice`）、拼接 `previewReplay`、`upsertTerminal` 里 `map` 整个数组并生成新对象——大量输出时产生持续的 GC 与 Vue 响应式触发。
+  建议：`replay` 不放进响应式状态（用普通 Map 或 `shallowRef` + 环形缓冲），xterm 直接消费原始数据块；预览缓冲只在预览可见时维护。
+- [x] **CLI-12 P1 [代码确认 · 5.2.0 输出订阅队列 + rAF 写入] 依赖 `lastChunk` + `seq` 的 watch 传递输出，存在丢块风险**
+  `TerminalView.vue` 只在 `seq` 变化时写入 `lastChunk`。如果同一渲染周期内收到多个输出块，中间块不会被写入 xterm，只有 `gap` 检测（`seq > last+1`）才会触发重新附着，且重新附着会 `reset()` 清屏重放，用户会看到闪屏。
+  建议：改为事件/队列方式（每个块入队，rAF 合并后一次 `xterm.write`），去掉对 watch 合并行为的依赖。
+- [x] **CLI-13 P1 [代码确认 · 5.1.0] 序号缺口时用 `ElMessage.info` 打扰用户，并在两处重复触发**
+  `terminal.output` 分支与 `onTerminalSeqGap` 都会发送 attach 并弹提示，可能连续弹窗。应合并为一次静默重新附着，只在连续失败时提示。
+- [x] **CLI-14 P1 [5.2.0 attach 订阅 + 背压 · 见 5.2.0] 输出广播给会话内所有 WebSocket 客户端，且无背压**
+  `emitTerminal()` 走会话总线，大量输出时每个客户端都收全量 JSON（含转义）。建议：按终端订阅（attach 的客户端才推送），WS 缓冲积压时丢帧并要求重新附着；二进制/批量编码以减小体积。
+- [x] **CLI-15 P2 [代码确认 · 5.2.0 fit 120ms 防抖] resize 抖动**
+  `fit()` 在 `ResizeObserver` 每次回调都执行并发送 `resize`，窗口拖动/缩放（含新增的缩放控件）时会高频下发。建议 100～150ms 防抖，且尺寸未变化时不发送。
+- [x] **CLI-16 P2 [5.2.0 截断 attach 后 SIGWINCH resize] 回放截断后体验**
+  服务端回放上限默认 256KB；TUI（全屏重绘类程序）回放截断后重放可能出现错位。建议对 TUI 终端在 attach 时优先请求 CLI 重绘（发送 resize 触发 SIGWINCH）而非依赖字符流回放。
+
+### 1.4 稳定性与生命周期
+
+- [x] **CLI-17 P1 [代码确认 · 5.1.0] 终端状态全在内存，服务重启即丢**
+  `terminals` 是进程内 `Map`，数据库只存元信息。桌面端后台服务异常退出/重启后，终端条目消失、PTY 子进程可能成为孤儿。建议：启动时把数据库里仍为 `running/starting` 的记录标记为 `interrupted`，并清理遗留进程；UI 显示"已中断，可重启同配置会话"。
+- [x] **CLI-18 P1 [5.3.0 before-quit releaseAllResources + taskkill /T · 实机验证待补] 退出应用时的进程树回收**
+  `electron/main.js` 在 `before-quit` 调 `stopChild(serverChild)`（Windows 用 `taskkill /T /F`）。若 Electron 崩溃或被任务管理器结束，服务端与其下全部 PTY 子进程不会被回收。建议服务端监听父进程存活（IPC 通道或心跳），父进程消失则自杀并回收子进程树。
+- [x] **CLI-19 P2 [5.2.0+ terminalService 并发/日志配额提示 · 全局 UI 汇总待补] 并发与配额提示**
+  达到并发上限（默认 8）时只返回错误摘要；建议在 UI 列出占用者并提供"停止最久未用终端"快捷操作。
+
+---
+
+## 二、桌面壳（Electron）
+
+涉及：`electron/main.js`、`electron/preload.js`、`electron/lib/*`。
+
+- [x] **DESK-01 P0 [待实机验证 · 5.1.0 已改 preload.cjs] 预加载脚本可能根本没有生效**
+  `preload.js` 使用 ESM `import`，且 `package.json` 为 `"type": "module"`，窗口却开启了 `sandbox: true`。沙箱预加载**不支持 ESM**，通常会直接报错，导致 `window.__ACW_DESKTOP_API__` 缺失——系统通知、最小化到托盘、更新通道以及 4.9.1 新增的原生缩放都会静默回退。
+  建议：把预加载改为 `preload.cjs`（`require('electron')`，仅使用沙箱允许的模块）；在 `electron/test` 里加一条"preload 能被沙箱加载并暴露 API"的测试；渲染进程在 API 缺失时给出可见的诊断（设置 → 关于）。
+- [x] **DESK-02 P1 [代码确认 · 5.1.0] 端口被占用时会"复用任意服务"**
+  `ensureServer()` 只要 `3780` 端口健康检查通过就认为是自己的服务。若端口上是别的版本/别的实例，会加载错误的后台。建议握手校验（版本号 + 实例 ID），不匹配则换端口并提示。
+- [x] **DESK-03 P1 [代码确认 · 5.1.0] 单窗口、关闭即隐藏到托盘的行为缺少提示**
+  `close` 事件在托盘可用时直接 `hide()`，首次关闭没有任何说明，用户会以为程序退出了或仍在占用资源。建议首次提示 + 设置里可选"关闭时退出"。
+- [x] **DESK-04 P1 [5.3.0 splash 进度条 + 分阶段文案 · IPC 细粒度待补] 启动串行且无进度**
+  流程为 `splash → ensureServer(最多 60s) → loadWorkbench`。失败时只有一个错误框。建议在启动页展示阶段进度（启动后台 / 迁移数据 / 加载界面），超时给出"查看日志 / 重试"。
+- [x] **DESK-05 P2 [5.2.0 缩放菜单 Cmd/Ctrl+/-/0 · 日志/更新等待补] 菜单栏与快捷键**
+  默认菜单（File/Edit/View/Window/Help）未定制：缺少缩放（`Ctrl +/-/0`）、重新加载、打开日志目录、检查更新等桌面应用应有项；应与 4.9.1 的缩放控件联动同步百分比。
+- [x] **DESK-06 P2 [5.3.0 同 DSK-05 用户目录 · 浏览器模式仍用安装 data/] 数据目录位置**
+  用户数据与 Electron profile 都放在应用目录 `data/` 下。覆盖解压升级、安装到只读目录（macOS `.app`、Program Files）时会出问题。建议默认放到系统用户数据目录，并提供迁移与"打开数据目录"入口。
+- [ ] **DESK-07 P2 [5.3.0 pack-release 三平台 runtime + Win desktop（见 packages/README） · macOS/Linux Electron/签名待补] 三平台桌面包**
+  目前只有 Windows 桌面包；macOS/Linux 仍是轻量运行包。需要补签名/公证（macOS）、安装器与自动更新通道（见路线图）。
+
+---
+
+## 三、熔炉精灵
+
+涉及：`web/src/components/FurnaceSprite.vue`、`web/src/composables/furnacePetAtlas.js`、`FurnaceAvatar.vue`。
+
+- [x] **PET-01 P1 [代码确认 · 5.1.0] 动画由 `setTimeout` 链驱动并常驻**
+  即使窗口隐藏/最小化到托盘、或全屏终端遮挡时仍在计时更新帧。建议：监听 `visibilitychange` 与精灵可见性（`IntersectionObserver`）暂停；改用 CSS `steps()` 动画或 rAF 并统一时钟。
+- [x] **PET-02 P1 [5.3.0 默认贴右下缘半收起 + 右栏避让 · 尺寸三档待补] 遮挡主操作区**
+  4.9.1 已缩小约三分之一，但默认落点仍在右侧中部，会压住右栏的"待确认/流程"卡片（见最近截图）。建议：默认贴边半收起、仅悬停展开；对右栏卡片区域做避让；设置里提供"不显示 / 小 / 中"三档。
+- [x] **PET-03 P2 [5.3.0 气泡 translateX 贴边 · 拖拽边界已有 resize] 气泡与拖拽**
+  气泡宽度固定、靠近窗口边缘会被裁剪；拖拽位置未在窗口缩放/改变大小后做边界校正。
+- [x] **PET-04 P2 [5.3.0 ui.furnacePet + furnacePetPolicy · 设置 UI 待补] 全局显示策略不统一**
+  现在仅"文档中心页、熔炉工作区打开时"隐藏。建议集中成一个可配置项（工作台 / 设置 / 文档 / 终端全屏分别开关）。
+- [x] **PET-05 P2 [5.3.0 动态 import 图集 · 减动效静态帧待补] 精灵图集体积与加载**
+  图集随前端打包，首屏即加载。建议懒加载并在 `prefers-reduced-motion` 下只载静态首帧。
+
+---
+
+## 四、前端性能与结构
+
+- [ ] **FE-01 P1 [5.3.0 sessionLoadActions + composerPanel* + insert/keydown · Furnace 子组件 · useSessionDetail ~615 行待拆] 超大单文件拖慢维护与热更新**
+  `useSessionDetail.js`（~2300 行）、`FurnaceWorkspace.vue`（~1200 行）、`DocsHub.vue`（~1000 行）、`routes.js`（~1000 行）。建议按职责拆分（列表/详情/消息/终端桥/熔炉同步），并为拆分后的模块补 pure logic 测试。
+- [x] **FE-02 P1 [5.3.0 coalescedReload 合并 WS 触发 · 增量载荷待补] 会话详情靠整体重载**
+  WS 收到 `message / node.status / session.status` 等事件后直接 `loadDetail()` 全量拉取并刷新会话列表。建议：事件携带增量载荷并就地合并；合并同一帧内的多次事件，降低请求数。
+- [x] **FE-03 P1 [5.3.0 vite manualChunks · Element 按需/路由懒加载待补] 首屏体积**
+  构建已提示 chunk 过大。建议：Element Plus 按需引入、`xterm` 与文档中心路由懒加载、`manualChunks` 拆分第三方依赖。
+- [x] **FE-04 P2 [5.3.0 docsRenderCache LRU · 分段/虚拟化待补] 文档中心渲染**
+  大文档一次性 `v-html`；建议渲染结果缓存、超长文档分段/虚拟化，并补目录大纲与锚点（飞书式阅读体验后续项）。
+- [x] **FE-05 P2 [5.2.0 uiZoom + 桌面菜单同步] 缩放控件**
+  4.9.1 的缩放网页端使用 CSS `zoom`，在 `100vh` 与 `position: fixed` 的布局下可能出现留白或溢出；应在三栏布局、满屏终端（Teleport 到 body）和精灵位置上逐一回归，并考虑改用 `transform` 或仅桌面端提供。
+- [x] **FE-06 P2 [5.3.0 已无 window.confirm/alert · acwConfirm/ElMessageBox] 原生对话框清理**
+  仍有 `window.confirm / alert` 残留的地方（以代码搜索为准）统一改为非阻塞组件，避免再次出现抢焦点问题。
+
+---
+
+## 五、服务端与数据
+
+- [ ] **SRV-01 P1 [5.3.0 异步 restore/backup CLI + HTTP createBackupAsync · sync @deprecated 仅单测边界 · restoreBackupUnlockedAsync + CLI async 单测 · 生产路径无 sync restore] 同步阻塞调用**
+  除 `spawnSync(where/which)` 外，备份/恢复（`backup.js`）原使用同步 `tar`、`fs.cpSync/rmSync`，大数据量会阻塞整个服务。5.5.0 已将 HTTP/CLI 备份还原、文件树安全检查、暂存目录清理及列表扫描改为异步；同步 SQLite 校验/检查点/重新初始化和进度反馈仍待处理。
+- [x] **SRV-02 P1 [代码确认 · 5.1.0] 备份导入把整个文件读入内存**
+  4.9.1 的 `POST /api/backup/import` 使用 `express.raw({ limit: '2gb' })`，整包进内存后再写盘。建议改为流式落盘（`req.pipe(fs.createWriteStream)`），限制并发，并在导入前展示备份元信息（版本、会话数、大小）供确认；导入失败的临时文件清理要覆盖所有异常路径。
+- [x] **SRV-03 P2 [5.3.0 requireLocalAccess + X-ACW-Token · 远程绑定待补] 本地接口鉴权**
+  接口依赖 `X-ACW-Token` 与来源校验；导入/删除等高风险接口建议再加一次性确认令牌，并记录审计日志。
+- [x] **SRV-04 P2 [5.3.0 terminal/{ptyLaunch,terminalLog,terminalOutput,terminalLifecycle,terminalQuota,terminalPersist,terminalRun,...} + runners/* · terminalService ~120 行 + runners 桶] `runners.js` 与 `terminalService.js` 职责过重**
+  启动解析、配额、日志、回放、适配器、WS 协议都在同一文件。拆分后更利于加入"终端诊断面板"与自动化测试。
+- [x] **SRV-05 P2 [5.2.0+ terminalService quota · 全局提示 UI 待补] 日志与回放配额**
+  终端日志默认每终端 10MB、保留 200 个已结束终端，长期使用磁盘增长缺乏可视化；建议在设置里显示占用并提供清理。
+
+---
+
+## 六、测试与可观测
+
+- [x] **TEST-01 P1 [5.3.0 smoke-chain 进 test:electron · Playwright 全 GUI 待补] 缺少桌面端自动化冒烟**
+  现有 `electron/test` 只测 URL、图标、`start.bat`。建议加：Electron 启动 → 加载工作台 → 打开终端 → 粘贴/输入/回车 → 关闭的冒烟脚本（可用 `playwright` 的 Electron 支持），并纳入 CI（Linux 虚拟显示）。
+- [x] **TEST-02 P1 [5.2.0 terminalInput.test.mjs 分块/保序 · 进程退出/重附着 E2E 待补] 终端输入回归用例**
+  覆盖：多行粘贴确认后可继续输入、超长粘贴分块、确认期间输入保序、进程退出后禁用输入、重新附着不丢字。
+- [x] **TEST-03 P2 [5.3.0 scripts/perf-baseline.mjs · 前端指标待补] 性能基线**
+  记录：冷启动到可交互耗时、PTY 高吞吐（如 `yes | head -n 1e6`）下主线程长任务、内存增长曲线；作为 5.0.0 验收基线。
+- [x] **OBS-01 P2 [5.3.0 诊断 JSON 导出 · 命令探测待补] 诊断包**
+  设置 → 关于 提供"导出诊断信息"：版本、平台、`electron.log`、`desktop-server.log`、命令探测结果、最近终端错误，降低远程排障成本。
+
+---
+
+## 七、本轮补充项（安全 / 仓库 / 体验 / 发布）
+
+- [x] **REPO-01 P1 [5.3.0 check-no-new-vendor-zips + gitignore · 历史 zip/filter-repo 待补] 仓库体积膨胀**
+  `packages/*.zip`（三平台各约 24MB）每次打包都提交进 git，`.git` 已达约 380MB，克隆与 CI 越来越慢，GitHub 单文件 100MB 限制也已迫使桌面包另走 Release。
+  建议：运行包只发布到 GitHub Release（`packages/` 仅保留 `CURRENT.txt` 与校验信息），历史用 `git filter-repo` 瘦身（需单独评估、通知协作者重新克隆）；更新检查改读 Release 清单。
+- [x] **REPO-02 P2 [5.3.0 docs/archive/README + README 索引 · 物理搬迁待补] 文档数量与重复**
+  `docs/` 已有 30+ 份计划/设计文档，`README.md` 路线图与 `about.json` 更新日志、`CODE_CHANGE.md` 多处重复维护版本信息。建议：版本号与更新日志单一来源（脚本生成），旧计划归档到 `docs/archive/`。
+- [x] **SEC-01 P1 [5.3.0 静态 CSP 响应头 · markdown-it html:false · DOMPurify/专项测待补] 没有内容安全策略（CSP）**
+  服务端与 `web/index.html` 均未设置 CSP；文档中心用 `v-html` 渲染 Markdown，一旦渲染器漏过脚本/事件属性就是 XSS，而页面能调用本地终端接口，风险被放大。建议：加严格 CSP（禁内联脚本）、渲染结果统一经 DOMPurify 之类的白名单净化，并补针对 `<img onerror>`、`javascript:` 链接的测试。
+- [x] **SEC-02 P1 [5.3.0 sandbox+contextIsolation+will-navigate+openHandler · IPC 校验待补全] Electron 加固**
+  核对 `contextIsolation` / `sandbox` 保持开启、限制 `webContents` 的新窗口与导航（`setWindowOpenHandler`、`will-navigate` 只允许本机来源）、外链用系统浏览器打开；IPC 入参逐项校验。
+- [x] **SEC-03 P2 [5.3.0 默认 gh/Bearer 正则 · 日志全链路待补] 脱敏覆盖面**
+  回放与 WebSocket 保持原文、仅日志脱敏；导出的文档/备份包是否含密钥需要明确提示并提供导出前扫描。
+- [x] **UX-01 P1 [5.3.0 首次开屏引导 + onboarding 设置 · 分步检测 CLI 待补] 首次使用引导**
+  新用户进来是空工作台 + 演示数据，缺少"3 步上手"（装 CLI → 选目录 → 开始对话）；CLI 未安装/未登录时应在入口处就地提示而不是进了终端才发现。
+- [x] **UX-02 P1 [5.3.0 formatUserFacingError + api 层 · 全页面 catch 待补] 错误提示统一**
+  接口错误多为 `ElMessage.error(e.message)` 的原始文案。建议统一错误码 → 中文说明 → 下一步动作（重试/打开设置/复制诊断），并去掉重复弹窗。
+- [ ] **UX-03 P2 [5.3.0 skip-link + focus-visible + App 顶栏/shell i18n+aria + Workbench/命令面板/SessionRail · 全站待补] 无障碍与键盘**
+  全站 `aria-*` 很少（主要是少数组件），图标按钮缺 `aria-label`、焦点环被样式吞掉；对话框与抽屉需要焦点陷阱与 `Esc` 关闭。补快捷键清单页并检测冲突。
+- [x] **UX-04 P2 [5.2.0 uiColorScheme + ecw-theme-dark · 降低特效待补] 深色模式与系统主题**
+  目前只有浅色玻璃拟态主题；终端已有主题而外壳没有，夜间使用刺眼。至少支持跟随系统的深色，并校验毛玻璃（`backdrop-filter`）在低端机/远程桌面下的性能（提供"降低特效"开关）。
+- [x] **UX-05 P2 [5.2.0 EmptyState + FlowRail 空态 · 骨架屏待补] 空状态与加载态**
+  列表/文档中心/流程轨的空状态文案不一致；长请求缺少骨架屏。统一组件。
+- [x] **UX-06 P2 [5.3.0 desktop-prefs mainWindowBounds + clamp · 右栏/缩放待补] 窗口状态记忆**
+  窗口位置/大小/最大化、右栏宽度、精灵位置、缩放比例统一持久化并在多显示器断开后做越界校正。
+- [x] **PERF-01 P2 [5.3.0 设置页资源列表 hidden 降频 · 全局轮询待补] 轮询收敛**
+  设置页资源面板每 3 秒轮询一次（`Prefs.vue` `resourcePoll`）、精灵 `chatterTimer`、心跳等多处定时器常驻。统一调度器：页面不可见时暂停，设置页离开即停。
+- [x] **REL-01 P1 [5.3.0 npm run release:gate · CI 接线待补] 发布流程**
+  CI 在 `main` 推送后交叉打三平台包，但缺少：打包后的冒烟启动、`validate:packages` 之外的功能校验、桌面包自动上传到 Release 并生成校验和。建议加"解压 → 启动 → 健康检查 → 关闭"的发布门禁。
+- [x] **REL-02 P2 [5.3.0 关于页下载 + 退出安装说明 · 自动解压待补] 更新体验**
+  更新检查只读版本号、不自动安装；桌面端应提供"下载并替换"的引导（保留 `data/`），并展示更新说明。
+- [x] **I18N-01 P2 [5.3.0 web/src/i18n/zh-CN.js · 全站迁移/英文待补] 文案集中管理**
+  中文文案散落在组件与服务端返回中，英文用户不可用。至少把用户可见字符串集中到一处，为后续多语言留口子。
+- [ ] **QA-01 P2 [5.3.0 CI npm test 含 terminalService + ci-e2e-smoke 备份/会话/composer Enter/附件/PTY READY+输入回显 replay（xterm 画布不测 DOM 字形）/docs/主导航+聊天搜索+开聊下拉 aria · 全站 E2E 待补] 测试覆盖不均**
+  server 测试较多，前端仅 8 个纯逻辑测试，组件级与端到端几乎没有。优先补：粘贴/焦点、备份导入导出往返、文档中心渲染安全、缩放布局回归。
+
+---
+
+## 八、建议的落地顺序
+
+1. **先让它能用**：CLI-01、CLI-02、DESK-01、CLI-07、SEC-01（启动不了 / 预加载失效 / 粘贴被拒，是用户感知最强的三件事）。
+2. **再让它顺手**：CLI-08、CLI-09、CLI-11～13、PET-01、PET-02。
+3. **然后稳住**：CLI-17、CLI-18、DESK-02、SRV-01、SRV-02。
+4. **治理与发布**：REPO-01（仓库瘦身）、REL-01（发布门禁）、UX-01/02。
+5. **最后打磨**：其余 P2 项、FE 拆分与首屏体积。
+
+> 每项落地时：同步更新本文状态、`CODE_CHANGE.md`、必要时 `docs/plan-5.0.0.md` 的验收条目；版本发布后在 README 路线图登记 5.1.0。
