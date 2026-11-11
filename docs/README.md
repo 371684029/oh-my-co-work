@@ -90,6 +90,8 @@
 | [plan-5.5.0.md](./plan-5.5.0.md) | **5.5.0 收尾 5.x 未完成项**：备份全异步、全站 E2E、设置页 i18n/aria、前端按需分块、三平台桌面包、`useSessionDetail` 拆分；剩实机通知 QA |
 | [plan-5.6.0.md](./plan-5.6.0.md) | **5.6.0 需求文档**：5.x 收尾加固与三平台桌面补全（P0/P1/P2 需求清单与 DoD）；代码侧 P0 已收尾 |
 | [plan-5.7.0.md](./plan-5.7.0.md) | **5.7.0 需求文档**：打包链路一劳永逸与发布治理（PKG-01~14 / REPO-01）；PKG-01~10 已落地 |
+| [plan-5.8.0.md](./plan-5.8.0.md) | **5.8.0 计划**：熔炉与内置 CLI 性能 II |
+| [plan-5.9.0.md](./plan-5.9.0.md) | **5.9.0 规划**：炼化 · 适配 · 还原质量闭环（verify / review / demo） |
 
 配套文件：[author-contact.example.json](./author-contact.example.json) — 支持与交流配置示例。
 
