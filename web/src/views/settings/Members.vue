@@ -106,6 +106,17 @@
           >
             {{ membersT('form.refineRestore') }}
           </el-button>
+          <el-button
+            v-if="form._editId && form.kind === 'script' && form.refine"
+            size="small"
+            plain
+            class="refine-restore-btn"
+            :loading="verifyingMember"
+            @click="onVerifyMember"
+          >
+            {{ membersT('form.verifyProbe') }}
+          </el-button>
+          <div v-if="verifyLastHint" class="field-hint">{{ verifyLastHint }}</div>
         </el-form-item>
         <el-form-item v-if="form.refine" :label="membersT('form.refineSkills')">
           <div class="refine-skill-box">
@@ -424,6 +435,16 @@ const viewRow = ref(null)
 const form = ref(emptyForm())
 const refineSkillPrompt = ref(membersRefineSkillFallback())
 const restoringRefine = ref(false)
+const verifyingMember = ref(false)
+
+const verifyLastHint = computed(() => {
+  const v = form.value._verifyLast
+  if (!v || v.skipped) return ''
+  if (v.ok) return membersT('form.verifyLastOk')
+  const failed = (v.checks || []).filter((c) => !c.ok).map((c) => c.detail)
+  const detail = failed.length ? failed.join('；') : membersT('form.verifyLastFailShort')
+  return `${membersT('form.verifyLastFail')}：${detail}`
+})
 
 async function refreshRefineSkillPrompt() {
   try {
@@ -431,6 +452,29 @@ async function refreshRefineSkillPrompt() {
     if (r?.prompt) refineSkillPrompt.value = r.prompt
   } catch {
     /* Keep the local fallback copy */
+  }
+}
+
+async function onVerifyMember() {
+  const id = form.value._editId
+  if (!id) return
+  verifyingMember.value = true
+  try {
+    const r = await api.members.verify(id)
+    form.value._verifyLast = {
+      ok: r.ok,
+      skipped: r.skipped,
+      checks: r.checks || [],
+    }
+    if (r.ok) ElMessage.success(membersT('form.verifyToastOk'))
+    else if (!r.skipped) ElMessage.warning(verifyLastHint.value || membersT('form.verifyLastFailShort'))
+    await load()
+    const row = list.value.find((m) => m.id === id)
+    if (row) form.value._verifyLast = row.config?.refine?.verifyLast || form.value._verifyLast
+  } catch (e) {
+    ElMessage.error(e?.message || membersToast('verifyFail'))
+  } finally {
+    verifyingMember.value = false
   }
 }
 
@@ -712,6 +756,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     },
     _editId: asClone ? undefined : row.id,
     _cloneFrom: asClone ? row.id : undefined,
+    _verifyLast: row.config?.refine?.verifyLast || null,
   }
 }
 

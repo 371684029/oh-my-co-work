@@ -141,15 +141,22 @@ export const api = {
       req(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(body || {}) }),
     clone: (id, body) => req(`/members/${id}/clone`, { method: 'POST', body: JSON.stringify(body || {}) }),
     remove: (id) => req(`/members/${id}`, { method: 'DELETE' }),
-    restoreRefine: (id, { force = false } = {}) =>
+    restoreRefine: (id, { force = false, manifestId = '' } = {}) =>
       req(`/members/${id}/refine/restore`, {
         method: 'POST',
-        body: JSON.stringify({ force: !!force }),
+        body: JSON.stringify({ force: !!force, manifestId: manifestId || undefined }),
       }),
     refinePlan: (body) =>
       req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
+    adaptPlan: (body) =>
+      req('/members/adapt/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     verify: (id, body) =>
       req(`/members/${id}/verify`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    restoreAdapt: (id, { force = false, manifestId = '' } = {}) =>
+      req(`/members/${id}/adapt/restore`, {
+        method: 'POST',
+        body: JSON.stringify({ force: !!force, manifestId: manifestId || undefined }),
+      }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
     exportTemplate: (id) => req(`/members/${id}/export-template`),

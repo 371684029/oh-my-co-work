@@ -23,6 +23,7 @@
             <div class="rl-card-main">
               <strong>{{ m.name }}</strong>
               <span v-if="m.refineEnabled" class="rl-tag rl-tag--ok">已开启炼化</span>
+              <span v-else-if="m.adaptEnabled" class="rl-tag rl-tag--adapt">已开启适配</span>
               <span v-else class="rl-tag">已还原</span>
             </div>
             <el-button
@@ -138,7 +139,12 @@ const openDiffs = reactive({})
 
 const refineMembers = computed(() =>
   (data.value?.members || []).filter(
-    (m) => m.refineEnabled || m.refineBackup || (m.history && m.history.length),
+    (m) =>
+      m.refineEnabled ||
+      m.refineBackup ||
+      m.adaptEnabled ||
+      m.adaptBackup ||
+      (m.history && m.history.length),
   ),
 )
 const sessions = computed(() => data.value?.sessions || [])

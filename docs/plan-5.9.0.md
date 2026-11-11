@@ -71,14 +71,14 @@
   - `POST /api/members/:id/verify` — 手动探针（设置页「试跑验证」）
   - `POST /api/members/refine/plan` 响应扩展 optional `verifyPreview`（仅模拟，不落盘）（**待做**）
   - 炼化 `persistRefineOnSave` 成功后 **同步** 调 RAR-01；失败：`verifyFailed` + `verifyLast`；**不撤销已写契约**；UI 强提示
-- [ ] **RAR-03 P1 适配对称 plan API**：`POST /api/members/adapt/plan` — 将改哪些文件、是否 jsonl 覆盖、预估回落，与 `planRefineOnMemberSave` 同结构
-- [ ] **RAR-04 P1 适配还原 API**：`POST /api/members/:id/adapt/restore` — 复用 `restoreAdaptManifest`，manifest 来自 `config.adapt` 或历史列表（与炼化 REST 同形）
-- [ ] **RAR-05 P1 还原中心**：`GET /api/restore-center` 增加 **适配备份分区**（manifest 列表 + diff），与炼化同一 UX（5.3 TRC-02 收口）
+- [x] **RAR-03 P1 适配对称 plan API**：`POST /api/members/adapt/plan` — 将改哪些文件、是否 jsonl 覆盖、预估回落，与 `planRefineOnMemberSave` 同结构
+- [x] **RAR-04 P1 适配还原 API**：`POST /api/members/:id/adapt/restore` — 复用 `restoreAdaptManifest`，manifest 来自 `config.adapt` 或历史列表（与炼化 REST 同形）
+- [x] **RAR-05 P1 还原中心**：`GET /api/restore-center` 增加 **适配备份分区**（manifest 列表 + diff），与炼化同一 UX（5.3 TRC-02 收口）
 - [ ] **RAR-06 P2 熔炉改码闸门**：`appSettings.furnace.requireVerifyBeforeStamp` — acw-ctl / 熔炉 backup 后 patch 完成前必须 `verify` 通过才 `stampManifestAfterPatch`（默认 false，power user 可开）
 
 ### 3.2 前端（web）
 
-- [x] **RAR-07 P0 成员抽屉**：保存 toast 区分试跑通过/未通过（**试跑按钮待做**）
+- [x] **RAR-07 P0 成员抽屉**：保存 toast +「试跑验证」按钮 + verifyLast 提示
 - [ ] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要；节点跑完后在流程轨/toast 展示 **verify 或回落原因**（读 node output meta）
 - [ ] **RAR-09 P1 还原中心**：适配备份 Tab/区块 + 与炼化相同的 diff 抽屉
 - [ ] **RAR-10 P2 文档中心「节点炼化与还原」**：外链「运行验证记录」指向时间线事件（若 RAR-01 写 audit）
@@ -93,7 +93,7 @@
 
 - [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（**多后缀矩阵 fixture 待扩**）
 - [ ] **RAR-T2 P0 集成**：炼化 save → verify 失败 → restore → 字节一致；适配 prepare → verify jsonl → restore
-- [ ] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
+- [x] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
 - [ ] **RAR-T4 P1 CI**：`ci-e2e-smoke` 可选追加「试跑验证」按钮可见（轻量）；或仅在 selftest 阶段跑 RAR-T3
 - [ ] **RAR-T5 P2 实机**：Windows bat CRLF、PowerShell 执行策略受限时 verify 文案回归清单（附在 `spec-qa-checklist.md` 小节）
 

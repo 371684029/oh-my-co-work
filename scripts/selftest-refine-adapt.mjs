@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * 炼化 / 还原契约冒烟：bat 插入 → 剥离 → 再插入（模拟坏 bat 修复）。
+ * 5.9.0：追加 planAdapt + memberVerify 探针。
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -36,5 +37,34 @@ assert.equal(repair.ok, true)
 fs.writeFileSync(bat, repair.next)
 text = fs.readFileSync(bat, 'utf8')
 assert.doesNotMatch(text, /缺则用/)
+
+const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-selftest-verify-'))
+process.env.ACW_DATA_ROOT = dataRoot
+const { initDb } = await import(path.join(root, 'server/src/db.js'))
+initDb()
+const { planAdaptForMember } = await import(path.join(root, 'server/src/adaptBackup.js'))
+const { verifyMemberSync } = await import(path.join(root, 'server/src/memberVerify.js'))
+
+const mjs = path.join(dir, 'probe.mjs')
+fs.writeFileSync(mjs, 'console.log("### selftest\\n")\n', 'utf8')
+const adaptPlan = planAdaptForMember({
+  kind: 'script',
+  config: {
+    adapt: true,
+    script: { mode: 'file', filePath: mjs, scriptWorkDir: dir, executionMode: 'pipe' },
+  },
+})
+assert.equal(adaptPlan.ok, true)
+assert.equal(adaptPlan.fileCount, 1)
+
+const verify = verifyMemberSync({
+  kind: 'script',
+  display_name: 'selftest',
+  config: {
+    refine: { enabled: true, format: { output: { heading: 'selftest' } } },
+    script: { mode: 'file', filePath: mjs, scriptWorkDir: dir, executionMode: 'pipe' },
+  },
+})
+assert.equal(verify.ok, true, JSON.stringify(verify.checks))
 
 console.log('[selftest-refine-adapt] ok')

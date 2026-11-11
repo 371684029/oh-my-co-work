@@ -17,8 +17,18 @@ import {
   createSessionFromGroup,
   createSessionFromMember,
 } from '../services.js'
-import { restoreMemberRefine, restoreSourceByManifest, listMemberSourceHistory } from '../refineRestore.js'
-import { assessAdaptFiles, collectAdaptSourcePaths, createAdaptBackup } from '../adaptBackup.js'
+import {
+  restoreMemberRefine,
+  restoreMemberAdapt,
+  restoreSourceByManifest,
+  listMemberSourceHistory,
+} from '../refineRestore.js'
+import {
+  assessAdaptFiles,
+  collectAdaptSourcePaths,
+  createAdaptBackup,
+  planAdaptForMember,
+} from '../adaptBackup.js'
 import { exportMemberTemplate, exportGroupTemplate, importTemplatePack } from '../templatePack.js'
 import { planRefineOnMemberSave } from '../refineSource.js'
 
@@ -54,6 +64,35 @@ router.get('/members/:id/export-template', (req, res) => {
 router.patch('/members/:id', (req, res) => {
   try {
     res.json(updateMember(req.params.id, req.body || {}))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+router.post('/members/adapt/plan', (req, res) => {
+  try {
+    const body = req.body || {}
+    let member
+    if (body.memberId) {
+      const src = getMember(body.memberId)
+      if (!src) return res.status(404).json({ error: '成员不存在' })
+      member = {
+        ...src,
+        display_name: body.displayName || body.display_name || src.display_name,
+        kind: body.kind || src.kind,
+        config: body.config !== undefined ? body.config : src.config,
+      }
+    } else {
+      member = {
+        id: 'plan',
+        kind: body.kind,
+        display_name: body.displayName || body.display_name || '成员',
+        config: body.config || {},
+      }
+    }
+    if (!member.config?.adapt) {
+      return res.json({ ok: false, reason: 'adapt_disabled', files: [] })
+    }
+    res.json(planAdaptForMember(member))
   } catch (e) {
     res.status(400).json({ error: e.message })
   }
@@ -133,6 +172,28 @@ router.post('/members/:id/verify', (req, res) => {
   } catch (e) {
     const status = e.code === 'NOT_FOUND' ? 404 : 400
     res.status(status).json({ error: e.message, code: e.code })
+  }
+})
+router.post('/members/:id/adapt/restore', (req, res) => {
+  try {
+    const force = !!(req.body && req.body.force)
+    const manifestId = req.body?.manifestId ? String(req.body.manifestId) : ''
+    const out = manifestId
+      ? restoreSourceByManifest(req.params.id, manifestId, { force })
+      : restoreMemberAdapt(req.params.id, { force })
+    res.json(out)
+  } catch (e) {
+    const status =
+      e.code === 'NOT_FOUND'
+        ? 404
+        : e.code === 'RESTORE_CONFLICT'
+          ? 409
+          : 400
+    res.status(status).json({
+      error: e.message,
+      code: e.code,
+      conflicts: e.conflicts,
+    })
   }
 })
 router.post('/members/:id/refine/restore', (req, res) => {

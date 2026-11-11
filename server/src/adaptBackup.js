@@ -420,6 +420,58 @@ function overlayJsonlMember(member) {
   }
 }
 
+/** 保存前预览：将改哪些源文件、适配注释片段（不落盘）。 */
+export function planAdaptForMember(member) {
+  const adaptOn = !!(member?.config?.adapt === true || member?.config?.adapt?.enabled)
+  if (!adaptOn) {
+    return { ok: false, reason: 'adapt_disabled', files: [], fileCount: 0 }
+  }
+  const paths = collectAdaptSourcePaths(member)
+  const assess = assessAdaptFiles(paths)
+  if (!assess.ok) {
+    return {
+      ok: false,
+      reason: assess.reason,
+      files: [],
+      fileCount: 0,
+      fallback: true,
+    }
+  }
+  const files = []
+  for (const f of assess.files) {
+    let willPatch = true
+    let reason = 'will_patch'
+    try {
+      if (fs.readFileSync(f.path, 'utf8').includes(ADAPT_MARK)) {
+        willPatch = false
+        reason = 'already'
+      }
+    } catch {
+      willPatch = false
+      reason = 'unreadable'
+    }
+    files.push({
+      path: f.path,
+      willPatch,
+      reason,
+      snippet: willPatch ? adaptCommentLine(f.path) : '',
+    })
+  }
+  const enableJsonl = overlayJsonlMember(member) !== member
+  let reason = 'ok'
+  const need = files.filter((x) => x.willPatch)
+  if (!need.length) reason = files.length ? 'already' : 'no_source'
+  else reason = 'will_patch'
+  return {
+    ok: true,
+    reason,
+    files,
+    fileCount: need.length,
+    enableJsonl,
+    fallback: false,
+  }
+}
+
 /**
  * 勾选适配后：能改则先 zip 再打幂等注释并打开 JSONL；不能改只打步骤标记。
  */

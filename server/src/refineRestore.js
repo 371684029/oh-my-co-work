@@ -180,6 +180,26 @@ export function restoreSourceByManifest(memberId, manifestId, { force = false } 
         },
       },
     })
+  } else if (hit.kind === 'adapt') {
+    const prev = member.config && typeof member.config === 'object' ? member.config : {}
+    updateMember(memberId, {
+      config: {
+        ...prev,
+        adaptRestoredAt: new Date().toISOString(),
+      },
+    })
   }
-  return { ok: true, restored: r.restored, memberId, manifestId: hit.id }
+  return { ok: true, restored: r.restored, memberId, manifestId: hit.id, kind: hit.kind }
+}
+
+/** 还原成员最近一次适配备份（或指定 manifest） */
+export function restoreMemberAdapt(memberId, { force = false, manifestId = '' } = {}) {
+  const member = getMember(memberId)
+  if (!member) throw Object.assign(new Error('成员不存在'), { code: 'NOT_FOUND' })
+  if (manifestId) return restoreSourceByManifest(memberId, manifestId, { force })
+  const hist = listMemberSourceHistory(memberId).filter((h) => h.kind === 'adapt')
+  if (!hist.length) {
+    throw Object.assign(new Error('没有可还原的适配备份'), { code: 'NOT_FOUND' })
+  }
+  return restoreSourceByManifest(memberId, hist[0].id, { force })
 }

@@ -52,6 +52,11 @@ export const settingsMembersEn = {
     refineHint:
       'Checked + save patches source immediately. Prefer node index.mjs as entry (avoid refining a .bat wrapper); use Restore below or Restore center. Output still goes to the docs hub after the run.',
     refineRestore: 'Restore to pre-refine',
+    verifyProbe: 'Probe run',
+    verifyLastOk: 'Last probe: passed',
+    verifyLastFail: 'Last probe failed',
+    verifyLastFailShort: 'Probe failed',
+    verifyToastOk: 'Probe run passed',
     refineSkills: 'Refine skills (prompt for third-party agents)',
     refineCopySkill: 'Copy refine skill prompt',
     refineSkillHint1:
@@ -158,6 +163,7 @@ export const settingsMembersEn = {
     copySkillOk: 'Refine skill prompt copied to clipboard',
     restoreOk: 'Restored {n} files',
     restoreFail: 'Restore failed',
+    verifyFail: 'Probe run failed',
     removed: 'Deleted',
     saveWarnName: 'Display name is required',
     saveWarnWorkDir: 'Script working directory is required',

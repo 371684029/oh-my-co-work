@@ -145,12 +145,16 @@ router.get('/restore-center', (req, res) => {
     const cfg = m.config || {}
     const refine = cfg.refine || {}
     const history = listMemberSourceHistory(m.id)
+    const lastAdapt = history.find((h) => h.kind === 'adapt')
+    const lastRefine = history.find((h) => h.kind === 'refine')
     return {
       id: m.id,
       name: m.display_name,
-      refineBackup: refine.refineBackup || history[0]?.zipPath || null,
-      refineBackupManifest: refine.refineBackupManifest || history[0]?.manifestPath || null,
+      refineBackup: refine.refineBackup || lastRefine?.zipPath || null,
+      refineBackupManifest: refine.refineBackupManifest || lastRefine?.manifestPath || null,
       refineEnabled: !!refine.enabled,
+      adaptEnabled: !!cfg.adapt,
+      adaptBackup: lastAdapt?.zipPath || null,
       patched: refine.patched || [],
       history,
     }
