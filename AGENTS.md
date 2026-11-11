@@ -167,6 +167,7 @@ start.bat
 6. **先看 tests**：修改 engine / runners / routes 前，先读 `server/test/` 同名或相邻测试
 7. **终端相关先看 terminalService.js**：不要直接在 engine 里拼 PTY 命令
 8. **编码任务直接动手**：收到编码任务时直接写代码，第一响应必须是代码。禁止输出规划、拆解、步骤说明；除非用户明确要求「先规划再写」。
+9. **图片一律走 `look_at`**：当前模型可能不支持图片输入（会报 `Cannot read ... does not support image input`）。遇到用户粘贴的图片、截图、PDF 或任何媒体文件，**不要**让用户转录文字、也不要用 base64 之类的变通，直接调用 `look_at`（必要时用 `multimodal-looker` 子代理）读取，再基于读出的内容回答。用户未给路径时，先问路径或去临时目录找；读回来的关键数字与路径要提示用户核对。
 
 ---
 
