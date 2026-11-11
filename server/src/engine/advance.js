@@ -36,7 +36,6 @@ import {
   getSession,
   resolveStepForNode,
   templateStepIndexOf,
-  memberNeedsProjectParams,
   memberRequiredParamKeys,
   hasRequiredProjectParams,
   missingProjectParamKeys,

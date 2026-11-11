@@ -20,7 +20,7 @@ import {
   validateAndFillSessionParams,
   resolveGroupParamSpecs,
 } from '@acw/shared'
-import { getSession, getGroup, getMember, resolveStepForNode, templateStepIndexOf, syncAutoSessionTitle, bindGateHumanInput,  } from './store.js'
+import { getSession, getGroup, getMember, resolveStepForNode, syncAutoSessionTitle, bindGateHumanInput,  } from './store.js'
 import { archiveOffsiteOnReturnToMain } from './offsite.js'
 import {
   archiveSession,
@@ -566,9 +566,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       return { ok: true, needParamsFilled: true }
     }
 
-    // human input step
-    // 采集项目参数：步骤显式 captureParams，或模板首个人工步默认开启
-    const tplIdx = templateStepIndexOf(node, steps.length)
+    // human input step：仅步骤显式 captureParams 时采集项目参数
     const captureParams =
       prevIn.captureParams === true || step.captureParams === true
 
