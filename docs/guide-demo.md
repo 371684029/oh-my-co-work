@@ -3,8 +3,8 @@
 | 属性 | 内容 |
 |------|------|
 | 关联 | 根目录 [README.md](../README.md)；压缩包说明 [guide-release-user.md](./guide-release-user.md) |
-| 版本 | `2.0.1` |
-| 更新日期 | 2026-08-13 |
+| 版本 | `2.0.2` |
+| 更新日期 | 2026-11-11 |
 
 ---
 
@@ -116,3 +116,26 @@ npm run dev:server
 npm run backup
 # 输出 data/backups/acw-backup-*.tar.gz
 ```
+
+---
+
+## 7. 炼化试跑与还原（5.3.7+，约 3 分钟）
+
+在 §3「演示流」之外，可单独演示 **炼化契约 → 试跑验证 → 跑群 → 文档中心 diff → 还原中心一键还原**。
+
+| 步骤 | 操作 |
+|------|------|
+| 1 | **设置 → 成员** → 选 **示例命令**（或自建脚本成员）→ 勾选 **炼化** → 保存 |
+| 2 | 保存后 toast 区分 **炼化验证通过** / **验证未通过**；抽屉底部 **试跑验证** 可重复探针 |
+| 3 | 用该成员开群或单聊跑一步，在 **文档中心** 看 `###` 标题与节点产出 |
+| 4 | **设置 → 还原中心** → 成员分区看炼化前后 diff → **还原炼化**（须先备份 zip 存在） |
+| 5 | 再次 **试跑验证**，确认脚本与备份字节一致 |
+
+命令行（熔炉 `data/furnace/acw-ctl.mjs`，与 API 同校验）：
+
+```bash
+node data/furnace/acw-ctl.mjs verify-member --member 示例命令
+# JSON 含 ok / checks；失败时进程 exit 1
+```
+
+可选：本地无 UI 时先 `node scripts/selftest-refine-adapt.mjs` 做炼化/适配契约冒烟。

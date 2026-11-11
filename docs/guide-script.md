@@ -130,6 +130,17 @@
 - 输出：脚本开头向 stdout 打 `### <标题>`，文档中心按该规格收。
 - 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步。
 
+### 3.2 炼化试跑验证（5.3.7+）
+
+保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认 30s，不弹终端）：
+
+- 成功：写 `config.refine.verifyLast`（`ok` / `checks` / `elapsedMs`），清除 `verifyFailed`
+- 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证
+- API：`POST /api/members/:id/verify`；CLI：`acw-ctl.mjs verify-member --member <名>`
+- 探针输入默认 `ACW_HUMAN_INPUT=acw-verify-probe`（与群聊 `#1` 探针一致）
+
+仅 **启用炼化** 的脚本/回声成员会校验 stdout `###` 标题；熔炉成员跳过自动试跑。
+
 群聊跑完仍会把本次产出整理进 `step-*.md` / 群报告；那是归档，不是第一次才改脚本。
 
 ---

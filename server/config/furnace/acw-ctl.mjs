@@ -191,6 +191,7 @@ const HELP = `用法：node acw-ctl.mjs <动作> [参数]
   add-member --name "名称" --file "D:\\work\\run.bat" [--args "#1"] [--cwd "D:\\work"]
   update-member --id <mem_id|名称> [--name ..] [--cmd ..] [--cwd ..] [--pipe|--terminal]
   delete-member --id <mem_id|名称>
+  verify-member --member <mem_id|名称>   炼化 pipe 试跑（与 POST /api/members/:id/verify 一致；失败 exit 1）
 
 源码备份（改成员脚本前必须先调，文档中心「节点炼化与还原」可查看 diff 并一键还原）：
   backup-source --member <mem_id|名称> [--files "D:/work/a.js,D:/work/b.js"] [--kind refine|adapt]
@@ -255,6 +256,17 @@ async function main() {
     nextPayload.config = { ...(target.config || {}), ...(nextPayload.config || {}) }
     const out = await api('PATCH', `/members/${target.id}`, nextPayload)
     console.log(JSON.stringify({ action: 'updated', member: out }, null, 2))
+    return
+  }
+  if (cmd === 'verify-member' || cmd === 'verify') {
+    const key = flags.member || flags.id || pos[1]
+    if (!key) throw new Error('缺少 --member <名称或 id>')
+    const list = await api('GET', '/members')
+    const target = list.find((m) => m.id === key || m.display_name === key || m.name === key)
+    if (!target) throw new Error(`找不到成员：${key}`)
+    const out = await api('POST', `/members/${target.id}/verify`, {})
+    console.log(JSON.stringify({ memberId: target.id, ...out }, null, 2))
+    if (!out.ok && !out.skipped) process.exitCode = 1
     return
   }
   if (cmd === 'backup-source') {

@@ -85,14 +85,14 @@
 
 ### 3.3 熔炉 / demo / review
 
-- [ ] **RAR-11 P1 演示流**：在 [guide-demo.md](./guide-demo.md) 增加 **「炼化成员 → 验证 → 跑群 → 文档中心 → 还原」** 固定点击路径；种子成员 `demo-refine-verify`（若 REU-03 内置模板可挂接）
-- [ ] **RAR-12 P1 acw-ctl**：子命令 `verify-member --member <名>` 调 RAR-02，退出码与 JSON 与 API 一致（CI 可调用）
+- [x] **RAR-11 P1 演示流**：在 [guide-demo.md](./guide-demo.md) §7 增加 **「炼化成员 → 验证 → 跑群 → 文档中心 → 还原」** 点击路径（种子 `demo-refine-verify` 仍待 REU-03）
+- [x] **RAR-12 P1 acw-ctl**：子命令 `verify-member --member <名>` 调 RAR-02，退出码与 JSON 与 API 一致（`acwCtl.test.js` 覆盖）
 - [ ] **RAR-13 P2 REFINE 角色**：`defaultRefineSpecAuthor` 仍为兜底；熔炉产出 format 后 **必须 verify 通过** 才写 `status: done`（与 4.x 开放问题 5 对齐）
 
 ### 3.4 测试与 CI
 
 - [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（**多后缀矩阵 fixture 待扩**）
-- [ ] **RAR-T2 P0 集成**：炼化 save → verify 失败 → restore → 字节一致；适配 prepare → verify jsonl → restore
+- [x] **RAR-T2 P0 集成**：炼化 `memberVerifyRoundtrip.test.js`（save→verify→破坏→restore 字节一致）；适配 prepare→restore 见 `adaptPlan.test.js`（jsonl verify 仍待 RAR-06）
 - [x] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
 - [ ] **RAR-T4 P1 CI**：`ci-e2e-smoke` 可选追加「试跑验证」按钮可见（轻量）；或仅在 selftest 阶段跑 RAR-T3
 - [ ] **RAR-T5 P2 实机**：Windows bat CRLF、PowerShell 执行策略受限时 verify 文案回归清单（附在 `spec-qa-checklist.md` 小节）

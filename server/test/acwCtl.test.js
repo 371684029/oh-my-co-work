@@ -123,4 +123,29 @@ test('acw-ctl CLI adds/updates members and creates workflow groups via HTTP API'
   })
   assert.equal(restoreRes.status, 200)
   assert.equal(fs.readFileSync(scriptFile, 'utf8'), 'console.log("v1")\n')
+
+  const probeDir = path.join(dataRoot, 'probePipe')
+  fs.mkdirSync(probeDir, { recursive: true })
+  const probeFile = path.join(probeDir, 'probe.mjs')
+  fs.writeFileSync(
+    probeFile,
+    'console.log("### acw-ctl探针\\n");\nconsole.log(process.env.ACW_HUMAN_INPUT||"");\n',
+    'utf8',
+  )
+  const refined = JSON.parse(
+    await runCtl([
+      'add-member',
+      '--name',
+      'ctlVerify',
+      '--cmd',
+      `node probe.mjs #1`,
+      '--cwd',
+      probeDir,
+      '--pipe',
+      '--refine',
+    ]),
+  )
+  assert.equal(refined.member.config.refine?.enabled, true)
+  const verifyOut = JSON.parse(await runCtl(['verify-member', '--member', 'ctlVerify']))
+  assert.equal(verifyOut.ok, true, JSON.stringify(verifyOut))
 })
