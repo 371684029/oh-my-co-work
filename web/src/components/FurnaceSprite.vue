@@ -18,20 +18,19 @@
         <p>{{ bubbleText }}</p>
         <div class="furnace-actions">
           <button
-            v-if="docsNotifyActive"
-            type="button"
-            class="furnace-act furnace-act--primary"
-            @click.stop="$emit('open-docs')"
-          >
-            看报告
-          </button>
-          <button
-            v-else
             type="button"
             class="furnace-act furnace-act--primary"
             @click.stop="$emit('click')"
           >
-            开熔炉
+            {{ primaryFurnaceLabel }}
+          </button>
+          <button
+            v-if="docsNotifyActive"
+            type="button"
+            class="furnace-act"
+            @click.stop="openDocsFromBubble"
+          >
+            看报告
           </button>
           <button type="button" class="furnace-act" @click.stop="poke">戳一下</button>
         </div>
@@ -57,18 +56,26 @@
         </button>
       </div>
     </div>
-    <button
-      v-else
-      type="button"
-      class="furnace-pet-peek"
-      :title="hitTitle"
-      :aria-label="`${hitTitle} · 展开`"
-      @click="minimized = false"
-    >
-      <span class="furnace-pet-sheet-wrap is-peek" :style="peekWrapStyle">
-        <span class="furnace-pet-sheet" :style="peekSheetStyle" aria-hidden="true" />
-      </span>
-    </button>
+    <div v-else class="furnace-pet-min-wrap">
+      <button
+        type="button"
+        class="furnace-pet-peek"
+        :title="hitTitle"
+        :aria-label="`${hitTitle} · ${t('furnace.peek')}`"
+        @click="minimized = false"
+      >
+        <span class="furnace-pet-sheet-wrap is-peek" :style="peekWrapStyle">
+          <span class="furnace-pet-sheet" :style="peekSheetStyle" aria-hidden="true" />
+        </span>
+      </button>
+      <button
+        type="button"
+        class="furnace-peek-open"
+        @click.stop="$emit('click')"
+      >
+        {{ primaryFurnaceLabel }}
+      </button>
+    </div>
   </div>
 </template>
 
@@ -99,7 +106,7 @@ const props = defineProps({
   /** Increment to show "报告好了" bubble (5.2.0 DOC-18). */
   docsNotifySeq: { type: Number, default: 0 },
 })
-defineEmits(['click', 'open-docs'])
+const emit = defineEmits(['click', 'open-docs'])
 
 const creditTitle = computed(() => PET_COPYRIGHT)
 const hitTitle = computed(() => `${props.title} · ${PET_CREDIT_SHORT}`)
@@ -227,6 +234,15 @@ const stateLabel = computed(() => {
   if (props.state === 'waiting') return t('furnace.waiting')
   return t('furnace.idle')
 })
+
+const primaryFurnaceLabel = computed(() =>
+  props.state === 'working' ? t('furnace.goFurnace') : t('furnace.open'),
+)
+
+function openDocsFromBubble() {
+  docsNotifyActive.value = false
+  emit('open-docs')
+}
 
 const petStyle = computed(() => {
   const s = {}
@@ -556,6 +572,7 @@ onUnmounted(() => {
 
 .furnace-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -680,8 +697,40 @@ onUnmounted(() => {
   filter: brightness(1.04);
 }
 
+.furnace-pet-min-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.furnace-pet-min-wrap .furnace-pet-peek,
+.furnace-peek-open {
+  pointer-events: auto;
+}
+
+.furnace-peek-open {
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #16161a;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(20, 16, 28, 0.14);
+  white-space: nowrap;
+}
+
+.furnace-peek-open:hover {
+  filter: brightness(1.06);
+}
+
 .furnace-pet.is-min {
-  width: 56px;
+  width: auto;
+  min-width: 56px;
+  max-width: 128px;
 }
 
 @keyframes furnace-bubble-in {

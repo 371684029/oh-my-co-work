@@ -118,6 +118,7 @@ export const strings = {
     agentCursorTab: 'Cursor CLI',
     agentTabsAria: '熔炉 Agent 切换',
     open: '开熔炉',
+    goFurnace: '去熔炉',
     peek: '展开',
     minimize: '收起',
     backToChat: '返回群聊',

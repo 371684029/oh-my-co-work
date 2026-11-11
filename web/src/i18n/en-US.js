@@ -116,6 +116,7 @@ export const strings = {
     agentCursorTab: 'Cursor CLI',
     agentTabsAria: 'Furnace agent switcher',
     open: 'Open furnace',
+    goFurnace: 'Go to furnace',
     peek: 'Expand',
     minimize: 'Collapse',
     backToChat: 'Back to chat',
