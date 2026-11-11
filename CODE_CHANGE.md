@@ -3,6 +3,8 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-11 | M | AGENTS.md | §7 AI Agent 特别规则新增第 9 条：模型不支持图片时一律直接调 look_at / multimodal-looker 读媒体，禁止要求用户转录或走 base64 变通
+2026-11-11 | M | server/src/furnaceContext.js, server/test/furnaceContext.test.js, docs/tech-crucible-3.2.md | 熔炉情境取消截断（C 方案）：SITUATION_LIMITS 全置 0，clipFurnaceText 支持 max<=0 不切，agenda/params 条数不再 slice，节点标题与状态不再压字数；保留 AGENTS.md「此刻」420 字短合同；补 3 例表征测试
 2026-11-10 | A/M | docs/tech-architecture-map.md, docs/README.md | 新增《架构图 / 代码结构图》：全局运行拓扑、引擎 DAG 与 advance 主循环、执行体与 PTY 链路、前端三栏分层、数据落盘与迁移链、REST/WS 契约、读码路线与术语表；docs 索引 tech- 分组登记
 2026-11-10 | M | README.md | 5.3.2 徽章/源码版本/路线图/文档表/内嵌 TUI 能力说明
 2026-11-10 | A/M | web/src/composables/{terminalWriteScheduler,terminalOutputBridge,useFurnaceWorkspace}.js, web/src/components/terminal/{TerminalView,FurnaceTuiSurface,terminalPrefs}.js, web/src/views/workbench/composables/useTerminalSessions.js, server/src/terminal/clientMessage.js, electron/main.js, docs/5.8.0-plan.md, scripts/selftest-furnace-perf.mjs, web/test/{terminalWriteScheduler,terminalOutputBridge}.test.mjs, server/test/terminalClientMessage.test.js, */package.json, server/config/about.json | 5.3.2 熔炉/CLI 性能 II：rAF 输出合并、分片 replay、WebGL 兜底、Vue replay 解耦、GUI 解析节流、单 xterm、attach tail 512KB、背压提示、Electron 后台不节流

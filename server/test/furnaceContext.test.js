@@ -116,6 +116,35 @@ test('situation clips oversized intent', () => {
   assert.ok(clipped.length < huge.length)
 })
 
+test('clipFurnaceText treats max <= 0 as unlimited', () => {
+  const huge = '总结'.repeat(3000)
+  assert.equal(clipFurnaceText(huge, 0), huge)
+  assert.equal(clipFurnaceText(huge, -1), huge)
+})
+
+test('situation no longer clips intent / params / prevOutput', () => {
+  const hugeIntent = '需'.repeat(9000)
+  const hugeParam = '值'.repeat(5000)
+  const hugePrev = '产'.repeat(4000)
+  const text = composeFurnaceSituation({
+    intent: hugeIntent,
+    params: [{ key: '#1', value: hugeParam }],
+    now: { title: '当前步', prevOutput: hugePrev },
+  })
+  assert.ok(text.includes(hugeIntent))
+  assert.ok(text.includes(hugeParam))
+  assert.ok(text.includes(hugePrev))
+  assert.ok(!text.includes('…(截断)'))
+})
+
+test('situation keeps every agenda item and param', () => {
+  const agenda = Array.from({ length: 40 }, (_, i) => ({ title: `步骤 ${i + 1}` }))
+  const params = Array.from({ length: 12 }, (_, i) => ({ key: `#${i + 1}`, value: `v${i}` }))
+  const text = composeFurnaceSituation({ agenda, params })
+  assert.ok(text.includes('步骤 40'))
+  assert.ok(text.includes('`#12`'))
+})
+
 test('switching role keeps situation in ACTIVE.md', () => {
   const situation = { intent: '做工作总结', groupTitle: '周报工作总结' }
   activateFurnaceRole(FURNACE_ROLE.SESSION, { sessionId: 's2', situation })

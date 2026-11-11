@@ -16,13 +16,18 @@ const ROLE_FILES = {
   [FURNACE_ROLE.REFINE]: 'refine.md',
 }
 
+/**
+ * 5.8：情境不截断。全部置 0 = 不切（见 clipFurnaceText）。
+ * 保留 key 是为了调用点不用改；条数上限（params/agenda）同样置 0 表示不切。
+ * 唯一例外：写进 AGENTS.md 的「此刻」仍是短合同，见 furnaceGrokInject.js。
+ */
 export const SITUATION_LIMITS = {
-  intent: 2000,
-  field: 800,
-  total: 8000,
-  params: 8,
-  agenda: 30,
-  prevOut: 240,
+  intent: 0,
+  field: 0,
+  total: 0,
+  params: 0,
+  agenda: 0,
+  prevOut: 0,
 }
 
 export function furnaceHomeDir() {
@@ -100,16 +105,17 @@ export function loadFurnaceMemory(role) {
   return readUtf8(path.join(furnaceMemoryDir(), ROLE_FILES[role])).trim()
 }
 
+/** max <= 0 表示不截断。 */
 export function clipFurnaceText(s, max) {
   const t = String(s ?? '').trim()
-  if (!max || t.length <= max) return t
+  if (!max || max <= 0 || t.length <= max) return t
   return `${t.slice(0, max)}\n…(截断)`
 }
 
 export function formatFurnaceAgendaLine(item, i, nowIndex) {
   const n = i + 1
   const raw = typeof item === 'string' ? { title: item } : item || {}
-  const title = clipFurnaceText(raw.title || `步骤 ${n}`, 120) || `步骤 ${n}`
+  const title = raw.title || `步骤 ${n}`
   const flags = []
   if (raw.adapt) flags.push('适配')
   if (raw.gateAdmin) flags.push('熔炉闸')
@@ -128,7 +134,11 @@ export function composeFurnaceSituation(facts = {}) {
     clipFurnaceText(facts.groupDescription, lim.field) ||
     clipFurnaceText(facts.groupTitle, lim.field) ||
     '（无）'
-  const agenda = Array.isArray(facts.agenda) ? facts.agenda.slice(0, lim.agenda) : []
+  const agenda = Array.isArray(facts.agenda)
+    ? lim.agenda > 0
+      ? facts.agenda.slice(0, lim.agenda)
+      : facts.agenda
+    : []
   const nowIndex = Number(facts.nowIndex)
   const agendaLines = agenda.length
     ? agenda.map((item, i) => formatFurnaceAgendaLine(item, i, nowIndex))
@@ -147,11 +157,15 @@ export function composeFurnaceSituation(facts = {}) {
   const nowBlock = [
     `当前节点：${nowN ? `#${nowN} ` : ''}${clipFurnaceText(now.title, lim.field) || '（尚未推进）'}`,
     `它是什么：${clipFurnaceText(nowWhat || now.status, lim.field) || '（无）'}`,
-    `状态：${clipFurnaceText(now.statusLabel || now.status, 80) || '（无）'}`,
+    `状态：${now.statusLabel || now.status || '（无）'}`,
     `上一节点产出：${clipFurnaceText(now.prevOutput, lim.prevOut) || '（无）'}`,
     '合同：节点一览是地图。默认处理当前节点；用户要求其它任务照做。不要擅自改编排，除非用户要求。',
   ]
-  const params = Array.isArray(facts.params) ? facts.params.slice(0, lim.params) : []
+  const params = Array.isArray(facts.params)
+    ? lim.params > 0
+      ? facts.params.slice(0, lim.params)
+      : facts.params
+    : []
   const paramLines = params.length
     ? params.map((p) => {
         const key = p?.key || p?.name || '#'
