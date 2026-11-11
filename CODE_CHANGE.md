@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-11 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 还原中心断言对齐 DocsRefineChangesPane（.rl-section / 成员炼化源码备份）
 2026-11-11 | A/M | shared/acwWorkbenchParams.js, server/src/{refineArgvSync,refineSource}.js, server/test/{acwWorkbenchParams,refineArgvSync,refineSource}.test.js, server/config/furnace/{prompts/{member-adapt,refine,session}.md,snippets/acw-read-params.mjs,acw-ctl.mjs}, docs/guide-script.md, */package.json, server/config/about.json | 5.3.4 炼化多参：Node 契约追加 acwSyncArgvFromEnv；已炼化源保存时可补插；熔炉 prompt+snippet 约束 #3 起 rest 读 ACW_PARAM_n/JSON
 2026-11-11 | M | server/src/appSettings.js, web/src/composables/furnacePetPolicy.js, web/src/components/FurnaceSprite.vue | 熔炉入口可见性：furnacePet.showOnSettings 默认改 true（前后端同构，设置页也能看到桌宠）；桌宠恢复位置时若落点完全在视口外则回落默认锚点并写回，避免 localStorage 脏值导致桌宠永久丢失
 2026-11-11 | M | web/src/views/settings/{Members,Groups}.vue | 新建成员默认勾选炼化（refine: true，可取消）；群模板新建/首步默认带 refine，沿用服务端 refineMembersForSteps 契约

@@ -388,7 +388,7 @@ async function main() {
     //        「显示演示示例」(showDemo)，断言 PATCH /api/settings/app 200 →
     //        GET 持久化翻转 → reload 后开关状态一致 → API 还原原值（不留副作用）
     //   (3) /settings/restore —— 还原中心可见：role=region 外壳 + 标题，且
-    //        「成员炼化备份」列表区块（.restore-section）渲染出 API 创建的成员行
+    //        成员炼化备份列表（.rl-section）渲染出 API 创建的成员行
     //   (4) /docs             —— 文档中心外壳：欢迎区 region + 路由落地
     //        （搜索框等深度断言在上方 docs 步骤，此处不重复）
     //   (5) /workbench 多会话切换 —— 新建第二成员+会话（createSessionFromMember
@@ -502,12 +502,12 @@ async function main() {
     const restoreHeading = page.locator('#restore-center-title')
     assert.match((await restoreHeading.textContent()) || '', /还原中心|Restore center/)
     const backupSection = page
-      .locator('.restore-section')
-      .filter({ hasText: /成员炼化备份|Member refine backups/ })
+      .locator('.rl-section')
+      .filter({ hasText: /成员炼化.*源码备份|Member refine/ })
       .first()
     await backupSection.waitFor({ state: 'visible', timeout: 15000 })
     assert.ok(
-      (await backupSection.locator('li').count()) >= 1,
+      (await backupSection.locator('.rl-card').count()) >= 1,
       'restore center backup list should render rows',
     )
     assert.ok(

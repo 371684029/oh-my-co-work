@@ -21,7 +21,7 @@ test('QA-01: ci-e2e-smoke keeps full-site route coverage and skip convention', (
 
   // restore center backup list
   assert.match(src, /\/settings\/restore/)
-  assert.match(src, /restore-section/)
+  assert.match(src, /\.rl-section/)
 
   // docs hub shell
   assert.match(src, /\/docs/)
