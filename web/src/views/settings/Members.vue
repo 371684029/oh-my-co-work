@@ -884,7 +884,10 @@ async function save() {
     }
     drawer.value = false
     await load()
-    ElMessage.success(membersRefineSavedHint(saved, form.value.refine))
+    const saveHint = membersRefineSavedHint(saved, form.value.refine)
+    const vr = saved?.verifyResult
+    if (vr && !vr.skipped && !vr.ok) ElMessage.warning(saveHint)
+    else ElMessage.success(saveHint)
   } catch (e) {
     ElMessage.error(e.message)
   }

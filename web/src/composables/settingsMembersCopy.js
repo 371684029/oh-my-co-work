@@ -42,15 +42,21 @@ export function membersRefineSkillFallback() {
 export function membersRefineSavedHint(saved, refineOn) {
   if (!refineOn) return tp('refineSaved.off')
   const prep = saved?.refinePrep
+  const verify = saved?.verifyResult
   const names = (prep?.patched || [])
     .map((p) => String(p).split(/[/\\]/).pop())
     .filter(Boolean)
+  let base
   if (names.length) {
     const joined = names.join(getLocale() === 'en-US' ? ', ' : '、')
-    return subst(tp('refineSaved.patched'), { names: joined })
-  }
-  if (prep?.fallback) return tp('refineSaved.fallback')
-  return tp('refineSaved.plain')
+    base = subst(tp('refineSaved.patched'), { names: joined })
+  } else if (prep?.fallback) base = tp('refineSaved.fallback')
+  else base = tp('refineSaved.plain')
+  if (!verify || verify.skipped) return base
+  if (verify.ok) return `${base} · ${tp('refineSaved.verifyOk')}`
+  const failed = (verify.checks || []).filter((c) => !c.ok).map((c) => c.detail)
+  const detail = failed.length ? failed.join(getLocale() === 'en-US' ? '; ' : '；') : tp('refineSaved.verifyFail')
+  return `${base} · ${subst(tp('refineSaved.verifyFail'), { detail })}`
 }
 
 export function membersRestoreOk(n) {

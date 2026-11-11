@@ -3,12 +3,17 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+<<<<<<< HEAD
 2026-11-11 | M | server/src/engine/{advance,gates}.js | lint：移除未使用的 memberNeedsProjectParams / templateStepIndexOf 导入与 tplIdx
 2026-11-11 | A/M | shared/memberParams.js, server/src/engine/{advance,gates,store}.js, server/test/memberParams.test.js, web/src/views/settings/{Members,Groups}.vue, web/src/i18n/settings{Members,Groups}.{zh,en}.js, docs/guide-script.md, */package.json, server/config/about.json | 5.3.6 成员 # 槽位与群模板解耦：requiresParams 显式声明；群首步 captureParams 默认关；DB 行 config_json 兼容
 2026-11-11 | A/M | server/src/refineContractStrip.js, server/src/{refineRestore,refineSource}.js, server/test/{refineContractStrip,refineRestore}.test.js, scripts/selftest-refine-adapt.mjs, web/src/{views/settings/Members.vue,i18n/settingsMembers.{zh,en}.js}, shared/index.js | 5.3.5 炼化还原精准剥离(argv sync)；保存时修复旧 bat 契约；成员页适配/炼化说明；selftest-refine-adapt
 2026-11-11 | M | server/src/{refineSource,adaptBackup}.js, server/test/refineSource.test.js | 5.3.4：bat 炼化 rem 改 ASCII、强制 CRLF、禁止 BOM，修复 cmd 报 efined / _1 缺则用
 2026-11-11 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 还原中心断言对齐 DocsRefineChangesPane（.rl-section / 成员炼化源码备份）
 2026-11-11 | A/M | shared/acwWorkbenchParams.js, server/src/{refineArgvSync,refineSource}.js, server/test/{acwWorkbenchParams,refineArgvSync,refineSource}.test.js, server/config/furnace/{prompts/{member-adapt,refine,session}.md,snippets/acw-read-params.mjs,acw-ctl.mjs}, docs/guide-script.md, */package.json, server/config/about.json | 5.3.4 炼化多参：Node 契约追加 acwSyncArgvFromEnv；已炼化源保存时可补插；熔炉 prompt+snippet 约束 #3 起 rest 读 ACW_PARAM_n/JSON
+=======
+2026-11-11 | A/M | server/src/memberVerify.js, server/src/services.js, server/src/routes/catalogRoutes.js, server/test/memberVerify.test.js, web/src/api.js, web/src/composables/settingsMembersCopy.js, web/src/views/settings/Members.vue, web/src/i18n/settingsMembers.{zh,en}.js, docs/plan-5.9.0.md | 5.9.0 M1：炼化保存后同步试跑 verify、POST /members/:id/verify、verifyLast/verifyFailed 落库、保存 toast 告警
+2026-11-11 | A/M | docs/plan-5.9.0.md, docs/README.md | 5.9.0 规划：炼化/适配/还原 verify 闭环、还原中心适配备份、demo/selftest 验收；docs 索引登记
+>>>>>>> ec76d6e (feat: auto verify refine on member save (5.9.0 M1))
 2026-11-11 | M | server/src/appSettings.js, web/src/composables/furnacePetPolicy.js, web/src/components/FurnaceSprite.vue | 熔炉入口可见性：furnacePet.showOnSettings 默认改 true（前后端同构，设置页也能看到桌宠）；桌宠恢复位置时若落点完全在视口外则回落默认锚点并写回，避免 localStorage 脏值导致桌宠永久丢失
 2026-11-11 | M | web/src/views/settings/{Members,Groups}.vue | 新建成员默认勾选炼化（refine: true，可取消）；群模板新建/首步默认带 refine，沿用服务端 refineMembersForSteps 契约
 2026-11-11 | M | web/src/components/FurnaceSprite.vue, web/src/i18n/{zh-CN,en-US}.js | 桌宠：文档「看报告」不再顶掉「开/去熔炉」；收起态露出一键开炉；熔炉运行中主按钮改「去熔炉」

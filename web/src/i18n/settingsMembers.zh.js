@@ -137,6 +137,8 @@ export const settingsMembersZh = {
     patched: '已保存，并按炼化契约改写 {names}',
     fallback: '已保存炼化规格；没有可改的源文件时，跑完仍会整理进文档中心',
     plain: '已保存；源文件已按炼化契约处理',
+    verifyOk: '试跑验证通过',
+    verifyFail: '试跑未通过：{detail}',
   },
   cloneName: '{name} 副本',
   toast: {
