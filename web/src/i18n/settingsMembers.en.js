@@ -135,6 +135,8 @@ export const settingsMembersEn = {
     patched: 'Saved; rewrote {names} per the refine contract',
     fallback: 'Saved the refine spec; when there is no source file to patch, output still goes to the docs hub after the run',
     plain: 'Saved; source files processed per the refine contract',
+    verifyOk: 'Probe run passed',
+    verifyFail: 'Probe failed: {detail}',
   },
   cloneName: '{name} copy',
   toast: {

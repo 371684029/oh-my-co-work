@@ -148,6 +148,8 @@ export const api = {
       }),
     refinePlan: (body) =>
       req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
+    verify: (id, body) =>
+      req(`/members/${id}/verify`, { method: 'POST', body: JSON.stringify(body || {}) }),
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
     exportTemplate: (id) => req(`/members/${id}/export-template`),

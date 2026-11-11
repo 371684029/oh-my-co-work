@@ -62,15 +62,15 @@
 
 ### 3.1 统一验证内核（server）
 
-- [ ] **RAR-01 P0 `memberVerify.js`（新）**：纯函数 + 可注入 `spawn`/`runMemberOnce`
+- [x] **RAR-01 P0 `memberVerify.js`（新）**：纯函数 + 可注入 `spawn`/`runMemberOnce`
   - 输入：`member`、探测用 `humanInput` / `param1`、选项 `{ timeoutMs, channel: 'pipe'|'terminal' }`
   - 炼化断言：`exitCode === 0`（或可配置）、stdout 含 `### ${format.output.heading}`、可选 stderr 为空
   - 适配断言：`config.script.adapter` 为 jsonl 时检查事件文件首行 `JSON.parse` 成功或 runner 收到 adapter 事件
   - 输出：`{ ok, checks: [{ id, ok, detail }], elapsedMs, probeLogPath? }`
-- [ ] **RAR-02 P0 API**
+- [x] **RAR-02 P0 API**
   - `POST /api/members/:id/verify` — 手动探针（设置页「试跑验证」）
-  - `POST /api/members/refine/plan` 响应扩展 optional `verifyPreview`（仅模拟，不落盘）
-  - 炼化 `applyRefineOnMemberSave` 成功后 **异步或同步（可配置）** 调 RAR-01；失败时：`status: verify_failed`、**不撤销已写契约**（避免丢备份）但 UI 强提示 + 链到还原
+  - `POST /api/members/refine/plan` 响应扩展 optional `verifyPreview`（仅模拟，不落盘）（**待做**）
+  - 炼化 `persistRefineOnSave` 成功后 **同步** 调 RAR-01；失败：`verifyFailed` + `verifyLast`；**不撤销已写契约**；UI 强提示
 - [ ] **RAR-03 P1 适配对称 plan API**：`POST /api/members/adapt/plan` — 将改哪些文件、是否 jsonl 覆盖、预估回落，与 `planRefineOnMemberSave` 同结构
 - [ ] **RAR-04 P1 适配还原 API**：`POST /api/members/:id/adapt/restore` — 复用 `restoreAdaptManifest`，manifest 来自 `config.adapt` 或历史列表（与炼化 REST 同形）
 - [ ] **RAR-05 P1 还原中心**：`GET /api/restore-center` 增加 **适配备份分区**（manifest 列表 + diff），与炼化同一 UX（5.3 TRC-02 收口）
@@ -78,7 +78,7 @@
 
 ### 3.2 前端（web）
 
-- [ ] **RAR-07 P0 成员抽屉**：炼化保存确认框下展示 **verify 结果条**（绿/红 + 展开 checks）；按钮「试跑验证」
+- [x] **RAR-07 P0 成员抽屉**：保存 toast 区分试跑通过/未通过（**试跑按钮待做**）
 - [ ] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要；节点跑完后在流程轨/toast 展示 **verify 或回落原因**（读 node output meta）
 - [ ] **RAR-09 P1 还原中心**：适配备份 Tab/区块 + 与炼化相同的 diff 抽屉
 - [ ] **RAR-10 P2 文档中心「节点炼化与还原」**：外链「运行验证记录」指向时间线事件（若 RAR-01 写 audit）
@@ -91,7 +91,7 @@
 
 ### 3.4 测试与 CI
 
-- [ ] **RAR-T1 P0 单测**：`memberVerify.test.js` — bat/cmd/ps1/sh/py/js 矩阵 fixture（`server/test/fixtures/verify/`），炼化契约正/误各一例
+- [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（**多后缀矩阵 fixture 待扩**）
 - [ ] **RAR-T2 P0 集成**：炼化 save → verify 失败 → restore → 字节一致；适配 prepare → verify jsonl → restore
 - [ ] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
 - [ ] **RAR-T4 P1 CI**：`ci-e2e-smoke` 可选追加「试跑验证」按钮可见（轻量）；或仅在 selftest 阶段跑 RAR-T3

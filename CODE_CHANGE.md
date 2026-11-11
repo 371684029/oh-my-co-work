@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-11 | A/M | server/src/memberVerify.js, server/src/services.js, server/src/routes/catalogRoutes.js, server/test/memberVerify.test.js, web/src/api.js, web/src/composables/settingsMembersCopy.js, web/src/views/settings/Members.vue, web/src/i18n/settingsMembers.{zh,en}.js, docs/plan-5.9.0.md | 5.9.0 M1：炼化保存后同步试跑 verify、POST /members/:id/verify、verifyLast/verifyFailed 落库、保存 toast 告警
 2026-11-11 | A/M | docs/plan-5.9.0.md, docs/README.md | 5.9.0 规划：炼化/适配/还原 verify 闭环、还原中心适配备份、demo/selftest 验收；docs 索引登记
 2026-11-11 | M | server/src/appSettings.js, web/src/composables/furnacePetPolicy.js, web/src/components/FurnaceSprite.vue | 熔炉入口可见性：furnacePet.showOnSettings 默认改 true（前后端同构，设置页也能看到桌宠）；桌宠恢复位置时若落点完全在视口外则回落默认锚点并写回，避免 localStorage 脏值导致桌宠永久丢失
 2026-11-11 | M | web/src/views/settings/{Members,Groups}.vue | 新建成员默认勾选炼化（refine: true，可取消）；群模板新建/首步默认带 refine，沿用服务端 refineMembersForSteps 契约

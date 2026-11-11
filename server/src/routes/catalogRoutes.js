@@ -7,6 +7,7 @@ import {
   cloneMember,
   updateMember,
   deleteMember,
+  verifyMemberById,
   listGroups,
   getGroup,
   createGroup,
@@ -124,6 +125,14 @@ router.post('/members/:id/source-backup', (req, res) => {
     })
   } catch (e) {
     res.status(400).json({ error: e.message })
+  }
+})
+router.post('/members/:id/verify', (req, res) => {
+  try {
+    res.json(verifyMemberById(req.params.id, req.body || {}))
+  } catch (e) {
+    const status = e.code === 'NOT_FOUND' ? 404 : 400
+    res.status(status).json({ error: e.message, code: e.code })
   }
 })
 router.post('/members/:id/refine/restore', (req, res) => {

@@ -31,6 +31,7 @@ import { killSessionProcesses } from './processRegistry.js'
 import { getAppSettings, isDemoMember, isDemoGroup } from './appSettings.js'
 import { readSessionAnnouncement } from './journal.js'
 import { applyRefineOnMemberSave } from './refineSource.js'
+import { shouldAutoVerifyRefine, verifyMemberSync } from './memberVerify.js'
 
 function memberRow(r) {
   if (!r) return null
@@ -121,11 +122,54 @@ function finalizeMemberScript(script) {
 function persistRefineOnSave(member) {
   if (!member?.id || !member.config?.refine?.enabled) return member
   const { nextConfig, prep } = applyRefineOnMemberSave(member)
+  let verifyResult = null
+  const probeMember = { ...member, config: nextConfig }
+  if (shouldAutoVerifyRefine(probeMember, prep)) {
+    verifyResult = verifyMemberSync(probeMember)
+    const refine = {
+      ...(nextConfig.refine || {}),
+      verifyLast: {
+        ok: !!verifyResult.ok,
+        at: new Date().toISOString(),
+        checks: verifyResult.checks || [],
+        elapsedMs: verifyResult.elapsedMs ?? 0,
+        skipped: !!verifyResult.skipped,
+      },
+    }
+    if (!verifyResult.ok && !verifyResult.skipped) refine.verifyFailed = true
+    else delete refine.verifyFailed
+    nextConfig.refine = refine
+  }
   getDb()
     .prepare(`UPDATE members SET config_json = ?, updated_at = ? WHERE id = ?`)
     .run(JSON.stringify(nextConfig), nowIso(), member.id)
   const row = getMember(member.id)
-  return row ? { ...row, refinePrep: prep } : member
+  return row ? { ...row, refinePrep: prep, verifyResult } : member
+}
+
+export function verifyMemberById(id, options = {}) {
+  const m = getMember(id)
+  if (!m) throw Object.assign(new Error('成员不存在'), { code: 'NOT_FOUND' })
+  const verifyResult = verifyMemberSync(m, options)
+  const refine = m.config?.refine
+  if (refine?.enabled) {
+    const nextRefine = {
+      ...refine,
+      verifyLast: {
+        ok: !!verifyResult.ok,
+        at: new Date().toISOString(),
+        checks: verifyResult.checks || [],
+        elapsedMs: verifyResult.elapsedMs ?? 0,
+        skipped: !!verifyResult.skipped,
+      },
+    }
+    if (!verifyResult.ok && !verifyResult.skipped) nextRefine.verifyFailed = true
+    else delete nextRefine.verifyFailed
+    getDb()
+      .prepare(`UPDATE members SET config_json = ?, updated_at = ? WHERE id = ?`)
+      .run(JSON.stringify({ ...m.config, refine: nextRefine }), nowIso(), id)
+  }
+  return { memberId: id, ...verifyResult }
 }
 
 function refineMembersForSteps(steps) {
