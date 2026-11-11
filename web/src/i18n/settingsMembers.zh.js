@@ -44,11 +44,13 @@ export const settingsMembersZh = {
     desc: '简介',
     descPlaceholder: '可选，一句话说明职责',
     adapt: '是否适配',
+    adaptHint:
+      '仅新接入或跑不起来时再开。已稳定运行的脚本请关闭，避免每次执行前熔炉改源。与炼化不同：适配走 data/backups/adapt。',
     refine: '熔炉炼化',
     refineTip:
       '点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。',
     refineHint:
-      '勾上并保存后会马上改源文件（如 newBranch.bat），不是等群聊跑完才改。跑完仍会把产出整理进文档中心。',
+      '勾上并保存后会马上改源文件。推荐入口 node index.mjs（勿炼化 .bat 包装）；还原用下方按钮或「还原中心」。跑完仍整理进文档中心。',
     refineRestore: '还原到炼化前',
     refineSkills: '炼化 skills（第三方 Agent 调起指令）',
     refineCopySkill: '复制炼化 Skill 指令',

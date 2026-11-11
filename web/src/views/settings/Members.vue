@@ -88,6 +88,7 @@
           <el-tooltip :content="adaptHover" placement="top" :show-after="300">
             <el-checkbox v-model="form.adapt">{{ membersT('form.adapt') }}</el-checkbox>
           </el-tooltip>
+          <div class="field-hint">{{ membersT('form.adaptHint') }}</div>
         </el-form-item>
         <el-form-item>
           <el-tooltip :content="membersT('form.refineTip')" placement="top" :show-after="300">

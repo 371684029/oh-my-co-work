@@ -22,3 +22,16 @@ test('stripRefineContract removes refine block when backup missing', () => {
   assert.doesNotMatch(text, new RegExp(REFINE_MARK))
   assert.match(text, /@echo off/)
 })
+
+test('stripRefineContract on mjs removes argv sync', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-strip-mjs-'))
+  const mjs = path.join(dir, 'x.mjs')
+  fs.writeFileSync(mjs, 'console.log("ok")\n', 'utf8')
+  applyRefineContract(mjs, { title: 'T' })
+  assert.match(fs.readFileSync(mjs, 'utf8'), /acwSyncArgvFromEnv/)
+  const r = stripRefineContract(mjs)
+  assert.equal(r.ok, true)
+  const text = fs.readFileSync(mjs, 'utf8')
+  assert.doesNotMatch(text, /acwSyncArgvFromEnv/)
+  assert.match(text, /console\.log\("ok"\)/)
+})

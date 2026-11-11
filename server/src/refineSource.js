@@ -19,8 +19,9 @@ import {
   isNodeScript,
   nodeRefineArgvSyncSnippet,
 } from './refineArgvSync.js'
+import { REFINE_MARK, stripRefineContractText } from './refineContractStrip.js'
 
-export const REFINE_MARK = 'ACW-REFINE'
+export { REFINE_MARK }
 
 function nlOf(text) {
   return text.includes('\r\n') ? '\r\n' : '\n'
@@ -121,6 +122,23 @@ export function applyRefineContract(filePath, opts = {}) {
   return { patched: true, reason: 'ok' }
 }
 
+/** 修复旧版 bat 炼化注释（全角括号 /「缺则用」导致 cmd 乱解析）。 */
+export function repairRefineContractContent(filePath, { title } = {}) {
+  const ext = path.extname(filePath).toLowerCase()
+  if (ext !== '.bat' && ext !== '.cmd') return { ok: false, reason: 'not_bat' }
+  const raw = fs.readFileSync(filePath)
+  const src = readScriptSource(raw)
+  if (!src.ok) return { ok: false, reason: src.reason }
+  if (!src.text.includes(REFINE_MARK)) return { ok: false, reason: 'no_mark' }
+  if (!/缺则用|[\uFF08\uFF09]/.test(src.text)) return { ok: false, reason: 'ok' }
+  const stripped = stripRefineContractText(src.text)
+  const nl = '\r\n'
+  const heading = String(title || '产出台账').trim() || '产出台账'
+  const body = insertAfterPreamble(stripped.text, refineBlock(filePath, heading, nl), nl)
+  const next = body.replace(/\r?\n/g, '\r\n')
+  return { ok: true, next, hasBom: false }
+}
+
 /**
  * 勾选炼化并保存时：备份 → 改源文件契约 → 立刻写入 format 规格（不等第一次群聊跑完）。
  */
@@ -189,7 +207,17 @@ export function applyRefineOnMemberSave(member) {
       return false
     }
   })
-  const filesToTouch = [...needPatch, ...needArgvUpgrade]
+  const needBatRepair = (assess.files || []).filter((f) => {
+    try {
+      const t = fs.readFileSync(f.path, 'utf8')
+      const ext = path.extname(f.path).toLowerCase()
+      if (ext !== '.bat' && ext !== '.cmd') return false
+      return t.includes(REFINE_MARK) && /缺则用|[\uFF08\uFF09]/.test(t)
+    } catch {
+      return false
+    }
+  })
+  const filesToTouch = [...needPatch, ...needArgvUpgrade, ...needBatRepair]
   if (assess.ok && !filesToTouch.length) {
     reason = 'already'
   } else if (assess.ok) {
@@ -225,6 +253,12 @@ export function applyRefineOnMemberSave(member) {
           const up = ensureRefineArgvSyncInSource(src.text, f.path)
           if (!up.ok) continue
           staged.push({ path: f.path, next: up.next, hasBom: src.hasBom })
+        }
+        for (const f of needBatRepair) {
+          if (reason !== 'ok') break
+          const r = repairRefineContractContent(f.path, { title })
+          if (!r.ok) continue
+          staged.push({ path: f.path, next: r.next, hasBom: r.hasBom })
         }
         if (reason === 'ok') {
           for (const s of staged) {

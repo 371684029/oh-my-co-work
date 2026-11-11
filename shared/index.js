@@ -96,7 +96,10 @@ export const FURNACE_ROLE_LABEL = {
   refine: '炼化',
 }
 export const ADAPT_OPTION_HOVER =
-  '开启后由熔炉做适配：优先改代码接到工作台；改不了代码再给该步骤打适配标记。改源文件前会打压缩包备份。'
+  '仅在脚本尚未接好工作台时开启：每次执行前由熔炉改代码或打适配标记（备份在 data/backups/adapt）。已能稳定跑的成员请关适配，只保留炼化。'
+
+export const REFINE_VS_ADAPT_HINT =
+  '炼化=保存时写 ACW 输入/stdout 契约；适配=每次执行前熔炉改代码。推荐：入口用 node index.mjs，炼化开、适配关；.bat 仅本地双击用。'
 
 export function isFurnaceMember(m) {
   if (!m) return false

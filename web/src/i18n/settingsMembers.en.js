@@ -44,11 +44,13 @@ export const settingsMembersEn = {
     desc: 'Description',
     descPlaceholder: 'Optional one-liner for responsibilities',
     adapt: 'Adapt',
+    adaptHint:
+      'Turn on only while onboarding a script or when it does not run yet. Keep off for stable members so the furnace does not patch on every run. Backups: data/backups/adapt.',
     refine: 'Furnace refine',
     refineTip:
       'On save the script is rewritten right away: the ACW input env var is written and a doc title is printed to stdout. The docs hub collects output by that spec after the run.',
     refineHint:
-      'Once checked and saved, source files (e.g. newBranch.bat) are patched immediately — not after the group chat finishes. Output is still gathered into the docs hub after the run.',
+      'Checked + save patches source immediately. Prefer node index.mjs as entry (avoid refining a .bat wrapper); use Restore below or Restore center. Output still goes to the docs hub after the run.',
     refineRestore: 'Restore to pre-refine',
     refineSkills: 'Refine skills (prompt for third-party agents)',
     refineCopySkill: 'Copy refine skill prompt',

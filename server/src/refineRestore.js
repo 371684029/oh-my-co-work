@@ -3,11 +3,13 @@ import path from 'node:path'
 import { getMember, updateMember } from './services.js'
 import { DATA_ROOT } from './db.js'
 import {
+  readScriptSource,
   restoreAdaptManifest,
   collectAdaptSourcePaths,
   readAdaptZipEntries,
+  writeScriptSource,
 } from './adaptBackup.js'
-import { REFINE_MARK } from './refineSource.js'
+import { stripRefineContractText } from './refineContractStrip.js'
 
 function manifestPathForZip(zipPath) {
   const dir = path.dirname(zipPath)
@@ -19,33 +21,18 @@ function manifestPathForZip(zipPath) {
   return null
 }
 
-/** Strip炼化契约块（无备份时的降级，仅移除含 REFINE_MARK 的注释行及紧随的契约行）。 */
+/** Strip炼化契约块（无备份时的降级；含 acwSyncArgvFromEnv）。 */
 export function stripRefineContract(filePath) {
   if (!fs.existsSync(filePath)) return { ok: false, reason: 'missing' }
   const raw = fs.readFileSync(filePath)
   if (raw.includes(0)) return { ok: false, reason: 'binary' }
-  const text = raw.toString('utf8')
-  if (!text.includes(REFINE_MARK)) return { ok: false, reason: 'no_mark' }
-  const nl = text.includes('\r\n') ? '\r\n' : '\n'
-  const lines = text.split(/\r?\n/)
-  const out = []
-  let skipping = false
-  let skipBudget = 0
-  for (const line of lines) {
-    if (line.includes(REFINE_MARK)) {
-      skipping = true
-      skipBudget = 8
-      continue
-    }
-    if (skipping && skipBudget > 0) {
-      skipBudget -= 1
-      if (/^\s*$/.test(line)) skipping = false
-      continue
-    }
-    skipping = false
-    out.push(line)
-  }
-  fs.writeFileSync(filePath, out.join(nl), 'utf8')
+  const src = readScriptSource(raw)
+  if (!src.ok) return { ok: false, reason: src.reason || 'unreadable' }
+  const { text, removed } = stripRefineContractText(src.text)
+  if (!removed) return { ok: false, reason: 'no_mark' }
+  const ext = path.extname(filePath).toLowerCase()
+  const hasBom = ext === '.bat' || ext === '.cmd' ? false : src.hasBom
+  writeScriptSource(filePath, text, { hasBom })
   return { ok: true, reason: 'stripped' }
 }
 
