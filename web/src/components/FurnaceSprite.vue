@@ -342,6 +342,30 @@ function clampPos(left, top, el) {
   }
 }
 
+/**
+ * PET-05: a saved position from another window size / monitor can leave the
+ * sprite fully off-screen with no way to grab it back. Detect that and fall
+ * back to the default anchor instead of trusting the stored value.
+ */
+function isPosOffScreen(saved) {
+  if (!saved || typeof saved !== 'object' || typeof window === 'undefined') return false
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  if (saved.left != null || saved.top != null) {
+    const left = Number(saved.left)
+    const top = Number(saved.top)
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return true
+    // Require at least a 24px grab handle inside the viewport.
+    const sliver = 24
+    return left > vw - sliver || top > vh - sliver || left + sliver < 0 || top + sliver < 0
+  }
+  const right = Number(saved.right)
+  const bottom = Number(saved.bottom)
+  if (Number.isFinite(right) && right > vw - 24) return true
+  if (Number.isFinite(bottom) && bottom > vh - 24) return true
+  return false
+}
+
 function onDragStart(e) {
   if (e.button != null && e.button !== 0) return
   const root = e.currentTarget.closest('.furnace-pet')
@@ -422,7 +446,12 @@ onMounted(async () => {
     const raw = localStorage.getItem(POS_KEY)
     if (raw) {
       const saved = JSON.parse(raw)
-      pos.value = isAutoPlacedPos(saved) ? defaultPos() : { ...defaultPos(), ...saved }
+      if (isPosOffScreen(saved)) {
+        pos.value = defaultPos()
+        persist()
+      } else {
+        pos.value = isAutoPlacedPos(saved) ? defaultPos() : { ...defaultPos(), ...saved }
+      }
     } else {
       pos.value = defaultPos()
     }

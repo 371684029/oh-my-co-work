@@ -137,7 +137,7 @@ export function defaultUiSettings() {
     colorScheme: 'system',
     furnacePet: {
       showOnWorkbench: true,
-      showOnSettings: false,
+      showOnSettings: true,
       showOnDocs: false,
       hideWhenTerminalFullscreen: true,
     },
@@ -155,7 +155,7 @@ function normalizeUi(raw) {
     colorScheme,
     furnacePet: {
       showOnWorkbench: fp.showOnWorkbench !== false,
-      showOnSettings: fp.showOnSettings === true,
+      showOnSettings: fp.showOnSettings !== false,
       showOnDocs: fp.showOnDocs === true,
       hideWhenTerminalFullscreen: fp.hideWhenTerminalFullscreen !== false,
     },

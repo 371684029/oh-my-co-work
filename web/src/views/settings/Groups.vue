@@ -575,6 +575,9 @@ function openCreate() {
         type: 'member',
         memberId: admin.id,
         flow,
+        // 群模板首步跟随成员炼化状态：已炼化则继承；未炼化也默认勾上，
+        // 保存时服务端会按炼化契约把该成员的源脚本补成「有输入/输出」。
+        refine: true,
       }),
     )
   }

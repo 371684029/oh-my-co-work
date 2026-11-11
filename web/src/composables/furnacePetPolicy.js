@@ -6,7 +6,7 @@ import { furnaceWorkspaceOpen } from './furnaceUi.js'
 export function defaultFurnacePetPolicy() {
   return {
     showOnWorkbench: true,
-    showOnSettings: false,
+    showOnSettings: true,
     showOnDocs: false,
     hideWhenTerminalFullscreen: true,
   }
@@ -17,7 +17,7 @@ export function normalizeFurnacePetPolicy(raw) {
   if (!raw || typeof raw !== 'object') return d
   return {
     showOnWorkbench: raw.showOnWorkbench !== false,
-    showOnSettings: raw.showOnSettings === true,
+    showOnSettings: raw.showOnSettings !== false,
     showOnDocs: raw.showOnDocs === true,
     hideWhenTerminalFullscreen: raw.hideWhenTerminalFullscreen !== false,
   }

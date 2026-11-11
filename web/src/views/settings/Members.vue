@@ -509,7 +509,9 @@ function emptyForm() {
     description: '',
     kind: 'script',
     adapt: false,
-    refine: false,
+    // 新建成员默认炼化：保存时自动写入 ACW 输入环境变量与 stdout 标题，
+    // 文档中心才收得到稳定正文。取消勾选即可不炼化。
+    refine: true,
     script: {
       mode: 'file',
       filePath: '',
