@@ -228,6 +228,30 @@
                 <el-input v-model="form.script.argsText" placeholder="--flag value" />
               </el-form-item>
 
+              <el-form-item :label="membersT('form.paramCheck')">
+                <el-radio-group v-model="form.paramCheckMode">
+                  <el-radio value="off">{{ membersT('form.paramCheckOff') }}</el-radio>
+                  <el-radio value="keys">{{ membersT('form.paramCheckKeys') }}</el-radio>
+                  <el-radio value="command">{{ membersT('form.paramCheckCommand') }}</el-radio>
+                </el-radio-group>
+                <div class="field-hint">{{ membersT('form.requiredParamsHint') }}</div>
+              </el-form-item>
+              <el-form-item
+                v-if="form.paramCheckMode === 'keys'"
+                :label="membersT('form.requiredParams')"
+              >
+                <el-input
+                  v-model="form.requiredParamsText"
+                  :placeholder="membersT('form.requiredParamsPlaceholder')"
+                >
+                  <template #append>
+                    <el-button type="primary" link @click="fillRequiredParamsFromCommand">
+                      {{ membersT('form.requiredParamsFromCmd') }}
+                    </el-button>
+                  </template>
+                </el-input>
+              </el-form-item>
+
               <el-form-item :label="membersT('form.env')">
                 <el-input
                   v-model="form.script.envText"
@@ -292,7 +316,7 @@ import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-import { ADAPT_OPTION_HOVER } from '@acw/shared'
+import { ADAPT_OPTION_HOVER, scanParamKeysInMemberConfig } from '@acw/shared'
 import { fuzzySearch } from '@acw/shared'
 import {
   membersT,
@@ -504,12 +528,38 @@ function onScriptModeChange() {
   if (!s.runtime) s.runtime = defaultRuntime()
 }
 
+function paramCheckFromConfig(cfg = {}) {
+  if (cfg.requiresParams === false || cfg.skipParamsCheck) {
+    return { paramCheckMode: 'off', requiredParamsText: '' }
+  }
+  if (cfg.requiresParams === 'command') {
+    return { paramCheckMode: 'command', requiredParamsText: '' }
+  }
+  if (Array.isArray(cfg.requiresParams) && cfg.requiresParams.length) {
+    return {
+      paramCheckMode: 'keys',
+      requiredParamsText: cfg.requiresParams.join(', '),
+    }
+  }
+  return { paramCheckMode: 'off', requiredParamsText: '' }
+}
+
+function fillRequiredParamsFromCommand() {
+  const cfg = { script: form.value.script }
+  const keys = scanParamKeysInMemberConfig(cfg)
+  form.value.requiredParamsText = keys.join(', ')
+  if (keys.length) form.value.paramCheckMode = 'keys'
+  else ElMessage.info(membersT('form.requiredParamsPlaceholder'))
+}
+
 function emptyForm() {
   return {
     displayName: '',
     description: '',
     kind: 'script',
     adapt: false,
+    paramCheckMode: 'off',
+    requiredParamsText: '',
     // 新建成员默认炼化：保存时自动写入 ACW 输入环境变量与 stdout 标题，
     // 文档中心才收得到稳定正文。取消勾选即可不炼化。
     refine: true,
@@ -637,12 +687,14 @@ async function load() {
 
 function fillFromRow(row, { asClone = false } = {}) {
   const s = row.config?.script || {}
+  const param = paramCheckFromConfig(row.config || {})
   return {
     displayName: asClone ? membersCloneName(row.display_name) : row.display_name,
     description: row.config?.description || '',
     kind: row.kind,
     adapt: !!row.config?.adapt,
     refine: !!row.config?.refine?.enabled,
+    ...param,
     script: {
       mode: s.mode || (s.filePath ? 'file' : 'command'),
       filePath: s.filePath || '',
@@ -734,6 +786,21 @@ async function save() {
 
     if (prev?.role) baseConfig.role = prev.role
     if (form.value.adapt) baseConfig.adapt = true
+  if (form.value.kind === 'script') {
+    const mode = form.value.paramCheckMode || 'off'
+    if (mode === 'off') {
+      baseConfig.requiresParams = false
+    } else if (mode === 'command') {
+      baseConfig.requiresParams = 'command'
+    } else {
+      const keys = String(form.value.requiredParamsText || '')
+        .split(/[,，\s]+/)
+        .map((k) => k.trim())
+        .filter((k) => /^#\d+$/.test(k) || /^\d+$/.test(k))
+        .map((k) => (k.startsWith('#') ? k : `#${k}`))
+      baseConfig.requiresParams = keys.length ? keys : false
+    }
+  }
     // 4.5 熔炉炼化：开启时写入 config.refine；取消只关 enabled，保留已学到的 format
     if (form.value.refine) {
       baseConfig.refine = {

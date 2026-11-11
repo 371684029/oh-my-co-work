@@ -30,7 +30,19 @@ import {
 } from '../furnaceContext.js'
 import { syncFurnaceSessionContext, touchFurnaceWorkflow } from '../furnaceSituation.js'
 import { formatFurnaceRoleNotice } from '../furnaceGrokInject.js'
-import { getMember, getGroup, getSession, resolveStepForNode, templateStepIndexOf, memberNeedsProjectParams, hasProjectParam1, resolveParamsMap, parseMemberConfig,  } from './store.js'
+import {
+  getMember,
+  getGroup,
+  getSession,
+  resolveStepForNode,
+  templateStepIndexOf,
+  memberNeedsProjectParams,
+  memberRequiredParamKeys,
+  hasRequiredProjectParams,
+  missingProjectParamKeys,
+  resolveParamsMap,
+  parseMemberConfig,
+} from './store.js'
 import { skipArchiveNode, dismissPendingArchiveIfAny, archiveSession, refreshSessionAnnouncement } from './archive.js'
 import { captureStepSnapshot, summarizeStepChange } from '../stepSnapshot.js'
 import { dryRunMemberStep } from '../stepDryRun.js'
@@ -278,19 +290,23 @@ export async function advance(sessionId) {
       }
     }
 
-    if (memberNeedsProjectParams(member) && !hasProjectParam1(ctx)) {
+    const requiredKeys = memberRequiredParamKeys(member)
+    if (requiredKeys.length && !hasRequiredProjectParams(ctx, requiredKeys)) {
+      const missing = missingProjectParamKeys(ctx, requiredKeys)
       engineEmit('persist_node_io', sessionId, node.id, {
         input: {
           memberId: member.id,
           memberName: member.display_name,
           kind: member.kind,
           needParams: true,
+          requiredParamKeys: requiredKeys,
         },
         output: {
           needParams: true,
           waiting: true,
           humanAction: 'pending',
-          reason: 'missing_param_1',
+          reason: 'missing_params',
+          missingParamKeys: missing,
         },
         status: NODE_STATUS.WAITING_HUMAN,
       })
@@ -300,11 +316,14 @@ export async function advance(sessionId) {
         type: 'gate',
         node_instance_id: node.id,
         content: {
-          text: `「${node.title || member.display_name}」需要项目参数 #1 才能启动。请在输入框提交（空格/换行分段为 #1 #2…），或点「提交」。`,
+          text: `「${node.title || member.display_name}」需要项目参数 ${missing.join('、')} 才能启动。请在输入框提交（空格/换行分段为 #1 #2…），或点「提交」。成员须在设置里声明 requiresParams，命令里的 # 占位仅负责替换、不默认缺参。`,
           mode: 'need_params',
           actions: ['submit'],
           needParams: true,
-          policy: '缺 #1 时不启动脚本。闸门重试时本轮输入全文会作为 ACW_HUMAN_INPUT，不强制再切 #1。',
+          requiredParamKeys: requiredKeys,
+          missingParamKeys: missing,
+          policy:
+            '缺参闸门仅看成员配置的 requiresParams。闸门重试时本轮输入全文会作为 ACW_HUMAN_INPUT，不强制再切 #1。',
         },
       })
       engineEmit('ws_broadcast_session', sessionId, {

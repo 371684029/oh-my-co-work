@@ -486,13 +486,12 @@ function emptyForm() {
     description: '',
     adminInherit: true,
     adminMemberId: null,
-    // First node: collect project info → #1 #2…; flow follows global by default
     steps: [
       stepForm(
         {
           title: groupsT('steps.defaultFirst'),
           type: 'human',
-          captureParams: true,
+          captureParams: false,
           flow,
         },
         0,

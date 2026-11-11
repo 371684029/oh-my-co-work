@@ -151,13 +151,16 @@
 
 ## 5. 缺参拦截（CI01）
 
-若成员模板（`defaultText` / `command` / `path` / `args` / `env`）引用了 `#1`，或配置了 `requiresParams` / `minParams`：
+**群模板采集的 #1 #2… 与成员命令里的 # 占位无默认对应**：命令写 `node index.mjs #3 #4` 只从会话取 `#3`、`#4` 的值做替换。
 
-- 会话尚无非空 `#1` 时：**不启动脚本**，弹出「需要项目参数」闸门  
-- 提交后从**本步**继续，不跳步  
-- 闸门重试时本轮输入全文 → `ACW_HUMAN_INPUT`（不强制再切 `#1`）
+缺参闸门**仅看成员显式配置**（不再因命令里出现 `#1` 就默认拦截）：
 
-显式关闭检查：`config.requiresParams: false` 或 `skipParamsCheck: true`。
+- `config.requiresParams: ['#1','#3']` — 缺任一槽位则不启动，弹闸门  
+- `config.requiresParams: 'command'` — 按命令/args/env 里扫描到的 `#n` 校验（须主动选）  
+- `config.requiresParams: false` — 不拦（占位仍照常替换）  
+- `minParams: n` — 等价要求 `#1`…`#n` 均有值  
+
+闸门重试时本轮输入全文 → `ACW_HUMAN_INPUT`（不强制再切 `#1`）。
 
 ---
 

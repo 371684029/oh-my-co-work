@@ -570,9 +570,7 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
     // 采集项目参数：步骤显式 captureParams，或模板首个人工步默认开启
     const tplIdx = templateStepIndexOf(node, steps.length)
     const captureParams =
-      prevIn.captureParams === true ||
-      step.captureParams === true ||
-      (step.captureParams !== false && tplIdx === 0)
+      prevIn.captureParams === true || step.captureParams === true
 
     let parsed = null
     if (captureParams) {

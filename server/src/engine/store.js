@@ -12,6 +12,10 @@ import {
   mergeSystemParams,
   abbrGroupTag,
   formatSessionAutoTitle,
+  hasRequiredProjectParams,
+  memberNeedsProjectParams,
+  memberRequiredParamKeys,
+  missingProjectParamKeys,
 } from '@acw/shared'
 
 export function getMember(id) {
@@ -39,46 +43,16 @@ export function parseMemberConfig(member) {
   return parseJson(member.config_json, {})
 }
 
-/**
- * CI01：成员是否依赖会话级项目参数 #1
- * - requiresParams: false → 不拦截
- * - requiresParams: ['#1'] / minParams ≥ 1 → 拦截
- * - 否则扫描 defaultText / command / path / args / env 是否引用 #1
- */
-export function memberNeedsProjectParams(member) {
-  const config = parseMemberConfig(member)
-  if (config.requiresParams === false || config.skipParamsCheck === true) return false
-  if (Array.isArray(config.requiresParams) && config.requiresParams.length > 0) {
-    return config.requiresParams.some((k) => String(k) === '#1' || String(k) === '1')
-  }
-  if (Number(config.minParams) > 0) return true
-  const script = config.script && typeof config.script === 'object' ? config.script : {}
-  const envVals =
-    script.env && typeof script.env === 'object' ? Object.values(script.env) : []
-  const blobs = [
-    config.defaultText,
-    script.command,
-    script.filePath,
-    script.path,
-    ...(Array.isArray(script.args) ? script.args : []),
-    ...envVals,
-  ]
-    .filter((x) => x != null && String(x).length)
-    .map(String)
-    .join('\n')
-  return /\{#1\}|#1\b|\{1\}/.test(blobs)
+export {
+  memberNeedsProjectParams,
+  memberRequiredParamKeys,
+  hasRequiredProjectParams,
+  missingProjectParamKeys,
 }
 
-/** 会话是否已有非空 #1 / paramsList[0] */
+/** @deprecated 使用 hasRequiredProjectParams(ctx, ['#1']) */
 export function hasProjectParam1(ctx) {
-  const c = ctx || {}
-  if (Array.isArray(c.paramsList) && c.paramsList[0] != null && String(c.paramsList[0]).trim()) {
-    return true
-  }
-  const p = c.params && typeof c.params === 'object' ? c.params : {}
-  if (p['#1'] != null && String(p['#1']).trim()) return true
-  if (p['1'] != null && String(p['1']).trim()) return true
-  return false
+  return hasRequiredProjectParams(ctx, ['#1'])
 }
 
 /** X07：闸门附言写入 lastHumanInput + #a */

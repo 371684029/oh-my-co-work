@@ -1,6 +1,6 @@
 {
   "name": "oh-my-co-work",
-  "version": "5.3.5",
+  "version": "5.3.6",
   "private": true,
   "type": "module",
   "description": "群聊式多智能体协同台 MVP",

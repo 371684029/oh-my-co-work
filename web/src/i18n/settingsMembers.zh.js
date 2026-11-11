@@ -71,6 +71,15 @@ export const settingsMembersZh = {
     commandHint1: '，产品不内置任何工具名。走 PATH；占位符 ',
     commandHint2: '（调用时输入框参数）、',
     commandHint3: '（空占位自动去掉）。含 $env: 时 runtime 用 PowerShell 或 auto。',
+    paramCheck: '缺参校验',
+    paramCheckOff: '不校验（命令里的 # 仅替换，不挡运行）',
+    paramCheckKeys: '指定槽位',
+    paramCheckCommand: '按命令中的 # 占位',
+    requiredParams: '必填参数槽位',
+    requiredParamsPlaceholder: '如 #1,#3,#5（与群模板采集顺序无关，须自己在命令里写对应 #）',
+    requiredParamsHint:
+      '与群聊里采集的 #1 #2… 无默认对应关系：命令写 node index.mjs #3 #4 就只替换 #3、#4，是否缺参由本项决定。',
+    requiredParamsFromCmd: '从命令识别 #',
     // Placeholder syntax tokens — keep identical to product syntax.
     commandHintPlaceholders: '{#1} #群聊 #文件夹 {input} {folder}',
     workDir: '脚本工作目录',

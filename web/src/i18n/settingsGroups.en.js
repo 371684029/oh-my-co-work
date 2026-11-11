@@ -72,7 +72,7 @@ export const settingsGroupsEn = {
     memberPlaceholder: 'Bind member',
     humanTag: 'Human step',
     offsiteTag: 'Temp',
-    captureParams: 'Project params #1 #2…',
+    captureParams: 'Capture as session #1 #2… (not auto-bound to member command slots)',
     adapt: 'Adapt',
     refine: 'Furnace refine',
     refineTip:

@@ -72,7 +72,7 @@ export const settingsGroupsZh = {
     memberPlaceholder: '绑定成员',
     humanTag: '人工步骤',
     offsiteTag: '临时',
-    captureParams: '项目参数 #1 #2…',
+    captureParams: '采集为会话 #1 #2…（与各成员命令占位无默认绑定）',
     adapt: '是否适配',
     refine: '熔炉炼化',
     refineTip: '点保存立刻按炼化契约改该步成员源脚本（ACW 输入 + stdout 标题）；跑完再写入文档中心。',

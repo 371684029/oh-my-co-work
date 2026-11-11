@@ -75,6 +75,15 @@ export const settingsMembersEn = {
     commandHint2: ' (arguments typed into the input box at call time), ',
     commandHint3:
       ' (empty placeholders are dropped). When the command contains $env:, the runtime uses PowerShell or auto.',
+    paramCheck: 'Missing-param gate',
+    paramCheckOff: 'Off (# in command only substitutes, does not block)',
+    paramCheckKeys: 'Explicit slots',
+    paramCheckCommand: 'Infer from command # placeholders',
+    requiredParams: 'Required param slots',
+    requiredParamsPlaceholder: 'e.g. #1,#3,#5 (not tied to group capture order)',
+    requiredParamsHint:
+      'Group #1/#2 and member slots are not coupled: command #3 #4 only maps to session #3/#4; gate rules come from here.',
+    requiredParamsFromCmd: 'Pick # from command',
     // Placeholder syntax tokens — keep identical to product syntax.
     commandHintPlaceholders: '{#1} #群聊 #文件夹 {input} {folder}',
     workDir: 'Script working directory',
