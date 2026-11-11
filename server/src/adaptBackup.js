@@ -137,9 +137,15 @@ export function readScriptSource(raw) {
 }
 
 export function writeScriptSource(abs, text, { hasBom = false } = {}) {
+  let out = String(text)
+  const ext = path.extname(String(abs || '')).toLowerCase()
+  if (ext === '.bat' || ext === '.cmd') {
+    hasBom = false
+    out = out.replace(/\r?\n/g, '\r\n')
+  }
   const payload = hasBom
-    ? Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(String(text), 'utf8')])
-    : Buffer.from(String(text), 'utf8')
+    ? Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(out, 'utf8')])
+    : Buffer.from(out, 'utf8')
   fs.writeFileSync(abs, payload)
 }
 

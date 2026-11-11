@@ -34,13 +34,14 @@ function safeTitle(member) {
 function refineBlock(filePath, title, nl) {
   const ext = path.extname(filePath).toLowerCase()
   if (ext === '.bat' || ext === '.cmd') {
+    // rem 行仅用 ASCII：全角括号 / UTF-8 无 BOM 时 cmd 可能把下一行拆成乱命令（ef-ined / _1 缺则用）
     return [
-      `rem ${REFINE_MARK}: 工作台炼化契约。输入：ACW_HUMAN_INPUT / ACW_PARAM_1（缺则用 %1）；产出 echo 到 stdout，文档中心按「${title}」收。`,
+      `rem ${REFINE_MARK}: ACW_HUMAN_INPUT / ACW_PARAM_1; else use %%1; stdout ### for docs.`,
       'if not defined ACW_PARAM_1 if not "%~1"=="" set "ACW_PARAM_1=%~1"',
       'if not defined ACW_HUMAN_INPUT set "ACW_HUMAN_INPUT=%ACW_PARAM_1%"',
       `echo ### ${title}`,
       'echo.',
-    ].join(nl)
+    ].join('\r\n')
   }
   if (ext === '.ps1') {
     return [
@@ -99,10 +100,18 @@ export function computeRefineContractContent(filePath, { title } = {}) {
   const src = readScriptSource(raw)
   if (!src.ok) return { ok: false, reason: src.reason }
   if (src.text.includes(REFINE_MARK)) return { ok: false, reason: 'already' }
-  const nl = src.nl || nlOf(src.text)
+  const nl =
+    ext === '.bat' || ext === '.cmd'
+      ? '\r\n'
+      : src.nl || nlOf(src.text)
   const heading = String(title || '产出台账').trim() || '产出台账'
-  const next = insertAfterPreamble(src.text, refineBlock(filePath, heading, nl), nl)
-  return { ok: true, next, hasBom: src.hasBom }
+  const body = insertAfterPreamble(src.text, refineBlock(filePath, heading, nl), nl)
+  const next =
+    ext === '.bat' || ext === '.cmd'
+      ? body.replace(/\r?\n/g, '\r\n')
+      : body
+  const hasBom = ext === '.bat' || ext === '.cmd' ? false : src.hasBom
+  return { ok: true, next, hasBom }
 }
 
 export function applyRefineContract(filePath, opts = {}) {

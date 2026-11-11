@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-11 | M | server/src/{refineSource,adaptBackup}.js, server/test/refineSource.test.js | 5.3.4：bat 炼化 rem 改 ASCII、强制 CRLF、禁止 BOM，修复 cmd 报 efined / _1 缺则用
 2026-11-11 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 还原中心断言对齐 DocsRefineChangesPane（.rl-section / 成员炼化源码备份）
 2026-11-11 | A/M | shared/acwWorkbenchParams.js, server/src/{refineArgvSync,refineSource}.js, server/test/{acwWorkbenchParams,refineArgvSync,refineSource}.test.js, server/config/furnace/{prompts/{member-adapt,refine,session}.md,snippets/acw-read-params.mjs,acw-ctl.mjs}, docs/guide-script.md, */package.json, server/config/about.json | 5.3.4 炼化多参：Node 契约追加 acwSyncArgvFromEnv；已炼化源保存时可补插；熔炉 prompt+snippet 约束 #3 起 rest 读 ACW_PARAM_n/JSON
 2026-11-11 | M | server/src/appSettings.js, web/src/composables/furnacePetPolicy.js, web/src/components/FurnaceSprite.vue | 熔炉入口可见性：furnacePet.showOnSettings 默认改 true（前后端同构，设置页也能看到桌宠）；桌宠恢复位置时若落点完全在视口外则回落默认锚点并写回，避免 localStorage 脏值导致桌宠永久丢失
