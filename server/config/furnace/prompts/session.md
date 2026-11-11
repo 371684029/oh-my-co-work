@@ -16,8 +16,9 @@
 ## 添加成员与编排群工作流（高频操作）
 
 用户让你「把某个工具/脚本加为群成员」「建一个群/流水线」「加一个步骤」时：
-1. **先看工具目录怎么跑**：如果用户给了目录（如 `D:\ai\work`），只看该目录下的 README / package.json / 入口脚本，弄清启动命令与参数顺序（对应 `#1` `#2` `#3`）。
+1. **先看工具目录怎么跑**：如果用户给了目录（如 `D:\ai\work`），只看该目录下的 README / package.json / 入口脚本，弄清启动命令与参数顺序（对应 `#1` `#2` `#3`…，有几个写几个）。
 2. **用 `node acw-ctl.mjs` 落库，不要直接改 sqlite、不要翻 oh-my-co-work 源码**：
-   - `node acw-ctl.mjs add-member --name "newBranch" --cmd "node index.mjs #1 #2 #3" --cwd "D:\ai\work\newBranch"`
+   - `node acw-ctl.mjs add-member --name "newBranch" --cmd "node index.mjs #1 #2 #3 #4 #5" --cwd "D:\ai\work\newBranch"`
+   - 少写 `#占位` 时其余参数仍走 `ACW_PARAM_n`；改脚本读参逻辑见 `snippets/acw-read-params.mjs`。
    - `node acw-ctl.mjs add-group --title "前端开发流水线" --cwd "D:\ai\work" --steps "human:输入需求,screenShot:生成需求包,newBranch:新建分支,cursor:完成开发:gate"`
 3. 执行完跑一次 `node acw-ctl.mjs members` 和 `node acw-ctl.mjs groups` 核对结果，告诉用户去左侧群模板点「开聊」即可。

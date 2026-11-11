@@ -51,12 +51,41 @@ test('applyRefineOnMemberSave：保存时备份并改源，立刻写入 format',
   assert.deepEqual(nextConfig.refine.format.input.env, [
     'ACW_HUMAN_INPUT',
     'ACW_PARAM_1',
+    'ACW_PARAM_n',
     'ACW_PARAMS_JSON',
   ])
   assert.equal(nextConfig.refine.format.output.channel, 'stdout')
   assert.ok(nextConfig.refine.refineBackup)
   assert.match(fs.readFileSync(bat, 'utf8'), new RegExp(REFINE_MARK))
   assert.match(refineSaveStatusText(prep), /已按炼化契约改写/)
+})
+
+test('applyRefineOnMemberSave：已有炼化契约可补 argv 同步', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-mem-upg-'))
+  const js = path.join(dir, 'index.mjs')
+  fs.writeFileSync(
+    js,
+    [
+      '#!/usr/bin/env node',
+      '// ACW-REFINE: old',
+      "process.env.ACW_HUMAN_INPUT = process.env.ACW_HUMAN_INPUT || ''",
+      'console.log("### t\\n")',
+      'const gi = process.argv[4]',
+    ].join('\n'),
+    'utf8',
+  )
+  const member = {
+    id: 'mem_upg',
+    kind: MEMBER_KIND.SCRIPT,
+    display_name: 'upg',
+    config: {
+      refine: { enabled: true },
+      script: { mode: 'file', filePath: js, scriptWorkDir: dir },
+    },
+  }
+  const { prep } = applyRefineOnMemberSave(member)
+  assert.equal(prep.patched.length, 1)
+  assert.match(fs.readFileSync(js, 'utf8'), /acwSyncArgvFromEnv/)
 })
 
 test('applyRefineOnMemberSave：无源文件仍保存规格', () => {

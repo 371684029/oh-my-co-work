@@ -14,6 +14,11 @@ import {
   writeScriptSource,
 } from './adaptBackup.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
+import {
+  ensureRefineArgvSyncInSource,
+  isNodeScript,
+  nodeRefineArgvSyncSnippet,
+} from './refineArgvSync.js'
 
 export const REFINE_MARK = 'ACW-REFINE'
 
@@ -64,12 +69,14 @@ function refineBlock(filePath, title, nl) {
       `print("### ${title}\\n")`,
     ].join(nl)
   }
-  return [
-    `// ${REFINE_MARK}: 工作台炼化契约。输入：ACW_HUMAN_INPUT / ACW_PARAM_1；产出 console 到 stdout，文档中心按「${title}」收。`,
+  const lines = [
+    `// ${REFINE_MARK}: 工作台炼化契约。#1…#n → ACW_PARAM_1… / ACW_PARAMS_JSON；成员命令可只写前几个 #占位，其余仍走环境变量。stdout 文档标题「${title}」。`,
     "if (!process.env.ACW_PARAM_1 && process.argv[2]) process.env.ACW_PARAM_1 = process.argv[2]",
     "if (!process.env.ACW_HUMAN_INPUT) process.env.ACW_HUMAN_INPUT = process.env.ACW_PARAM_1 || ''",
     `console.log("### ${title}\\n")`,
-  ].join(nl)
+    nodeRefineArgvSyncSnippet(),
+  ]
+  return lines.join(nl)
 }
 
 function insertAfterPreamble(text, block, nl) {
@@ -144,7 +151,7 @@ export function applyRefineOnMemberSave(member) {
     ...produceRefineSpec(member),
     title,
     input: {
-      env: ['ACW_HUMAN_INPUT', 'ACW_PARAM_1', 'ACW_PARAMS_JSON'],
+      env: ['ACW_HUMAN_INPUT', 'ACW_PARAM_1', 'ACW_PARAM_n', 'ACW_PARAMS_JSON'],
       argvFallback: true,
     },
     output: { channel: 'stdout', heading: title },
@@ -161,12 +168,25 @@ export function applyRefineOnMemberSave(member) {
       return false
     }
   })
-  if (assess.ok && !needPatch.length) {
+  const needArgvUpgrade = (assess.files || []).filter((f) => {
+    try {
+      const t = fs.readFileSync(f.path, 'utf8')
+      return (
+        isNodeScript(f.path) &&
+        t.includes(REFINE_MARK) &&
+        !t.includes('acwSyncArgvFromEnv')
+      )
+    } catch {
+      return false
+    }
+  })
+  const filesToTouch = [...needPatch, ...needArgvUpgrade]
+  if (assess.ok && !filesToTouch.length) {
     reason = 'already'
   } else if (assess.ok) {
     try {
       backup = createAdaptBackup({
-        files: needPatch,
+        files: filesToTouch,
         memberId: member.id,
         kind: 'refine',
       })
@@ -184,6 +204,18 @@ export function applyRefineOnMemberSave(member) {
             break
           }
           staged.push({ path: f.path, next: r.next, hasBom: r.hasBom })
+        }
+        for (const f of needArgvUpgrade) {
+          if (reason !== 'ok') break
+          const raw = fs.readFileSync(f.path)
+          const src = readScriptSource(raw)
+          if (!src.ok) {
+            reason = 'patch_failed'
+            break
+          }
+          const up = ensureRefineArgvSyncInSource(src.text, f.path)
+          if (!up.ok) continue
+          staged.push({ path: f.path, next: up.next, hasBom: src.hasBom })
         }
         if (reason === 'ok') {
           for (const s of staged) {

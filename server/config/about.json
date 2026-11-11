@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "5.3.3",
+  "version": "5.3.4",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,15 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "5.3.4",
+      "date": "2026-11-11",
+      "title": "5.3.4：炼化多参数与 argv 同步",
+      "items": [
+        "Node 炼化契约追加 acwSyncArgvFromEnv，成员命令少写 #占位 时仍能把 ACW_PARAM_4、ACW_PARAM_5 等同步进 process.argv。",
+        "已炼化脚本再次保存成员时可自动补插 argv 同步；熔炉适配 prompt 禁止只读 ACW_PARAM_3，并提供 acw-read-params.mjs 片段。"
+      ]
+    },
     {
       "version": "5.3.3",
       "date": "2026-11-11",

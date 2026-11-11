@@ -1,6 +1,6 @@
 {
   "name": "@acw/server",
-  "version": "5.3.3",
+  "version": "5.3.4",
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",

@@ -8,7 +8,8 @@
   - 明确该成员**输入模板**（期望的关键字段/结构）；
   - 明确该成员**输出模板**（产出应按何结构/标题/要点呈现，便于写进 `step-*.md` 台账与群报告 `ANNOUNCEMENT.md`）。
 - 把格式规格写进成员的 `config.refine.format`（JSON），并回填 `config.refine.status = "done"` 与 `refinedAt`。
-- **保存成员/步骤勾选炼化时立刻改源文件**：写入 `ACW-REFINE` 契约块（绑定 `ACW_HUMAN_INPUT` / `ACW_PARAM_1`，stdout 打文档标题）。改之前必须已有压缩包备份（`data/backups/refine`）。已有标记则不要重复插入。
+- **保存成员/步骤勾选炼化时立刻改源文件**：写入 `ACW-REFINE` 契约块（`ACW_HUMAN_INPUT`、`ACW_PARAM_1…n`、`ACW_PARAMS_JSON`；Node 会追加 `acwSyncArgvFromEnv` 把环境参数同步进 `process.argv`）。stdout 打文档标题。改之前必须已有压缩包备份（`data/backups/refine`）。已有标记则不要重复插入契约，但可补 argv 同步。
+- 熔炉后续改源（适配交互输入）时：**禁止**只把 `ACW_PARAM_3` 当唯一第三参；多索引/开关从 `#3` 起用 rest，与 `acw-read-params.mjs` 一致。
 - 跑完后仍把本次产出按规格写进台账；不碰适配备份目录。
 
 ## 原则

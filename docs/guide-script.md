@@ -124,9 +124,11 @@
 
 成员勾选「熔炉炼化」并点保存后，工作台会立刻改脚本文件（bat/cmd/ps1/sh/py/js），幂等标记 `ACW-REFINE`：
 
-- 输入：优先读 `ACW_HUMAN_INPUT` / `ACW_PARAM_1`；若环境变量为空则回退 `%1` / `argv`。
+- 输入：优先读 `ACW_HUMAN_INPUT` / `ACW_PARAM_1`…`ACW_PARAM_n` / `ACW_PARAMS_JSON`；若环境变量为空则回退 `%1` / `argv`。
+- Node 炼化块含 `acwSyncArgvFromEnv`：成员命令只写前几个 `#` 时，仍把 `ACW_PARAM_1…n` 同步进 `process.argv[2…]`（仅 `.js`/`.mjs` 等）。
+- 熔炉改交互读参时勿只读 `ACW_PARAM_3`：自 `#3` 起与 readline 的 `...rest` 一致，可参考 `server/config/furnace/snippets/acw-read-params.mjs`。
 - 输出：脚本开头向 stdout 打 `### <标题>`，文档中心按该规格收。
-- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再插入。
+- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步。
 
 群聊跑完仍会把本次产出整理进 `step-*.md` / 群报告；那是归档，不是第一次才改脚本。
 

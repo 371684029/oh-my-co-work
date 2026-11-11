@@ -201,7 +201,7 @@ const HELP = `用法：node acw-ctl.mjs <动作> [参数]
   append-step --group <grp_id|群名> --member <mem_id|成员名> [--title "步骤标题"] [--gate]
 
 说明：
-  • #1 #2 #3 是工作流参数占位符（也会注入环境变量 ACW_PARAM_1 / ACW_HUMAN_INPUT）
+  • #1 #2 #3… 是工作流参数占位符（同时注入 ACW_PARAM_1…n、ACW_PARAMS_JSON、ACW_HUMAN_INPUT；成员命令可少写几个 #，其余仍走环境变量）
   • 默认在「内嵌终端（terminal）」跑并等待退出（waitForExit=true）；常驻 TUI 加 --keepalive；纯后台静默跑加 --pipe
   • --steps 逗号分隔，每项格式：「human:标题」或「成员名或ID:步骤标题[:gate]」（加 :gate 表示跑完需人工确认）`
 
