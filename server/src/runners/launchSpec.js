@@ -1,7 +1,18 @@
 import path from 'node:path'
+import { stripSurroundingQuotes } from './cwdResolve.js'
+
+function batLikePath(p) {
+  return /\.(bat|cmd)$/i.test(String(p || ''))
+}
+
+/** cmd /c line for Windows: drop /s when nesting call + quotes (node-pty ConPTY). */
+export function windowsCmdInvocation(commandLine) {
+  return ['/d', '/c', String(commandLine || '')]
+}
 
 export function winBatCallCommand(absPath, userArgs = []) {
-  const bat = `"${String(absPath).replace(/"/g, '')}"`
+  const clean = stripSurroundingQuotes(String(absPath).replace(/"/g, ''))
+  const bat = /[\s"&<>|^]/.test(clean) ? `"${clean}"` : clean
   const extra = (userArgs || [])
     .map((a) => {
       const s = String(a)
@@ -13,6 +24,16 @@ export function winBatCallCommand(absPath, userArgs = []) {
   return extra
     ? `chcp 65001>nul & call ${bat} ${extra}`
     : `chcp 65001>nul & call ${bat}`
+}
+
+function windowsCommandLine(command, isWin) {
+  const raw = String(command || '').trim()
+  if (!isWin) return raw
+  const inner = stripSurroundingQuotes(raw)
+  if (batLikePath(inner) && !/\s/.test(inner)) {
+    return winBatCallCommand(inner, [])
+  }
+  return raw
 }
 
 /** @returns {{ cmd: string, args: string[], shell?: boolean, label: string }} */
@@ -38,16 +59,18 @@ export function resolveLaunchSpec({ filePath, command, shell, runtime, args = []
       return { cmd: exe, args: ['-lc', command], label: exe }
     }
     if (sh === 'cmd' || (sh === 'auto' && isWin)) {
+      const line = windowsCommandLine(command, isWin)
+      const batCmd = batLikePath(stripSurroundingQuotes(command))
       return {
         cmd: process.env.ComSpec || 'cmd.exe',
-        args: ['/d', '/s', '/c', command],
-        label: 'cmd',
+        args: batCmd ? windowsCmdInvocation(line) : ['/d', '/s', '/c', line],
+        label: batCmd ? 'bat' : 'cmd',
       }
     }
     return { cmd: command, args: [], shell: true, label: 'shell' }
   }
 
-  const abs = filePath
+  const abs = stripSurroundingQuotes(filePath)
   const ext = path.extname(abs).toLowerCase()
   const rt = (runtime || 'auto').toLowerCase()
 
@@ -77,9 +100,16 @@ export function resolveLaunchSpec({ filePath, command, shell, runtime, args = []
       return { cmd: rt === 'sh' ? 'sh' : 'bash', args: [abs, ...extraArgs], label: rt }
     }
     if (rt === 'cmd' || rt === 'bat') {
+      if (isWin && (ext === '.bat' || ext === '.cmd')) {
+        return {
+          cmd: process.env.ComSpec || 'cmd.exe',
+          args: windowsCmdInvocation(winBatCallCommand(abs, extraArgs)),
+          label: 'bat',
+        }
+      }
       return {
         cmd: process.env.ComSpec || 'cmd.exe',
-        args: ['/d', '/s', '/c', `"${abs}"${extraArgs.length ? ' ' + extraArgs.map((a) => `"${a}"`).join(' ') : ''}`],
+        args: ['/d', '/s', '/c', `"${abs.replace(/"/g, '')}"${extraArgs.length ? ' ' + extraArgs.map((a) => `"${a}"`).join(' ') : ''}`],
         label: 'cmd',
       }
     }
@@ -98,8 +128,8 @@ export function resolveLaunchSpec({ filePath, command, shell, runtime, args = []
       return {
         cmd: process.env.ComSpec || 'cmd.exe',
         args: isWin
-          ? ['/d', '/s', '/c', winBatCallCommand(abs, extraArgs)]
-          : ['/d', '/s', '/c', 'call', abs, ...extraArgs],
+          ? windowsCmdInvocation(winBatCallCommand(abs, extraArgs))
+          : ['/d', '/c', 'call', abs, ...extraArgs],
         label: 'bat',
       }
     case '.sh':

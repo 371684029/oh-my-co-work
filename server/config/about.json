@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "5.3.2",
+  "version": "5.3.3",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,15 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "5.3.3",
+      "date": "2026-11-11",
+      "title": "5.3.3：Windows 脚本成员 .bat 内嵌终端启动修复",
+      "items": [
+        "成员脚本选 runtime=cmd 或直接跑 .bat 时，内嵌 PTY 不再用 cmd /s 嵌套引号，改为 chcp 65001 + call，避免报「不是内部或外部命令」。",
+        "脚本路径/命令若带首尾引号会自动剥掉再解析，减少 D:\\\\path\\\\file.bat 类误配。"
+      ]
+    },
     {
       "version": "5.3.2",
       "date": "2026-11-10",

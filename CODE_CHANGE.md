@@ -5,6 +5,7 @@
 
 2026-11-11 | M | server/src/appSettings.js, web/src/composables/furnacePetPolicy.js, web/src/components/FurnaceSprite.vue | 熔炉入口可见性：furnacePet.showOnSettings 默认改 true（前后端同构，设置页也能看到桌宠）；桌宠恢复位置时若落点完全在视口外则回落默认锚点并写回，避免 localStorage 脏值导致桌宠永久丢失
 2026-11-11 | M | web/src/views/settings/{Members,Groups}.vue | 新建成员默认勾选炼化（refine: true，可取消）；群模板新建/首步默认带 refine，沿用服务端 refineMembersForSteps 契约
+2026-11-11 | M/A | server/src/runners/{launchSpec,cwdResolve}.js, server/test/launchSpec.test.js, package.json, server/package.json, web/package.json, shared/package.json, server/config/about.json | 5.3.3：Windows 内嵌终端跑 .bat（含成员 runtime=cmd）改 chcp+call 且去掉 cmd /s，避免 PTY 双重引号报「不是内部或外部命令」；路径去首尾引号
 2026-11-11 | M | AGENTS.md | §7 AI Agent 特别规则新增第 9 条：模型不支持图片时一律直接调 look_at / multimodal-looker 读媒体，禁止要求用户转录或走 base64 变通
 2026-11-11 | M | server/src/furnaceContext.js, server/test/furnaceContext.test.js, docs/tech-crucible-3.2.md | 熔炉情境取消截断（C 方案）：SITUATION_LIMITS 全置 0，clipFurnaceText 支持 max<=0 不切，agenda/params 条数不再 slice，节点标题与状态不再压字数；保留 AGENTS.md「此刻」420 字短合同；补 3 例表征测试
 2026-11-10 | A/M | docs/tech-architecture-map.md, docs/README.md | 新增《架构图 / 代码结构图》：全局运行拓扑、引擎 DAG 与 advance 主循环、执行体与 PTY 链路、前端三栏分层、数据落盘与迁移链、REST/WS 契约、读码路线与术语表；docs 索引 tech- 分组登记

@@ -60,12 +60,20 @@ export function resolveCwd({ member, group, sessionContext, scriptCfg, filePath 
   return process.cwd()
 }
 
+/** Strip one pair of surrounding ASCII quotes from paths or commands. */
+export function stripSurroundingQuotes(s) {
+  const t = String(s || '').trim()
+  if (t.length >= 2 && t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1).trim()
+  if (t.length >= 2 && t.startsWith("'") && t.endsWith("'")) return t.slice(1, -1).trim()
+  return t
+}
+
 /**
  * 将配置中的脚本路径解析为绝对路径
  */
 export function resolveScriptFilePath(rawPath, { scriptWorkDir, scriptDir } = {}) {
   if (!rawPath || !String(rawPath).trim()) return null
-  const p = String(rawPath).trim()
+  const p = stripSurroundingQuotes(rawPath)
   if (path.isAbsolute(p)) return path.resolve(p)
   const base = getScriptWorkDir({ scriptWorkDir, scriptDir })
   if (!base) return null
