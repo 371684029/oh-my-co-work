@@ -130,7 +130,11 @@ function timelineItemAria(ev) {
 watch(
   () => [flowStore.rightTab, activeId.value],
   ([tab]) => {
-    if (tab === 'timeline') loadSessionTimeline()
+    if (tab === 'timeline') {
+      const pref = flowStore.consumeTimelineCategoryPref()
+      if (pref && pref !== 'all') timelineFilter.value = pref
+      loadSessionTimeline()
+    }
   },
 )
 </script>

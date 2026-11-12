@@ -94,6 +94,18 @@ export function buildSessionTimeline({ nodes = [], messages = [], terminals = []
       continue
     }
     const text = msgText(m)
+    if (m.type === 'status' && /试跑|炼化验证|适配已准备|适配回落/i.test(text)) {
+      events.push({
+        id: `msg-verify-${m.id}`,
+        at: m.created_at,
+        category: 'verify',
+        kind: 'verify.status',
+        title: text.slice(0, 120),
+        nodeId: m.node_instance_id || null,
+        messageId: m.id,
+      })
+      continue
+    }
     if (m.type === 'status' && /文档|台账|报告|ANNOUNCEMENT/i.test(text)) {
       events.push({
         id: `msg-doc-${m.id}`,

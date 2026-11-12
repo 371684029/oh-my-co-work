@@ -495,7 +495,7 @@ export function normalizeParamBindSlots(raw) {
  * 按群模板/步骤配置的槽位写入参数（覆盖绑定槽，不自动占用 #1 #2）。
  * @returns {{ useAppend: boolean, map?: Record<string,string>, bound?: Array<{key,value}>, raw?: string, added?: string[] }}
  */
-export function applyProjectParamBind(ctx, text, slots, { overwrite = true } = {}) {
+export function applyProjectParamBind(ctx, text, slots, { overwrite: _overwrite = true } = {}) {
   const keys = normalizeParamBindSlots(slots)
   if (!keys.length) return { useAppend: true }
   const parsed = parseProjectParams(text)

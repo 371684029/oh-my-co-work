@@ -470,7 +470,7 @@ function keysToFlow(keys) {
   }
 }
 
-function stepForm(s = {}, index = 0) {
+function stepForm(s = {}, _index = 0) {
   const flowKeys = flowToKeys(s.flow, s.gate)
   // 人工步：显式配置优先；新建默认首步开启项目参数采集
   const captureParams = s.captureParams === true

@@ -156,6 +156,8 @@ router.get('/restore-center', (req, res) => {
       adaptEnabled: !!cfg.adapt,
       adaptBackup: lastAdapt?.zipPath || null,
       patched: refine.patched || [],
+      verifyLast: refine.verifyLast || null,
+      verifyFailed: !!refine.verifyFailed,
       history,
     }
   })

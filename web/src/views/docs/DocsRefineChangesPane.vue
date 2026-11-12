@@ -36,6 +36,33 @@
               还原最新备份
             </el-button>
           </div>
+          <div v-if="m.verifyLast" class="rl-verify">
+            <span
+              class="rl-tag"
+              :class="m.verifyLast.ok && !m.verifyFailed ? 'rl-tag--ok' : 'rl-tag--warn'"
+            >
+              {{ m.verifyLast.ok && !m.verifyFailed ? '试跑通过' : '试跑未通过' }}
+            </span>
+            <span class="rl-time" v-if="m.verifyLast.at">{{ fmtTime(m.verifyLast.at) }}</span>
+            <span class="rl-verify-detail">{{
+              (m.verifyLast.checks || [])
+                .filter((c) => !c.ok)
+                .map((c) => c.detail)
+                .join('；') || '炼化探针已记录'
+            }}</span>
+            <el-button
+              v-if="props.sessionId"
+              size="small"
+              link
+              type="primary"
+              @click="openVerifyTimeline"
+            >
+              运行验证记录
+            </el-button>
+            <el-button v-else size="small" link type="primary" @click="goMembersSettings(m.id)">
+              成员试跑记录
+            </el-button>
+          </div>
 
           <div v-if="m.history?.length" class="rl-history">
             <div v-for="h in m.history" :key="h.id" class="rl-hist-item">
@@ -123,14 +150,19 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
+import { useFlowStore } from '../../stores/flow.js'
 
 const props = defineProps({
   sessionId: { type: String, default: '' },
   compact: { type: Boolean, default: false },
 })
+
+const router = useRouter()
+const flowStore = useFlowStore()
 
 const data = ref(null)
 const loading = ref(false)
@@ -151,6 +183,15 @@ const sessions = computed(() => data.value?.sessions || [])
 
 function toggleDiff(key) {
   openDiffs[key] = !openDiffs[key]
+}
+
+function openVerifyTimeline() {
+  if (!props.sessionId) return
+  flowStore.openSessionTimeline('verify')
+}
+
+function goMembersSettings(memberId) {
+  router.push({ path: '/settings/members', query: memberId ? { id: memberId } : {} })
 }
 
 function fmtTime(iso) {
@@ -334,6 +375,23 @@ onMounted(load)
 .rl-tag--adapt {
   background: rgba(255, 149, 0, 0.15);
   color: #b25000;
+}
+.rl-tag--warn {
+  background: rgba(255, 59, 48, 0.12);
+  color: #c9342b;
+}
+.rl-verify {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6e6e73;
+}
+.rl-verify-detail {
+  flex: 1 1 120px;
+  min-width: 0;
 }
 .rl-history {
   margin-top: 8px;

@@ -81,7 +81,7 @@
 - [x] **RAR-07 P0 成员抽屉**：保存 toast +「试跑验证」按钮 + verifyLast 提示
 - [x] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要（成员抽屉 live `adaptPlan`）；节点跑完后流程轨摘要 + 工作台 toast（`sessionAdaptToast`）
 - [x] **RAR-09 P1 还原中心**：`RestoreCenter` + `DocsRefineChangesPane` 炼化/适配共用 diff（5.3.7 M2）
-- [ ] **RAR-10 P2 文档中心「节点炼化与还原」**：外链「运行验证记录」指向时间线事件（若 RAR-01 写 audit）
+- [x] **RAR-10 P2 文档中心「节点炼化与还原」**：`verifyLast` 摘要 +「运行验证记录」跳转时间线 `verify` 筛选
 
 ### 3.3 熔炉 / demo / review
 

@@ -22,6 +22,8 @@ export const useFlowStore = defineStore('flow', () => {
   /** Bumps when UI should open a doc in the right rail (DOC-18). */
   const railDocFocus = ref(null)
   const docsNotifySeq = ref(0)
+  /** 文档中心跳转时间线时预选分类（5.9.0 RAR-10）。 */
+  const timelineCategoryPref = ref('all')
 
   watch(rightTab, (v) => {
     try {
@@ -40,6 +42,17 @@ export const useFlowStore = defineStore('flow', () => {
     if (!sessionId || !name) return
     rightTab.value = 'docs'
     railDocFocus.value = { sessionId, name, token: Date.now() }
+  }
+
+  function openSessionTimeline(category = 'all') {
+    timelineCategoryPref.value = category === 'verify' ? 'verify' : 'all'
+    rightTab.value = 'timeline'
+  }
+
+  function consumeTimelineCategoryPref() {
+    const v = timelineCategoryPref.value
+    timelineCategoryPref.value = 'all'
+    return v
   }
 
   function clearDocsUnread() {
@@ -66,6 +79,9 @@ export const useFlowStore = defineStore('flow', () => {
     clearActionUnread,
     railDocFocus,
     docsNotifySeq,
+    timelineCategoryPref,
     focusRailDoc,
+    openSessionTimeline,
+    consumeTimelineCategoryPref,
   }
 })

@@ -12,12 +12,12 @@ test('flowRailTimelineCatLabel maps known categories', () => {
   assert.equal(flowRailTimelineCatLabel('unknown'), 'unknown')
 })
 
-test('flowRailTimelineFilterOptions has six filters', () => {
+test('flowRailTimelineFilterOptions has seven filters', () => {
   const opts = flowRailTimelineFilterOptions()
-  assert.equal(opts.length, 6)
+  assert.equal(opts.length, 7)
   assert.deepEqual(
     opts.map((o) => o.value),
-    ['all', 'node', 'gate', 'terminal', 'docs', 'offsite'],
+    ['all', 'node', 'gate', 'terminal', 'docs', 'offsite', 'verify'],
   )
 })
 

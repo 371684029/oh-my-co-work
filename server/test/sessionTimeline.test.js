@@ -41,6 +41,22 @@ test('buildSessionTimeline merges nodes gates and terminals by time', () => {
   assert.ok(events.some((e) => e.kind === 'terminal.start'))
 })
 
+test('buildSessionTimeline captures verify status messages', () => {
+  const events = buildSessionTimeline({
+    messages: [
+      {
+        id: 'mv',
+        created_at: '2026-01-01T11:00:00.000Z',
+        type: 'status',
+        content: { text: '已写入项目参数；炼化试跑验证通过' },
+      },
+    ],
+  })
+  const v = events.find((e) => e.category === 'verify')
+  assert.ok(v)
+  assert.equal(filterTimelineEvents(events, 'verify').length, 1)
+})
+
 test('filterTimelineEvents by category', () => {
   const events = [
     { category: 'node', at: '1' },

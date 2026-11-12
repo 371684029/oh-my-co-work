@@ -197,7 +197,14 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.9.0**（炼化·适配·验证闭环 + 闸门下一步与参数绑定槽）。桌面窗口请用上面的 `*-desktop.zip`。运行包只发布到 Release，不再提交进仓库（`packages/` 仅为本地 `npm run pack` 输出目录）。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。latest 发布前会强制校验 Windows / macOS / Linux 三份轻量包来自同一源码提交且都含当前图集；包内 `BUILD_INFO.json` 可用于排障。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **5.9.0**（炼化·适配·验证闭环、闸门「通过+下一步」、`paramBindSlots`、文档中心 **运行验证记录** → 时间线「验证」筛选）。
+
+| 产物 | 路径（本地打包，不进 git） |
+|------|---------------------------|
+| Linux 轻量包 | `packages/oh-my-co-work-v5-linux-x64.zip`（`npm run pack`） |
+| Windows 桌面包 | `release/oh-my-co-work-v5-win32-x64-desktop.zip`（`ACW_PACK_TARGET=win32-x64 npm run pack:desktop`） |
+
+桌面窗口请用 **`*-desktop.zip`**。`packages/` 仅放可入仓的轻量 zip；超过 100MB 的桌面包在 `release/`。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。发布前建议：`npm run lint`、`npm test`、`npm run test:web`、`node scripts/selftest-refine-adapt.mjs`；包内 `BUILD_INFO.json` 可用于排障。
 
 ### 从源码启动
 
