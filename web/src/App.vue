@@ -14,6 +14,14 @@
           <h1 class="docs-brand-title">{{ shellDocsHubTitle() }}</h1>
         </div>
         <div class="top-right docs-top-right">
+          <el-input
+            v-model="docsSearchQuery"
+            class="docs-topbar-search"
+            :placeholder="t('docs.searchPlaceholder')"
+            :aria-label="t('docs.searchPlaceholder')"
+            clearable
+            size="small"
+          />
           <div class="zoom-ctrl" data-fullscreen-control role="group" :aria-label="shellZoomGroupAria()">
             <button
               type="button"
@@ -297,6 +305,7 @@ import {
 import { exitFullscreen, fullscreenElement, requestFullscreen } from './composables/fullscreen'
 import { useAppInit } from './composables/useAppInit.js'
 import { useFlowStore } from './stores/flow.js'
+import { searchQuery as docsHubSearchQuery } from './views/workbench/composables/useDocsHub.js'
 import {
   readDocsReadingHistory,
   recentDocsPreview,
@@ -318,6 +327,8 @@ import {
 const route = useRoute()
 const { paletteOpen, showPalette, hidePalette } = useCommandPalette()
 const flowStore = useFlowStore()
+// DocsHub 全文搜索输入共享同一 ref（文档中心顶栏 <-> 会话列搜索结果联动）
+const docsSearchQuery = docsHubSearchQuery
 const navDocsPreview = ref(recentDocsPreview(readDocsReadingHistory().recent, 3))
 const router = useRouter()
 const nav = ref(route.path.startsWith('/settings') ? 'settings' : 'workbench')
@@ -571,6 +582,10 @@ function goGrokSettings() {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.docs-topbar-search {
+  width: 200px;
 }
 
 .dh-back-btn {

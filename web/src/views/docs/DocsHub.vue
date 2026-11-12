@@ -11,10 +11,8 @@
         :list-loading="listLoading"
         :exporting-all="exportingAll"
         :total-sessions-count="totalSessionsCount"
-        :refine-open="refineOpen"
-        @update:selected-group-id=";(refineOpen = false), (selectedGroupId = $event)"
-        @update:selected-time-range=";(refineOpen = false), (selectedTimeRange = $event)"
-        @update:refine-open="refineOpen = $event"
+        @update:selected-group-id="selectedGroupId = $event"
+        @update:selected-time-range="selectedTimeRange = $event"
         @export-all="onExportAll"
         @export-group="onExportGroup"
       />
@@ -43,13 +41,10 @@
         @toggle-pin="onTogglePin"
         @search-hit="onSearchHit"
         @toggle-session="toggleSession"
-        @select-file="(sid, name) => ((refineOpen = false), selectFile(sid, name))"
+        @select-file="(sid, name) => selectFile(sid, name)"
       />
 
-      <main v-if="refineOpen" class="dh-col dh-col-content">
-        <DocsRefineChangesPane :session-id="current?.sessionId || ''" />
-      </main>
-      <DocsHubContentColumn v-else :has-docs="hasDocs" :expand-for="expandFor" @go-workbench="goWorkbench" />
+      <DocsHubContentColumn :has-docs="hasDocs" :expand-for="expandFor" @go-workbench="goWorkbench" />
     </div>
   </div>
 </template>
@@ -90,7 +85,6 @@ import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
 import DocsHubGroupsColumn from './DocsHubGroupsColumn.vue'
 import DocsHubSessionsColumn from './DocsHubSessionsColumn.vue'
 import DocsHubContentColumn from './DocsHubContentColumn.vue'
-import DocsRefineChangesPane from './DocsRefineChangesPane.vue'
 import {
   docsTimeRangeBuckets,
   filterDocsItemsByTimeRange,
@@ -131,7 +125,6 @@ async function onQuickOpen(item) {
 }
 
 const selectedGroupId = ref('all')
-const refineOpen = ref(false)
 const selectedTimeRange = ref('all')
 const expandedSessions = ref({})
 const exportingAll = ref(false)

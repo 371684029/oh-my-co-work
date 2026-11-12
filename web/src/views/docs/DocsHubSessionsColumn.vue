@@ -1,15 +1,5 @@
 <template>
   <aside class="dh-col dh-col-sessions">
-    <div class="dh-search-box">
-      <el-input
-        v-model="searchQuery"
-        :placeholder="docsHubSearchPlaceholder()"
-        :aria-label="docsHubSearchPlaceholder()"
-        clearable
-        size="small"
-      />
-    </div>
-
     <div class="dh-toolbar-row">
       <el-segmented v-model="sort" :options="sortOptions" size="small" class="dh-segmented" />
       <el-button size="small" class="dh-refresh-btn" :loading="listLoading" @click="$emit('refresh')">
@@ -171,7 +161,6 @@ import {
   docsHubPinnedSectionTitle,
   docsHubRecentSectionTitle,
   docsHubRefreshLabel,
-  docsHubSearchPlaceholder,
   docsHubSearchingLabel,
   docsHubUnpinTitle,
 } from './docsHubCopy.js'
@@ -215,10 +204,6 @@ function highlightSnippet(snippet, query) {
   min-width: 270px;
   max-width: 320px;
   padding: 12px 10px 14px;
-}
-
-.dh-search-box {
-  margin-bottom: 8px;
 }
 
 .dh-toolbar-row {
