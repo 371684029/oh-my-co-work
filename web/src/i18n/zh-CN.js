@@ -326,6 +326,7 @@ export const strings = {
       active: '进行中',
       archived: '已归档',
     },
+    adaptFallbackToast: '适配回落：{reason}',
     flowRail: {
       tabFlow: '流程',
       tabTimeline: '时间线',

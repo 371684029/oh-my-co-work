@@ -31,6 +31,15 @@ export const BUILTIN_TEMPLATES = [
       { title: '整理日报', type: 'member', memberId: null, gate: true, refine: true },
     ],
   },
+  {
+    id: 'refine-verify',
+    title: '炼化验证演示',
+    description: '5.9.0：炼化脚本一步 → 试跑验证 → 文档中心（绑定「炼化验证示例」成员）',
+    steps: [
+      { title: '说明', type: 'human', captureParams: false },
+      { title: '炼化探针', type: 'member', memberId: null, gate: true, refine: true },
+    ],
+  },
 ]
 
 export function listBuiltinTemplates() {

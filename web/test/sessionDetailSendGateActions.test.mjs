@@ -34,6 +34,8 @@ test('createSessionDetailSendGateActions returns the expected action keys', () =
     'approveSessionStart',
     'gate',
     'answerAdapterQuestion',
+    'nextStepReview',
+    'cancelReview',
     'nextIdempotencyKey',
   ]
   for (const key of expected) {

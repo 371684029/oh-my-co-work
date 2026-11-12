@@ -75,6 +75,20 @@ export function membersPlanConfirmBody(n, lines) {
   return subst(tp('confirm.planBody'), { n, lines })
 }
 
+/** refine plan verifyPreview 摘要（保存前） */
+export function membersRefineVerifyPreviewHint(preview) {
+  if (!preview || preview.skipped) return ''
+  if (preview.pendingPatch || preview.simulated) {
+    const c = (preview.checks || [])[0]
+    return c?.detail ? `${tp('form.verifyPreviewPending')}：${c.detail}` : tp('form.verifyPreviewPending')
+  }
+  if (preview.ok) return tp('form.verifyPreviewOk')
+  const failed = (preview.checks || []).filter((x) => !x.ok).map((x) => x.detail)
+  return failed.length
+    ? `${tp('form.verifyPreviewFail')}：${failed.join(getLocale() === 'en-US' ? '; ' : '；')}`
+    : tp('form.verifyPreviewFail')
+}
+
 /** Live adapt plan summary under the「是否适配」checkbox (5.9.0 RAR-08). */
 export function membersAdaptPlanHint(plan) {
   if (!plan) return ''

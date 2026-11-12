@@ -31,6 +31,7 @@ import {
 } from '../adaptBackup.js'
 import { exportMemberTemplate, exportGroupTemplate, importTemplatePack } from '../templatePack.js'
 import { planRefineOnMemberSave } from '../refineSource.js'
+import { previewRefineVerify } from '../memberVerify.js'
 
 const router = Router()
 
@@ -121,7 +122,11 @@ router.post('/members/refine/plan', (req, res) => {
     if (!member.config?.refine?.enabled) {
       return res.json({ ok: false, reason: 'refine_disabled', files: [] })
     }
-    res.json(planRefineOnMemberSave(member))
+    const plan = planRefineOnMemberSave(member)
+    if (body.verifyPreview) {
+      plan.verifyPreview = previewRefineVerify(member)
+    }
+    res.json(plan)
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

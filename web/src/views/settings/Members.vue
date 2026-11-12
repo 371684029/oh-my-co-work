@@ -343,6 +343,7 @@ import {
   membersRestoreConflictBody,
   membersPlanConfirmBody,
   membersAdaptPlanHint,
+  membersRefineVerifyPreviewHint,
 } from '../../composables/settingsMembersCopy.js'
 
 const adaptHover = ADAPT_OPTION_HOVER
@@ -935,6 +936,7 @@ async function save() {
         displayName: body.displayName,
         kind: body.kind,
         config: body.config,
+        verifyPreview: true,
       })
       if (plan?.reason === 'will_patch' && plan.files?.length) {
         const lines = plan.files
@@ -947,8 +949,12 @@ async function save() {
                 .join('\n  ')}`,
           )
           .join('\n\n')
+        const vHint = membersRefineVerifyPreviewHint(plan.verifyPreview)
+        const bodyText = vHint
+          ? `${membersPlanConfirmBody(plan.fileCount, lines)}\n\n${vHint}`
+          : membersPlanConfirmBody(plan.fileCount, lines)
         await ElMessageBox.confirm(
-          membersPlanConfirmBody(plan.fileCount, lines),
+          bodyText,
           membersConfirm('planTitle'),
           {
             type: 'warning',

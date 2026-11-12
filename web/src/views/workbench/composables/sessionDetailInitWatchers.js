@@ -2,6 +2,7 @@
 import { watch } from 'vue'
 import { useComposerStore } from '../../../stores/composer.js'
 import { useFlowStore } from '../../../stores/flow.js'
+import { registerAdaptFallbackToastWatcher } from './sessionAdaptToast.js'
 
 export function registerSessionDetailWatchers({
   stopWatchers,
@@ -34,4 +35,6 @@ export function registerSessionDetailWatchers({
       },
     ),
   )
+
+  registerAdaptFallbackToastWatcher({ stopWatchers, detail, activeId })
 }

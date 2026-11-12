@@ -1,6 +1,16 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { initDb } from './db.js'
 import { createMember, createGroup, listMembers, listGroups } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
+
+const REFINE_PROBE_SRC = path.join(process.cwd(), 'server/test/fixtures/refine-verify-probe.mjs')
+const probeDir = path.join(process.cwd(), 'data', 'demo-fixtures')
+fs.mkdirSync(probeDir, { recursive: true })
+const REFINE_PROBE = path.join(probeDir, 'refine-verify-probe.mjs')
+if (!fs.existsSync(REFINE_PROBE)) {
+  fs.copyFileSync(REFINE_PROBE_SRC, REFINE_PROBE)
+}
 
 initDb()
 
@@ -15,6 +25,23 @@ const echo = createMember({
   displayName: '示例回声',
   kind: MEMBER_KIND.ECHO,
   config: { demo: true, defaultText: 'hello from echo' },
+})
+
+const refineDemo = createMember({
+  name: 'demo_refine_verify',
+  displayName: '炼化验证示例',
+  kind: MEMBER_KIND.SCRIPT,
+  workFolder: path.dirname(REFINE_PROBE),
+  config: {
+    demo: true,
+    refine: { enabled: true },
+    script: {
+      mode: 'file',
+      filePath: REFINE_PROBE,
+      scriptWorkDir: path.dirname(REFINE_PROBE),
+      executionMode: 'pipe',
+    },
+  },
 })
 
 const scriptCmd = createMember({
@@ -36,6 +63,15 @@ const scriptCmd = createMember({
       waitForExit: false,
     },
   },
+})
+
+createGroup({
+  title: '炼化验证演示',
+  description: '5.9.0：绑定炼化验证示例成员，保存后试跑 → 开聊一步 → 文档中心',
+  workFolder: path.dirname(REFINE_PROBE),
+  steps: [
+    { title: '炼化探针', type: 'member', memberId: refineDemo.id, gate: true, refine: true },
+  ],
 })
 
 createGroup({

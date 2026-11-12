@@ -326,6 +326,7 @@ export const strings = {
       active: 'Active',
       archived: 'Archived',
     },
+    adaptFallbackToast: 'Adapt fallback: {reason}',
     flowRail: {
       tabFlow: 'Flow',
       tabTimeline: 'Timeline',

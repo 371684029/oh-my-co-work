@@ -8,6 +8,7 @@ const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-refine-plan-'))
 process.env.ACW_DATA_ROOT = dataRoot
 
 const { planRefineOnMemberSave } = await import('../src/refineSource.js')
+const { previewRefineVerify } = await import('../src/memberVerify.js')
 const { MEMBER_KIND } = await import('@acw/shared')
 
 test('planRefineOnMemberSave lists files without writing', () => {
@@ -28,4 +29,22 @@ test('planRefineOnMemberSave lists files without writing', () => {
   assert.equal(plan.files.length, 1)
   assert.match(plan.files[0].snippet, /ACW-REFINE/)
   assert.equal(fs.readFileSync(bat, 'utf8').includes('ACW-REFINE'), false)
+})
+
+test('previewRefineVerify simulates before first patch', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-preview-'))
+  const bat = path.join(dir, 'p.bat')
+  fs.writeFileSync(bat, '@echo off\necho ok\n', 'utf8')
+  const member = {
+    kind: MEMBER_KIND.SCRIPT,
+    display_name: '预览',
+    config: {
+      refine: { enabled: true, format: { output: { heading: '标题' } } },
+      script: { mode: 'file', filePath: bat, scriptWorkDir: dir },
+    },
+  }
+  const p = previewRefineVerify(member)
+  assert.equal(p.simulated, true)
+  assert.equal(p.pendingPatch, true)
+  assert.ok(p.checks.some((c) => c.id === 'preview_pending_patch'))
 })

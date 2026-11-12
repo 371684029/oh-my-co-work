@@ -69,7 +69,7 @@
   - 输出：`{ ok, checks: [{ id, ok, detail }], elapsedMs, probeLogPath? }`
 - [x] **RAR-02 P0 API**
   - `POST /api/members/:id/verify` — 手动探针（设置页「试跑验证」）
-  - `POST /api/members/refine/plan` 响应扩展 optional `verifyPreview`（仅模拟，不落盘）（**待做**）
+  - `POST /api/members/refine/plan` 响应扩展 optional `verifyPreview`（仅模拟，不落盘）
   - 炼化 `persistRefineOnSave` 成功后 **同步** 调 RAR-01；失败：`verifyFailed` + `verifyLast`；**不撤销已写契约**；UI 强提示
 - [x] **RAR-03 P1 适配对称 plan API**：`POST /api/members/adapt/plan` — 将改哪些文件、是否 jsonl 覆盖、预估回落，与 `planRefineOnMemberSave` 同结构
 - [x] **RAR-04 P1 适配还原 API**：`POST /api/members/:id/adapt/restore` — 复用 `restoreAdaptManifest`，manifest 来自 `config.adapt` 或历史列表（与炼化 REST 同形）
@@ -79,19 +79,19 @@
 ### 3.2 前端（web）
 
 - [x] **RAR-07 P0 成员抽屉**：保存 toast +「试跑验证」按钮 + verifyLast 提示
-- [x] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要（成员抽屉 live `adaptPlan`）；节点跑完后流程轨/toast 回落原因仍待补
+- [x] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要（成员抽屉 live `adaptPlan`）；节点跑完后流程轨摘要 + 工作台 toast（`sessionAdaptToast`）
 - [x] **RAR-09 P1 还原中心**：`RestoreCenter` + `DocsRefineChangesPane` 炼化/适配共用 diff（5.3.7 M2）
 - [ ] **RAR-10 P2 文档中心「节点炼化与还原」**：外链「运行验证记录」指向时间线事件（若 RAR-01 写 audit）
 
 ### 3.3 熔炉 / demo / review
 
-- [x] **RAR-11 P1 演示流**：在 [guide-demo.md](./guide-demo.md) §7 增加 **「炼化成员 → 验证 → 跑群 → 文档中心 → 还原」** 点击路径（种子 `demo-refine-verify` 仍待 REU-03）
+- [x] **RAR-11 P1 演示流**：在 [guide-demo.md](./guide-demo.md) §7 增加炼化路径；种子 **炼化验证演示** + 内置模板 `refine-verify`
 - [x] **RAR-12 P1 acw-ctl**：子命令 `verify-member --member <名>` 调 RAR-02，退出码与 JSON 与 API 一致（`acwCtl.test.js` 覆盖）
 - [x] **RAR-13 P2 REFINE 角色**：保存炼化 patch 后 `status: pending`，**verify 通过** 才 `status: done`（熔炉真角色仍待 4.x）
 
 ### 3.4 测试与 CI
 
-- [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（**多后缀矩阵 fixture 待扩**）
+- [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（`.mjs` + `.sh` 探针矩阵；Windows `.bat` 见 spec-qa-checklist）
 - [x] **RAR-T2 P0 集成**：炼化 `memberVerifyRoundtrip.test.js`（save→verify→破坏→restore 字节一致）；适配 prepare→restore 见 `adaptPlan.test.js`（jsonl verify 仍待 RAR-06）
 - [x] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
 - [x] **RAR-T4 P1 CI**：`ci-e2e-smoke` 断言炼化脚本成员抽屉「试跑验证」；CI 跑 `selftest-refine-adapt.mjs`
@@ -126,7 +126,8 @@
 2. 适配准备改源后，verify 能区分 **jsonl 就绪** vs **回落仅标记**。
 3. 还原中心可同时列出炼化与适配 manifest，diff + restore 与 `acwCtl.test.js` 场景等价。
 4. `npm test` 新增用例全绿；`node scripts/selftest-refine-adapt.mjs` 在干净环境一次通过。
-5. 文档：`guide-script.md` 炼化契约节增加「验证」说明；`tech-data-storage.md` 备份目录表补充 verify 审计字段（若落盘）。
+5. 文档：`guide-script.md` 炼化契约节增加「验证」说明；成员 `config.refine.verifyLast` / `verifyFailed` 落库（见 `persistRefineOnSave`）。
+6. 工作台闸门（随 5.9.0 合入）：**通过 + 下一步**；开聊默认 `#a`；群/步 `paramBindSlots` 覆盖绑定。
 
 ---
 

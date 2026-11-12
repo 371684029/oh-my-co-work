@@ -12,6 +12,8 @@ import { enrichScriptConfig } from './runners/scriptMemberConfig.js'
 import { getScriptWorkDir } from './runners/scriptWorkDir.js'
 import { resolveCwdForScript, resolveScriptFilePath } from './runners/cwdResolve.js'
 import { resolveLaunchSpec } from './runners/launchSpec.js'
+import { collectAdaptSourcePaths } from './adaptBackup.js'
+import { REFINE_MARK } from './refineContractStrip.js'
 
 export const MEMBER_VERIFY_TIMEOUT_MS = 30_000
 
@@ -270,6 +272,63 @@ export function verifyMemberSync(member, options = {}) {
     stdoutPreview: probe.stdout?.slice(0, 400) || '',
     stderrPreview: probe.stderr?.slice(0, 200) || '',
   }
+}
+
+/**
+ * refine/plan 用：不落盘试跑。源文件尚无契约时返回模拟说明；已有契约则同步探针。
+ */
+export function previewRefineVerify(member) {
+  const t0 = Date.now()
+  if (!member?.config?.refine?.enabled) {
+    return {
+      ok: false,
+      simulated: true,
+      skipped: true,
+      reason: 'refine_disabled',
+      checks: [],
+      elapsedMs: 0,
+    }
+  }
+  if (isFurnaceMember(member)) {
+    return {
+      ok: true,
+      simulated: true,
+      skipped: true,
+      reason: 'furnace_member',
+      checks: [{ id: 'skip_furnace', ok: true, detail: '熔炉成员不自动试跑' }],
+      elapsedMs: Date.now() - t0,
+    }
+  }
+  const paths = collectAdaptSourcePaths(member)
+  let pendingPatch = false
+  for (const p of paths) {
+    try {
+      if (!fs.readFileSync(p, 'utf8').includes(REFINE_MARK)) {
+        pendingPatch = true
+        break
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (pendingPatch) {
+    const title = refineHeading(member) || '炼化标题'
+    return {
+      ok: null,
+      simulated: true,
+      pendingPatch: true,
+      checks: [
+        {
+          id: 'preview_pending_patch',
+          ok: true,
+          detail: `保存插入契约后将自动试跑（stdout 须含 ### ${title}）`,
+        },
+      ],
+      elapsedMs: Date.now() - t0,
+    }
+  }
+  const v = verifyMemberSync(member, { scope: 'refine' })
+  return { ...v, simulated: false }
 }
 
 export async function verifyMember(member, options = {}) {

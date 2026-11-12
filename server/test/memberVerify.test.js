@@ -104,6 +104,30 @@ test('verifyMemberSync fails when stdout missing heading', () => {
   assert.ok(h && !h.ok)
 })
 
+test('verifyMemberSync: .sh refine heading in stdout', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-verify-sh-'))
+  const sh = path.join(dir, 'run.sh')
+  fs.writeFileSync(sh, '#!/bin/sh\n# ACW-REFINE: probe\necho "### Sh标题"\n', 'utf8')
+  fs.chmodSync(sh, 0o755)
+  const member = {
+    kind: 'script',
+    config: {
+      refine: {
+        enabled: true,
+        format: { title: 'Sh标题', output: { heading: 'Sh标题' } },
+      },
+      script: {
+        mode: 'file',
+        filePath: sh,
+        scriptWorkDir: dir,
+        executionMode: 'pipe',
+      },
+    },
+  }
+  const v = verifyMemberSync(member)
+  assert.equal(v.ok, true, JSON.stringify(v.checks))
+})
+
 test('verifyMemberSync accepts injected runProbe', () => {
   const member = {
     kind: 'script',
