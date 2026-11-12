@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-12 | M | web/src/views/workbench/{components/ComposerPanel.vue,composables/sessionSenderSubmitUi,sessionGateActions}.js, server/src/engine/advance.js, web/test/sessionSenderSubmitUi.test.mjs | 成员闸门 mode=gate 显示「通过」勾选；人工步补取消
 2026-11-12 | M | shared/index.js, server/src/engine/store.js, server/test/sessionAutoTitle.test.js, web/src/views/workbench/composables/sessionListUi.js, docs/tech-data-storage.md | 开聊仅 #a 时仍用首条输入自动命名（resolveSessionAutoTitleParam1）
 2026-11-12 | A/M | server/src/{sessionTimeline,sessionsRoutes}.js, server/test/sessionTimeline.test.js, web/src/{stores/flow.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailTimelinePane.vue}, web/src/i18n/*.js, shared/index.js, web/src/views/settings/Groups.vue, web/test/flowRailTimelineUi.test.mjs, README.md, docs/plan-5.9.0.md, packages/README.md | RAR-10 验证记录与时间线 verify 筛选；lint 收尾；5.9.0 打包说明
 2026-11-12 | A/M | server/src/{memberVerify,routes/catalogRoutes,builtinTemplates,seed}.js, server/test/{fixtures/refine-verify-probe.mjs,memberVerify,refinePlan}.test.js, web/src/{views/settings/Members.vue,composables/settingsMembersCopy,sessionAdaptToast,sessionDetailInitWatchers}.js, web/src/i18n/**, */package.json, server/config/about.json, README.md, docs/{plan-5.9.0,guide-demo}.md | 5.9.0 封板：verifyPreview、炼化验证演示种子、适配回落 toast

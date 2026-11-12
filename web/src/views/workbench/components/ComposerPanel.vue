@@ -266,10 +266,16 @@
                     <el-button type="danger" @click="submitHuman(pendingGate)">
                       {{ gatePassButtonLabel() }}
                     </el-button>
+                    <el-button plain @click="cancelReview(pendingGate)">
+                      {{ gateCancelStartLabel() }}
+                    </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'need_params'">
                     <el-button type="danger" @click="submitHuman(pendingGate)">
                       {{ gatePassButtonLabel() }}
+                    </el-button>
+                    <el-button plain @click="cancelReview(pendingGate)">
+                      {{ gateCancelStartLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'adapter_question'">
@@ -383,22 +389,9 @@ import {
   gateResumeInterruptedLabel,
   gateViewDetailsTitle,
 } from '../composables/sessionGatePanelUi.js'
+import { gateShowsPassCheck } from '../composables/sessionSenderSubmitUi.js'
 
 const composerStore = useComposerStore()
-
-const gateShowPassCheck = computed(() => {
-  const g = pendingGate.value
-  if (!g) return false
-  const mode = g.content?.mode
-  return (
-    !mode ||
-    mode === 'session_start' ||
-    mode === 'human_input' ||
-    mode === 'need_params' ||
-    mode === 'review' ||
-    mode === 'node_review'
-  )
-})
 
 import {
   detail,
@@ -437,6 +430,8 @@ import {
   nextStepReview,
   cancelReview,
 } from '../composables/useSessionDetail'
+
+const gateShowPassCheck = computed(() => gateShowsPassCheck(pendingGate.value))
 
 const fileInputRef = ref(null)
 

@@ -800,7 +800,7 @@ export function openFlowGate(sessionId, node, payload) {
       riskHints,
       humanAction: 'pending',
       policy:
-        '审核三态：pending（待定）/ 通过 / 拒绝。拒绝时可附原因；输入框发消息或执行脚本保持 pending；须点「同意」才通过。',
+        '审核三态：pending（待定）/ 通过 / 拒绝。勾选「通过」后点「下一步」；取消或取消勾选等同不通过。输入框发消息不会自动通过。',
     },
   })
   // 管理员总结与流转：闸门打开后刷新群报告 MD

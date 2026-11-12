@@ -19,11 +19,27 @@ export function shouldSessionStartGateOnSubmit(gate, mentionAssistOnly) {
   return gate.content?.mode === 'session_start'
 }
 
+/** 成员步审核 / 流转闸门（服务端 content.mode 多为 gate） */
 export function isReviewGate(gate) {
   if (!gate) return false
   const mode = gate.content?.mode
   if (!mode) return true
-  return mode === 'review' || mode === 'node_review'
+  return mode === 'review' || mode === 'node_review' || mode === 'gate'
+}
+
+/** 展示「通过」勾选：开聊、人工输入、补参、成员审核 */
+export function gateShowsPassCheck(gate) {
+  if (!gate) return false
+  const mode = gate.content?.mode
+  return (
+    !mode ||
+    mode === 'session_start' ||
+    mode === 'human_input' ||
+    mode === 'need_params' ||
+    mode === 'review' ||
+    mode === 'node_review' ||
+    mode === 'gate'
+  )
 }
 
 export function canSendPlainMessage(text, attachmentsCount) {

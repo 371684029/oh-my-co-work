@@ -54,6 +54,11 @@ export function createSessionGateActions({
 
   async function approveSessionStart(m) {
     if (gating.value) return
+    const passed = useComposerStore().gatePassChecked
+    if (!passed) {
+      await gate(m, 'cancel_start')
+      return
+    }
     gating.value = true
     try {
       const text = readSenderText()
