@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-12 | A/M | web/src/views/settings/Members.vue, web/src/composables/settingsMembersCopy.js, web/src/i18n/settingsMembers.{zh,en}.js, web/test/settingsMembersCopy.test.mjs, scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js, .github/workflows/ci.yml, docs/plan-5.9.0.md, */package.json, server/config/about.json | 5.3.9 / 5.9.0 M4：适配 plan 预览、E2E 试跑验证、CI selftest-refine-adapt
 2026-11-11 | A/M | server/config/furnace/acw-ctl.mjs, server/test/{acwCtl,memberVerifyRoundtrip}.test.js, docs/{guide-demo,guide-script,plan-5.9.0,spec-selftest}.md, */package.json, server/config/about.json | 5.3.8 / 5.9.0 M3：verify-member CLI、炼化演示文档、verify 失败还原集成测
 2026-11-11 | A/M | server/src/{adaptBackup,refineRestore}.js, server/src/routes/{catalogRoutes,sessionsRoutes}.js, server/test/adaptPlan.test.js, scripts/selftest-refine-adapt.mjs, web/src/{api.js,views/settings/Members.vue,views/docs/DocsRefineChangesPane.vue}, */package.json, server/config/about.json, docs/plan-5.9.0.md | 5.3.7 / 5.9.0 M2：adapt plan/restore、还原中心适配、试跑按钮、selftest 扩展
 2026-11-11 | A/M | server/src/memberVerify.js, server/src/services.js, server/src/routes/catalogRoutes.js, server/test/memberVerify.test.js, web/src/api.js, web/src/composables/settingsMembersCopy.js, web/src/views/settings/Members.vue, web/src/i18n/settingsMembers.{zh,en}.js, docs/plan-5.9.0.md | 5.9.0 M1：炼化保存后同步试跑 verify、POST /members/:id/verify、verifyLast/verifyFailed 落库、保存 toast 告警

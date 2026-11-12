@@ -205,6 +205,38 @@ async function main() {
     })
     assert.equal(memberRes.status, 201)
     const member = await memberRes.json()
+
+    const verifyScriptDir = fs.mkdtempSync(path.join(dataRoot, 'e2e-verify-'))
+    const probePath = path.join(verifyScriptDir, 'probe.mjs')
+    fs.writeFileSync(
+      probePath,
+      'console.log("### e2e-probe\\n");\nconsole.log(process.env.ACW_HUMAN_INPUT||"");\n',
+      'utf8',
+    )
+    const verifyMemRes = await fetch(`${base}/api/members`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        name: `e2e-verify-${Date.now()}`,
+        display_name: 'E2E Verify Probe',
+        kind: 'script',
+        workFolder: verifyScriptDir,
+        config: {
+          refine: { enabled: true },
+          script: {
+            mode: 'file',
+            filePath: probePath,
+            scriptWorkDir: verifyScriptDir,
+            command: 'node probe.mjs #1',
+            executionMode: 'pipe',
+          },
+        },
+      }),
+    })
+    assert.equal(verifyMemRes.status, 201)
+    const verifyMem = await verifyMemRes.json()
+    assert.equal(verifyMem.verifyResult?.ok, true, 'refine save should auto-verify script member')
+
     const sessRes = await fetch(`${base}/api/members/${member.id}/sessions`, {
       method: 'POST',
       headers: authHeaders,
@@ -382,8 +414,8 @@ async function main() {
     // 还原中心）待补」）
     //
     // 新增步骤（仅浏览器可用时执行；否则随上面的 SKIP 一起跳过并 exit 0）：
-    //   (1) /settings/members —— 设置侧栏导航壳 + 成员管理页主标题渲染
-    //        （h2.page-title，i18n 稳定文案：成员管理|Members）
+    //   (1) /settings/members —— 设置侧栏导航壳 + 主标题；炼化脚本成员抽屉内
+    //        「试跑验证」按钮可见（5.9.0 RAR-T4）
     //   (2) /settings/prefs   —— 设置保存往返：点侧栏进入偏好页，UI 切换无害偏好
     //        「显示演示示例」(showDemo)，断言 PATCH /api/settings/app 200 →
     //        GET 持久化翻转 → reload 后开关状态一致 → API 还原原值（不留副作用）
@@ -411,6 +443,16 @@ async function main() {
     await membersHeading.waitFor({ state: 'visible', timeout: 15000 })
     assert.match((await membersHeading.textContent()) || '', /成员管理|Members/)
     await page.locator('aside.settings-side').waitFor({ state: 'visible', timeout: 15000 })
+
+    const editVerifyRow = page
+      .locator('.el-table__row')
+      .filter({ hasText: verifyMem.display_name })
+      .first()
+    await editVerifyRow.getByRole('button', { name: /编辑|Edit/ }).click()
+    const verifyProbeBtn = page.getByRole('button', { name: /试跑验证|Probe run/ }).first()
+    await verifyProbeBtn.waitFor({ state: 'visible', timeout: 15000 })
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(400)
 
     // (2) /settings/prefs 设置保存往返（showDemo：无害显示偏好）
     const prefsNavItem = page

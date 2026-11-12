@@ -16,6 +16,7 @@ test('QA-01: ci-e2e-smoke keeps full-site route coverage and skip convention', (
 
   // settings navigation + one save round-trip
   assert.match(src, /\/settings\/members/)
+  assert.match(src, /试跑验证|Probe run/)
   assert.match(src, /\/settings\/prefs/)
   assert.match(src, /showDemo/)
 

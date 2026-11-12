@@ -79,8 +79,8 @@
 ### 3.2 前端（web）
 
 - [x] **RAR-07 P0 成员抽屉**：保存 toast +「试跑验证」按钮 + verifyLast 提示
-- [ ] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要；节点跑完后在流程轨/toast 展示 **verify 或回落原因**（读 node output meta）
-- [ ] **RAR-09 P1 还原中心**：适配备份 Tab/区块 + 与炼化相同的 diff 抽屉
+- [x] **RAR-08 P1 适配**：勾选「是否适配」时展示 plan 摘要（成员抽屉 live `adaptPlan`）；节点跑完后流程轨/toast 回落原因仍待补
+- [x] **RAR-09 P1 还原中心**：`RestoreCenter` + `DocsRefineChangesPane` 炼化/适配共用 diff（5.3.7 M2）
 - [ ] **RAR-10 P2 文档中心「节点炼化与还原」**：外链「运行验证记录」指向时间线事件（若 RAR-01 写 audit）
 
 ### 3.3 熔炉 / demo / review
@@ -94,7 +94,7 @@
 - [x] **RAR-T1 P0 单测**：`memberVerify.test.js`（**多后缀矩阵 fixture 待扩**）
 - [x] **RAR-T2 P0 集成**：炼化 `memberVerifyRoundtrip.test.js`（save→verify→破坏→restore 字节一致）；适配 prepare→restore 见 `adaptPlan.test.js`（jsonl verify 仍待 RAR-06）
 - [x] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
-- [ ] **RAR-T4 P1 CI**：`ci-e2e-smoke` 可选追加「试跑验证」按钮可见（轻量）；或仅在 selftest 阶段跑 RAR-T3
+- [x] **RAR-T4 P1 CI**：`ci-e2e-smoke` 断言炼化脚本成员抽屉「试跑验证」；CI 跑 `selftest-refine-adapt.mjs`
 - [ ] **RAR-T5 P2 实机**：Windows bat CRLF、PowerShell 执行策略受限时 verify 文案回归清单（附在 `spec-qa-checklist.md` 小节）
 
 ---

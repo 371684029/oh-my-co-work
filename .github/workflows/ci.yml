@@ -35,6 +35,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Selftest refine-adapt (isolated data root)
+        run: node scripts/selftest-refine-adapt.mjs
+
       - name: Test web (pure logic)
         run: npm run test:web
 

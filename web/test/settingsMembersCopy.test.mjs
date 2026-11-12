@@ -5,6 +5,7 @@ import {
   membersToast,
   membersCloneName,
   membersRefineSavedHint,
+  membersAdaptPlanHint,
   membersRestoreOk,
   membersRemoveConfirmBody,
 } from '../src/composables/settingsMembersCopy.js'
@@ -19,6 +20,11 @@ test('membersCloneName and confirm bodies substitute values', () => {
   assert.match(membersCloneName('Alpha'), /Alpha/)
   assert.match(membersRemoveConfirmBody('Alpha'), /Alpha/)
   assert.match(membersRestoreOk(3), /3/)
+})
+
+test('membersAdaptPlanHint summarizes adapt plan preview', () => {
+  assert.match(membersAdaptPlanHint({ ok: true, reason: 'will_patch', fileCount: 2, enableJsonl: true }), /2/)
+  assert.match(membersAdaptPlanHint({ ok: false, reason: 'no_source' }), /脚本|script/i)
 })
 
 test('membersRefineSavedHint composes refine save feedback', () => {

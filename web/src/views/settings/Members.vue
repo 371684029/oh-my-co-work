@@ -89,6 +89,7 @@
             <el-checkbox v-model="form.adapt">{{ membersT('form.adapt') }}</el-checkbox>
           </el-tooltip>
           <div class="field-hint">{{ membersT('form.adaptHint') }}</div>
+          <div v-if="adaptPlanHint" class="field-hint adapt-plan-hint">{{ adaptPlanHint }}</div>
         </el-form-item>
         <el-form-item>
           <el-tooltip :content="membersT('form.refineTip')" placement="top" :show-after="300">
@@ -321,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
@@ -341,6 +342,7 @@ import {
   membersRemoveConfirmBody,
   membersRestoreConflictBody,
   membersPlanConfirmBody,
+  membersAdaptPlanHint,
 } from '../../composables/settingsMembersCopy.js'
 
 const adaptHover = ADAPT_OPTION_HOVER
@@ -436,6 +438,8 @@ const form = ref(emptyForm())
 const refineSkillPrompt = ref(membersRefineSkillFallback())
 const restoringRefine = ref(false)
 const verifyingMember = ref(false)
+const adaptPlanHint = ref('')
+let adaptPlanTimer = null
 
 const verifyLastHint = computed(() => {
   const v = form.value._verifyLast
@@ -771,6 +775,7 @@ function openCreate() {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.create')
   drawer.value = true
+  scheduleAdaptPlan()
 }
 
 function openEdit(row) {
@@ -779,6 +784,108 @@ function openEdit(row) {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.edit')
   drawer.value = true
+  scheduleAdaptPlan()
+}
+
+function memberPayloadFromForm() {
+  const s = form.value.script
+  const desc = (form.value.description || '').trim()
+  const baseConfig = {}
+  if (desc) baseConfig.description = desc
+  const prev =
+    form.value._editId && list.value.find((m) => m.id === form.value._editId)?.config
+  if (prev?.demo) baseConfig.demo = true
+  if (form.value.kind === 'echo' && prev?.defaultText) {
+    baseConfig.defaultText = prev.defaultText
+  }
+  if (prev?.role) baseConfig.role = prev.role
+  if (form.value.adapt) baseConfig.adapt = true
+  if (form.value.kind === 'script') {
+    const mode = form.value.paramCheckMode || 'off'
+    if (mode === 'off') {
+      baseConfig.requiresParams = false
+    } else if (mode === 'command') {
+      baseConfig.requiresParams = 'command'
+    } else {
+      const keys = String(form.value.requiredParamsText || '')
+        .split(/[,，\s]+/)
+        .map((k) => k.trim())
+        .filter((k) => /^#\d+$/.test(k) || /^\d+$/.test(k))
+        .map((k) => (k.startsWith('#') ? k : `#${k}`))
+      baseConfig.requiresParams = keys.length ? keys : false
+    }
+  }
+  if (form.value.refine) {
+    baseConfig.refine = {
+      ...(prev?.refine || {}),
+      enabled: true,
+    }
+  } else if (prev?.refine) {
+    baseConfig.refine = {
+      ...prev.refine,
+      enabled: false,
+    }
+  }
+  const prevRow = form.value._editId && list.value.find((m) => m.id === form.value._editId)
+  return {
+    displayName: form.value.displayName?.trim() || membersT('drawer.create'),
+    name: prevRow?.name || form.value.displayName?.trim() || 'member',
+    kind: form.value.kind,
+    config:
+      form.value.kind === 'script'
+        ? {
+            ...baseConfig,
+            script: {
+              mode: s.mode,
+              filePath: s.mode === 'file' ? s.filePath : undefined,
+              scriptWorkDir: s.scriptWorkDir || s.scriptDir || undefined,
+              scriptDir: s.scriptWorkDir || s.scriptDir || undefined,
+              command: s.mode === 'command' ? s.command : undefined,
+              runtime: s.runtime || 'auto',
+              args: s.mode === 'file' ? parseArgs(s.argsText) : undefined,
+              ...(Object.keys(parseEnvText(s.envText)).length
+                ? { env: parseEnvText(s.envText) }
+                : {}),
+              executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
+              adapter: s.adapter === 'jsonl' ? 'jsonl' : undefined,
+              ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
+              detach: !!s.detach,
+              waitForExit: !s.detach,
+              useHumanAsStdin: !!s.useHumanAsStdin,
+              passHumanInput: !!s.useHumanAsStdin,
+            },
+          }
+        : { ...baseConfig },
+  }
+}
+
+async function refreshAdaptPlan() {
+  adaptPlanHint.value = ''
+  if (!drawer.value || readonly.value || !form.value.adapt || form.value.kind !== 'script') return
+  const s = form.value.script
+  const sw = String(s.scriptWorkDir || s.scriptDir || '').trim()
+  if (!sw) return
+  if (s.mode === 'file' && !String(s.filePath || '').trim()) return
+  if (s.mode === 'command' && !String(s.command || '').trim()) return
+  try {
+    const body = memberPayloadFromForm()
+    const plan = await api.members.adaptPlan({
+      memberId: form.value._editId || undefined,
+      displayName: body.displayName,
+      kind: body.kind,
+      config: body.config,
+    })
+    adaptPlanHint.value = membersAdaptPlanHint(plan)
+  } catch {
+    adaptPlanHint.value = ''
+  }
+}
+
+function scheduleAdaptPlan() {
+  clearTimeout(adaptPlanTimer)
+  adaptPlanTimer = setTimeout(() => {
+    refreshAdaptPlan().catch(() => {})
+  }, 350)
 }
 
 function openClone(row) {
@@ -787,6 +894,7 @@ function openClone(row) {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.clone')
   drawer.value = true
+  scheduleAdaptPlan()
 }
 
 function view(row) {
@@ -818,78 +926,9 @@ async function save() {
         return
       }
     }
-    const desc = (form.value.description || '').trim()
-    const baseConfig = {}
-    if (desc) baseConfig.description = desc
-    // 编辑时保留 demo / defaultText 等原有字段
-    const prev =
-      form.value._editId && list.value.find((m) => m.id === form.value._editId)?.config
-    if (prev?.demo) baseConfig.demo = true
-    if (form.value.kind === 'echo' && prev?.defaultText) {
-      baseConfig.defaultText = prev.defaultText
-    }
-
-    if (prev?.role) baseConfig.role = prev.role
-    if (form.value.adapt) baseConfig.adapt = true
-  if (form.value.kind === 'script') {
-    const mode = form.value.paramCheckMode || 'off'
-    if (mode === 'off') {
-      baseConfig.requiresParams = false
-    } else if (mode === 'command') {
-      baseConfig.requiresParams = 'command'
-    } else {
-      const keys = String(form.value.requiredParamsText || '')
-        .split(/[,，\s]+/)
-        .map((k) => k.trim())
-        .filter((k) => /^#\d+$/.test(k) || /^\d+$/.test(k))
-        .map((k) => (k.startsWith('#') ? k : `#${k}`))
-      baseConfig.requiresParams = keys.length ? keys : false
-    }
-  }
-    // 4.5 熔炉炼化：开启时写入 config.refine；取消只关 enabled，保留已学到的 format
-    if (form.value.refine) {
-      baseConfig.refine = {
-        ...(prev?.refine || {}),
-        enabled: true,
-      }
-    } else if (prev?.refine) {
-      baseConfig.refine = {
-        ...prev.refine,
-        enabled: false,
-      }
-    }
-
-    const prevRow = form.value._editId && list.value.find((m) => m.id === form.value._editId)
-    const body = {
-      displayName: form.value.displayName.trim(),
-      name: prevRow?.name || form.value.displayName.trim(),
-      kind: form.value.kind,
-      config:
-        form.value.kind === 'script'
-          ? {
-              ...baseConfig,
-              script: {
-                mode: s.mode,
-                filePath: s.mode === 'file' ? s.filePath : undefined,
-                scriptWorkDir: s.scriptWorkDir || s.scriptDir || undefined,
-                scriptDir: s.scriptWorkDir || s.scriptDir || undefined,
-                command: s.mode === 'command' ? s.command : undefined,
-                runtime: s.runtime || 'auto',
-                args: s.mode === 'file' ? parseArgs(s.argsText) : undefined,
-                ...(Object.keys(parseEnvText(s.envText)).length
-                  ? { env: parseEnvText(s.envText) }
-                  : {}),
-                executionMode: s.executionMode === 'pipe' ? 'pipe' : 'terminal',
-                adapter: s.adapter === 'jsonl' ? 'jsonl' : undefined,
-                ...popupFieldsFromMode(s.showScriptPopupMode || 'inherit'),
-                detach: !!s.detach,
-                waitForExit: !s.detach,
-                useHumanAsStdin: !!s.useHumanAsStdin,
-                passHumanInput: !!s.useHumanAsStdin,
-              },
-            }
-          : { ...baseConfig },
-    }
+    const body = memberPayloadFromForm()
+    body.displayName = form.value.displayName.trim()
+    body.name = (form.value._editId && list.value.find((m) => m.id === form.value._editId)?.name) || body.displayName
     if (form.value.refine) {
       const plan = await api.members.refinePlan({
         memberId: form.value._editId || undefined,
@@ -950,6 +989,23 @@ async function remove(row) {
     ElMessage.error(e.message)
   }
 }
+
+watch(
+  () => [
+    drawer.value,
+    form.value.adapt,
+    form.value.kind,
+    form.value.script?.mode,
+    form.value.script?.filePath,
+    form.value.script?.command,
+    form.value.script?.scriptWorkDir,
+    form.value.script?.adapter,
+  ],
+  () => {
+    if (drawer.value && !readonly.value) scheduleAdaptPlan()
+    else adaptPlanHint.value = ''
+  },
+)
 
 onMounted(() => {
   load()

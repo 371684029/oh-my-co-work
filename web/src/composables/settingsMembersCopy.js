@@ -74,3 +74,19 @@ export function membersRestoreConflictBody(list, fallback) {
 export function membersPlanConfirmBody(n, lines) {
   return subst(tp('confirm.planBody'), { n, lines })
 }
+
+/** Live adapt plan summary under the「是否适配」checkbox (5.9.0 RAR-08). */
+export function membersAdaptPlanHint(plan) {
+  if (!plan) return ''
+  if (!plan.ok) {
+    const reason = plan.reason || 'unknown'
+    const key = `form.adaptPlanReason.${reason}`
+    const line = tp(key)
+    return line !== key ? line : reason
+  }
+  const n = plan.fileCount ?? 0
+  const jsonl = plan.enableJsonl ? tp('form.adaptPlanJsonlSuffix') : ''
+  if (plan.reason === 'already') return tp('form.adaptPlanAlready')
+  if (plan.reason === 'no_source') return tp('form.adaptPlanNoSource')
+  return subst(tp('form.adaptPlanWillPatch'), { n, jsonl })
+}

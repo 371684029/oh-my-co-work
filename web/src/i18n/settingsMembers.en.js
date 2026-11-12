@@ -46,6 +46,17 @@ export const settingsMembersEn = {
     adapt: 'Adapt',
     adaptHint:
       'Turn on only while onboarding a script or when it does not run yet. Keep off for stable members so the furnace does not patch on every run. Backups: data/backups/adapt.',
+    adaptPlanWillPatch: 'Preview: up to {n} source file(s) may be patched{jsonl} before a node run (not saved yet)',
+    adaptPlanJsonlSuffix: '; jsonl adapter will be enabled',
+    adaptPlanAlready: 'Sources already carry adapt marks; no rewrite expected',
+    adaptPlanNoSource: 'No script path to adapt; run will fall back to step marking only',
+    adaptPlanReason: {
+      adapt_disabled: 'Adapt is off',
+      no_source: 'No adapt script path',
+      already: 'Adapt mark already present',
+      unreadable: 'Script path not readable',
+      fallback: 'Some sources not writable; run may fall back',
+    },
     refine: 'Furnace refine',
     refineTip:
       'On save the script is rewritten right away: the ACW input env var is written and a doc title is printed to stdout. The docs hub collects output by that spec after the run.',

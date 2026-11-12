@@ -46,6 +46,17 @@ export const settingsMembersZh = {
     adapt: '是否适配',
     adaptHint:
       '仅新接入或跑不起来时再开。已稳定运行的脚本请关闭，避免每次执行前熔炉改源。与炼化不同：适配走 data/backups/adapt。',
+    adaptPlanWillPatch: '预计节点跑前改写 {n} 个源文件{jsonl}（仅预览，保存不落盘）',
+    adaptPlanJsonlSuffix: '，并将打开 jsonl 适配',
+    adaptPlanAlready: '源文件已含适配标记，预计不会重复改写',
+    adaptPlanNoSource: '未找到可适配脚本路径；运行时将回落仅打步骤标记',
+    adaptPlanReason: {
+      adapt_disabled: '未勾选适配',
+      no_source: '未找到可适配脚本路径',
+      already: '源文件已含适配标记',
+      unreadable: '脚本路径不可读',
+      fallback: '部分源不可写，运行时将回落',
+    },
     refine: '熔炉炼化',
     refineTip:
       '点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。',
