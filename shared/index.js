@@ -479,6 +479,57 @@ export function existingProjectParamsList(sessionContext) {
  * @param {string} text 本轮用户输入
  * @returns {{ list: string[], map: Record<string,string>, raw: string, added: string[], startIndex: number }}
  */
+export function normalizeParamBindSlots(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((s) => {
+      const t = String(s ?? '').trim()
+      if (!t) return ''
+      return t.startsWith('#') ? t : `#${t}`
+    })
+    .filter(Boolean)
+    .slice(0, MAX_PROJECT_PARAMS)
+}
+
+/**
+ * 按群模板/步骤配置的槽位写入参数（覆盖绑定槽，不自动占用 #1 #2）。
+ * @returns {{ useAppend: boolean, map?: Record<string,string>, bound?: Array<{key,value}>, raw?: string, added?: string[] }}
+ */
+export function applyProjectParamBind(ctx, text, slots, { overwrite = true } = {}) {
+  const keys = normalizeParamBindSlots(slots)
+  if (!keys.length) return { useAppend: true }
+  const parsed = parseProjectParams(text)
+  const params = { ...(ctx?.params && typeof ctx.params === 'object' ? ctx.params : {}) }
+  const bound = []
+  keys.forEach((key, i) => {
+    const val = parsed.list[i]
+    if (val == null || !String(val).trim()) return
+    params[key] = String(val).trim()
+    bound.push({ key, value: String(val).trim() })
+  })
+  if (!bound.length && !parsed.list.length) return { useAppend: true }
+  return {
+    useAppend: false,
+    map: params,
+    bound,
+    raw: parsed.raw,
+    added: bound.map((b) => b.value),
+    bindKeys: bound.map((b) => b.key),
+  }
+}
+
+export function resolveStepParamBindSlots(step, group) {
+  const fromStep = normalizeParamBindSlots(step?.paramBindSlots)
+  if (fromStep.length) return fromStep
+  const cfg =
+    group?.config && typeof group.config === 'object'
+      ? group.config
+      : typeof group?.config_json === 'string'
+        ? JSON.parse(group.config_json || '{}')
+        : {}
+  return normalizeParamBindSlots(cfg.paramBindSlots)
+}
+
 export function appendProjectParams(existingListOrCtx, text) {
   const base = dedupeProjectParamsList(
     Array.isArray(existingListOrCtx)

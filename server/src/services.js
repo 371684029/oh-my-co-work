@@ -7,6 +7,7 @@ import {
   MEMBER_KIND,
   normalizeStepFlow,
   flowNeedsWait,
+  normalizeParamBindSlots,
 } from '@acw/shared'
 import { fuzzyScore, searchMatchThreshold } from '@acw/shared'
 import {
@@ -85,6 +86,12 @@ function buildGroupConfig(body, prevConfig = {}) {
     cfg.admin = normalizeGroupAdminConfig(body.admin)
   } else if (!cfg.admin) {
     cfg.admin = { inherit: true, memberId: null, defaultFlow: null }
+  }
+  if (body.paramBindSlots !== undefined) {
+    cfg.paramBindSlots = normalizeParamBindSlots(body.paramBindSlots)
+  }
+  if (body.config?.paramBindSlots !== undefined) {
+    cfg.paramBindSlots = normalizeParamBindSlots(body.config.paramBindSlots)
   }
   return cfg
 }
@@ -315,13 +322,9 @@ function normalizeSteps(steps) {
       flow,
     }
     if (row.type === 'human') {
-      // 首步默认采集项目参数；显式 false 可关
-      row.captureParams =
-        s.captureParams === true
-          ? true
-          : s.captureParams === false
-            ? false
-            : i === 0
+      row.captureParams = s.captureParams === true
+      const slots = normalizeParamBindSlots(s.paramBindSlots)
+      if (slots.length) row.paramBindSlots = slots
     }
     if (s.adapt === true || s.adapt === 'true' || s.adapt === 1) {
       row.adapt = true

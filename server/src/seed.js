@@ -42,11 +42,13 @@ createGroup({
   title: '演示流',
   description: 'MVP 演示：人工输入 → 回声+闸门 → 命令',
   workFolder: process.cwd(),
+  paramBindSlots: ['#1'],
   steps: [
     {
       title: '输入项目信息',
       type: 'human',
       captureParams: true,
+      paramBindSlots: ['#1'],
       gate: false,
     },
     { title: '示例回声', type: 'member', memberId: echo.id, gate: true },

@@ -93,8 +93,8 @@ export function createSessionFromGroup(groupId, { title, dryRun } = {}) {
     ctx.pendingStart = {
       at: t,
       groupTitle,
-      captureParams: true,
-      callArgs: false,
+      captureParams: false,
+      callArgs: true,
     }
   }
 
@@ -174,13 +174,13 @@ export function createSessionFromGroup(groupId, { title, dryRun } = {}) {
       mode: 'session_start',
       text: isAdhoc
         ? `准备开始「${group.title}」。可先在输入框填写参数（将作为 #a），再点「通过」启动。`
-        : `准备开始「${group.title}」。可先填写说明或项目参数，再点「通过」启动流程。`,
-      captureParams: !isAdhoc,
-      callArgs: isAdhoc,
+        : `准备开始「${group.title}」。可先填写说明（记为 #a），再点「下一步」启动；会话 # 槽位请在群模板配置绑定（如 #4 #5），不默认写入成员占位。`,
+      captureParams: false,
+      callArgs: !isAdhoc,
       actions: ['approve_start', 'cancel_start'],
       policy: isAdhoc
         ? '通过=开始执行成员；取消=关闭。输入全文记为 #a（调用参数），成员命令里可用 #a / {#a}。'
-        : '通过=开始执行流程；取消=关闭本任务。输入可选：多段用空格或换行分隔为 #1、#2…；同会话内递增追加，新开聊另起一套。输出整段不切分。',
+        : '下一步=开始执行；取消=关闭本任务。开聊输入默认仅 #a；采集 #n 须在模板配置 paramBindSlots 或在「下一步」人工步绑定。',
     },
   })
 

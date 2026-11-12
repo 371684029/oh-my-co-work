@@ -19,6 +19,13 @@ export function shouldSessionStartGateOnSubmit(gate, mentionAssistOnly) {
   return gate.content?.mode === 'session_start'
 }
 
+export function isReviewGate(gate) {
+  if (!gate) return false
+  const mode = gate.content?.mode
+  if (!mode) return true
+  return mode === 'review' || mode === 'node_review'
+}
+
 export function canSendPlainMessage(text, attachmentsCount) {
   return Boolean(String(text || '').trim()) || Number(attachmentsCount) > 0
 }
@@ -28,6 +35,7 @@ export function composerSubmitRoute({ text, gate, mentionAssistOnly, attachments
   const raw = String(text || '')
   if (raw.startsWith('/')) return 'slash'
   if (shouldSessionStartGateOnSubmit(gate, mentionAssistOnly)) return 'session_start_gate'
+  if (isReviewGate(gate) && !mentionAssistOnly) return 'review_gate'
   if (shouldSubmitHumanGate(gate, mentionAssistOnly)) return 'human_gate'
   if (canSendPlainMessage(raw, attachmentsCount)) return 'plain_message'
   return 'noop'

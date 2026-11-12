@@ -12,6 +12,8 @@ export const useComposerStore = defineStore('composer', () => {
   const hashOpen = ref(false)
   const hashQuery = ref('')
   const hashIndex = ref(0)
+  /** 闸门「是否通过」，默认勾选（5.4.1 下一步节点） */
+  const gatePassChecked = ref(true)
 
   return {
     footerCollapsed,
@@ -24,5 +26,6 @@ export const useComposerStore = defineStore('composer', () => {
     hashOpen,
     hashQuery,
     hashIndex,
+    gatePassChecked,
   }
 })

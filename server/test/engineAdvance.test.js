@@ -51,7 +51,7 @@ const FLOW_OFF = { admin: false, auto: false, human: false }
 test('advance stops at a human-input gate; submit captures params then completes', async () => {
   const session = await makeEchoStepSession(
     (id) => [
-      { title: '填写参数', type: 'human', gate: false },
+      { title: '填写参数', type: 'human', gate: false, captureParams: true },
       { title: '回声', type: 'member', memberId: id, gate: false, flow: FLOW_OFF },
     ],
     'human-gate',
@@ -78,10 +78,10 @@ test('advance stops at a human-input gate; submit captures params then completes
     return d.session.status === SESSION_STATUS.ARCHIVED ? d : null
   })
   assert.equal(d2.nodes[0].status, 'succeeded')
-  // 参数追加语义：启动文本「开始」占 #1，人工步输入递增为 #2、#3
-  assert.equal(d2.session.context.params?.['#1'], '开始')
-  assert.equal(d2.session.context.params?.['#2'], 'p1')
-  assert.equal(d2.session.context.params?.['#3'], 'p2')
+  // 开聊默认 #a；人工步显式采集 → #1 #2
+  assert.equal(d2.session.context.params?.['#a'], '开始')
+  assert.equal(d2.session.context.params?.['#1'], 'p1')
+  assert.equal(d2.session.context.params?.['#2'], 'p2')
   assert.equal(d2.nodes[1].status, 'succeeded')
 })
 

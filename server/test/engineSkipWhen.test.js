@@ -37,6 +37,7 @@ test('skipWhen skips member step when param matches', async () => {
   const group = createGroup({
     title: 'Skip group',
     workFolder: process.cwd(),
+    paramBindSlots: ['#1'],
     config: { paramSpecs: [{ key: '#1', required: false }] },
     steps: [
       { title: '跳过步', type: 'member', memberId: member.id, gate: false, flow: { admin: false, auto: false, human: false }, skipWhen: { param: '#1', value: 'skip' } },

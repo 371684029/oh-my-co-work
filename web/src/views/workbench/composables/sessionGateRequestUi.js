@@ -7,11 +7,13 @@ export function buildSessionGateBody({
   questionId,
   choice,
   idempotencyKey,
+  passed,
 }) {
   const body = {
     action,
     idempotencyKey,
   }
+  if (passed === false) body.passed = false
   const trimmed = String(text || '').trim()
   if (trimmed) body.text = trimmed
   if (nodeInstanceId) body.nodeInstanceId = nodeInstanceId

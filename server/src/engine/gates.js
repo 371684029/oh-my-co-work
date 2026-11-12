@@ -12,6 +12,9 @@ import {
   nowIso,
   normalizeStepFlow,
   appendProjectParams,
+  applyProjectParamBind,
+  resolveStepParamBindSlots,
+  existingProjectParamsList,
   formatAddedParamsText,
   formatGroupCard,
   resolveGroupFolder,
@@ -80,7 +83,10 @@ function rememberGateIdempotency(sessionId, key, result) {
   engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
 }
 
-export async function handleGateAction(sessionId, { action, text, nodeInstanceId, idempotencyKey, questionId, choice }) {
+export async function handleGateAction(
+  sessionId,
+  { action, text, nodeInstanceId, idempotencyKey, questionId, choice, passed },
+) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.ARCHIVED) {
@@ -147,6 +153,7 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
     nodeInstanceId,
     questionId,
     choice,
+    passed,
   })
   if (idemKey) {
     rememberGateIdempotency(sessionId, idemKey, result || { ok: true, action })
@@ -154,7 +161,10 @@ export async function handleGateAction(sessionId, { action, text, nodeInstanceId
   return result
 }
 
-async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, questionId, choice }) {
+async function handleGateActionCore(
+  sessionId,
+  { action, text, nodeInstanceId, questionId, choice, passed },
+) {
   const session = getSession(sessionId)
   if (!session) throw new Error('会话不存在')
   if (session.status === SESSION_STATUS.ARCHIVED) {
@@ -233,8 +243,44 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       }
 
       let parsed = null
-      if (inputText.trim() && !callArgsOnly) {
-        // 同会话递增追加（开聊一般为首次，等价于从 #1 起）
+      const groupEarly = getGroup(session.group_id)
+      const bindSlots = resolveStepParamBindSlots(null, groupEarly)
+      if (inputText.trim() && bindSlots.length) {
+        const bind = applyProjectParamBind(ctxStart, inputText, bindSlots, { overwrite: true })
+        if (!bind.useAppend) {
+          ctxStart.params = {
+            ...(ctxStart.params || {}),
+            ...bind.map,
+          }
+          parsed = {
+            map: bind.map,
+            list: existingProjectParamsList(ctxStart),
+            raw: bind.raw,
+            added: bind.added,
+            startIndex: 0,
+            bound: bind.bound,
+          }
+          const steps0 = parseJson(groupEarly?.steps_json, [])
+          const gObj0 = { ...groupEarly, steps: steps0 }
+          ctxStart.params = mergeSystemParams(
+            {
+              ...ctxStart.params,
+              ...(bind.map || {}),
+              [SYSTEM_PARAM_KEYS.CALL_ARGS]: inputText.trim(),
+            },
+            {
+              group: gObj0,
+              sessionContext: ctxStart,
+              memberNameOf: (id) => {
+                const m = getMember(id)
+                return m?.display_name || m?.name || id
+              },
+            },
+          )
+        }
+      }
+      if (inputText.trim() && !callArgsOnly && !parsed && !bindSlots.length) {
+        // 未配置绑定槽时才递增 #1 #2…
         parsed = appendProjectParams(ctxStart, inputText)
         ctxStart.projectInfoRaw = [ctxStart.projectInfoRaw, parsed.raw]
           .filter((s) => s != null && String(s).trim())
@@ -571,9 +617,24 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
       prevIn.captureParams === true || step.captureParams === true
 
     let parsed = null
+    const stepPassed = passed !== false
     if (captureParams) {
-      // 同会话内追加：开聊已写 #1 时，本步再输入 → #2…，不覆盖
-      parsed = appendProjectParams(ctx, fullText)
+      const bindSlots = resolveStepParamBindSlots(step, group)
+      const bind = applyProjectParamBind(ctx, fullText, bindSlots, { overwrite: true })
+      if (!bind.useAppend && bindSlots.length) {
+        parsed = {
+          map: bind.map,
+          list: existingProjectParamsList(ctx),
+          raw: bind.raw,
+          added: bind.added,
+          startIndex: 0,
+          bound: bind.bound,
+        }
+        ctx.params = { ...(ctx.params || {}), ...bind.map }
+      } else {
+        // 同会话内追加：仅无绑定槽时递增 #1 #2…
+        parsed = appendProjectParams(ctx, fullText)
+      }
       ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
         .filter((s) => s != null && String(s).trim())
         .join('\n')
@@ -591,14 +652,17 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
         })
       ctx.groupCard = sysCard
       ctx.groupFolder = resolveGroupFolder(gObj, ctx)
-      ctx.params = mergeSystemParams(parsed.map, {
-        group: gObj,
-        sessionContext: ctx,
-        memberNameOf: (id) => {
-          const m = getMember(id)
-          return m?.display_name || m?.name || id
+      ctx.params = mergeSystemParams(
+        { ...(ctx.params || {}), ...(parsed.map || {}) },
+        {
+          group: gObj,
+          sessionContext: ctx,
+          memberNameOf: (id) => {
+            const m = getMember(id)
+            return m?.display_name || m?.name || id
+          },
         },
-      })
+      )
     }
 
     const autoTitleHuman = syncAutoSessionTitle(ctx, group)
@@ -610,22 +674,28 @@ async function handleGateActionCore(sessionId, { action, text, nodeInstanceId, q
 
     const outPayload = {
       text: fullText || '(空)',
-      ok: true,
+      ok: stepPassed,
     }
     if (parsed) {
       outPayload.params = parsed.map
       outPayload.paramsList = parsed.list
-      outPayload.paramsPreview = formatAddedParamsText(parsed.added, parsed.startIndex)
+      if (parsed.bound?.length) {
+        outPayload.paramsPreview = parsed.bound.map((b) => `${b.key}=${b.value}`).join(' · ')
+      } else {
+        outPayload.paramsPreview = formatAddedParamsText(parsed.added, parsed.startIndex)
+      }
     }
+    if (!stepPassed) outPayload.humanAction = 'reject'
 
     engineEmit('persist_node_io', sessionId, node.id, {
       input: {
         ...prevIn,
         submitted: fullText || '',
         captureParams: !!captureParams,
+        passed: stepPassed,
       },
       output: outPayload,
-      status: NODE_STATUS.SUCCEEDED,
+      status: stepPassed ? NODE_STATUS.SUCCEEDED : NODE_STATUS.FAILED,
       finished: true,
     })
     engineEmit('add_message', sessionId, {

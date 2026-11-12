@@ -47,13 +47,15 @@ export function createSessionDetailSendGateActions({
     runSlash,
     submitHuman: (m) => gateActionsRef.submitHuman(m),
     approveSessionStart: (m) => gateActionsRef.approveSessionStart?.(m),
+    nextStepReview: (m) => gateActionsRef.nextStepReview?.(m),
     api,
     composerHistIndexRef,
   })
 
   const nextIdempotencyKey = nextGateIdempotencyKey
 
-  const { submitHuman, approveSessionStart, gate, answerAdapterQuestion } = createSessionGateActions({
+  const { submitHuman, approveSessionStart, gate, answerAdapterQuestion, nextStepReview, cancelReview } =
+    createSessionGateActions({
     gating,
     activeId,
     members,
@@ -65,7 +67,23 @@ export function createSessionDetailSendGateActions({
     onSenderSubmit,
     api,
   })
-  Object.assign(gateActionsRef, { submitHuman, approveSessionStart, gate, answerAdapterQuestion })
+  Object.assign(gateActionsRef, {
+    submitHuman,
+    approveSessionStart,
+    gate,
+    answerAdapterQuestion,
+    nextStepReview,
+    cancelReview,
+  })
 
-  return { onSenderSubmit, submitHuman, approveSessionStart, gate, answerAdapterQuestion, nextIdempotencyKey }
+  return {
+    onSenderSubmit,
+    submitHuman,
+    approveSessionStart,
+    gate,
+    answerAdapterQuestion,
+    nextStepReview,
+    cancelReview,
+    nextIdempotencyKey,
+  }
 }

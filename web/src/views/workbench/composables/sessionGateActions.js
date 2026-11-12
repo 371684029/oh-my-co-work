@@ -4,6 +4,7 @@ import { buildSessionGateBody } from './sessionGateRequestUi.js'
 import { gateActionToast } from './sessionGateFeedbackUi.js'
 import { humanGateShouldSendAsMessage } from './sessionHumanGateRouteUi.js'
 import { adapterAnsweredMessage } from './sessionWorkbenchFeedbackUi.js'
+import { useComposerStore } from '../../../stores/composer.js'
 
 export function createSessionGateActions({
   gating,
@@ -31,11 +32,13 @@ export function createSessionGateActions({
     }
     gating.value = true
     try {
+      const passed = useComposerStore().gatePassChecked
       await api.sessions.gate(
         activeId.value,
         buildSessionGateBody({
           action: 'submit',
           text,
+          passed,
           nodeInstanceId: m.node_instance_id,
           idempotencyKey: nextIdempotencyKey('submit', m.node_instance_id),
         }),
@@ -128,5 +131,14 @@ export function createSessionGateActions({
     }
   }
 
-  return { submitHuman, approveSessionStart, gate, answerAdapterQuestion }
+  async function nextStepReview(m) {
+    const passed = useComposerStore().gatePassChecked
+    await gate(m, passed ? 'approve' : 'reject')
+  }
+
+  async function cancelReview(m) {
+    await gate(m, 'reject')
+  }
+
+  return { submitHuman, approveSessionStart, gate, answerAdapterQuestion, nextStepReview, cancelReview }
 }

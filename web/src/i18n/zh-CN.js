@@ -601,8 +601,9 @@ export const strings = {
     },
     gate: {
       pass: '下一步',
+      passCheck: '通过',
       cancelStartButton: '取消',
-      submit: '提交',
+      submit: '下一步',
       rejectButton: '拒绝',
       resumeButton: '继续',
       discardButton: '放弃',

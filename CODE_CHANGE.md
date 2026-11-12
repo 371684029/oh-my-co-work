@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-12 | A/M | shared/index.js, server/src/engine/{gates,sessionLifecycle}.js, server/src/{services,seed}.js, server/test/{engineAdvance,engineSkipWhen}.test.js, web/src/{stores/composer.js,views/settings/Groups.vue,views/workbench/**,i18n/**}, web/test/sessionDetailSendGateActions.test.mjs, docs/guide-demo.md | 闸门：下一步+通过勾选；开聊默认 #a；群/步 paramBindSlots 覆盖绑定；人工步显式 captureParams
 2026-11-12 | A/M | server/src/{appSettings,refineSource,services}.js, server/test/furnaceSettings.test.js, server/config/app-settings.json, web/src/{i18n,i18n/en-US,zh-CN}.js, web/src/views/workbench/**, README.md, docs/{guide-demo,plan-5.9.0,spec-qa-checklist}.md, */package.json, server/config/about.json | 5.4.0：开聊下一步+Enter、verify stamp 闸门、refine status、流程轨适配提示
 2026-11-12 | A/M | web/src/views/settings/Members.vue, web/src/composables/settingsMembersCopy.js, web/src/i18n/settingsMembers.{zh,en}.js, web/test/settingsMembersCopy.test.mjs, scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js, .github/workflows/ci.yml, docs/plan-5.9.0.md, */package.json, server/config/about.json | 5.3.9 / 5.9.0 M4：适配 plan 预览、E2E 试跑验证、CI selftest-refine-adapt
 2026-11-11 | A/M | server/config/furnace/acw-ctl.mjs, server/test/{acwCtl,memberVerifyRoundtrip}.test.js, docs/{guide-demo,guide-script,plan-5.9.0,spec-selftest}.md, */package.json, server/config/about.json | 5.3.8 / 5.9.0 M3：verify-member CLI、炼化演示文档、verify 失败还原集成测

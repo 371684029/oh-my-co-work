@@ -203,7 +203,13 @@ const {
 // ===== 发送 / 闸门动作（onSenderSubmit 先于闸门创建，两段式接线在工厂内部）=====
 
 const {
-  onSenderSubmit, submitHuman, approveSessionStart, gate, answerAdapterQuestion,
+  onSenderSubmit,
+  submitHuman,
+  approveSessionStart,
+  gate,
+  answerAdapterQuestion,
+  nextStepReview,
+  cancelReview,
 } = createSessionDetailSendGateActions({
   sending, uploading, gating, activeId, sessions, members, slashCommands,
   pendingFiles, pendingGate, filteredSlashCmds, readSenderText, clearSender,
@@ -286,7 +292,7 @@ export {
   syncAtFromInput, syncHashFromInput, onSenderChange, onComposerKeydown,
   toggleSlashPanel, closeComposerPanel, toggleAtPanel, toggleHashPanel,
   insertAtMember, insertHashItem, runSlash, onSenderSubmit, submitHuman,
-  approveSessionStart, gate, goShortcuts, rename, doDelete, restartFromNode,
+  approveSessionStart, gate, nextStepReview, cancelReview, goShortcuts, rename, doDelete, restartFromNode,
   toggleNodeExpand, formatIo, toggleSkippedFlowGroup, isSkippedFlowGroupExpanded,
   nodeHasAdapt, nodeHasRefine, isClonedNode, isFlowHistoryNode, flowClass, isCurrent,
   isCurrentOffsiteSegment, offsiteEntryLabel, offsiteInvokedLabel, reviewLabel,

@@ -247,6 +247,13 @@
                   </button>
                 </el-tooltip>
                 <div v-if="pendingGate" class="composer-gate-actions">
+                  <el-checkbox
+                    v-if="gateShowPassCheck"
+                    v-model="composerStore.gatePassChecked"
+                    class="gate-pass-check"
+                  >
+                    {{ gatePassCheckLabel() }}
+                  </el-checkbox>
                   <template v-if="pendingGate.content?.mode === 'session_start'">
                     <el-button type="danger" @click="approveSessionStart(pendingGate)">
                       {{ gatePassButtonLabel() }}
@@ -257,12 +264,12 @@
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'human_input'">
                     <el-button type="danger" @click="submitHuman(pendingGate)">
-                      {{ gateSubmitButtonLabel() }}
+                      {{ gatePassButtonLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'need_params'">
                     <el-button type="danger" @click="submitHuman(pendingGate)">
-                      {{ gateSubmitButtonLabel() }}
+                      {{ gatePassButtonLabel() }}
                     </el-button>
                   </template>
                   <template v-else-if="pendingGate.content?.mode === 'adapter_question'">
@@ -304,11 +311,11 @@
                     >
                       <span class="gate-info-dot" :title="gateViewDetailsTitle()">i</span>
                     </el-tooltip>
-                    <el-button type="danger" @click="gate(pendingGate, 'approve')">
-                      {{ gateApproveButtonLabel(pendingGate.content?.lastNodeComplete) }}
+                    <el-button type="danger" @click="nextStepReview(pendingGate)">
+                      {{ gatePassButtonLabel() }}
                     </el-button>
-                    <el-button plain @click="gate(pendingGate, 'reject')">
-                      {{ gateRejectButtonLabel() }}
+                    <el-button plain @click="cancelReview(pendingGate)">
+                      {{ gateCancelStartLabel() }}
                     </el-button>
                   </template>
                 </div>
@@ -333,7 +340,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../../../api'
 import { useLocalUploads } from '../../../composables/localUploads'
@@ -369,17 +376,29 @@ import {
   composerUploadSuccessMessage,
 } from '../composables/sessionComposerUploadUi.js'
 import {
-  gateApproveButtonLabel,
   gateCancelStartLabel,
   gateDiscardInterruptedLabel,
   gatePassButtonLabel,
-  gateRejectButtonLabel,
+  gatePassCheckLabel,
   gateResumeInterruptedLabel,
-  gateSubmitButtonLabel,
   gateViewDetailsTitle,
 } from '../composables/sessionGatePanelUi.js'
 
 const composerStore = useComposerStore()
+
+const gateShowPassCheck = computed(() => {
+  const g = pendingGate.value
+  if (!g) return false
+  const mode = g.content?.mode
+  return (
+    !mode ||
+    mode === 'session_start' ||
+    mode === 'human_input' ||
+    mode === 'need_params' ||
+    mode === 'review' ||
+    mode === 'node_review'
+  )
+})
 
 import {
   detail,
@@ -415,6 +434,8 @@ import {
   gate,
   submitHuman,
   answerAdapterQuestion,
+  nextStepReview,
+  cancelReview,
 } from '../composables/useSessionDetail'
 
 const fileInputRef = ref(null)

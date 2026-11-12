@@ -175,6 +175,13 @@
               >
                 {{ groupsT('steps.captureParams') }}
               </el-checkbox>
+              <el-input
+                v-if="s.type === 'human' && s.captureParams"
+                v-model="s.paramBindSlotsText"
+                class="param-bind-input"
+                :placeholder="groupsT('steps.paramBindPlaceholder')"
+                style="max-width: 220px"
+              />
               <el-tooltip :content="adaptHover" placement="top" :show-after="300">
                 <el-checkbox v-model="s.adapt" class="capture-check">{{ groupsT('steps.adapt') }}</el-checkbox>
               </el-tooltip>
@@ -214,6 +221,13 @@
           <p class="flow-policy" style="margin-top: 4px">
             {{ groupsT('steps.footerPolicy') }}
           </p>
+          <el-form-item :label="groupsT('form.paramBind')">
+            <el-input
+              v-model="form.paramBindSlotsText"
+              :placeholder="groupsT('form.paramBindPlaceholder')"
+            />
+            <p class="field-hint">{{ groupsT('form.paramBindHint') }}</p>
+          </el-form-item>
           <el-button type="primary" @click="save">
             {{ form._editId ? groupsT('form.save') : form._cloneFrom ? groupsT('form.saveClone') : groupsT('form.create') }}
           </el-button>
@@ -459,12 +473,10 @@ function keysToFlow(keys) {
 function stepForm(s = {}, index = 0) {
   const flowKeys = flowToKeys(s.flow, s.gate)
   // 人工步：显式配置优先；新建默认首步开启项目参数采集
-  const captureParams =
-    s.captureParams === true
-      ? true
-      : s.captureParams === false
-        ? false
-        : s.type === 'human' && index === 0
+  const captureParams = s.captureParams === true
+  const paramBindSlotsText = Array.isArray(s.paramBindSlots)
+    ? s.paramBindSlots.join(', ')
+    : ''
   return {
     id: s.id,
     title: s.title || groupsT('steps.defaultTitle'),
@@ -473,6 +485,7 @@ function stepForm(s = {}, index = 0) {
     gate: !!(s.gate || flowKeys.includes('human') || flowKeys.includes('admin')),
     flowKeys,
     captureParams: !!captureParams,
+    paramBindSlotsText,
     adapt: !!s.adapt,
     refine: !!s.refine,
   }
@@ -486,6 +499,7 @@ function emptyForm() {
     description: '',
     adminInherit: true,
     adminMemberId: null,
+    paramBindSlotsText: '',
     steps: [
       stepForm(
         {
@@ -527,6 +541,13 @@ function flowTags(s) {
   return groupsFlowTags(flowToKeys(s.flow, s.gate))
 }
 
+function parseBindSlotsText(text) {
+  return String(text || '')
+    .split(/[,，\s]+/)
+    .map((x) => x.trim())
+    .filter((x) => x)
+}
+
 function serializeSteps(steps) {
   return (steps || []).map((s, i) => {
     const flow = keysToFlow(s.flowKeys)
@@ -540,6 +561,8 @@ function serializeSteps(steps) {
     }
     if (s.type === 'human') {
       row.captureParams = !!s.captureParams
+      const slots = parseBindSlotsText(s.paramBindSlotsText)
+      if (slots.length) row.paramBindSlots = slots
     }
     if (s.adapt) row.adapt = true
     if (s.refine) row.refine = true
@@ -593,6 +616,7 @@ function openEdit(row) {
     description: row.description || '',
     adminInherit: adm.adminInherit,
     adminMemberId: adm.adminMemberId,
+    paramBindSlotsText: (row.config?.paramBindSlots || []).join(', '),
     steps: (row.steps || []).map((s, i) => stepForm(s, i)),
     _editId: row.id,
   }
@@ -609,6 +633,7 @@ function openClone(row) {
     description: row.description || '',
     adminInherit: adm.adminInherit,
     adminMemberId: adm.adminMemberId,
+    paramBindSlotsText: (row.config?.paramBindSlots || []).join(', '),
     steps: (row.steps || []).map((s, i) => stepForm(s, i)),
     _cloneFrom: row.id,
   }
@@ -685,6 +710,7 @@ async function save() {
       title: form.value.title.trim(),
       workFolder: form.value.workFolder || null,
       description: form.value.description,
+      paramBindSlots: parseBindSlotsText(form.value.paramBindSlotsText),
       steps: serializeSteps(form.value.steps),
       admin: form.value.adminInherit
         ? { inherit: true, memberId: null, defaultFlow: null }

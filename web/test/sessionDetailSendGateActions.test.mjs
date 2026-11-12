@@ -49,6 +49,8 @@ test('send-gate wiring fills gateActionsRef after message-send creation (two-pha
   assert.equal(typeof gateActionsRef.approveSessionStart, 'function')
   assert.equal(typeof gateActionsRef.gate, 'function')
   assert.equal(typeof gateActionsRef.answerAdapterQuestion, 'function')
+  assert.equal(typeof gateActionsRef.nextStepReview, 'function')
+  assert.equal(typeof gateActionsRef.cancelReview, 'function')
   assert.equal(gateActionsRef.submitHuman, actions.submitHuman)
 })
 

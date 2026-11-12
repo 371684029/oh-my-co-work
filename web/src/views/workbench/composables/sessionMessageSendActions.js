@@ -39,6 +39,7 @@ export function createSessionMessageSendActions({
   runSlash,
   submitHuman,
   approveSessionStart,
+  nextStepReview,
   api,
   composerHistIndexRef,
 }) {
@@ -72,6 +73,11 @@ export function createSessionMessageSendActions({
 
     if (route === 'session_start_gate') {
       await approveSessionStart(g)
+      return
+    }
+
+    if (route === 'review_gate') {
+      await nextStepReview(g)
       return
     }
 

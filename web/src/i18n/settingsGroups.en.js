@@ -44,6 +44,9 @@ export const settingsGroupsEn = {
     save: 'Save changes',
     saveClone: 'Save clone',
     create: 'Create',
+    paramBind: 'Default param bind slots',
+    paramBindPlaceholder: '#4, #5 (session start / next step overwrite)',
+    paramBindHint: 'Decoupled from member # slots; human steps can override per step.',
   },
   admin: {
     title: 'Furnace config',
@@ -72,7 +75,8 @@ export const settingsGroupsEn = {
     memberPlaceholder: 'Bind member',
     humanTag: 'Human step',
     offsiteTag: 'Temp',
-    captureParams: 'Capture as session #1 #2… (not auto-bound to member command slots)',
+    captureParams: 'Capture project params',
+    paramBindPlaceholder: 'Bind slots e.g. #4,#5 (overwrite)',
     adapt: 'Adapt',
     refine: 'Furnace refine',
     refineTip:

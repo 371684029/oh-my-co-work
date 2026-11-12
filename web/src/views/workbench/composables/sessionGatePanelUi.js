@@ -6,6 +6,10 @@ export function gatePassButtonLabel() {
   return t('workbench.gate.pass')
 }
 
+export function gatePassCheckLabel() {
+  return t('workbench.gate.passCheck')
+}
+
 export function gateCancelStartLabel() {
   return t('workbench.gate.cancelStartButton')
 }

@@ -601,8 +601,9 @@ export const strings = {
     },
     gate: {
       pass: 'Next step',
+      passCheck: 'Pass',
       cancelStartButton: 'Cancel',
-      submit: 'Submit',
+      submit: 'Next step',
       rejectButton: 'Reject',
       resumeButton: 'Resume',
       discardButton: 'Discard',
