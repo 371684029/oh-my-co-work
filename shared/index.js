@@ -393,6 +393,29 @@ export function formatSessionAutoTitle(opts = {}) {
 }
 
 /**
+ * 自动会话名用的「首段」：优先 #1 / paramsList；否则开聊 #a / kickoff 首词（与旧版开聊占 #1 一致）。
+ */
+export function resolveSessionAutoTitleParam1(ctx) {
+  if (!ctx || typeof ctx !== 'object') return ''
+  const list0 = Array.isArray(ctx.paramsList) ? ctx.paramsList[0] : ''
+  if (list0 != null && String(list0).trim()) return String(list0).trim()
+  const p = ctx.params && typeof ctx.params === 'object' ? ctx.params : {}
+  if (p['#1'] != null && String(p['#1']).trim()) return String(p['#1']).trim()
+  if (p['1'] != null && String(p['1']).trim()) return String(p['1']).trim()
+  const kick = String(
+    ctx.kickoff?.text ||
+      p[SYSTEM_PARAM_KEYS.CALL_ARGS] ||
+      p['#a'] ||
+      ctx.lastHumanInput ||
+      '',
+  ).trim()
+  if (!kick) return ''
+  const { list } = parseProjectParams(kick)
+  if (list[0]) return list[0]
+  return kick.length > 120 ? kick.slice(0, 120) : kick
+}
+
+/**
  * 项目参数编号上限：#1 … #99
  */
 export const MAX_PROJECT_PARAMS = 99

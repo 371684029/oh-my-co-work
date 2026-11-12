@@ -264,7 +264,7 @@ data/journals/sessions/{sessionId}/README.md
 |------------------|----------|
 | 新建成员 / 群模板 | SQLite `members` / `groups` |
 | 开聊 | SQLite `sessions` + `node_instances` + 首批 `messages`；群模板或**成员单聊**（临时 `config.adhoc` 群） |
-| **会话默认名** | `context.titleAuto`：采集 `#1` 后自动 `formatSessionAutoTitle`（`#1 · 群模板缩写`）；`groupTitle` / `groupTitleAbbr` 供列表 hover；手改标题则 `titleAuto=false` |
+| **会话默认名** | `context.titleAuto`：`resolveSessionAutoTitleParam1`（`#1` 或开聊 `#a`/kickoff 首词）→ `formatSessionAutoTitle`（`首段 · 群模板缩写`）；手改标题则 `titleAuto=false` |
 | 发消息 / 附件 | `messages`；文件 → `uploads/`；**普通群聊**另追加 `context.paramsList` / `userNotes` 并刷新群报告 |
 | **项目参数 #1 #2…** | **用户输入**人工步提交：空格/换行切分 → `sessions.context_json.params` / `paramsList`；**新开聊另起一套**。节点输出整段不切分；`#` 面板可用 `#出n` 插入 |
 | **#群聊（群聊名片）** | 开聊时写入 `context_json.groupCard` / `params['#群聊']`：名称、简介、工作目录、步骤列表；脚本/回声可用 `#群聊` 或 `{#群聊}` |

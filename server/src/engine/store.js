@@ -12,6 +12,7 @@ import {
   mergeSystemParams,
   abbrGroupTag,
   formatSessionAutoTitle,
+  resolveSessionAutoTitleParam1,
   hasRequiredProjectParams,
   memberNeedsProjectParams,
   memberRequiredParamKeys,
@@ -327,11 +328,7 @@ export function syncAutoSessionTitle(ctx, group) {
     ctx.groupTitle || group?.title || group?.display_name || ctx.pendingStart?.groupTitle || ''
   if (!ctx.groupTitle && groupTitle) ctx.groupTitle = groupTitle
   if (!ctx.groupTitleAbbr) ctx.groupTitleAbbr = abbrGroupTag(groupTitle)
-  const param1 =
-    (Array.isArray(ctx.paramsList) && ctx.paramsList[0]) ||
-    ctx.params?.['#1'] ||
-    ctx.params?.['1'] ||
-    ''
+  const param1 = resolveSessionAutoTitleParam1(ctx)
   const next = formatSessionAutoTitle({
     param1,
     groupTitle: ctx.groupTitle,

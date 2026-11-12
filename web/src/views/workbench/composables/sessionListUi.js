@@ -1,4 +1,4 @@
-import { abbrGroupTag, formatSessionAutoTitle } from '@acw/shared'
+import { abbrGroupTag, formatSessionAutoTitle, resolveSessionAutoTitleParam1 } from '@acw/shared'
 
 /** 会话列表：#1 正文 + 群模板缩写标签；hover 气泡展示全文（前缀 + 群全称） */
 export function sessionListParts(s) {
@@ -16,11 +16,7 @@ export function sessionListParts(s) {
     }
   }
 
-  const p1 = String(
-    (Array.isArray(ctx.paramsList) && ctx.paramsList[0]) ||
-      ctx.params?.['#1'] ||
-      '',
-  ).trim()
+  const p1 = String(resolveSessionAutoTitleParam1(ctx)).trim()
   const groupAbbr = abbr || ''
   const labelPrefix = p1
   const label =
