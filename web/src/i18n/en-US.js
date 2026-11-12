@@ -304,6 +304,10 @@ export const strings = {
     chrome: {
       titlePlaceholder: 'Untitled task',
       humanAttention: 'Needs your attention',
+      openDocs: 'Docs',
+      openDocsAria: 'Open session docs in the right rail',
+      detachShort: 'New win',
+      searchChatShort: 'Go',
       searchChat: 'Search chat',
       searchChatAria: 'Search this session’s messages',
       searchPlaceholder: 'Search this session (pinyin / initials supported)',

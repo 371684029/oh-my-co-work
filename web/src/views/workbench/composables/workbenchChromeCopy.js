@@ -9,6 +9,22 @@ export function workbenchHumanAttentionPill() {
   return t('workbench.chrome.humanAttention')
 }
 
+export function workbenchOpenDocsLabel() {
+  return t('workbench.chrome.openDocs')
+}
+
+export function workbenchOpenDocsAria() {
+  return t('workbench.chrome.openDocsAria')
+}
+
+export function workbenchDetachShortLabel() {
+  return t('workbench.chrome.detachShort')
+}
+
+export function workbenchSearchChatShortLabel() {
+  return t('workbench.chrome.searchChatShort')
+}
+
 export function workbenchSearchChatLabel() {
   return t('workbench.chrome.searchChat')
 }

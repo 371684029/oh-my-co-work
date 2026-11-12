@@ -32,9 +32,26 @@
             >
               {{ archiveOutcomeTag.label }}
             </el-tag>
-            <span v-if="needsHuman" class="human-attention-pill">{{ workbenchHumanAttentionPill() }}</span>
+            <span
+              v-if="needsHuman"
+              class="human-attention-pill header-attention-compact"
+              :title="workbenchHumanAttentionPill()"
+            >
+              {{ workbenchHumanAttentionPill() }}
+            </span>
           </div>
           <div class="header-actions">
+            <el-button
+              size="small"
+              text
+              bg
+              class="header-action-compact"
+              :disabled="!detail.session"
+              :aria-label="workbenchOpenDocsAria()"
+              @click="focusSessionDocsRail"
+            >
+              {{ workbenchOpenDocsLabel() }}
+            </el-button>
             <el-popover
               v-model:visible="chatSearchOpen"
               placement="bottom-end"
@@ -44,12 +61,14 @@
             >
               <template #reference>
                 <el-button
-                  size="default"
+                  size="small"
                   text
                   bg
+                  class="header-action-compact"
                   :aria-label="workbenchSearchChatAria()"
                 >
-                  {{ workbenchSearchChatLabel() }}
+                  <span class="header-action-wide">{{ workbenchSearchChatLabel() }}</span>
+                  <span class="header-action-narrow">{{ workbenchSearchChatShortLabel() }}</span>
                 </el-button>
               </template>
               <div class="chat-search-box">
@@ -84,20 +103,22 @@
             <NotificationInbox />
             <el-button
               v-if="isDesktop && detail.session"
-              size="default"
+              size="small"
               text
               bg
+              class="header-action-compact"
               :title="detachWindowLabel"
               :aria-label="workbenchDetachWindowAria()"
               @click="openSessionDetached"
             >
-              {{ t('desktop.openDetachedWindow') }}
+              {{ workbenchDetachShortLabel() }}
             </el-button>
             <el-button
               v-if="detail.session"
-              size="default"
+              size="small"
               text
               bg
+              class="header-action-compact"
               :type="detail.session.pinned ? 'primary' : 'default'"
               :aria-label="workbenchPinAria(detail.session.pinned)"
               @click="togglePin(detail.session.id, !detail.session.pinned)"
@@ -105,10 +126,11 @@
               {{ workbenchPinLabel(detail.session.pinned) }}
             </el-button>
             <el-button
-              size="default"
+              size="small"
               text
               bg
               type="danger"
+              class="header-action-compact"
               :aria-label="workbenchDeleteAria()"
               @click="doDelete()"
             >
@@ -342,6 +364,10 @@ import { t } from '../i18n/index.js'
 import {
   workbenchTitlePlaceholder,
   workbenchHumanAttentionPill,
+  workbenchOpenDocsLabel,
+  workbenchOpenDocsAria,
+  workbenchDetachShortLabel,
+  workbenchSearchChatShortLabel,
   workbenchSearchChatLabel,
   workbenchSearchChatAria,
   workbenchSearchPlaceholder,
@@ -398,6 +424,11 @@ initFurnaceSync({ route, router })
 startWorkbench()
 
 const flowStore = useFlowStore()
+
+function focusSessionDocsRail() {
+  flowStore.rightTab = 'docs'
+  flowStore.clearDocsUnread()
+}
 
 function onBubbleOpenDoc({ file, path }) {
   if (!activeId.value) return
@@ -464,15 +495,15 @@ onUnmounted(() => {
 <style scoped>
 /* —— 会话顶栏（mac 标题栏气质） —— */
 .wb-chat-header {
-  min-height: 52px;
+  min-height: 48px;
   flex-shrink: 0;
   border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: 6px 12px;
-  padding: 6px 20px;
+  gap: 6px 8px;
+  padding: 6px 12px 6px 16px;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -516,10 +547,11 @@ onUnmounted(() => {
 
 .header-left {
   display: flex;
-  flex: 1 1 260px;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .header-left > :deep(.el-tag),
@@ -530,14 +562,44 @@ onUnmounted(() => {
 
 .header-actions {
   display: flex;
-  gap: 4px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
   flex-shrink: 0;
   margin-left: auto;
 }
 
+.header-action-compact {
+  font-size: 12px;
+  padding: 4px 8px !important;
+  height: 28px;
+  white-space: nowrap;
+}
+
+.header-action-wide {
+  display: inline;
+}
+
+.header-action-narrow {
+  display: none;
+}
+
+@media (max-width: 1320px) {
+  .header-action-wide {
+    display: none;
+  }
+  .header-action-narrow {
+    display: inline;
+  }
+  .header-attention-compact {
+    display: none;
+  }
+}
+
 .title-input {
-  flex: 0 1 380px;
-  min-width: 72px;
+  flex: 1 1 auto;
+  min-width: 48px;
+  max-width: min(42vw, 380px);
 }
 
 .title-input :deep(.el-input__wrapper) {

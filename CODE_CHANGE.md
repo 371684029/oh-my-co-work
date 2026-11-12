@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-12 | M | web/src/views/Workbench.vue, web/src/views/workbench/composables/workbenchChromeCopy.js, web/src/i18n/{zh-CN,en-US}.js | 会话顶栏「文档」快捷键切右栏文档中心；顶栏单行紧凑
 2026-11-12 | M | web/src/views/workbench/{components/ComposerPanel.vue,composables/sessionSenderSubmitUi,sessionGateActions}.js, server/src/engine/advance.js, web/test/sessionSenderSubmitUi.test.mjs | 成员闸门 mode=gate 显示「通过」勾选；人工步补取消
 2026-11-12 | M | shared/index.js, server/src/engine/store.js, server/test/sessionAutoTitle.test.js, web/src/views/workbench/composables/sessionListUi.js, docs/tech-data-storage.md | 开聊仅 #a 时仍用首条输入自动命名（resolveSessionAutoTitleParam1）
 2026-11-12 | A/M | server/src/{sessionTimeline,sessionsRoutes}.js, server/test/sessionTimeline.test.js, web/src/{stores/flow.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailTimelinePane.vue}, web/src/i18n/*.js, shared/index.js, web/src/views/settings/Groups.vue, web/test/flowRailTimelineUi.test.mjs, README.md, docs/plan-5.9.0.md, packages/README.md | RAR-10 验证记录与时间线 verify 筛选；lint 收尾；5.9.0 打包说明

@@ -304,6 +304,10 @@ export const strings = {
     chrome: {
       titlePlaceholder: '未命名任务',
       humanAttention: '需人工处理',
+      openDocs: '文档',
+      openDocsAria: '打开右侧文档中心',
+      detachShort: '新窗口',
+      searchChatShort: '搜',
       searchChat: '搜索聊天',
       searchChatAria: '搜索本会话聊天',
       searchPlaceholder: '搜索本会话聊天（支持拼音/首字母）',
