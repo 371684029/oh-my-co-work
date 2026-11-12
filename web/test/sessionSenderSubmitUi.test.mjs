@@ -5,6 +5,7 @@ import {
   composerSubmitRoute,
   pickSlashCommandOnSubmit,
   shouldSubmitHumanGate,
+  shouldSessionStartGateOnSubmit,
 } from '../src/views/workbench/composables/sessionSenderSubmitUi.js'
 
 test('pickSlashCommandOnSubmit resolves token', () => {
@@ -26,7 +27,18 @@ test('canSendPlainMessage', () => {
   assert.equal(canSendPlainMessage('', 1), true)
 })
 
+test('shouldSessionStartGateOnSubmit for session_start', () => {
+  const gate = { content: { mode: 'session_start' } }
+  assert.equal(shouldSessionStartGateOnSubmit(gate, false), true)
+  assert.equal(shouldSessionStartGateOnSubmit(gate, true), false)
+})
+
 test('composerSubmitRoute', () => {
+  const startGate = { content: { mode: 'session_start' } }
+  assert.equal(
+    composerSubmitRoute({ text: '', gate: startGate, mentionAssistOnly: false, attachmentsCount: 0 }),
+    'session_start_gate',
+  )
   const gate = { content: { mode: 'human_input' } }
   assert.equal(composerSubmitRoute({ text: '/x', gate: null, mentionAssistOnly: false, attachmentsCount: 0 }), 'slash')
   assert.equal(

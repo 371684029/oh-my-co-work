@@ -74,7 +74,7 @@
 - [x] **RAR-03 P1 适配对称 plan API**：`POST /api/members/adapt/plan` — 将改哪些文件、是否 jsonl 覆盖、预估回落，与 `planRefineOnMemberSave` 同结构
 - [x] **RAR-04 P1 适配还原 API**：`POST /api/members/:id/adapt/restore` — 复用 `restoreAdaptManifest`，manifest 来自 `config.adapt` 或历史列表（与炼化 REST 同形）
 - [x] **RAR-05 P1 还原中心**：`GET /api/restore-center` 增加 **适配备份分区**（manifest 列表 + diff），与炼化同一 UX（5.3 TRC-02 收口）
-- [ ] **RAR-06 P2 熔炉改码闸门**：`appSettings.furnace.requireVerifyBeforeStamp` — acw-ctl / 熔炉 backup 后 patch 完成前必须 `verify` 通过才 `stampManifestAfterPatch`（默认 false，power user 可开）
+- [x] **RAR-06 P2 熔炉改码闸门**：`appSettings.furnace.requireVerifyBeforeStamp` — patch 后 `stampManifestAfterPatch` 前须 verify 通过（默认 false）
 
 ### 3.2 前端（web）
 
@@ -87,7 +87,7 @@
 
 - [x] **RAR-11 P1 演示流**：在 [guide-demo.md](./guide-demo.md) §7 增加 **「炼化成员 → 验证 → 跑群 → 文档中心 → 还原」** 点击路径（种子 `demo-refine-verify` 仍待 REU-03）
 - [x] **RAR-12 P1 acw-ctl**：子命令 `verify-member --member <名>` 调 RAR-02，退出码与 JSON 与 API 一致（`acwCtl.test.js` 覆盖）
-- [ ] **RAR-13 P2 REFINE 角色**：`defaultRefineSpecAuthor` 仍为兜底；熔炉产出 format 后 **必须 verify 通过** 才写 `status: done`（与 4.x 开放问题 5 对齐）
+- [x] **RAR-13 P2 REFINE 角色**：保存炼化 patch 后 `status: pending`，**verify 通过** 才 `status: done`（熔炉真角色仍待 4.x）
 
 ### 3.4 测试与 CI
 
@@ -95,7 +95,7 @@
 - [x] **RAR-T2 P0 集成**：炼化 `memberVerifyRoundtrip.test.js`（save→verify→破坏→restore 字节一致）；适配 prepare→restore 见 `adaptPlan.test.js`（jsonl verify 仍待 RAR-06）
 - [x] **RAR-T3 P1 脚本**：`scripts/selftest-refine-adapt.mjs` — 隔离 `ACW_DATA_ROOT`，跑 RAR-T2 场景 + 打印摘要（纳入 [spec-selftest.md](./spec-selftest.md) 索引）
 - [x] **RAR-T4 P1 CI**：`ci-e2e-smoke` 断言炼化脚本成员抽屉「试跑验证」；CI 跑 `selftest-refine-adapt.mjs`
-- [ ] **RAR-T5 P2 实机**：Windows bat CRLF、PowerShell 执行策略受限时 verify 文案回归清单（附在 `spec-qa-checklist.md` 小节）
+- [x] **RAR-T5 P2 实机**：`spec-qa-checklist.md` 炼化试跑验证小节（手工勾选）
 
 ---
 

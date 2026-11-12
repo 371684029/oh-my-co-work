@@ -136,8 +136,13 @@ function persistRefineOnSave(member) {
         skipped: !!verifyResult.skipped,
       },
     }
-    if (!verifyResult.ok && !verifyResult.skipped) refine.verifyFailed = true
-    else delete refine.verifyFailed
+    if (!verifyResult.ok && !verifyResult.skipped) {
+      refine.verifyFailed = true
+      refine.status = 'pending'
+    } else {
+      delete refine.verifyFailed
+      if (refine.enabled) refine.status = 'done'
+    }
     nextConfig.refine = refine
   }
   getDb()

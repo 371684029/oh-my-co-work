@@ -46,6 +46,7 @@ export function createSessionDetailSendGateActions({
     sessions,
     runSlash,
     submitHuman: (m) => gateActionsRef.submitHuman(m),
+    approveSessionStart: (m) => gateActionsRef.approveSessionStart?.(m),
     api,
     composerHistIndexRef,
   })

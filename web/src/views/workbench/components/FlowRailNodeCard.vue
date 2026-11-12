@@ -39,6 +39,9 @@
           <span v-if="flowRailNodeChangeSummary(node)" class="meta-change">
             · {{ flowRailNodeChangeSummary(node) }}
           </span>
+          <span v-if="flowRailNodeAdaptHint(node)" class="meta-adapt">
+            · {{ flowRailNodeAdaptHint(node) }}
+          </span>
           <span class="flow-expand-caret">{{
             flowStore.expandedNodeId === node.id
               ? flowRailCollapseLabel()
@@ -105,6 +108,7 @@ import {
   flowRailRevertStepButton,
 } from '../composables/flowRailCopy.js'
 import {
+  flowRailNodeAdaptHint,
   flowRailNodeChangePatch,
   flowRailNodeChangeSummary,
 } from '../composables/flowRailNodeChange.js'

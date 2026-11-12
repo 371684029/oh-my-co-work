@@ -38,6 +38,7 @@ export function createSessionMessageSendActions({
   sessions,
   runSlash,
   submitHuman,
+  approveSessionStart,
   api,
   composerHistIndexRef,
 }) {
@@ -66,6 +67,11 @@ export function createSessionMessageSendActions({
       }
       const token = text.slice(1).trim().split(/\s+/)[0] || ''
       ElMessage.warning(slashCommandNotFoundMessage(token))
+      return
+    }
+
+    if (route === 'session_start_gate') {
+      await approveSessionStart(g)
       return
     }
 

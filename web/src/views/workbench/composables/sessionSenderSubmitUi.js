@@ -14,14 +14,20 @@ export function shouldSubmitHumanGate(gate, mentionAssistOnly) {
   return !mentionAssistOnly
 }
 
+export function shouldSessionStartGateOnSubmit(gate, mentionAssistOnly) {
+  if (!gate || mentionAssistOnly) return false
+  return gate.content?.mode === 'session_start'
+}
+
 export function canSendPlainMessage(text, attachmentsCount) {
   return Boolean(String(text || '').trim()) || Number(attachmentsCount) > 0
 }
 
-/** @returns {'slash'|'human_gate'|'plain_message'|'noop'} */
+/** @returns {'slash'|'session_start_gate'|'human_gate'|'plain_message'|'noop'} */
 export function composerSubmitRoute({ text, gate, mentionAssistOnly, attachmentsCount }) {
   const raw = String(text || '')
   if (raw.startsWith('/')) return 'slash'
+  if (shouldSessionStartGateOnSubmit(gate, mentionAssistOnly)) return 'session_start_gate'
   if (shouldSubmitHumanGate(gate, mentionAssistOnly)) return 'human_gate'
   if (canSendPlainMessage(raw, attachmentsCount)) return 'plain_message'
   return 'noop'

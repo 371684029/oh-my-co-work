@@ -39,6 +39,19 @@ export function defaultAdaptSettings() {
   return { backup: true }
 }
 
+/** 熔炉 / 炼化高级选项（5.9.0 RAR-06） */
+export function defaultFurnaceSettings() {
+  return { requireVerifyBeforeStamp: false }
+}
+
+function normalizeFurnace(raw) {
+  const d = defaultFurnaceSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return {
+    requireVerifyBeforeStamp: raw.requireVerifyBeforeStamp === true,
+  }
+}
+
 function normalizeAdapt(raw) {
   const d = defaultAdaptSettings()
   if (!raw || typeof raw !== 'object') return d
@@ -395,6 +408,7 @@ export function getAppSettings() {
       admin: normalizeAdmin(raw.admin),
       grok: normalizeGrok(raw.grok),
       adapt: normalizeAdapt(raw.adapt),
+      furnace: normalizeFurnace(raw.furnace),
       /** 归档确认超时（小时），超时系统自动归档释放资源；默认 3 */
       autoArchiveHours: normalizeAutoArchiveHours(
         raw.autoArchiveHours != null ? raw.autoArchiveHours : 3,
@@ -419,6 +433,7 @@ export function getAppSettings() {
       admin: defaultAdminSettings(),
       grok: defaultGrokSettings(),
       adapt: defaultAdaptSettings(),
+      furnace: defaultFurnaceSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
       terminal: defaultTerminalSettings(),
@@ -475,6 +490,10 @@ export function updateAppSettings(patch = {}) {
       patch.adapt !== undefined
         ? normalizeAdapt({ ...cur.adapt, ...patch.adapt })
         : cur.adapt,
+    furnace:
+      patch.furnace !== undefined
+        ? normalizeFurnace({ ...cur.furnace, ...patch.furnace })
+        : cur.furnace || defaultFurnaceSettings(),
     autoArchiveHours:
       patch.autoArchiveHours !== undefined
         ? normalizeAutoArchiveHours(patch.autoArchiveHours)

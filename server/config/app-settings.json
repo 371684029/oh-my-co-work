@@ -21,6 +21,9 @@
   "adapt": {
     "backup": true
   },
+  "furnace": {
+    "requireVerifyBeforeStamp": false
+  },
   "autoArchiveHours": 3,
   "showScriptPopup": true,
   "terminal": {

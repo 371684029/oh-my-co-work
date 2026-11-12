@@ -13,6 +13,8 @@ import {
   stampManifestAfterPatch,
   writeScriptSource,
 } from './adaptBackup.js'
+import { getAppSettings } from './appSettings.js'
+import { verifyMemberSync } from './memberVerify.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
 import {
   ensureRefineArgvSyncInSource,
@@ -266,7 +268,20 @@ export function applyRefineOnMemberSave(member) {
             patched.push(s.path)
           }
           if (backup?.manifestPath && patched.length) {
-            stampManifestAfterPatch(backup.manifestPath, patched)
+            let stampOk = true
+            if (getAppSettings().furnace?.requireVerifyBeforeStamp) {
+              const probe = {
+                ...member,
+                config: {
+                  ...(member.config || {}),
+                  refine: { ...(member.config?.refine || {}), enabled: true, format: spec },
+                },
+              }
+              const v = verifyMemberSync(probe)
+              stampOk = !!(v.ok || v.skipped)
+              if (!stampOk) reason = 'verify_before_stamp_failed'
+            }
+            if (stampOk) stampManifestAfterPatch(backup.manifestPath, patched)
           }
         }
       } catch {
@@ -286,7 +301,7 @@ export function applyRefineOnMemberSave(member) {
   const refine = {
     ...prev,
     enabled: true,
-    status: 'done',
+    status: patched.length && reason === 'ok' ? 'pending' : prev.status || 'done',
     format: spec,
     refinedAt: prev.refinedAt || new Date().toISOString(),
     refineBackup: backup?.zipPath || prev.refineBackup || null,
