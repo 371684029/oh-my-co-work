@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-13 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 开聊闸门走「通过+下一步」按钮；炼化文件夹断言收录进 coverage 单测
 2026-11-13 | M | scripts/ci-e2e-smoke.mjs | E2E 冒烟：开聊闸门先勾「通过」；发送监听 /gate；断言文档中心炼化文件夹
 2026-11-13 | M | web/src/views/docs/{DocsHub.vue,DocsHubSidebar.vue,DocsHubContentColumn.vue,docsHubCopy.js}, web/src/i18n/{zh-CN,en-US}.js, web/test/docsHubLayout.test.mjs, README.md | 文档中心侧栏底部恢复「节点炼化与还原」文件夹入口
 2026-11-13 | M | README.md, docs/assets/screenshots/{docs-hub,docs-hub-rail}.webp, scripts/{capture-docs-screenshots,selftest-docs-rail-toolbar}.mjs, server/src/seed.js, web/test/docsRailLayout.test.mjs | 自测与 README 截图/文案；种子 probe 路径修正；顶栏文档入口自测改造

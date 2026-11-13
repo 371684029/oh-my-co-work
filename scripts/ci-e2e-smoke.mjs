@@ -339,14 +339,8 @@ async function main() {
     const marker = `e2e-smoke-${Date.now()}`
     const editor = page.locator(chatSel).first()
     await editor.click()
-    const gatePass = composer
-      .locator('.el-checkbox')
-      .filter({ hasText: /通过|Pass|approve/i })
-      .first()
-    if (await gatePass.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await gatePass.click()
-    }
-    const sendWait = page.waitForResponse(
+  const waitComposerPost = () =>
+    page.waitForResponse(
       (r) => {
         const u = r.url()
         if (!u.includes(`/api/sessions/${session.id}/`) || r.request().method() !== 'POST') {
@@ -356,13 +350,32 @@ async function main() {
       },
       { timeout: 45000 },
     )
-    await page.keyboard.type(marker, { delay: 12 })
-    await page.keyboard.press('Enter')
-    const sendRes = await sendWait
-    assert.ok(
-      sendRes.status() >= 200 && sendRes.status() < 300,
-      `composer Enter should POST message or gate: ${sendRes.status()} ${sendRes.url()}`,
-    )
+
+    const gateNext = composer.getByRole('button', { name: /下一步|Next step/i })
+    const hasStartGate = await gateNext.isVisible({ timeout: 8000 }).catch(() => false)
+    if (hasStartGate) {
+      const passCheck = composer.locator('.gate-pass-check').first()
+      await passCheck.waitFor({ state: 'visible', timeout: 10000 })
+      await passCheck.locator('.el-checkbox__input').click({ force: true })
+      await editor.click()
+      const sendWait = waitComposerPost()
+      await editor.pressSequentially(marker, { delay: 12 })
+      await gateNext.click()
+      const sendRes = await sendWait
+      assert.ok(
+        sendRes.status() >= 200 && sendRes.status() < 300,
+        `start gate should POST /gate: ${sendRes.status()} ${sendRes.url()}`,
+      )
+    } else {
+      const sendWait = waitComposerPost()
+      await editor.pressSequentially(marker, { delay: 12 })
+      await page.keyboard.press('Enter')
+      const sendRes = await sendWait
+      assert.ok(
+        sendRes.status() >= 200 && sendRes.status() < 300,
+        `composer Enter should POST message: ${sendRes.status()} ${sendRes.url()}`,
+      )
+    }
 
     await page.goto(`${base}/docs`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const docsFirstRunEarly = page.getByRole('button', { name: /开始探索|Start exploring/i })
