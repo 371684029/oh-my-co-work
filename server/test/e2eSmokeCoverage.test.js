@@ -26,7 +26,7 @@ test('QA-01: ci-e2e-smoke keeps full-site route coverage and skip convention', (
 
   // docs hub shell
   assert.match(src, /\/docs/)
-  assert.match(src, /节点炼化与还原|Refine & restore/)
+  assert.match(src, /dh-tree-row--refine/)
 
   // multi-session workbench switch (second member + session)
   assert.match(src, /gotoWorkbenchSession/)

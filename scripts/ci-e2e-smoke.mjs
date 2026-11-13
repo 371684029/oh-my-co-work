@@ -389,10 +389,14 @@ async function main() {
     await docsWelcome.waitFor({ state: 'visible', timeout: 15000 })
     const docsSearch = page.locator('input[aria-label*="搜索"], input[aria-label*="Search"]')
     assert.equal(await docsSearch.count(), 1, 'docs hub search input aria-label')
-    const refineFolder = page.getByRole('button', {
-      name: /节点炼化与还原|Refine & restore/i,
-    })
+    await page.locator('.dh-col-explorer').waitFor({ state: 'visible', timeout: 15000 })
+    const refineFolder = page.locator('.dh-tree-row--refine')
     await refineFolder.waitFor({ state: 'visible', timeout: 15000 })
+    assert.match(
+      (await refineFolder.innerText()).replace(/\s+/g, ' ').trim(),
+      /节点炼化与还原|Refine & restore/i,
+      'refine footer row label',
+    )
 
     await page.goto(`${base}/workbench/${session.id}`, {
       waitUntil: 'domcontentloaded',

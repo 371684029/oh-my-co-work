@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-13 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 炼化文件夹改 `.dh-tree-row--refine`（aria-label 与可见文案不一致）
 2026-11-13 | M | docs/assets/screenshots/{docs-hub,docs-hub-rail}.webp, README.md | 重新截取文档中心（侧栏可见）与工作台顶栏文档入口 README 截图
 2026-11-13 | M | web/src/views/docs/DocsHubSidebar.vue, web/test/docsHubLayout.test.mjs | 修复文档中心左侧资源管理器：`t` 未导入导致侧栏渲染失败
 2026-11-13 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 开聊闸门走「通过+下一步」按钮；炼化文件夹断言收录进 coverage 单测
