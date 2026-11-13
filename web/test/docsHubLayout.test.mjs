@@ -20,3 +20,13 @@ test('资源管理器采用等高树形行', () => {
   assert.match(sidebar, /min-height:\s*26px/)
   assert.match(sidebar, /height:\s*26px/)
 })
+
+test('侧栏底部保留炼化与还原文件夹', () => {
+  const sidebar = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubSidebar.vue'), 'utf8')
+  const hub = fs.readFileSync(path.join(root, 'src/views/docs/DocsHub.vue'), 'utf8')
+  assert.match(sidebar, /select-refine/)
+  assert.match(sidebar, /dh-explorer-footer/)
+  assert.match(hub, /refineLedgerOpen/)
+  const content = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubContentColumn.vue'), 'utf8')
+  assert.match(content, /DocsRefineChangesPane/)
+})

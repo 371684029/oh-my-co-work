@@ -143,7 +143,7 @@
 <img src="./docs/assets/screenshots/docs-hub-rail.webp" alt="工作台：会话顶栏「文档中心」进入文档页；右侧仅流程与时间线" width="100%" />
 <p align="center"><sub>工作台不再内嵌文档预览；点会话顶栏「文档中心」跳转独立页（带当前会话上下文）</sub></p>
 
-- 双栏：左栏资源管理器（按群模板树或按时间列表）+ 右栏 Markdown 渲染。
+- 双栏：左栏资源管理器（按群模板树或按时间列表）+ 右栏 Markdown 渲染；侧栏底部 **节点炼化与还原** 查看成员炼化/适配备份与工作流节点改动。
 - 工作台顶栏「文档中心」打开同一套文档页；右侧流程轨只保留流程与时间线。
 - 只有 `ANNOUNCEMENT.md` 可编辑；节点台账只读，避免改坏溯源。
 - 第三方 Agent 可用 `POST /api/docs/refine`（或成员页复制的 `agent-refine-skill` 指令）把输入 / diff / 结论追加进群报告。

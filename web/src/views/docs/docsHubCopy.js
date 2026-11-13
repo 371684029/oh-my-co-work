@@ -30,6 +30,14 @@ export function docsHubRefreshLabel() {
   return t('docs.refresh')
 }
 
+export function docsHubRefineFolderLabel() {
+  return t('docs.refineFolder')
+}
+
+export function docsHubRefineFolderAria() {
+  return t('docs.a11y.refineFolder')
+}
+
 export function docsHubPinnedSectionTitle() {
   return t('docs.pinned')
 }

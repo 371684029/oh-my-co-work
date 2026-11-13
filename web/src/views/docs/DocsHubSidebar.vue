@@ -197,6 +197,20 @@
         {{ docsHubNoSessionDocs() }}
       </div>
     </div>
+
+    <div class="dh-explorer-footer">
+      <button
+        type="button"
+        class="dh-tree-row dh-tree-row--branch dh-tree-row--refine"
+        :class="{ active: refineLedgerActive }"
+        :aria-label="docsHubRefineFolderAria()"
+        @click="$emit('select-refine')"
+      >
+        <span class="dh-tree-chevron" aria-hidden="true" />
+        <AcwIcon class="dh-tree-folder" name="users" :size="16" />
+        <span class="dh-tree-label">{{ docsHubRefineFolderLabel() }}</span>
+      </button>
+    </div>
   </aside>
 </template>
 
@@ -227,6 +241,8 @@ import {
   docsHubPinnedSectionTitle,
   docsHubRecentSectionTitle,
   docsHubRefreshLabel,
+  docsHubRefineFolderAria,
+  docsHubRefineFolderLabel,
   docsHubSearchingLabel,
   docsHubUnpinTitle,
 } from './docsHubCopy.js'
@@ -254,6 +270,7 @@ defineProps({
   isSessionExpanded: { type: Function, required: true },
   isGroupExpanded: { type: Function, required: true },
   relativeTime: { type: Function, required: true },
+  refineLedgerActive: { type: Boolean, default: false },
 })
 
 defineEmits([
@@ -264,6 +281,7 @@ defineEmits([
   'toggle-session',
   'toggle-group',
   'select-file',
+  'select-refine',
   'export-all',
   'export-group',
   'update:selectedTimeRange',
@@ -577,5 +595,17 @@ function highlightSnippet(snippet, query) {
 .dh-hit-line {
   font-size: 10px;
   color: var(--ecw-text-3, #86868b);
+}
+
+.dh-explorer-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 6px 4px 4px;
+  border-top: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+
+.dh-tree-row--refine.active {
+  background: var(--ecw-accent-soft, rgba(0, 122, 255, 0.12));
+  color: var(--ecw-accent, #007aff);
 }
 </style>

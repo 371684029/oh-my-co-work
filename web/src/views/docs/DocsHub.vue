@@ -23,19 +23,27 @@
         :is-session-expanded="isSessionExpanded"
         :is-group-expanded="isGroupExpanded"
         :relative-time="relativeTime"
+        :refine-ledger-active="refineLedgerOpen"
         @refresh="refresh"
         @quick-open="onQuickOpen"
         @toggle-pin="onTogglePin"
         @search-hit="onSearchHit"
         @toggle-session="toggleSession"
         @toggle-group="toggleGroup"
-        @select-file="(sid, name) => selectFile(sid, name)"
+        @select-file="onSelectFile"
+        @select-refine="openRefineLedger"
         @export-all="onExportAll"
         @export-group="onExportGroup"
         @update:selected-time-range="selectedTimeRange = $event"
       />
 
-      <DocsHubContentColumn :has-docs="hasDocs" :expand-for="expandFor" @go-workbench="goWorkbench" />
+      <DocsHubContentColumn
+        :has-docs="hasDocs"
+        :expand-for="expandFor"
+        :show-refine-ledger="refineLedgerOpen"
+        :refine-session-id="refineSessionId"
+        @go-workbench="goWorkbench"
+      />
     </div>
   </div>
 </template>
@@ -104,20 +112,33 @@ function isPinnedItem(item) {
   return isDocsPinned(item.sessionId, item.name, docsPinned.value)
 }
 
+const selectedTimeRange = ref('all')
+const expandedSessions = ref({})
+const expandedGroups = ref({})
+const exportingAll = ref(false)
+const refineLedgerOpen = ref(false)
+
+const refineSessionId = computed(() => String(route.query.session || '').trim())
+
 function onTogglePin(item) {
   toggleDocsPin(item)
   refreshDocsHistory()
 }
 
 async function onQuickOpen(item) {
+  refineLedgerOpen.value = false
   expandFor(item.sessionId)
   await selectFile(item.sessionId, item.name)
 }
 
-const selectedTimeRange = ref('all')
-const expandedSessions = ref({})
-const expandedGroups = ref({})
-const exportingAll = ref(false)
+function openRefineLedger() {
+  refineLedgerOpen.value = true
+}
+
+async function onSelectFile(sid, name) {
+  refineLedgerOpen.value = false
+  await selectFile(sid, name)
+}
 
 const timeRanges = computed(() => docsTimeRangeBuckets(items.value))
 
@@ -154,10 +175,12 @@ function expandFor(sessionId) {
 }
 
 function isActiveFile(sessionId, name) {
+  if (refineLedgerOpen.value) return false
   return current.value?.sessionId === sessionId && current.value?.name === name
 }
 
 function onSearchHit(hit) {
+  refineLedgerOpen.value = false
   activateInDocSearch(searchQuery.value, hit.line || 1)
   expandFor(hit.sessionId)
   selectFile(hit.sessionId, hit.name)

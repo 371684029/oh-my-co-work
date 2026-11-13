@@ -1,13 +1,18 @@
 <template>
   <main class="dh-col dh-col-content" :class="readingClasses" :style="readingStyle">
-    <DocsHubWelcomePane
-      :current="current"
-      :file-loading="fileLoading"
-      :has-docs="hasDocs"
-      @go-workbench="$emit('go-workbench')"
-    />
+    <div v-if="showRefineLedger" class="dh-refine-wrap">
+      <DocsRefineChangesPane :session-id="refineSessionId" />
+    </div>
 
-    <template v-if="file && !fileLoading">
+    <template v-else>
+      <DocsHubWelcomePane
+        :current="current"
+        :file-loading="fileLoading"
+        :has-docs="hasDocs"
+        @go-workbench="$emit('go-workbench')"
+      />
+
+      <template v-if="file && !fileLoading">
       <div class="dh-content-head">
         <div class="dh-content-title-row">
           <h2 class="dh-file-title">{{ fileLabel(file) }}</h2>
@@ -133,12 +138,14 @@
           v-html="draftPreviewHtml"
         />
       </div>
+      </template>
     </template>
   </main>
 </template>
 
 <script setup>
 import { ref, watch, nextTick, onUnmounted } from 'vue'
+import DocsRefineChangesPane from './DocsRefineChangesPane.vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { handleDocsProseClick } from './docsCodeFence.js'
 import {
@@ -228,6 +235,8 @@ import {
 const props = defineProps({
   hasDocs: { type: Boolean, default: false },
   expandFor: { type: Function, required: true },
+  showRefineLedger: { type: Boolean, default: false },
+  refineSessionId: { type: String, default: '' },
 })
 
 defineEmits(['go-workbench'])
@@ -394,6 +403,12 @@ onUnmounted(() => {
   padding: 20px 24px 28px;
   background: rgba(255, 255, 255, 0.88);
   position: relative;
+}
+
+.dh-refine-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .dh-outline {

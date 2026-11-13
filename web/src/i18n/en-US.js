@@ -663,8 +663,10 @@ export const strings = {
     noDocsInRange: 'No docs in this range',
     noSessionDocs: 'No session documents',
     exportGroupShort: 'Export',
+    refineFolder: 'Refine & restore',
     a11y: {
       explorer: 'Document explorer',
+      refineFolder: 'View refine backups and node code change records',
       exportAll: 'Export all documents',
       allGroups: 'View documents for all group templates',
       welcomeRegion: 'Docs hub welcome area',

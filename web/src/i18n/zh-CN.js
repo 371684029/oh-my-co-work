@@ -666,8 +666,10 @@ export const strings = {
     noDocsInRange: '该时间段暂无文档',
     noSessionDocs: '暂无会话文档',
     exportGroupShort: '导出',
+    refineFolder: '节点炼化与还原',
     a11y: {
       explorer: '文档资源管理器',
+      refineFolder: '查看成员炼化与节点代码改动记录',
       exportAll: '导出全部文档',
       allGroups: '查看全部群模板文档',
       welcomeRegion: '文档中心欢迎区',
