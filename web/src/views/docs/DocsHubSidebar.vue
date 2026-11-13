@@ -215,6 +215,7 @@
 </template>
 
 <script setup>
+import { t } from '../../i18n/index.js'
 import AcwIcon from '../../components/icons/AcwIcon.vue'
 import { docsGroupKey } from './docsHubFilterUi.js'
 import { highlightSearchSnippet } from './docsHubSearchUi.js'

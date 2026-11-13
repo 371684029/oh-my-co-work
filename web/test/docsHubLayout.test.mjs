@@ -21,6 +21,11 @@ test('资源管理器采用等高树形行', () => {
   assert.match(sidebar, /height:\s*26px/)
 })
 
+test('资源管理器侧栏引入 i18n t', () => {
+  const sidebar = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubSidebar.vue'), 'utf8')
+  assert.match(sidebar, /import\s*\{\s*t\s*\}\s*from\s*['"].*i18n/)
+})
+
 test('侧栏底部保留炼化与还原文件夹', () => {
   const sidebar = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubSidebar.vue'), 'utf8')
   const hub = fs.readFileSync(path.join(root, 'src/views/docs/DocsHub.vue'), 'utf8')
