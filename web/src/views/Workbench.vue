@@ -45,12 +45,17 @@
               size="small"
               text
               bg
-              class="header-action-compact"
+              class="header-action-compact header-docs-btn"
               :disabled="!detail.session"
               :aria-label="workbenchOpenDocsAria()"
-              @click="focusSessionDocsRail"
+              @click="openSessionDocsHub"
             >
               {{ workbenchOpenDocsLabel() }}
+              <span
+                v-if="flowStore.docsUnread > 0"
+                class="header-docs-badge"
+                aria-hidden="true"
+              >{{ flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread }}</span>
             </el-button>
             <el-popover
               v-model:visible="chatSearchOpen"
@@ -295,7 +300,7 @@
       </div>
     </section>
 
-    <!-- 右：流程轨 / 文档中心 -->
+    <!-- 右：流程轨 / 时间线 -->
     <FlowRail />
   </div>
 </template>
@@ -331,6 +336,7 @@ import {
   startingChat,
   startDemoChat,
   selectSession,
+  openDocsHub,
   terminalPrefs,
   furnaceSurface,
 } from './workbench/composables/useSessionDetail'
@@ -425,16 +431,15 @@ startWorkbench()
 
 const flowStore = useFlowStore()
 
-function focusSessionDocsRail() {
-  flowStore.rightTab = 'docs'
-  flowStore.clearDocsUnread()
+function openSessionDocsHub() {
+  openDocsHub()
 }
 
 function onBubbleOpenDoc({ file, path }) {
   if (!activeId.value) return
   const resolved = journalPathToDocFile(path || file) || file
   if (!resolved) return
-  flowStore.focusRailDoc(activeId.value, resolved)
+  openDocsHub({ file: resolved })
 }
 
 // —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——
@@ -574,6 +579,23 @@ onUnmounted(() => {
   padding: 4px 8px !important;
   height: 28px;
   white-space: nowrap;
+}
+
+.header-docs-btn {
+  position: relative;
+}
+
+.header-docs-badge {
+  margin-left: 4px;
+  min-width: 14px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  background: rgba(230, 162, 60, 0.35);
+  color: #9a6414;
+  vertical-align: middle;
 }
 
 .header-action-wide {

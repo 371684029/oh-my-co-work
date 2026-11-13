@@ -28,38 +28,15 @@
       <span class="wb-right-tab-icon" aria-hidden="true">🕐</span>
       <span class="wb-right-tab-label">{{ flowRailTabTimeline() }}</span>
     </button>
-    <button
-      type="button"
-      class="wb-right-tab"
-      role="tab"
-      :aria-selected="isDocsHubTab"
-      :aria-label="t('a11y.docsTab')"
-      :class="{ active: isDocsHubTab }"
-      @click="flowStore.rightTab = 'docs'"
-    >
-      <span class="wb-right-tab-icon" aria-hidden="true">📄</span>
-      <span class="wb-right-tab-label">{{ flowRailTabDocs() }}</span>
-      <span v-if="flowStore.docsUnread > 0" class="wb-right-tab-badge">{{
-        flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread
-      }}</span>
-    </button>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { t } from '../../../i18n/index.js'
-import {
-  flowRailTabDocs,
-  flowRailTabFlow,
-  flowRailTabTimeline,
-} from '../composables/flowRailCopy.js'
+import { flowRailTabFlow, flowRailTabTimeline } from '../composables/flowRailCopy.js'
 import { useFlowStore } from '../../../stores/flow.js'
 
 const flowStore = useFlowStore()
-const isDocsHubTab = computed(
-  () => flowStore.rightTab === 'docs' || flowStore.rightTab === 'announce',
-)
 </script>
 
 <style scoped>
@@ -122,21 +99,10 @@ const isDocsHubTab = computed(
   text-overflow: ellipsis;
 }
 
-/* 右栏较窄时三段装不下「图标 + 文字」：先去图标，保证文字单行 */
-@container (max-width: 300px) {
+/* 右栏较窄时装不下「图标 + 文字」：先去图标，保证文字单行 */
+@container (max-width: 220px) {
   .wb-right-tab-icon {
     display: none;
   }
-}
-
-.wb-right-tab-badge {
-  margin-left: 4px;
-  min-width: 14px;
-  padding: 0 4px;
-  border-radius: 8px;
-  font-size: 10px;
-  line-height: 14px;
-  background: rgba(230, 162, 60, 0.25);
-  color: #9a6414;
 }
 </style>

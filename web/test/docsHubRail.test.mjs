@@ -10,20 +10,25 @@ const railSrc = fs.readFileSync(
   path.join(root, 'src/views/workbench/components/FlowRail.vue'),
   'utf8',
 )
-const docsPaneSrc = fs.readFileSync(
-  path.join(root, 'src/views/workbench/components/FlowRailDocsPane.vue'),
+const tabsSrc = fs.readFileSync(
+  path.join(root, 'src/views/workbench/components/FlowRailTabs.vue'),
+  'utf8',
+)
+const workbenchSrc = fs.readFileSync(
+  path.join(root, 'src/views/Workbench.vue'),
   'utf8',
 )
 
-test('右侧栏群报告并进文档中心，不再单独占一个 Tab', () => {
-  assert.match(railSrc, /isDocsHubTab/)
-  assert.match(railSrc, /文档中心/)
-  assert.doesNotMatch(railSrc, />\s*群报告\s*<\/button>/)
-  assert.doesNotMatch(railSrc, /announce-pane/)
-  assert.doesNotMatch(railSrc, /announce-title/)
-  assert.match(railSrc, /v-show="isDocsHubTab"/)
-  assert.match(docsPaneSrc, /white-space:\s*normal/)
-  assert.match(docsPaneSrc, /writing-mode:\s*horizontal-tb/)
+test('右侧栏不再嵌入文档中心，仅流程与时间线', () => {
+  assert.doesNotMatch(railSrc, /FlowRailDocsPane/)
+  assert.doesNotMatch(railSrc, /isDocsHubTab/)
+  assert.doesNotMatch(tabsSrc, /flowRailTabDocs/)
+  assert.doesNotMatch(tabsSrc, /rightTab = 'docs'/)
+})
+
+test('会话顶栏提供文档中心入口', () => {
+  assert.match(workbenchSrc, /openSessionDocsHub/)
+  assert.match(workbenchSrc, /openDocsHub\(/)
 })
 
 test('inferFurnaceAgent 认 furnaceAgent 与 cursor-agent 命令', () => {

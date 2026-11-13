@@ -652,7 +652,6 @@ function bindWs(sessionId) {
         // 默认保持「流程」Tab，不自动跳群报告
         // 群报告由节点 detail / # 参数驱动；备注在 context.notes
         if (ev.type === 'session.archived') {
-          useFlowStore().rightTab = 'docs'
           useFlowStore().bumpDocsUnread()
         } else if (ev.type === 'session.restart') {
           useFlowStore().rightTab = 'flow'

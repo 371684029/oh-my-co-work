@@ -304,8 +304,8 @@ export const strings = {
     chrome: {
       titlePlaceholder: 'Untitled task',
       humanAttention: 'Needs your attention',
-      openDocs: 'Docs',
-      openDocsAria: 'Open session docs in the right rail',
+      openDocs: 'Docs hub',
+      openDocsAria: 'Open this session in docs hub',
       detachShort: 'New win',
       searchChatShort: 'Go',
       searchChat: 'Search chat',

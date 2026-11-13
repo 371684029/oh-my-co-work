@@ -6,7 +6,8 @@ const RIGHT_TAB_KEY = 'acw.rightTab'
 function readSavedRightTab() {
   try {
     const v = localStorage.getItem(RIGHT_TAB_KEY)
-    if (v === 'docs' || v === 'timeline') return v
+    if (v === 'docs') return 'flow'
+    if (v === 'timeline') return v
     return 'flow'
   } catch {
     return 'flow'
@@ -19,15 +20,13 @@ export const useFlowStore = defineStore('flow', () => {
   const rightTab = ref(readSavedRightTab())
   const docsUnread = ref(0)
   const actionUnread = ref(0)
-  /** Bumps when UI should open a doc in the right rail (DOC-18). */
-  const railDocFocus = ref(null)
   const docsNotifySeq = ref(0)
   /** 文档中心跳转时间线时预选分类（5.9.0 RAR-10）。 */
   const timelineCategoryPref = ref('all')
 
   watch(rightTab, (v) => {
     try {
-      localStorage.setItem(RIGHT_TAB_KEY, v === 'docs' || v === 'timeline' ? v : 'flow')
+      localStorage.setItem(RIGHT_TAB_KEY, v === 'timeline' ? v : 'flow')
     } catch {
       /* ignore */
     }
@@ -36,12 +35,6 @@ export const useFlowStore = defineStore('flow', () => {
   function bumpDocsUnread(n = 1) {
     docsUnread.value = Math.min(99, docsUnread.value + Number(n || 1))
     docsNotifySeq.value += 1
-  }
-
-  function focusRailDoc(sessionId, name) {
-    if (!sessionId || !name) return
-    rightTab.value = 'docs'
-    railDocFocus.value = { sessionId, name, token: Date.now() }
   }
 
   function openSessionTimeline(category = 'all') {
@@ -77,10 +70,8 @@ export const useFlowStore = defineStore('flow', () => {
     clearDocsUnread,
     bumpActionUnread,
     clearActionUnread,
-    railDocFocus,
     docsNotifySeq,
     timelineCategoryPref,
-    focusRailDoc,
     openSessionTimeline,
     consumeTimelineCategoryPref,
   }

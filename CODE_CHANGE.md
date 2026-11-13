@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-13 | M | web/src/views/{Workbench.vue,workbench/components/FlowRail.vue,FlowRailTabs.vue,workbench/composables/useTerminalSessions.js}, web/src/stores/flow.js, web/src/i18n/{zh-CN,en-US}.js, web/test/docsHubRail.test.mjs | 移除右侧栏文档中心 Tab；会话顶栏「文档中心」跳转完整文档中心页
 2026-11-12 | M | web/src/views/docs/{DocsHubGroupsColumn.vue,DocsHub.vue,DocsHubSessionsColumn.vue}, web/src/App.vue | 文档中心左栏移除「节点炼化与还原」入口（等高列表）；搜索框移至文档中心顶栏
 2026-11-12 | M | web/src/views/Workbench.vue, web/src/views/workbench/composables/workbenchChromeCopy.js, web/src/i18n/{zh-CN,en-US}.js | 会话顶栏「文档」快捷键切右栏文档中心；顶栏单行紧凑
 2026-11-12 | M | web/src/views/workbench/{components/ComposerPanel.vue,composables/sessionSenderSubmitUi,sessionGateActions}.js, server/src/engine/advance.js, web/test/sessionSenderSubmitUi.test.mjs | 成员闸门 mode=gate 显示「通过」勾选；人工步补取消
