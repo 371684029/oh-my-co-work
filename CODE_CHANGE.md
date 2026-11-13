@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-13 | M | README.md, docs/assets/screenshots/{docs-hub,docs-hub-rail}.webp, scripts/{capture-docs-screenshots,selftest-docs-rail-toolbar}.mjs, server/src/seed.js, web/test/docsRailLayout.test.mjs | 自测与 README 截图/文案；种子 probe 路径修正；顶栏文档入口自测改造
 2026-11-13 | A/M/D | web/src/views/docs/{DocsHub.vue,DocsHubSidebar.vue,docsHubSessionUi.js}, web/src/i18n/{zh-CN,en-US}.js, web/test/{docsHubLayout,docsHubSessionUi}.test.mjs; D DocsHubGroupsColumn.vue, DocsHubSessionsColumn.vue | 文档中心合并为 VS Code 式左侧资源管理器双栏布局
 2026-11-13 | M | web/src/views/{Workbench.vue,workbench/components/FlowRail.vue,FlowRailTabs.vue,workbench/composables/useTerminalSessions.js}, web/src/stores/flow.js, web/src/i18n/{zh-CN,en-US}.js, web/test/docsHubRail.test.mjs | 移除右侧栏文档中心 Tab；会话顶栏「文档中心」跳转完整文档中心页
 2026-11-12 | M | web/src/views/docs/{DocsHubGroupsColumn.vue,DocsHub.vue,DocsHubSessionsColumn.vue}, web/src/App.vue | 文档中心左栏移除「节点炼化与还原」入口（等高列表）；搜索框移至文档中心顶栏

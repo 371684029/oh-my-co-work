@@ -5,17 +5,11 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const vueSrc = fs.readFileSync(
-  path.join(root, 'src/views/workbench/components/FlowRailDocsPane.vue'),
-  'utf8',
-)
+const workbenchSrc = fs.readFileSync(path.join(root, 'src/views/Workbench.vue'), 'utf8')
 
-test('第三栏文档中心工具栏窄宽时换行，标题不竖排', () => {
-  assert.match(vueSrc, /\.docs-rail-toolbar \{[^}]*flex-wrap:\s*wrap/)
-  assert.match(vueSrc, /\.docs-rail-title \{[^}]*writing-mode:\s*horizontal-tb/)
-  assert.match(vueSrc, /\.docs-rail-title \{[^}]*white-space:\s*normal/)
-  assert.match(vueSrc, /\.docs-rail-title-wrap \{[^}]*min-width:\s*0/)
-  assert.match(vueSrc, /\.docs-rail-title-wrap \{[^}]*margin-right:\s*auto/)
-  assert.match(vueSrc, /\.docs-rail-actions \{[^}]*flex-wrap:\s*wrap/)
-  assert.doesNotMatch(vueSrc, /\.docs-rail-actions \{[^}]*flex-shrink:\s*0/)
+test('会话顶栏提供文档中心入口且单行紧凑', () => {
+  assert.match(workbenchSrc, /openSessionDocsHub/)
+  assert.match(workbenchSrc, /header-action-compact/)
+  assert.match(workbenchSrc, /workbenchOpenDocsLabel/)
+  assert.doesNotMatch(workbenchSrc, /focusSessionDocsRail/)
 })

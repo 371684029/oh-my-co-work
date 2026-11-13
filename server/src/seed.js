@@ -4,7 +4,7 @@ import { initDb } from './db.js'
 import { createMember, createGroup, listMembers, listGroups } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 
-const REFINE_PROBE_SRC = path.join(process.cwd(), 'server/test/fixtures/refine-verify-probe.mjs')
+const REFINE_PROBE_SRC = path.join(process.cwd(), 'test/fixtures/refine-verify-probe.mjs')
 const probeDir = path.join(process.cwd(), 'data', 'demo-fixtures')
 fs.mkdirSync(probeDir, { recursive: true })
 const REFINE_PROBE = path.join(probeDir, 'refine-verify-probe.mjs')
