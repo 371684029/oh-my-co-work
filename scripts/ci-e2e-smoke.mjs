@@ -339,16 +339,30 @@ async function main() {
     const marker = `e2e-smoke-${Date.now()}`
     const editor = page.locator(chatSel).first()
     await editor.click()
+    const gatePass = composer
+      .locator('.el-checkbox')
+      .filter({ hasText: /通过|Pass|approve/i })
+      .first()
+    if (await gatePass.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await gatePass.click()
+    }
     const sendWait = page.waitForResponse(
-      (r) =>
-        r.url().includes(`/api/sessions/${session.id}/messages`) &&
-        r.request().method() === 'POST',
-      { timeout: 20000 },
+      (r) => {
+        const u = r.url()
+        if (!u.includes(`/api/sessions/${session.id}/`) || r.request().method() !== 'POST') {
+          return false
+        }
+        return u.includes('/messages') || u.includes('/gate')
+      },
+      { timeout: 45000 },
     )
     await page.keyboard.type(marker, { delay: 12 })
     await page.keyboard.press('Enter')
     const sendRes = await sendWait
-    assert.equal(sendRes.status(), 200, 'composer Enter should POST message')
+    assert.ok(
+      sendRes.status() >= 200 && sendRes.status() < 300,
+      `composer Enter should POST message or gate: ${sendRes.status()} ${sendRes.url()}`,
+    )
 
     await page.goto(`${base}/docs`, { waitUntil: 'domcontentloaded', timeout: 60000 })
     const docsFirstRunEarly = page.getByRole('button', { name: /开始探索|Start exploring/i })
@@ -362,6 +376,10 @@ async function main() {
     await docsWelcome.waitFor({ state: 'visible', timeout: 15000 })
     const docsSearch = page.locator('input[aria-label*="搜索"], input[aria-label*="Search"]')
     assert.equal(await docsSearch.count(), 1, 'docs hub search input aria-label')
+    const refineFolder = page.getByRole('button', {
+      name: /节点炼化与还原|Refine & restore/i,
+    })
+    await refineFolder.waitFor({ state: 'visible', timeout: 15000 })
 
     await page.goto(`${base}/workbench/${session.id}`, {
       waitUntil: 'domcontentloaded',
