@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   docsExpandSessionInTree,
+  isDocsGroupExpanded,
   isDocsSessionExpanded,
+  toggleDocsGroupExpansion,
   toggleDocsSessionExpansion,
 } from '../src/views/docs/docsHubSessionUi.js'
 
@@ -20,9 +22,15 @@ test('toggleDocsSessionExpansion flips default expanded', () => {
   assert.equal(isDocsSessionExpanded(again, 's1'), true)
 })
 
-test('docsExpandSessionInTree selects group', () => {
+test('docs group expand toggles', () => {
+  assert.equal(isDocsGroupExpanded({}, 'g1'), true)
+  const closed = toggleDocsGroupExpansion({}, 'g1')
+  assert.equal(isDocsGroupExpanded(closed, 'g1'), false)
+})
+
+test('docsExpandSessionInTree expands group and session', () => {
   const groups = [{ groupId: 'g1', sessions: [{ sessionId: 's9' }] }]
-  const patch = docsExpandSessionInTree(groups, 's9', {})
-  assert.equal(patch.selectedGroupId, 'g1')
+  const patch = docsExpandSessionInTree(groups, 's9', {}, {})
+  assert.equal(patch.expandedGroups.g1, true)
   assert.equal(patch.expandedSessions.s9, true)
 })

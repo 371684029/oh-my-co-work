@@ -1,23 +1,7 @@
 <template>
   <div class="docs-hub">
-    <!-- 主体：三栏工作流（群模板分类轨 -> 会话与文件轨 -> 文档正文区） -->
     <div class="dh-body">
-      <DocsHubGroupsColumn
-        :sort="sort"
-        :selected-group-id="selectedGroupId"
-        :selected-time-range="selectedTimeRange"
-        :groups="groups"
-        :time-ranges="timeRanges"
-        :list-loading="listLoading"
-        :exporting-all="exportingAll"
-        :total-sessions-count="totalSessionsCount"
-        @update:selected-group-id="selectedGroupId = $event"
-        @update:selected-time-range="selectedTimeRange = $event"
-        @export-all="onExportAll"
-        @export-group="onExportGroup"
-      />
-
-      <DocsHubSessionsColumn
+      <DocsHubSidebar
         v-model:search-query="searchQuery"
         v-model:sort="sort"
         :sort-options="sortOptions"
@@ -27,21 +11,28 @@
         :is-searching="isSearching"
         :search-loading="searchLoading"
         :search-results="searchResults"
-        :displayed-groups="displayedGroups"
+        :groups="groups"
         :displayed-time-items="displayedTimeItems"
-        :selected-group-id="selectedGroupId"
+        :time-ranges="timeRanges"
+        :selected-time-range="selectedTimeRange"
         :list-error="listError"
         :has-docs="hasDocs"
+        :exporting-all="exportingAll"
         :is-active-file="isActiveFile"
         :is-pinned-item="isPinnedItem"
         :is-session-expanded="isSessionExpanded"
+        :is-group-expanded="isGroupExpanded"
         :relative-time="relativeTime"
         @refresh="refresh"
         @quick-open="onQuickOpen"
         @toggle-pin="onTogglePin"
         @search-hit="onSearchHit"
         @toggle-session="toggleSession"
+        @toggle-group="toggleGroup"
         @select-file="(sid, name) => selectFile(sid, name)"
+        @export-all="onExportAll"
+        @export-group="onExportGroup"
+        @update:selected-time-range="selectedTimeRange = $event"
       />
 
       <DocsHubContentColumn :has-docs="hasDocs" :expand-for="expandFor" @go-workbench="goWorkbench" />
@@ -82,19 +73,18 @@ import {
   refreshDocsHistory,
 } from '../workbench/composables/useDocsHub'
 import { toggleDocsPin, isDocsPinned } from './docsReadingHistory.js'
-import DocsHubGroupsColumn from './DocsHubGroupsColumn.vue'
-import DocsHubSessionsColumn from './DocsHubSessionsColumn.vue'
+import DocsHubSidebar from './DocsHubSidebar.vue'
 import DocsHubContentColumn from './DocsHubContentColumn.vue'
 import {
   docsTimeRangeBuckets,
   filterDocsItemsByTimeRange,
-  filterDocsGroupsById,
-  totalDocsSessionCount,
 } from './docsHubFilterUi.js'
 import {
   docsExpandSessionInTree,
   isDocsSessionExpanded,
+  isDocsGroupExpanded,
   toggleDocsSessionExpansion,
+  toggleDocsGroupExpansion,
 } from './docsHubSessionUi.js'
 import {
   docsExportAllErrorMessage,
@@ -124,9 +114,9 @@ async function onQuickOpen(item) {
   await selectFile(item.sessionId, item.name)
 }
 
-const selectedGroupId = ref('all')
 const selectedTimeRange = ref('all')
 const expandedSessions = ref({})
+const expandedGroups = ref({})
 const exportingAll = ref(false)
 
 const timeRanges = computed(() => docsTimeRangeBuckets(items.value))
@@ -135,22 +125,31 @@ const displayedTimeItems = computed(() =>
   filterDocsItemsByTimeRange(items.value, selectedTimeRange.value),
 )
 
-const totalSessionsCount = computed(() => totalDocsSessionCount(groups.value))
-
-const displayedGroups = computed(() => filterDocsGroupsById(groups.value, selectedGroupId.value))
-
 function isSessionExpanded(id) {
   return isDocsSessionExpanded(expandedSessions.value, id)
+}
+
+function isGroupExpanded(id) {
+  return isDocsGroupExpanded(expandedGroups.value, id)
 }
 
 function toggleSession(id) {
   expandedSessions.value = toggleDocsSessionExpansion(expandedSessions.value, id)
 }
 
+function toggleGroup(id) {
+  expandedGroups.value = toggleDocsGroupExpansion(expandedGroups.value, id)
+}
+
 function expandFor(sessionId) {
-  const patch = docsExpandSessionInTree(groups.value, sessionId, expandedSessions.value)
+  const patch = docsExpandSessionInTree(
+    groups.value,
+    sessionId,
+    expandedSessions.value,
+    expandedGroups.value,
+  )
   if (!patch) return
-  selectedGroupId.value = patch.selectedGroupId
+  expandedGroups.value = patch.expandedGroups
   expandedSessions.value = patch.expandedSessions
 }
 
@@ -223,7 +222,7 @@ onUnmounted(() => {
   flex: 1;
   min-height: 0;
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .dh-col {

@@ -13,12 +13,24 @@ export function toggleDocsSessionExpansion(expandedSessions, id) {
   }
 }
 
-/** @returns {{ selectedGroupId: string, expandedSessions: object } | null} */
-export function docsExpandSessionInTree(groups, sessionId, expandedSessions) {
+export function isDocsGroupExpanded(expandedGroups, id) {
+  return expandedGroups?.[id] !== false
+}
+
+export function toggleDocsGroupExpansion(expandedGroups, id) {
+  return {
+    ...(expandedGroups || {}),
+    [id]: !isDocsGroupExpanded(expandedGroups, id),
+  }
+}
+
+/** @returns {{ expandedGroups: object, expandedSessions: object } | null} */
+export function docsExpandSessionInTree(groups, sessionId, expandedSessions, expandedGroups) {
   for (const g of groups || []) {
     if ((g.sessions || []).some((s) => s.sessionId === sessionId)) {
+      const gKey = docsGroupKey(g)
       return {
-        selectedGroupId: docsGroupKey(g),
+        expandedGroups: { ...(expandedGroups || {}), [gKey]: true },
         expandedSessions: { ...(expandedSessions || {}), [sessionId]: true },
       }
     }

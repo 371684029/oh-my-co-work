@@ -664,6 +664,7 @@ export const strings = {
     noSessionDocs: 'No session documents',
     exportGroupShort: 'Export',
     a11y: {
+      explorer: 'Document explorer',
       exportAll: 'Export all documents',
       allGroups: 'View documents for all group templates',
       welcomeRegion: 'Docs hub welcome area',

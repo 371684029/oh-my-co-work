@@ -667,6 +667,7 @@ export const strings = {
     noSessionDocs: '暂无会话文档',
     exportGroupShort: '导出',
     a11y: {
+      explorer: '文档资源管理器',
       exportAll: '导出全部文档',
       allGroups: '查看全部群模板文档',
       welcomeRegion: '文档中心欢迎区',
