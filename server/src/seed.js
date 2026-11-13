@@ -1,11 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { initDb } from './db.js'
+import { fileURLToPath } from 'node:url'
+import { DATA_ROOT, initDb } from './db.js'
 import { createMember, createGroup, listMembers, listGroups } from './services.js'
 import { MEMBER_KIND } from '@acw/shared'
 
-const REFINE_PROBE_SRC = path.join(process.cwd(), 'server/test/fixtures/refine-verify-probe.mjs')
-const probeDir = path.join(process.cwd(), 'data', 'demo-fixtures')
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const REFINE_PROBE_SRC = path.join(__dirname, '../test/fixtures/refine-verify-probe.mjs')
+const probeDir = path.join(DATA_ROOT, 'demo-fixtures')
 fs.mkdirSync(probeDir, { recursive: true })
 const REFINE_PROBE = path.join(probeDir, 'refine-verify-probe.mjs')
 if (!fs.existsSync(REFINE_PROBE)) {
