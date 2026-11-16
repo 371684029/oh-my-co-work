@@ -201,8 +201,8 @@ Linux    → 解压后运行 ./start.sh
 
 | 产物 | 路径（本地打包，不进 git） |
 |------|---------------------------|
-| Linux 轻量包 | `packages/oh-my-co-work-v5-linux-x64.zip`（`npm run pack`） |
-| Windows 桌面包 | `release/oh-my-co-work-v5-win32-x64-desktop.zip`（`ACW_PACK_TARGET=win32-x64 npm run pack:desktop`） |
+| Linux 轻量包 | `packages/oh-my-co-work-v6-linux-x64.zip`（`npm run pack`） |
+| Windows 桌面包 | `release/oh-my-co-work-v6-win32-x64-desktop.zip`（`ACW_PACK_TARGET=win32-x64 npm run pack:desktop`） |
 
 桌面窗口请用 **`*-desktop.zip`**。`packages/` 仅放可入仓的轻量 zip；超过 100MB 的桌面包在 `release/`。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。发布前建议：`npm run lint`、`npm test`、`npm run test:web`、`node scripts/selftest-refine-adapt.mjs`；包内 `BUILD_INFO.json` 可用于排障。
 
@@ -340,6 +340,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 | [5.6.0 需求文档](./docs/plan-5.6.0.md) | 5.x 收尾加固与三平台桌面补全：P0/P1/P2 需求清单、非功能需求与版本 DoD；代码侧 P0 已收尾 |
 | [5.7.0 需求文档](./docs/plan-5.7.0.md) | 打包链路一劳永逸与发布治理：纯 Node 压缩、Windows 原生打包+启动冒烟、发布重试、配置迁出安装目录、产物出 git、备份导入/导出统一 ZIP；剩运行时升级与签名 |
 | [5.8.0 熔炉/CLI 性能 II](./docs/plan-5.8.0.md) | 5.3.2 已落地项台账与后续增量 parse / 性能 HUD |
+| [6.1.0 文档中心扁平 + 终端定格](./docs/plan-6.1.0.md) | 侧栏一会话一叶；终端 DB+log 历史预览卡 |
 
 ## 路线图
 
