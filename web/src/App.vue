@@ -748,16 +748,6 @@ function goGrokSettings() {
   transform: scale(0.98);
 }
 
-.nav-item--docs {
-  border: 1px solid rgba(0, 122, 255, 0.35);
-  background: rgba(0, 122, 255, 0.06);
-}
-
-.nav-item--docs.active {
-  background: rgba(0, 122, 255, 0.14);
-  color: var(--ecw-accent, #007aff);
-}
-
 .nav-docs-badge {
   margin-left: 6px;
   min-width: 16px;
