@@ -2,7 +2,7 @@
   "productName": "oh-my-co-work",
   "tagline": "人机协同 · 万物归元 · 皆可 Workflow",
   "livingLine": "节点是死的，人是活的 — 流动的 Workflow，人可绕行、插队、临时协助再回来。",
-  "version": "5.9.0",
+  "version": "6.1.0",
   "updateUrl": "https://github.com/371684029/oh-my-co-work/tree/main/packages",
   "updateHint": "请下载与系统匹配的运行包 zip（打包产物，无需 npm install）：同大版本同平台覆盖最新；仓库只留当前大版本包。",
   "localNote": "本项目完全本地运行，不夹带任何后台服务。数据保存在本机，不会向外部上传会话、成员配置或使用统计。",
@@ -13,6 +13,15 @@
     "熔炉桌宠立绘（李慕婉）复制自 github.com/xiongxianzhu/chatgpt-pets，MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者。"
   ],
   "changelog": [
+    {
+      "version": "6.1.0",
+      "date": "2026-11-16",
+      "title": "6.1.0：文档中心扁平 + 终端历史定格",
+      "items": [
+        "文档中心：按群模板下一行一会话，点即打开群报告；节点台账不出现在侧栏（仍可搜索/链入）。",
+        "终端：服务重启后从 terminal_sessions + 日志 tail 回填聊天预览卡（文本定格，非位图截图）。"
+      ]
+    },
     {
       "version": "5.9.0",
       "date": "2026-11-12",

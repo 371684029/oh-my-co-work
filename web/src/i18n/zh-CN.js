@@ -694,7 +694,7 @@ export const strings = {
     welcome: {
       selectTitle: '选择左侧文档查看',
       emptyTitle: '还没有会话文档',
-      selectDesc: '从左侧列表中选择群报告、节点台账或会话索引',
+      selectDesc: '从左侧点选群聊（打开群报告）；节点台账请用搜索或正文链接',
       emptyDesc: '工作流跑完产生的群报告与节点审计台账将自动汇总于此',
       emptyTip: '跑完一个群流程后，群报告与节点台账会自动出现在左侧列表。',
     },

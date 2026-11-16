@@ -691,7 +691,7 @@ export const strings = {
     welcome: {
       selectTitle: 'Select a document on the left',
       emptyTitle: 'No session documents yet',
-      selectDesc: 'Pick a group report, step ledger, or session index from the list',
+      selectDesc: 'Select a group chat row (opens the report); use search or links for step ledgers',
       emptyDesc: 'Reports and ledgers appear here after workflows finish',
       emptyTip: 'After a group workflow finishes, reports and ledgers show up in the list.',
     },
