@@ -15,6 +15,14 @@ export function chatSearchHitSenderLabel(hit) {
   return hit?.memberName || hit?.role || t('workbench.chatSearch.system')
 }
 
-export function canRunChatSearch(query, sessionId) {
-  return Boolean(String(query || '').trim() && sessionId)
+export function canRunChatSearch(query) {
+  return Boolean(String(query || '').trim())
+}
+
+export function scrollChatMessageIntoView(messageId) {
+  if (!messageId) return false
+  const el = document.querySelector(`[data-msg-id="${CSS.escape(String(messageId))}"]`)
+  if (!el) return false
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  return true
 }

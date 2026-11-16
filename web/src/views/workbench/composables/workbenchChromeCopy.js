@@ -57,6 +57,14 @@ export function workbenchPinAria(pinned) {
   return pinned ? t('workbench.chrome.unpinAria') : t('workbench.chrome.pinAria')
 }
 
+export function workbenchDoneLabel() {
+  return t('workbench.chrome.done')
+}
+
+export function workbenchDoneAria() {
+  return t('workbench.chrome.doneAria')
+}
+
 export function workbenchDeleteLabel() {
   return t('workbench.chrome.delete')
 }

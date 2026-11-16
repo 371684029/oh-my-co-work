@@ -197,7 +197,8 @@ export const api = {
     pin: (id, pinned = true) =>
       req(`/sessions/${id}/pin`, { method: 'POST', body: JSON.stringify({ pinned: !!pinned }) }),
     remove: (id) => req(`/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    archive: (id) => req(`/sessions/${id}/archive`, { method: 'POST', body: '{}' }),
+    archive: (id, body = {}) =>
+      req(`/sessions/${id}/archive`, { method: 'POST', body: JSON.stringify(body) }),
     /** 恢复：仍在本会话，可无限归档 */
     unarchive: (id) => req(`/sessions/${id}/unarchive`, { method: 'POST', body: '{}' }),
     terminals: (id) => req(`/sessions/${id}/terminals`),

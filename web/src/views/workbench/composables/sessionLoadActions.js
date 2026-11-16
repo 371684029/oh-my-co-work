@@ -1,5 +1,8 @@
 /** Session list/detail load and select (FE-01 extract from useSessionDetail). */
+import { nextTick } from 'vue'
 import { useFlowStore } from '../../../stores/flow.js'
+import { consumePendingChatScrollMessageId } from './chatSearchScrollPending.js'
+import { scrollChatMessageIntoView } from './workbenchChatSearchUi.js'
 import {
   composerScopeKey,
   loadInputDraft,
@@ -69,6 +72,11 @@ export function createSessionLoadActions({
     useFlowStore().expandedSkippedFlowGroups = {}
     terminalBridge.bindWs?.(id)
     await Promise.all([loadDetail(id), terminalBridge.loadTerminals?.(id)])
+    const pendingMsg = consumePendingChatScrollMessageId()
+    if (pendingMsg) {
+      await nextTick()
+      scrollChatMessageIntoView(pendingMsg)
+    }
     terminalBridge.revealFurnaceTui?.()
     const savedDraft = loadInputDraft(composerScopeKey(id))
     if (savedDraft) await replaceSenderText(savedDraft)

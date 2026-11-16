@@ -11,8 +11,8 @@ test('chat search seq and apply guard', () => {
   assert.equal(nextChatSearchSeq(0), 1)
   assert.equal(shouldApplyChatSearchResponse(2, 2), true)
   assert.equal(shouldApplyChatSearchResponse(1, 2), false)
-  assert.equal(canRunChatSearch(' hi ', 's1'), true)
-  assert.equal(canRunChatSearch('  ', 's1'), false)
+  assert.equal(canRunChatSearch(' hi '), true)
+  assert.equal(canRunChatSearch('  '), false)
 })
 
 test('session delete navigation', () => {

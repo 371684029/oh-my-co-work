@@ -45,6 +45,7 @@ test('createSessionDetailLifecycleActions returns the expected action keys', () 
     'openDocsHub',
     'onConvChange',
     'doDelete',
+    'markSessionDone',
     'rename',
     'togglePin',
     'onConvMenu',

@@ -11,6 +11,7 @@ import { createSessionRenameActions } from './sessionRenameActions.js'
 import { createSessionConvActions } from './sessionConvActions.js'
 import { createSessionStartChatActions } from './sessionStartChatActions.js'
 import { createSessionRestartActions } from './sessionRestartActions.js'
+import { createSessionArchiveActions } from './sessionArchiveActions.js'
 import { formatDocsHubSearchParams } from './sessionDocsNavUi.js'
 
 export function createSessionDetailLifecycleActions({
@@ -76,6 +77,16 @@ export function createSessionDetailLifecycleActions({
     if (id) selectSession(id)
   }
 
+  const { markSessionDone } = createSessionArchiveActions({
+    activeId,
+    detail,
+    loadLists,
+    loadDetail,
+    api,
+    acwConfirm,
+    terminalBridge,
+  })
+
   const { doDelete } = createSessionDeleteActions({
     activeId,
     detail,
@@ -135,6 +146,7 @@ export function createSessionDetailLifecycleActions({
     openDocsHub,
     onConvChange,
     doDelete,
+    markSessionDone,
     rename,
     togglePin,
     onConvMenu,

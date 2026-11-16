@@ -67,6 +67,13 @@
       stroke-width="1.6"
       stroke-linejoin="round"
     />
+    <path
+      v-else-if="name === 'search'"
+      d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM16.2 16.2 20 20"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+    />
   </svg>
 </template>
 
@@ -78,9 +85,17 @@ const props = defineProps({
     type: String,
     required: true,
     validator: (v) =>
-      ['folder', 'users', 'bell', 'fullscreen', 'fullscreen-exit', 'file', 'clock', 'grid'].includes(
-        v,
-      ),
+      [
+        'folder',
+        'users',
+        'bell',
+        'fullscreen',
+        'fullscreen-exit',
+        'file',
+        'clock',
+        'grid',
+        'search',
+      ].includes(v),
   },
   size: { type: [Number, String], default: 16 },
 })

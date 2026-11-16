@@ -57,54 +57,6 @@
                 aria-hidden="true"
               >{{ flowStore.docsUnread > 9 ? '9+' : flowStore.docsUnread }}</span>
             </el-button>
-            <el-popover
-              v-model:visible="chatSearchOpen"
-              placement="bottom-end"
-              width="480"
-              trigger="click"
-              popper-class="chat-search-popper"
-            >
-              <template #reference>
-                <el-button
-                  size="small"
-                  text
-                  bg
-                  class="header-action-compact"
-                  :aria-label="workbenchSearchChatAria()"
-                >
-                  <span class="header-action-wide">{{ workbenchSearchChatLabel() }}</span>
-                  <span class="header-action-narrow">{{ workbenchSearchChatShortLabel() }}</span>
-                </el-button>
-              </template>
-              <div class="chat-search-box">
-                <el-input
-                  v-model="chatSearchQ"
-                  :placeholder="workbenchSearchPlaceholder()"
-                  :aria-label="workbenchSearchChatAria()"
-                  clearable
-                  @input="runChatSearch"
-                  @keyup.enter="runChatSearch"
-                />
-                <div v-if="chatSearchLoading" class="chat-search-empty" role="status">
-                  {{ workbenchSearchLoading() }}
-                </div>
-                <template v-else-if="chatSearchHits.length">
-                  <div
-                    v-for="(hit, i) in chatSearchHits"
-                    :key="hit.messageId || i"
-                    class="chat-search-hit"
-                    @click="jumpToChatHit(hit)"
-                  >
-                    <div class="chat-search-hit-meta">
-                      <span class="hit-sender">{{ chatSearchHitSenderLabel(hit) }}</span>
-                      <span v-if="hit.sessionTitle" class="hit-session">{{ hit.sessionTitle }}</span>
-                    </div>
-                    <div class="chat-search-hit-snippet">{{ hit.snippet }}</div>
-                  </div>
-                </template>
-                <div v-else class="chat-search-empty" role="status">{{ workbenchSearchEmpty() }}</div>
-              </div>
-            </el-popover>
             <NotificationInbox />
             <el-button
               v-if="isDesktop && detail.session"
@@ -129,6 +81,18 @@
               @click="togglePin(detail.session.id, !detail.session.pinned)"
             >
               {{ workbenchPinLabel(detail.session.pinned) }}
+            </el-button>
+            <el-button
+              v-if="showSessionDone"
+              size="small"
+              text
+              bg
+              type="success"
+              class="header-action-compact header-done-btn"
+              :aria-label="workbenchDoneAria()"
+              @click="markSessionDone()"
+            >
+              {{ workbenchDoneLabel() }}
             </el-button>
             <el-button
               size="small"
@@ -306,11 +270,10 @@
 </template>
 
 <script setup>
-import { onUnmounted, defineAsyncComponent, ref, nextTick, computed } from 'vue'
+import { onUnmounted, defineAsyncComponent, computed } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../components/AppLogo.vue'
-import { api } from '../api'
 import TerminalSessionCard from '../components/terminal/TerminalSessionCard.vue'
 import MessageDocText from '../components/MessageDocText.vue'
 import NotificationInbox from '../components/NotificationInbox.vue'
@@ -330,12 +293,12 @@ import {
   rename,
   togglePin,
   doDelete,
+  markSessionDone,
   bubbleList,
   fileIcon,
   formatSize,
   startingChat,
   startDemoChat,
-  selectSession,
   openDocsHub,
   terminalPrefs,
   furnaceSurface,
@@ -373,15 +336,11 @@ import {
   workbenchOpenDocsLabel,
   workbenchOpenDocsAria,
   workbenchDetachShortLabel,
-  workbenchSearchChatShortLabel,
-  workbenchSearchChatLabel,
-  workbenchSearchChatAria,
-  workbenchSearchPlaceholder,
-  workbenchSearchLoading,
-  workbenchSearchEmpty,
   workbenchDetachWindowAria,
   workbenchPinLabel,
   workbenchPinAria,
+  workbenchDoneLabel,
+  workbenchDoneAria,
   workbenchDeleteLabel,
   workbenchDeleteAria,
   workbenchDetachFailedMessage,
@@ -390,13 +349,7 @@ import {
   workbenchWelcomeDemoCta,
   workbenchWelcomePickGroup,
 } from './workbench/composables/workbenchChromeCopy.js'
-import {
-  WORKBENCH_CHAT_SEARCH_DEBOUNCE_MS,
-  canRunChatSearch,
-  chatSearchHitSenderLabel,
-  nextChatSearchSeq,
-  shouldApplyChatSearchResponse,
-} from './workbench/composables/workbenchChatSearchUi.js'
+import { shouldShowSessionDone } from './workbench/composables/sessionArchiveActions.js'
 
 // BubbleList 默认虚拟滚动；终端卡片与普通气泡高度差几倍，估高失准时自动触底会把可视区渲染成空白，
 // 只在超长会话才开启虚拟化
@@ -442,53 +395,7 @@ function onBubbleOpenDoc({ file, path }) {
   openDocsHub({ file: resolved })
 }
 
-// —— 4.6 聊天消息模糊搜索（会话详情内，调 /messages/search） ——
-const chatSearchOpen = ref(false)
-const chatSearchQ = ref('')
-const chatSearchLoading = ref(false)
-const chatSearchHits = ref([])
-let chatSearchTimer = null
-let chatSearchSeq = 0
-
-function runChatSearch() {
-  // 防抖：避免每次击键都全量扫当前会话消息
-  clearTimeout(chatSearchTimer)
-  chatSearchTimer = setTimeout(fireChatSearch, WORKBENCH_CHAT_SEARCH_DEBOUNCE_MS)
-}
-
-async function fireChatSearch() {
-  const q = chatSearchQ.value.trim()
-  const sessionId = activeId.value
-  chatSearchHits.value = []
-  if (!canRunChatSearch(q, sessionId)) return
-  const seq = nextChatSearchSeq(chatSearchSeq)
-  chatSearchSeq = seq
-  chatSearchLoading.value = true
-  try {
-    const res = await api.messages.find(q, sessionId)
-    // 竞态防护：仅采纳与当前查询一致的响应
-    if (!shouldApplyChatSearchResponse(seq, chatSearchSeq)) return
-    chatSearchHits.value = res.hits || []
-  } catch (e) {
-    if (!shouldApplyChatSearchResponse(seq, chatSearchSeq)) return
-    chatSearchHits.value = []
-    console.warn('[acw] chat search', e?.message || e)
-  } finally {
-    if (seq === chatSearchSeq) chatSearchLoading.value = false
-  }
-}
-
-async function jumpToChatHit(hit) {
-  chatSearchOpen.value = false
-  chatSearchQ.value = ''
-  chatSearchHits.value = []
-  if (hit.sessionId && hit.sessionId !== activeId.value) selectSession(hit.sessionId)
-  await nextTick()
-  const id = hit.messageId
-  if (!id) return
-  const el = document.querySelector(`[data-msg-id="${CSS.escape(String(id))}"]`)
-  el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-}
+const showSessionDone = computed(() => shouldShowSessionDone(detail.value?.session))
 
 onUnmounted(() => {
   disposeFurnaceSync()
@@ -1075,49 +982,5 @@ onUnmounted(() => {
   .wb-welcome {
     padding: 28px 20px 32px;
   }
-}
-</style>
-
-<style>
-/* 聊天搜索弹层（popper teleport 到 body，需全局样式） */
-.chat-search-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.chat-search-empty {
-  color: #909399;
-  font-size: 13px;
-  text-align: center;
-  padding: 16px 4px;
-}
-.chat-search-hit {
-  padding: 8px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.chat-search-hit:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-.chat-search-hit-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-.chat-search-hit-meta .hit-sender {
-  font-weight: 600;
-  font-size: 13px;
-}
-.chat-search-hit-meta .hit-session {
-  font-size: 12px;
-  color: #909399;
-}
-.chat-search-hit-snippet {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.5;
-  word-break: break-word;
 }
 </style>

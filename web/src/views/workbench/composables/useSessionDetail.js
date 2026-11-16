@@ -155,7 +155,7 @@ const convMenu = CONVERSATION_MENU
 
 const {
   loadLists, loadDetail, selectSession, openDocsHub, onConvChange,
-  doDelete, rename, togglePin, onConvMenu, startChat, startDemoChat,
+  doDelete, markSessionDone, rename, togglePin, onConvMenu, startChat, startDemoChat,
   restartFromNode, goShortcuts,
 } = createSessionDetailLifecycleActions({
   sessions, groups, members, slashCommands, startTarget, startingChat,
@@ -292,7 +292,8 @@ export {
   syncAtFromInput, syncHashFromInput, onSenderChange, onComposerKeydown,
   toggleSlashPanel, closeComposerPanel, toggleAtPanel, toggleHashPanel,
   insertAtMember, insertHashItem, runSlash, onSenderSubmit, submitHuman,
-  approveSessionStart, gate, nextStepReview, cancelReview, goShortcuts, rename, doDelete, restartFromNode,
+  approveSessionStart, gate, nextStepReview, cancelReview, goShortcuts, rename, doDelete, markSessionDone,
+  restartFromNode,
   toggleNodeExpand, formatIo, toggleSkippedFlowGroup, isSkippedFlowGroupExpanded,
   nodeHasAdapt, nodeHasRefine, isClonedNode, isFlowHistoryNode, flowClass, isCurrent,
   isCurrentOffsiteSegment, offsiteEntryLabel, offsiteInvokedLabel, reviewLabel,

@@ -316,7 +316,7 @@ async function main() {
       await page.waitForTimeout(400)
     }
     const chatSearchBtn = page.getByRole('button', {
-      name: /搜索本会话聊天|Search this session/i,
+      name: /搜索全部会话聊天|Search messages across all sessions/i,
     })
     await chatSearchBtn.waitFor({ state: 'visible', timeout: 15000 })
 

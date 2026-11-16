@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-16 | A/M | docs/plan-6.2.0.md, web/src/{App.vue,api.js,components/{GlobalChatSearch.vue,icons/AcwIcon.vue},i18n/{zh-CN,en-US}.js,views/{Workbench.vue,workbench/composables/{chatSearchScrollPending.js,sessionArchiveActions.js,sessionDetailLifecycleActions.js,sessionLoadActions.js,sessionWorkbenchFeedbackUi.js,useSessionDetail.js,workbenchChatSearchUi.js,workbenchChromeCopy.js}}}, web/test/{sessionArchiveActions.test.mjs,sessionDetailLifecycleActions.test.mjs,workbenchChatSearchUi.test.mjs}, scripts/ci-e2e-smoke.mjs | 6.2.0：顶栏全局聊天搜索放大镜；会话头「完成」手动归档
 2026-11-16 | M | README.md | v6 产物路径与 plan-6.1.0 文档索引
 2026-11-16 | M | README.md, server/config/about.json, web/src/i18n/{zh-CN,en-US}.js | 6.1.0 发布说明与文档中心空态文案；push main 提示
 2026-11-16 | A/M | docs/plan-6.1.0.md, server/src/{docsHub.js,terminal/{terminalLog.js,terminalRehydrate.js,terminalService.js,publicTerminal.js}}, server/test/{docsHub.test.js,terminalRehydrate.test.js}, web/src/{views/docs/{DocsHub.vue,DocsHubSidebar.vue,docsHubSessionUi.js},components/terminal/TerminalSessionCard.vue,views/workbench/composables/useTerminalSessions.js}, web/test/{docsHubLayout.test.mjs,docsHubSessionUi.test.mjs}, docs/spec-frontend-components.md | 6.1.0：文档中心一会话一叶；终端 DB+log 历史定格卡

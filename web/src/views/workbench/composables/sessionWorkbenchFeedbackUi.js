@@ -94,3 +94,23 @@ export function deleteSuccessMessage() {
 export function deleteFailedMessage(err) {
   return err?.message || t('workbench.delete.failed')
 }
+
+export function archiveNoSessionMessage() {
+  return t('workbench.archive.noSession')
+}
+
+export function archiveConfirmDialogOptions() {
+  return {
+    title: t('workbench.archive.title'),
+    message: t('workbench.archive.message'),
+    confirmButtonText: t('workbench.archive.confirm'),
+  }
+}
+
+export function archiveSuccessMessage() {
+  return t('workbench.archive.success')
+}
+
+export function archiveFailedMessage(err) {
+  return err?.message || t('workbench.archive.failed')
+}

@@ -143,6 +143,7 @@
           </nav>
         </div>
         <div class="top-right">
+          <GlobalChatSearch />
           <div class="zoom-ctrl" data-fullscreen-control role="group" :aria-label="shellZoomGroupAria()">
             <button
               type="button"
@@ -253,6 +254,7 @@ import AcwIcon from './components/icons/AcwIcon.vue'
 import FurnaceSprite from './components/FurnaceSprite.vue'
 import GrokSetupGuide from './components/GrokSetupGuide.vue'
 import CommandPalette from './components/CommandPalette.vue'
+import GlobalChatSearch from './components/GlobalChatSearch.vue'
 import { useCommandPalette } from './composables/useCommandPalette.js'
 import {
   furnaceSpriteState,
