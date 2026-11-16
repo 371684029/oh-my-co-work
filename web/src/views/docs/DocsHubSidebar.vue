@@ -150,45 +150,26 @@
           </div>
 
           <template v-if="isGroupExpanded(groupKey(g))">
-            <div v-for="s in g.sessions" :key="s.sessionId" class="dh-tree-session">
-              <button
-                type="button"
-                class="dh-tree-row dh-tree-row--branch dh-tree-row--indent-1"
-                :aria-expanded="isSessionExpanded(s.sessionId)"
-                @click="$emit('toggle-session', s.sessionId)"
-              >
-                <span
-                  class="dh-tree-chevron"
-                  :class="{ open: isSessionExpanded(s.sessionId) }"
-                  aria-hidden="true"
-                  >›</span
-                >
-                <span
-                  class="dh-status-dot"
-                  :class="docsSessionStatusClass(s.status)"
-                  :title="docsSessionStatusLabel(s.status)"
-                  aria-hidden="true"
-                />
-                <span class="dh-tree-label">{{ s.sessionTitle }}</span>
-                <span class="dh-tree-meta">{{ relativeTime(s.updatedAt) }}</span>
-              </button>
-
-              <template v-if="isSessionExpanded(s.sessionId)">
-                <button
-                  v-for="f in s.files"
-                  :key="f.name"
-                  type="button"
-                  class="dh-tree-row dh-tree-row--leaf dh-tree-row--indent-2"
-                  :class="{ active: isActiveFile(s.sessionId, f.name) }"
-                  @click="$emit('select-file', s.sessionId, f.name)"
-                >
-                  <span class="dh-tree-chevron" aria-hidden="true" />
-                  <span class="dh-tree-label">{{ docsFileLabel(f) }}</span>
-                  <span v-if="f.meta?.adapt" class="dh-badge dh-badge--adapt">{{ docsHubBadgeAdaptLabel() }}</span>
-                  <span v-if="f.meta?.cloned" class="dh-badge dh-badge--cloned">{{ docsHubBadgeClonedLabel() }}</span>
-                </button>
-              </template>
-            </div>
+            <button
+              v-for="s in g.sessions"
+              :key="s.sessionId"
+              type="button"
+              class="dh-tree-row dh-tree-row--leaf dh-tree-row--indent-1"
+              :class="{ active: isActiveSession(s.sessionId), 'is-disabled': !s.navFile }"
+              :disabled="!s.navFile"
+              @click="s.navFile && $emit('select-file', s.sessionId, s.navFile.name)"
+            >
+              <span class="dh-tree-chevron" aria-hidden="true" />
+              <span
+                class="dh-status-dot"
+                :class="docsSessionStatusClass(s.status)"
+                :title="docsSessionStatusLabel(s.status)"
+                aria-hidden="true"
+              />
+              <AcwIcon class="dh-tree-doc" name="file" :size="15" />
+              <span class="dh-tree-label">{{ s.sessionTitle }}</span>
+              <span class="dh-tree-meta">{{ relativeTime(s.navFile?.mtimeMs || s.updatedAt) }}</span>
+            </button>
           </template>
         </div>
       </template>
@@ -268,7 +249,7 @@ defineProps({
   exportingAll: { type: Boolean, default: false },
   isActiveFile: { type: Function, required: true },
   isPinnedItem: { type: Function, required: true },
-  isSessionExpanded: { type: Function, required: true },
+  isActiveSession: { type: Function, required: true },
   isGroupExpanded: { type: Function, required: true },
   relativeTime: { type: Function, required: true },
   refineLedgerActive: { type: Boolean, default: false },
@@ -279,7 +260,6 @@ defineEmits([
   'quick-open',
   'toggle-pin',
   'search-hit',
-  'toggle-session',
   'toggle-group',
   'select-file',
   'select-refine',

@@ -566,7 +566,12 @@ function bindWs(sessionId) {
       }
       if (ev.type === 'terminal.exited') {
         const term = ev.payload?.terminal
-        upsertTerminal(term)
+        upsertTerminal({
+          ...term,
+          previewReplay: String(term?.replay || terminalOutputGetReplay(term?.id) || '').slice(
+            -12_000,
+          ),
+        })
         const code = Number(term?.exitCode)
         if (Number.isFinite(code) && code !== 0) {
           const title = detail.value?.session?.title || '工作台'

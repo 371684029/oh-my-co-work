@@ -46,7 +46,12 @@
         <template v-if="terminal.exitCode != null"> · exit {{ terminal.exitCode }}</template>
       </span>
       <div class="terminal-actions">
-        <button type="button" class="terminal-action primary" @click="$emit('open', terminal.id)">
+        <button
+          v-if="showOpenTerminal"
+          type="button"
+          class="terminal-action primary"
+          @click="$emit('open', terminal.id)"
+        >
           {{ isRunning ? terminalCardEnterTerminal() : terminalCardViewTerminal() }}
         </button>
         <button
@@ -96,6 +101,11 @@ defineEmits(['open', 'kill'])
 const PREVIEW_LINES = 40
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
+
+/** 历史定格（服务重启回填）：预览只读，不强求进入 PTY。 */
+const showOpenTerminal = computed(
+  () => isRunning.value || (!props.terminal.rehydrated && props.terminal.status === 'exited'),
+)
 
 const statusText = computed(
   () => terminalStatusText(props.terminal.status, 'card') || terminalCardStatusUnknown(),

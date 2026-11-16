@@ -138,7 +138,7 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 2. 终端默认深灰背景、等宽字体；与普通聊天气泡明确分层，但圆角、阴影和强调色保持一致。
 3. `TerminalWorkspace` 使用异步组件加载，普通会话不必加载 `xterm.js`。
 4. 终端获得焦点后键盘直接写入 PTY；多行粘贴需要确认。
-5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。
+5. 终端输出通过有限 replay 字符串进入 xterm；消息卡仅显示清理 ANSI 后的末尾摘要。**6.1.0**：进程结束或服务重启后，已结束终端从 `terminal_sessions` + 日志 tail 回填为**只读定格卡**（文本，非位图）；`rehydrated` 条目默认不展示「进入终端」主按钮。
 6. 顶栏可切换整个工作台全屏；终端工具栏可切换 **满屏**（铺满 HTML 页面）与 **全屏**（浏览器系统全屏）。满屏层 Teleport 到 `body`，避免中栏毛玻璃（`backdrop-filter`）把 `position: fixed` 锁在卡片内。**熔炉**默认 `FurnaceWorkspace`：铺满 GUI，可切 TUI、可「缩小」回三栏。
 
 ### Composer 三快捷（已实现）

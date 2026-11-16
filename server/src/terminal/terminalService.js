@@ -16,6 +16,7 @@ import {
   markInterruptedTerminalsInDb,
 } from './terminalLifecycle.js'
 import { runTerminalPty } from './terminalRun.js'
+import { listPersistedTerminalsForSession } from './terminalRehydrate.js'
 
 export { normalizePtyLaunch, resolveWindowsExecutable }
 
@@ -53,9 +54,14 @@ export function listSessionTerminals(sessionId, { includeReplay = true } = {}) {
       flushOutput(entry)
     }
   }
-  return entries
+  const liveIds = new Set(entries.map((e) => e.id))
+  const live = entries
     .sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt)))
     .map((entry) => publicTerminal(entry, { includeReplay }))
+  const persisted = listPersistedTerminalsForSession(sessionId, liveIds, { includeReplay })
+  return [...live, ...persisted].sort((a, b) =>
+    String(a.startedAt || '').localeCompare(String(b.startedAt || '')),
+  )
 }
 
 export function getTerminal(id) {

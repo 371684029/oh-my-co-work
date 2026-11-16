@@ -31,7 +31,7 @@ export function docsExpandSessionInTree(groups, sessionId, expandedSessions, exp
       const gKey = docsGroupKey(g)
       return {
         expandedGroups: { ...(expandedGroups || {}), [gKey]: true },
-        expandedSessions: { ...(expandedSessions || {}), [sessionId]: true },
+        expandedSessions: expandedSessions || {},
       }
     }
   }

@@ -26,6 +26,13 @@ test('资源管理器侧栏引入 i18n t', () => {
   assert.match(sidebar, /import\s*\{\s*t\s*\}\s*from\s*['"].*i18n/)
 })
 
+test('按群模板：会话为叶节点，不展开节点台账', () => {
+  const sidebar = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubSidebar.vue'), 'utf8')
+  assert.match(sidebar, /navFile/)
+  assert.doesNotMatch(sidebar, /toggle-session/)
+  assert.doesNotMatch(sidebar, /v-for="f in s\.files"/)
+})
+
 test('侧栏底部保留炼化与还原文件夹', () => {
   const sidebar = fs.readFileSync(path.join(root, 'src/views/docs/DocsHubSidebar.vue'), 'utf8')
   const hub = fs.readFileSync(path.join(root, 'src/views/docs/DocsHub.vue'), 'utf8')

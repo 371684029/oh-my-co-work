@@ -20,7 +20,7 @@
         :exporting-all="exportingAll"
         :is-active-file="isActiveFile"
         :is-pinned-item="isPinnedItem"
-        :is-session-expanded="isSessionExpanded"
+        :is-active-session="isActiveSession"
         :is-group-expanded="isGroupExpanded"
         :relative-time="relativeTime"
         :refine-ledger-active="refineLedgerOpen"
@@ -28,7 +28,6 @@
         @quick-open="onQuickOpen"
         @toggle-pin="onTogglePin"
         @search-hit="onSearchHit"
-        @toggle-session="toggleSession"
         @toggle-group="toggleGroup"
         @select-file="onSelectFile"
         @select-refine="openRefineLedger"
@@ -89,9 +88,7 @@ import {
 } from './docsHubFilterUi.js'
 import {
   docsExpandSessionInTree,
-  isDocsSessionExpanded,
   isDocsGroupExpanded,
-  toggleDocsSessionExpansion,
   toggleDocsGroupExpansion,
 } from './docsHubSessionUi.js'
 import {
@@ -146,16 +143,12 @@ const displayedTimeItems = computed(() =>
   filterDocsItemsByTimeRange(items.value, selectedTimeRange.value),
 )
 
-function isSessionExpanded(id) {
-  return isDocsSessionExpanded(expandedSessions.value, id)
-}
-
 function isGroupExpanded(id) {
   return isDocsGroupExpanded(expandedGroups.value, id)
 }
 
-function toggleSession(id) {
-  expandedSessions.value = toggleDocsSessionExpansion(expandedSessions.value, id)
+function isActiveSession(sessionId) {
+  return current.value?.sessionId === sessionId
 }
 
 function toggleGroup(id) {

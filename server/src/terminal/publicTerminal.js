@@ -26,6 +26,7 @@ export function publicTerminal(entry, { includeReplay = false } = {}) {
     replayTruncated: entry.replayTruncated,
     adapter: entry.adapterType || null,
     lastError: entry.lastError || null,
+    rehydrated: !!entry.rehydrated,
     ...(includeReplay ? { replay: entry.replay } : {}),
   }
 }

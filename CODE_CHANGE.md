@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-16 | A/M | docs/plan-6.1.0.md, server/src/{docsHub.js,terminal/{terminalLog.js,terminalRehydrate.js,terminalService.js,publicTerminal.js}}, server/test/{docsHub.test.js,terminalRehydrate.test.js}, web/src/{views/docs/{DocsHub.vue,DocsHubSidebar.vue,docsHubSessionUi.js},components/terminal/TerminalSessionCard.vue,views/workbench/composables/useTerminalSessions.js}, web/test/{docsHubLayout.test.mjs,docsHubSessionUi.test.mjs}, docs/spec-frontend-components.md | 6.1.0：文档中心一会话一叶；终端 DB+log 历史定格卡
 2026-11-13 | M | scripts/ci-e2e-smoke.mjs, server/test/e2eSmokeCoverage.test.js | E2E 炼化文件夹改 `.dh-tree-row--refine`（aria-label 与可见文案不一致）
 2026-11-13 | M | docs/assets/screenshots/{docs-hub,docs-hub-rail}.webp, README.md | 重新截取文档中心（侧栏可见）与工作台顶栏文档入口 README 截图
 2026-11-13 | M | web/src/views/docs/DocsHubSidebar.vue, web/test/docsHubLayout.test.mjs | 修复文档中心左侧资源管理器：`t` 未导入导致侧栏渲染失败

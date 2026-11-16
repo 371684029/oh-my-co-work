@@ -56,8 +56,21 @@ test('listDocs groups by group template with whitelisted files only', () => {
   assert.deepEqual(names, ['ANNOUNCEMENT.md', 'README.md', 'nodes/step-00-abc.md'])
   assert.equal(item.files[0].kind, 'announce')
   assert.equal(item.files[2].kind, 'step')
+  assert.equal(item.navFile?.name, 'ANNOUNCEMENT.md')
   // 越权文件不在列表里
   assert.equal(names.includes('secret.md'), false)
+})
+
+test('listDocs time sort only includes session nav files', () => {
+  const session = seedSession('仅侧栏导航')
+  writeDoc(session.id, 'ANNOUNCEMENT.md', '报告')
+  writeDoc(session.id, 'nodes/step-00-abc.md', '台账')
+  docsHub.invalidateDocsCache()
+
+  const out = docsHub.listDocs({ sort: 'time' })
+  const mine = out.items.filter((i) => i.sessionId === session.id)
+  assert.equal(mine.length, 1)
+  assert.equal(mine[0].name, 'ANNOUNCEMENT.md')
 })
 
 test('getSessionDocsSummary returns one session without full rescan list', () => {

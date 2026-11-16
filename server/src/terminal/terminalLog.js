@@ -1,18 +1,30 @@
 import fs from 'node:fs'
-import { getDb } from '../db.js'
+import path from 'node:path'
+import { DATA_ROOT, getDb } from '../db.js'
+
+/** Resolve DB `log_path` (basename or absolute) to an on-disk log file. */
+export function resolveTerminalLogAbs(logPathOrName) {
+  if (!logPathOrName) return null
+  const raw = String(logPathOrName)
+  if (path.isAbsolute(raw) && fs.existsSync(raw)) return raw
+  const underDataRoot = path.join(DATA_ROOT, 'logs', path.basename(raw))
+  if (fs.existsSync(underDataRoot)) return underDataRoot
+  if (fs.existsSync(raw)) return raw
+  return null
+}
 
 /**
  * @param {(id: string) => object | undefined} resolveEntry
  */
 export function readTerminalLogPath(sessionId, terminalId, resolveEntry) {
   const entry = resolveEntry(terminalId)
-  if (!entry || entry.sessionId !== sessionId) return null
-  if (entry.logPath && fs.existsSync(entry.logPath)) return entry.logPath
+  if (entry?.sessionId === sessionId && entry.logPath && fs.existsSync(entry.logPath)) {
+    return entry.logPath
+  }
   const row = getDb()
     .prepare('SELECT log_path FROM terminal_sessions WHERE id = ? AND session_id = ?')
     .get(terminalId, sessionId)
-  if (row?.log_path && fs.existsSync(row.log_path)) return row.log_path
-  return null
+  return resolveTerminalLogAbs(row?.log_path)
 }
 
 export function deleteTerminalLogForEntry(entry, sessionId, _terminalId) {

@@ -28,9 +28,9 @@ test('docs group expand toggles', () => {
   assert.equal(isDocsGroupExpanded(closed, 'g1'), false)
 })
 
-test('docsExpandSessionInTree expands group and session', () => {
+test('docsExpandSessionInTree expands group only (6.1.0 flat session row)', () => {
   const groups = [{ groupId: 'g1', sessions: [{ sessionId: 's9' }] }]
   const patch = docsExpandSessionInTree(groups, 's9', {}, {})
   assert.equal(patch.expandedGroups.g1, true)
-  assert.equal(patch.expandedSessions.s9, true)
+  assert.equal(patch.expandedSessions.s9, undefined)
 })

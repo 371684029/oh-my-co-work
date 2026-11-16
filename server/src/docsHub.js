@@ -90,6 +90,16 @@ function statFile(abs) {
   return { mtimeMs: st.mtimeMs, size: st.size }
 }
 
+/** Sidebar navigation: one session → one primary doc (群报告优先). */
+export function pickSessionNavFile(files) {
+  const list = files || []
+  return (
+    list.find((f) => f.kind === 'announce') ||
+    list.find((f) => f.kind === 'index') ||
+    null
+  )
+}
+
 function scanSessionDir(sessionId) {
   const dir = path.join(journalRoot(), sessionId)
   const files = []
@@ -197,6 +207,8 @@ function scanAll() {
       const s = meta.byId.get(sessionId)
       if (!s) continue
       const group = s ? meta.groupById.get(s.group_id) : null
+      const decorated = decorateWithNodeMeta(sessionId, files)
+      const navFile = pickSessionNavFile(decorated)
       const item = {
         sessionId,
         sessionTitle: s?.title || sessionId,
@@ -206,20 +218,21 @@ function scanAll() {
         status: s?.status || null,
         updatedAt: s?.updated_at || null,
         workFolder: s?.workFolder || null,
-        files: decorateWithNodeMeta(sessionId, files),
+        files: decorated,
+        navFile,
       }
       sessions.push(item)
-      for (const f of item.files) {
+      if (navFile) {
         flat.push({
           sessionId,
           sessionTitle: item.sessionTitle,
           groupTitle: item.groupTitle,
-          name: f.name,
-          kind: f.kind,
-          title: f.title,
-          meta: f.meta,
-          mtimeMs: f.mtimeMs,
-          size: f.size,
+          name: navFile.name,
+          kind: navFile.kind,
+          title: navFile.title,
+          meta: navFile.meta,
+          mtimeMs: navFile.mtimeMs,
+          size: navFile.size,
         })
       }
     }
@@ -274,6 +287,7 @@ export function getSessionDocsSummary(sessionId) {
     updatedAt: s.updated_at || null,
     workFolder: s.workFolder || null,
     files,
+    navFile: pickSessionNavFile(files),
   }
 }
 
@@ -295,7 +309,8 @@ export function listDocs({ sort = 'group' } = {}) {
     g.sessions.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
   }
   groupList.sort((a, b) => {
-    const latest = (x) => x.sessions[0]?.files?.reduce((m, f) => Math.max(m, f.mtimeMs), 0) || 0
+    const latest = (x) =>
+      x.sessions.reduce((m, s) => Math.max(m, s.navFile?.mtimeMs || 0), 0)
     return latest(b) - latest(a)
   })
   return { sort: 'group', groups: groupList }
