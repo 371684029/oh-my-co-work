@@ -315,20 +315,52 @@ html.acw-terminal-pagefill body {
   max-width: var(--ecw-stage-max-wide, 1180px);
 }
 
-/* 右栏：流程轨 */
+/* 右栏：流程轨（Tab/状态头固定，仅内容区滚动） */
 .wb-right {
   width: var(--ecw-rail-w);
   min-width: var(--ecw-rail-w);
   max-width: var(--ecw-rail-w);
+  align-self: stretch;
+  min-height: 0;
+  height: 100%;
   border: 0.5px solid rgba(255, 255, 255, 0.55);
   border-radius: var(--ecw-radius-xl);
   background: var(--ecw-glass-strong);
   backdrop-filter: saturate(160%) blur(40px);
   -webkit-backdrop-filter: saturate(160%) blur(40px);
   box-shadow: var(--ecw-shadow-md);
-  overflow-x: hidden;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 20px 16px 26px;
+}
+
+.wb-right-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wb-right-body > .wb-right-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.flow-rail-scroll,
+.timeline-scroll,
+.slash-panel-body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.flow-rail-scroll::-webkit-scrollbar,
+.timeline-scroll::-webkit-scrollbar,
+.slash-panel-body::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 /* 侧栏顶区 */

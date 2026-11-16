@@ -64,21 +64,23 @@
                   </button>
                 </div>
               </div>
-              <div v-if="!filteredSlashCmds.length" class="slash-empty">
-                {{ composerSlashEmptyHint() }}
+              <div class="slash-panel-body">
+                <div v-if="!filteredSlashCmds.length" class="slash-empty">
+                  {{ composerSlashEmptyHint() }}
+                </div>
+                <button
+                  v-for="(c, i) in filteredSlashCmds"
+                  :key="c.id"
+                  type="button"
+                  class="slash-item"
+                  :class="{ active: i === composerStore.slashIndex }"
+                  @mousedown.prevent="runSlash(c)"
+                >
+                  <code class="slash-token">/{{ c.slash }}</code>
+                  <span class="slash-name">{{ c.name }}</span>
+                  <span class="slash-desc">{{ c.description }}</span>
+                </button>
               </div>
-              <button
-                v-for="(c, i) in filteredSlashCmds"
-                :key="c.id"
-                type="button"
-                class="slash-item"
-                :class="{ active: i === composerStore.slashIndex }"
-                @mousedown.prevent="runSlash(c)"
-              >
-                <code class="slash-token">/{{ c.slash }}</code>
-                <span class="slash-name">{{ c.name }}</span>
-                <span class="slash-desc">{{ c.description }}</span>
-              </button>
             </div>
             <div v-if="composerStore.atOpen" class="slash-panel at-panel">
               <div class="slash-panel-head">
@@ -97,23 +99,25 @@
                   </button>
                 </div>
               </div>
-              <div class="at-section-label">{{ composerAtSectionMembers() }}</div>
-              <div v-if="!filteredAtMembers.length" class="slash-empty">{{ composerAtEmptyHint() }}</div>
-              <button
-                v-for="(m, i) in filteredAtMembers"
-                :key="m.id"
-                type="button"
-                class="slash-item"
-                :class="{ active: i === composerStore.atIndex }"
-                @mousedown.prevent="insertAtMember(m)"
-              >
-                <span class="at-avatar">{{ (m.display_name || m.name || '?').slice(0, 1) }}</span>
-                <span class="slash-name">{{ m.display_name || m.name }}</span>
-                <span class="slash-desc"
-                  >{{ m.kind
-                  }}{{ m.config?.description ? ` · ${m.config.description}` : '' }}</span
+              <div class="slash-panel-body">
+                <div class="at-section-label">{{ composerAtSectionMembers() }}</div>
+                <div v-if="!filteredAtMembers.length" class="slash-empty">{{ composerAtEmptyHint() }}</div>
+                <button
+                  v-for="(m, i) in filteredAtMembers"
+                  :key="m.id"
+                  type="button"
+                  class="slash-item"
+                  :class="{ active: i === composerStore.atIndex }"
+                  @mousedown.prevent="insertAtMember(m)"
                 >
-              </button>
+                  <span class="at-avatar">{{ (m.display_name || m.name || '?').slice(0, 1) }}</span>
+                  <span class="slash-name">{{ m.display_name || m.name }}</span>
+                  <span class="slash-desc"
+                    >{{ m.kind
+                    }}{{ m.config?.description ? ` · ${m.config.description}` : '' }}</span
+                  >
+                </button>
+              </div>
             </div>
             <div v-if="composerStore.hashOpen" class="slash-panel hash-panel">
               <div class="slash-panel-head">
@@ -132,23 +136,25 @@
                   </button>
                 </div>
               </div>
-              <div v-if="!filteredHashItems.length" class="slash-empty">
-                {{ composerHashEmptyHint() }}
+              <div class="slash-panel-body">
+                <div v-if="!filteredHashItems.length" class="slash-empty">
+                  {{ composerHashEmptyHint() }}
+                </div>
+                <button
+                  v-for="(h, i) in filteredHashItems"
+                  :key="h.key"
+                  type="button"
+                  class="slash-item"
+                  :class="{ active: i === composerStore.hashIndex }"
+                  @mousedown.prevent="insertHashItem(h)"
+                >
+                  <code class="slash-token">{{ h.label }}</code>
+                  <span class="slash-name">{{ h.name }}</span>
+                  <span class="slash-desc" :title="h.value || h.emptyHint">{{
+                    h.preview || h.emptyHint
+                  }}</span>
+                </button>
               </div>
-              <button
-                v-for="(h, i) in filteredHashItems"
-                :key="h.key"
-                type="button"
-                class="slash-item"
-                :class="{ active: i === composerStore.hashIndex }"
-                @mousedown.prevent="insertHashItem(h)"
-              >
-                <code class="slash-token">{{ h.label }}</code>
-                <span class="slash-name">{{ h.name }}</span>
-                <span class="slash-desc" :title="h.value || h.emptyHint">{{
-                  h.preview || h.emptyHint
-                }}</span>
-              </button>
             </div>
             <div
               v-if="pendingFiles.length"
@@ -765,13 +771,23 @@ button.composer-hint-i {
   right: 8px;
   bottom: calc(100% + 8px);
   max-height: 280px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
   z-index: 40;
-  padding: 8px;
+  padding: 8px 8px 0;
+}
+
+.slash-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 8px;
 }
 
 .slash-panel-head {
@@ -779,6 +795,7 @@ button.composer-hint-i {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-shrink: 0;
   padding: 4px 4px 8px 8px;
   font-size: 12px;
   font-weight: 650;

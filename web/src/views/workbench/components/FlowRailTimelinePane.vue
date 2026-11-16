@@ -22,26 +22,28 @@
         {{ flowRailTimelineAuditExport() }}
       </el-button>
     </div>
-    <p v-if="!activeId" class="timeline-hint">{{ flowRailTimelineSelectSessionFirst() }}</p>
-    <ul v-else-if="timelineEvents.length" class="timeline-list" role="list" :aria-label="t('a11y.timelineList')">
-      <li v-for="ev in timelineEvents" :key="ev.id">
-        <button
-          type="button"
-          class="timeline-item"
-          :aria-label="timelineItemAria(ev)"
-          @click="onTimelineEvent(ev)"
-        >
-          <span class="timeline-time">{{ flowRailFormatTimelineAt(ev.at) }}</span>
-          <span class="timeline-cat">{{ flowRailTimelineCatLabel(ev.category) }}</span>
-          <span class="timeline-title">{{ ev.title }}</span>
-        </button>
-      </li>
-    </ul>
-    <EmptyState
-      v-else-if="!timelineLoading"
-      :title="flowRailEmptyTimelineTitle()"
-      :description="flowRailEmptyTimelineDescription()"
-    />
+    <div class="timeline-scroll">
+      <p v-if="!activeId" class="timeline-hint">{{ flowRailTimelineSelectSessionFirst() }}</p>
+      <ul v-else-if="timelineEvents.length" class="timeline-list" role="list" :aria-label="t('a11y.timelineList')">
+        <li v-for="ev in timelineEvents" :key="ev.id">
+          <button
+            type="button"
+            class="timeline-item"
+            :aria-label="timelineItemAria(ev)"
+            @click="onTimelineEvent(ev)"
+          >
+            <span class="timeline-time">{{ flowRailFormatTimelineAt(ev.at) }}</span>
+            <span class="timeline-cat">{{ flowRailTimelineCatLabel(ev.category) }}</span>
+            <span class="timeline-title">{{ ev.title }}</span>
+          </button>
+        </li>
+      </ul>
+      <EmptyState
+        v-else-if="!timelineLoading"
+        :title="flowRailEmptyTimelineTitle()"
+        :description="flowRailEmptyTimelineDescription()"
+      />
+    </div>
 
     <el-dialog
       v-model="terminalReplayOpen"
@@ -140,12 +142,29 @@ watch(
 </script>
 
 <style scoped>
+.wb-right-pane.timeline-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .timeline-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
+
+.timeline-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
 .timeline-hint {
   font-size: 12px;
   color: var(--ecw-text-3, #8e8ea0);
@@ -154,8 +173,6 @@ watch(
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: calc(100vh - 220px);
-  overflow: auto;
 }
 .timeline-item {
   display: grid;

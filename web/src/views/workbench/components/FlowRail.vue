@@ -2,10 +2,12 @@
   <aside class="wb-right" :aria-label="t('a11y.flowRail')">
     <FlowRailTabs />
 
-    <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
-    <FlowRailFlowPane v-show="flowStore.rightTab === 'flow'" />
+    <div class="wb-right-body">
+      <!-- Tab：流程（适配步骤直接在节点标题上打「适配」角标，不再单开筛选 Tab） -->
+      <FlowRailFlowPane v-show="flowStore.rightTab === 'flow'" />
 
-    <FlowRailTimelinePane v-show="flowStore.rightTab === 'timeline'" />
+      <FlowRailTimelinePane v-show="flowStore.rightTab === 'timeline'" />
+    </div>
   </aside>
 </template>
 
@@ -20,7 +22,7 @@ const flowStore = useFlowStore()
 </script>
 
 <style scoped>
-.wb-right-pane {
-  min-height: 0;
+:deep(.wb-right-tabs) {
+  flex-shrink: 0;
 }
 </style>

@@ -15,6 +15,7 @@
     <p v-else-if="offsiteActive" class="flow-offsite-hint">
       {{ flowRailOffsiteHint() }}
     </p>
+    <div class="flow-rail-scroll">
     <template v-if="flowEntries.length">
       <template v-for="entry in flowEntries" :key="entry.key">
         <div
@@ -78,6 +79,7 @@
       :title="flowRailEmptyFlowTitle()"
       :description="flowRailEmptyFlowDescription()"
     />
+    </div>
   </div>
 </template>
 
@@ -117,6 +119,26 @@ const { revertStepChanges } = createFlowRailRevertActions({ activeId, revertLoad
 </script>
 
 <style scoped>
+.wb-right-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.flow-rail-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.flow-archive-hint,
+.flow-offsite-hint {
+  flex-shrink: 0;
+}
+
 .flow-skipped-group {
   position: relative;
   margin: 2px 0 10px 7px;
