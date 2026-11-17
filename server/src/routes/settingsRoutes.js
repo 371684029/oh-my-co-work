@@ -10,6 +10,11 @@ import {
 } from '../appSettings.js'
 import { probeGrokStatusAsync, probeCursorStatusAsync, loadGrokExampleConfig } from '../grokStatus.js'
 import { prepareFurnaceGrokLaunch } from '../furnaceSituation.js'
+import { resolveGrokWorkspaceDir } from '../furnaceGrokInject.js'
+import {
+  listFurnaceSkillsCatalog,
+  syncFurnaceSkillsToWorkspace,
+} from '../furnaceSkillSync.js'
 import { ensureAdminMember } from '../slashCommands.js'
 
 const router = Router()
@@ -42,6 +47,31 @@ router.post('/furnace/prepare', (req, res) => {
       updateAppSettings({ grok: { rulesAcknowledged: true } })
     }
     res.json(prepareFurnaceGrokLaunch({ sessionId: req.body?.sessionId || null }))
+  } catch (e) {
+    res.status(400).json({ error: e.message })
+  }
+})
+
+router.get('/furnace/skills', (_req, res) => {
+  try {
+    const grok = getAppSettings().grok || {}
+    const workspace = resolveGrokWorkspaceDir(grok)
+    res.json({
+      skills: listFurnaceSkillsCatalog(),
+      workspace,
+      syncSkills: getAppSettings().furnace?.syncSkills !== false,
+    })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+router.post('/furnace/skills/sync', (_req, res) => {
+  try {
+    const grok = getAppSettings().grok || {}
+    const cwd = resolveGrokWorkspaceDir(grok)
+    const out = syncFurnaceSkillsToWorkspace(cwd)
+    res.json({ ok: true, ...out })
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

@@ -117,6 +117,14 @@ export function flowRailJournalPathPrefix() {
   return t('workbench.flowRail.journalPathPrefix')
 }
 
+export function flowRailRefineFailDocs() {
+  return t('workbench.flowRail.refineFailDocs')
+}
+
+export function flowRailRefineFailMembers() {
+  return t('workbench.flowRail.refineFailMembers')
+}
+
 export function flowRailOpenInDocsHub() {
   return t('workbench.flowRail.openInDocsHub')
 }

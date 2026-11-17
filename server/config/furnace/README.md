@@ -6,10 +6,10 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `prompts/session.md` | 群聊主持：通用 Agent，审核/闸门更专业 |
-| `prompts/member-adapt.md` | 把当前成员接到工作台 |
-| `prompts/node-adapt.md` | 把当前步骤接到工作台 |
-| `prompts/refine.md` | 把成员输入/输出炼成文档；保存时改源契约 |
+| **skills/**（仓库根） | **主维护**：`furnace-core` / `furnace-acw-ctl` / `furnace-refine-skill` / `furnace-review` → 同步到工作区 `.grok/skills/` |
+| `prompts/*.md` | **过渡**：仍拼进 `ACTIVE.md`；与 Skill 重复时以 Skill 为准 |
+| `prompts/session.md` | 群聊主持壳（过渡） |
+| `prompts/refine.md` | 炼化角色壳（过渡） |
 
 `SITUATION.md` 是本场节点地图（哪个节点是什么）。不要把多套角色 prompt 拼在一起。
 配置示例见 `grok-config.example.toml`（`api_key` 一律写「秘钥」）。

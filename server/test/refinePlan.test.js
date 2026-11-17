@@ -31,6 +31,22 @@ test('planRefineOnMemberSave lists files without writing', () => {
   assert.equal(fs.readFileSync(bat, 'utf8').includes('ACW-REFINE'), false)
 })
 
+test('planRefineOnMemberSave warns on bat node wrapper', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-plan-wrap-'))
+  const bat = path.join(dir, 'run.bat')
+  fs.writeFileSync(bat, '@echo off\r\nnode index.mjs %*\r\n', 'utf8')
+  const member = {
+    kind: MEMBER_KIND.SCRIPT,
+    display_name: '包装',
+    config: {
+      refine: { enabled: true },
+      script: { mode: 'file', filePath: bat, scriptWorkDir: dir },
+    },
+  }
+  const plan = planRefineOnMemberSave(member)
+  assert.ok(plan.warnings?.some((w) => w.code === 'bat_wrapper'))
+})
+
 test('previewRefineVerify simulates before first patch', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-preview-'))
   const bat = path.join(dir, 'p.bat')

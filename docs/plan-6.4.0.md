@@ -97,11 +97,11 @@ furnaceSituation.syncFurnaceSessionContext
 
 ### 4.1 Skill 内容与仓库
 
-- [ ] **FSK-01 P0** 新增 `skills/furnace-core/SKILL.md`、`skills/furnace-acw-ctl/SKILL.md`（从 `session.md` + `composeAgentsInner` **搬迁**，删重复）。
-- [ ] **FSK-02 P0** 落地 `skills/furnace-refine-skill/SKILL.md`（承接 6.3 RFN-SKILL-01）。
-- [ ] **FSK-03 P1** 新增 `skills/furnace-review/SKILL.md`（从 `prompts/review.md`）。
-- [ ] **FSK-04 P1** Skill frontmatter 统一：`name` / `description` / `version` / `acw.minVersion`。
-- [ ] **FSK-05 P2** 设置页「熔炉 Skills」：列出版本、一键「同步到工作区」、复制单 Skill 正文（外部 Agent 仍用 agent-refine-skill 入口）。
+- [x] **FSK-01 P0** 新增 `skills/furnace-core/SKILL.md`、`skills/furnace-acw-ctl/SKILL.md`（从 `session.md` + `composeAgentsInner` **搬迁**，删重复）。
+- [x] **FSK-02 P0** 落地 `skills/furnace-refine-skill/SKILL.md`（承接 6.3 RFN-SKILL-01）。
+- [x] **FSK-03 P1** 新增 `skills/furnace-review/SKILL.md`（从 `prompts/review.md`）。
+- [x] **FSK-04 P1** Skill frontmatter 统一：`name` / `description` / `version` / `acw.minVersion`。
+- [x] **FSK-05 P2** 设置页「熔炉 Skills」：列出版本、一键「同步到工作区」、复制单 Skill 正文（外部 Agent 仍用 agent-refine-skill 入口）。
 
 ### 4.2 运行时同步与瘦身
 

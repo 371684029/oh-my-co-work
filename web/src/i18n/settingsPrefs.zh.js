@@ -85,6 +85,17 @@ export const settingsPrefsZh = {
     flowHuman: '人工流转',
     save: '保存熔炉配置',
   },
+  furnaceSkills: {
+    title: '熔炉 Skills',
+    hint: '本机 Grok 工作区 .grok/skills/ 下的操作手册（与仓库 skills/ 同步）。开熔炉时默认自动同步；也可手动刷新。',
+    workspace: '工作目录',
+    colId: 'Skill',
+    colVersion: '版本',
+    colDesc: '说明',
+    sync: '同步到 Grok 工作区',
+    syncOk: '已同步 {n} 个 Skill',
+    syncFail: '同步失败',
+  },
   grok: {
     title: 'Grok Build',
     hintPrefix:

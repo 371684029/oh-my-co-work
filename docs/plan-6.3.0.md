@@ -142,27 +142,27 @@ sequenceDiagram
 
 ### 5.1 文档与心智（RFN-DOC）
 
-- [ ] **RFN-D01 P0** 更新 `guide-script.md`：§3 增「对接模型」图与端到端表；删除与 adapt 对立表述。
-- [ ] **RFN-D02 P0** `Members.vue` / i18n：炼化 hint = 注入输入 + 稳定产出 + 保存改源 + 试跑/还原一句说完。
-- [ ] **RFN-D03 P1** 设置内嵌只读 `refine.format` 摘要组件。
+- [x] **RFN-D01 P0** 更新 `guide-script.md`：§3 增「对接模型」图与端到端表；删除与 adapt 对立表述。
+- [x] **RFN-D02 P0** `Members.vue` / i18n：炼化 hint = 注入输入 + 稳定产出 + 保存改源 + 试跑/还原一句说完。
+- [x] **RFN-D03 P1** 设置内嵌只读 `refine.format` 摘要组件。
 
 ### 5.2 产出路径（RFN-IO）
 
-- [ ] **RFN-IO-01 P0** `refine.js` / `extractMessageText`：jsonl `result`、终端 summary 与 stdout 统一进入炼化（单测）。
-- [ ] **RFN-IO-02 P0** 承接 6.2 **DOC-IO-01～02**：step 台账可编辑保存。
-- [ ] **RFN-IO-03 P1** 节点失败且 `verifyFailed` 时，流程轨/设置抽屉深链还原 + 文档 step。
+- [x] **RFN-IO-01 P0** `refine.js` / `extractMessageText`：jsonl `result`、终端 summary 与 stdout 统一进入炼化（单测）。
+- [x] **RFN-IO-02 P0** 承接 6.2 **DOC-IO-01～02**：step 台账可编辑保存。
+- [x] **RFN-IO-03 P1** 节点失败且 `verifyFailed` 时，流程轨/设置抽屉深链还原 + 文档 step。
 
 ### 5.3 炼化改造工具（RFN-SRC）
 
-- [ ] **RFN-SRC-01 P1** 保存炼化：`refine/plan` 抽屉默认展开契约 diff 摘要（已有数据，只调 UI）。
-- [ ] **RFN-SRC-02 P2** bat 包装检测警告（不阻断，可设置关闭）。
-- [ ] **RFN-SRC-03 P2** 熔炉 prompt 与 `acw-ctl` 帮助文案统一为「炼化契约」。
+- [x] **RFN-SRC-01 P1** 保存炼化：`refine/plan` 抽屉默认展开契约 diff 摘要（已有数据，只调 UI）。
+- [x] **RFN-SRC-02 P2** bat 包装检测警告（不阻断，可设置关闭）。
+- [x] **RFN-SRC-03 P2** 熔炉 prompt 与 `acw-ctl` 帮助文案统一为「炼化契约」。
 
 ### 5.4 测试与发布
 
-- [ ] **RFN-T01 P0** 扩展 `refineRoundtrip` / `memberVerify` 场景矩阵（cmd/ps1/sh/node 各一例）文档化在 `spec-selftest.md`。
-- [ ] **RFN-T02 P1** 冒烟：炼化成员保存 → verify 绿 → 开聊一步 → 文档中心 step 输出含 `###`。
-- [ ] **REL-01 P1** 版本号 / CHANGELOG 条目「6.3 炼化 IO 对接」。
+- [x] **RFN-T01 P0** 扩展 `refineRoundtrip` / `memberVerify` 场景矩阵（cmd/ps1/sh/node 各一例）文档化在 `spec-selftest.md`。
+- [x] **RFN-T02 P1** 冒烟：炼化成员保存 → verify 绿 → 开聊一步 → 文档中心 step 输出含 `###`。
+- [x] **REL-01 P1** 版本号 / CHANGELOG 条目「6.3 炼化 IO 对接」。
 
 ### 5.5 熔炉 Skill（RFN-SKILL）— 要不要、做什么
 

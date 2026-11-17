@@ -366,6 +366,8 @@ export const strings = {
       revertStep: '回退本步改动',
       journalPathPrefix: '台账：',
       openInDocsHub: '在文档中心打开',
+      refineFailDocs: '文档中心修正产出',
+      refineFailMembers: '成员炼化 / 还原',
       currentBarOffsite: '临时协助',
       currentBarNeedsHuman: '待确认',
       currentBarCurrent: '当前节点',

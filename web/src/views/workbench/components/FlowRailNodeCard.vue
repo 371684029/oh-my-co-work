@@ -84,6 +84,14 @@
           <div class="flow-io-label">{{ flowRailIoOutputLabel() }}</div>
           <pre class="flow-io-pre">{{ formatIo(node.output, 'output') }}</pre>
         </div>
+        <div
+          v-if="node.status === 'failed' && node.journalPath"
+          class="flow-refine-fail-links"
+        >
+          <router-link :to="docsHubStepLink(node)">{{ flowRailRefineFailDocs() }}</router-link>
+          ·
+          <router-link to="/settings/members">{{ flowRailRefineFailMembers() }}</router-link>
+        </div>
         <div v-if="node.journalPath" class="flow-io-path">
           {{ flowRailJournalPathPrefix() }}{{ node.journalPath }}
           <el-button size="small" text type="primary" @click.stop="openNodeJournal(node)">
@@ -96,6 +104,8 @@
 </template>
 
 <script setup>
+import { useRoute } from 'vue-router'
+import { journalPathToDocFile } from '../../../composables/messageDocLinks.js'
 import {
   flowRailCollapseLabel,
   flowRailExpandLabel,
@@ -105,6 +115,8 @@ import {
   flowRailJournalPathPrefix,
   flowRailMetaGatePending,
   flowRailOpenInDocsHub,
+  flowRailRefineFailDocs,
+  flowRailRefineFailMembers,
   flowRailRevertStepButton,
 } from '../composables/flowRailCopy.js'
 import {
@@ -140,6 +152,14 @@ defineProps({
 defineEmits(['revert'])
 
 const flowStore = useFlowStore()
+const route = useRoute()
+
+function docsHubStepLink(node) {
+  const sessionId = route.params.id || route.query.sessionId
+  const name = journalPathToDocFile(node?.journalPath)
+  if (!sessionId || !name) return { path: '/docs' }
+  return { path: '/docs', query: { sessionId: String(sessionId), name } }
+}
 
 function openNodeJournal(n) {
   flowRailOpenNodeJournal(n, { openDocsHub })

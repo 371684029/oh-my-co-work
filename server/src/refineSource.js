@@ -25,6 +25,44 @@ import { REFINE_MARK, stripRefineContractText } from './refineContractStrip.js'
 
 export { REFINE_MARK }
 
+function isBatWrapperScript(text) {
+  const body = String(text || '')
+  if (!/\bnode\b/i.test(body)) return false
+  const lines = body.split(/\r?\n/).filter((line) => {
+    const t = line.trim().toLowerCase()
+    return t && !t.startsWith('rem ') && !t.startsWith('@echo') && t !== '@echo off'
+  })
+  return lines.length <= 6
+}
+
+/** RFN-SRC-02：.bat/.cmd 仅转发 node 时提示改炼化真实入口（不阻断）。 */
+export function detectRefineBatWrapperWarnings(member) {
+  if (getAppSettings().furnace?.warnBatWrapper === false) return []
+  const paths = collectAdaptSourcePaths(member)
+  const warnings = []
+  for (const filePath of paths) {
+    const abs = String(filePath || '').trim()
+    if (!abs) continue
+    const ext = path.extname(abs).toLowerCase()
+    if (ext !== '.bat' && ext !== '.cmd') continue
+    let text = ''
+    try {
+      text = fs.readFileSync(abs, 'utf8')
+    } catch {
+      continue
+    }
+    if (isBatWrapperScript(text)) {
+      warnings.push({
+        code: 'bat_wrapper',
+        path: abs,
+        message:
+          '该 .bat 更像启动包装：建议在设置里把脚本入口改为 node *.mjs 并炼化业务文件，.bat 仅保留本地双击。',
+      })
+    }
+  }
+  return warnings
+}
+
 function nlOf(text) {
   return text.includes('\r\n') ? '\r\n' : '\n'
 }
@@ -171,7 +209,8 @@ export function planRefineOnMemberSave(member) {
   let reason = assess.ok ? 'ok' : assess.reason
   if (assess.ok && !needPatch.length) reason = 'already'
   else if (assess.ok && files.some((x) => x.willPatch)) reason = 'will_patch'
-  return { ok: assess.ok, reason, title, files, fileCount: needPatch.length }
+  const warnings = detectRefineBatWrapperWarnings(member)
+  return { ok: assess.ok, reason, title, files, fileCount: needPatch.length, warnings }
 }
 
 export function applyRefineOnMemberSave(member) {

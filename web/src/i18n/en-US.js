@@ -366,6 +366,8 @@ export const strings = {
       revertStep: 'Revert step changes',
       journalPathPrefix: 'Journal:',
       openInDocsHub: 'Open in docs hub',
+      refineFailDocs: 'Fix output in docs hub',
+      refineFailMembers: 'Member refine / restore',
       currentBarOffsite: 'Off-site assist',
       currentBarNeedsHuman: 'Needs confirm',
       currentBarCurrent: 'Current step',

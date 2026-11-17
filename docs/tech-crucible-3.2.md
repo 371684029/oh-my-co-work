@@ -161,9 +161,24 @@
 
 ---
 
-## 9. 验收
+## 9. Skills 化（6.4 增补）
 
-- 开聊后 `SITUATION.md` 能列出每个节点的类型、执行者、适配/闸门标记、状态，并标出「现在」。
+本机 Grok 熔炉的**定制操作手册**迁到仓库 `skills/furnace-*/SKILL.md`，由引擎同步到工作区 `.grok/skills/`。`AGENTS.md` 标记块只做薄引导（身份 + 本轮 Skill 列表 +「此刻」摘要）；长文情境仍在 `ACTIVE.md`。
+
+| 原载体 | 6.4 主维护 |
+| --- | --- |
+| `composeAgentsInner` 内 acw-ctl 手册 | `furnace-acw-ctl` Skill |
+| `prompts/session.md` 通用原则 | `furnace-core` Skill |
+| 炼化改源说明 | `furnace-refine-skill` Skill |
+| `prompts/*.md` 角色壳 | 过渡期仍写入 ACTIVE「Prompt」节，与 Skill 冲突时以 Skill 为准 |
+
+设置 → 偏好 → **熔炉 Skills** 可手动同步；`furnace.syncSkills` 关闭后仅写 ACTIVE。
+
+---
+
+## 10. 验收
+
+- 开聊后 `SITUATION.md` 能列出每个节点的类型、执行者、炼化/闸门标记、状态，并标出「现在」。
 - 换到适配步 / 熔炉闸门时，角色壳变、节点一览还在，「当前节点」对准那一格。
 - 群标题叫什么都可以；地图不依赖「工作总结」这种场景词。
 - `npm test` 覆盖节点一览编译与换壳保留地图。

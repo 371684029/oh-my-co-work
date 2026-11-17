@@ -111,6 +111,42 @@
             {{ membersT('form.verifyProbe') }}
           </el-button>
           <div v-if="verifyLastHint" class="field-hint">{{ verifyLastHint }}</div>
+          <div v-if="form.refine && refineFormatSummary" class="field-hint refine-format-box">
+            <div>{{ membersT('form.refineFormatTitle') }}</div>
+            <div>
+              {{ membersT('form.refineFormatHeading') }}：<code>{{ refineFormatSummary.title }}</code>
+            </div>
+            <div v-if="refineFormatSummary.env?.length">
+              {{ membersT('form.refineFormatEnv') }}：{{ refineFormatSummary.env.join(', ') }}
+            </div>
+            <div>
+              {{ membersT('form.refineFormatOut') }}：{{ refineFormatSummary.output }}
+            </div>
+          </div>
+          <el-collapse
+            v-if="form.refine && form.kind === 'script'"
+            v-model="refinePlanCollapse"
+            class="refine-plan-collapse"
+          >
+            <el-collapse-item :title="membersT('form.refinePlanTitle')" name="plan">
+              <el-button size="small" plain :loading="refinePlanLoading" @click="loadRefinePlanPreview">
+                {{ membersT('form.refinePlanRefresh') }}
+              </el-button>
+              <pre class="refine-plan-pre">{{ refinePlanPreviewText || membersT('form.refinePlanEmpty') }}</pre>
+            </el-collapse-item>
+          </el-collapse>
+          <el-alert
+            v-if="form.refine && form._verifyFailed"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="refine-verify-alert"
+            :title="membersT('form.refineVerifyFailedTitle')"
+          >
+            <router-link to="/docs">{{ membersT('form.refineVerifyFailedDocs') }}</router-link>
+            ·
+            <span>{{ membersT('form.refineVerifyFailedRestore') }}</span>
+          </el-alert>
         </el-form-item>
         <el-form-item v-if="form.refine" :label="membersT('form.refineSkillsAgent')">
           <div class="refine-skill-box">
@@ -433,6 +469,19 @@ const viewRow = ref(null)
 const form = ref(emptyForm())
 const refineSkillPrompt = ref(membersRefineSkillFallback())
 const furnaceRefineSkillPrompt = ref('')
+const refinePlanCollapse = ref(['plan'])
+const refinePlanPreviewText = ref('')
+const refinePlanLoading = ref(false)
+
+const refineFormatSummary = computed(() => {
+  const fmt = form.value?.config?.refine?.format
+  if (!fmt || typeof fmt !== 'object') return null
+  const title = String(fmt.title || '').trim()
+  if (!title) return null
+  const env = Array.isArray(fmt.input?.env) ? fmt.input.env : []
+  const out = fmt.output?.channel ? String(fmt.output.channel) : 'stdout'
+  return { title, env, output: out }
+})
 const restoringRefine = ref(false)
 const verifyingMember = ref(false)
 
@@ -451,6 +500,37 @@ async function refreshRefineSkillPrompt() {
     if (r?.prompt) refineSkillPrompt.value = r.prompt
   } catch {
     /* Keep the local fallback copy */
+  }
+}
+
+async function loadRefinePlanPreview() {
+  if (!form.value.refine || form.value.kind !== 'script') return
+  refinePlanLoading.value = true
+  try {
+    const body = memberPayloadFromForm()
+    body.displayName = form.value.displayName?.trim() || body.displayName
+    const plan = await api.members.refinePlan({
+      memberId: form.value._editId || undefined,
+      displayName: body.displayName,
+      kind: body.kind,
+      config: body.config,
+      verifyPreview: true,
+    })
+    const lines = (plan.files || [])
+      .map((f) => {
+        const head = f.willPatch ? `【将改】${f.path}` : `【跳过】${f.path}${f.reason ? ` (${f.reason})` : ''}`
+        const snip = String(f.snippet || '').trim()
+        return snip ? `${head}\n${snip}` : head
+      })
+      .join('\n\n')
+    const warns = (plan.warnings || []).map((w) => `⚠ ${w.message} (${w.path})`).join('\n')
+    refinePlanPreviewText.value = [plan.title ? `标题：${plan.title}` : '', lines, warns]
+      .filter(Boolean)
+      .join('\n\n')
+  } catch (e) {
+    refinePlanPreviewText.value = e?.message || ''
+  } finally {
+    refinePlanLoading.value = false
   }
 }
 
@@ -777,6 +857,8 @@ function fillFromRow(row, { asClone = false } = {}) {
     _editId: asClone ? undefined : row.id,
     _cloneFrom: asClone ? row.id : undefined,
     _verifyLast: row.config?.refine?.verifyLast || null,
+    _verifyFailed: !!row.config?.refine?.verifyFailed,
+    config: row.config ? { ...row.config } : {},
   }
 }
 
@@ -799,6 +881,7 @@ function openEdit(row) {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.edit')
   drawer.value = true
+  if (form.value.refine) loadRefinePlanPreview()
 }
 
 function memberPayloadFromForm() {
@@ -806,8 +889,8 @@ function memberPayloadFromForm() {
   const desc = (form.value.description || '').trim()
   const baseConfig = {}
   if (desc) baseConfig.description = desc
-  const prev =
-    form.value._editId && list.value.find((m) => m.id === form.value._editId)?.config
+  const prev = form.value.config ||
+    (form.value._editId && list.value.find((m) => m.id === form.value._editId)?.config)
   if (prev?.demo) baseConfig.demo = true
   if (form.value.kind === 'echo' && prev?.defaultText) {
     baseConfig.defaultText = prev.defaultText
@@ -932,9 +1015,10 @@ async function save() {
           )
           .join('\n\n')
         const vHint = membersRefineVerifyPreviewHint(plan.verifyPreview)
-        const bodyText = vHint
-          ? `${membersPlanConfirmBody(plan.fileCount, lines)}\n\n${vHint}`
-          : membersPlanConfirmBody(plan.fileCount, lines)
+        const warnLines = (plan.warnings || []).map((w) => `⚠ ${w.message}`).join('\n')
+        let bodyText = membersPlanConfirmBody(plan.fileCount, lines)
+        if (vHint) bodyText = `${bodyText}\n\n${vHint}`
+        if (warnLines) bodyText = `${bodyText}\n\n${warnLines}`
         await ElMessageBox.confirm(
           bodyText,
           membersConfirm('planTitle'),
@@ -978,6 +1062,14 @@ async function remove(row) {
   }
 }
 
+watch(
+  () => form.value.refine,
+  (on) => {
+    if (on && form.value.kind === 'script') loadRefinePlanPreview()
+    else refinePlanPreviewText.value = ''
+  },
+)
+
 onMounted(() => {
   load()
   loadInstallDir()
@@ -1020,6 +1112,21 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
   line-height: 1.45;
 }
+.refine-plan-pre {
+  margin-top: 8px;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-light);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.refine-format-box code {
+  font-size: 12px;
+}
+
 .refine-skill-box {
   display: flex;
   flex-direction: column;

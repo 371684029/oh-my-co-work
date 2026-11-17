@@ -240,6 +240,29 @@
     </section>
 
     <section class="prefs-card">
+      <div class="prefs-title">{{ prefsT('furnaceSkills.title') }}</div>
+      <p class="prefs-hint">{{ prefsT('furnaceSkills.hint') }}</p>
+      <p v-if="furnaceSkillsWorkspace" class="prefs-resolved">
+        {{ prefsT('furnaceSkills.workspace') }}：{{ furnaceSkillsWorkspace }}
+      </p>
+      <el-table v-if="furnaceSkills.length" :data="furnaceSkills" size="small" class="furnace-skills-table">
+        <el-table-column prop="id" :label="prefsT('furnaceSkills.colId')" width="200" />
+        <el-table-column prop="version" :label="prefsT('furnaceSkills.colVersion')" width="88" />
+        <el-table-column prop="description" :label="prefsT('furnaceSkills.colDesc')" />
+      </el-table>
+      <el-button
+        type="primary"
+        plain
+        size="small"
+        class="furnace-skills-sync"
+        :loading="syncingFurnaceSkills"
+        @click="syncFurnaceSkills"
+      >
+        {{ prefsT('furnaceSkills.sync') }}
+      </el-button>
+    </section>
+
+    <section class="prefs-card">
       <div class="prefs-title">{{ prefsT('grok.title') }}</div>
       <p class="prefs-hint">
         {{ prefsT('grok.hintPrefix') }}
@@ -557,6 +580,9 @@ const lastExportTime = ref('')
 const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'tui' })
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
+const furnaceSkills = ref([])
+const furnaceSkillsWorkspace = ref('')
+const syncingFurnaceSkills = ref(false)
 const startupUpdateCheck = ref(true)
 const savingStartupUpdate = ref(false)
 const notifyPrefs = ref({
@@ -651,8 +677,34 @@ async function load() {
       }
     }
     await loadResources()
+    await loadFurnaceSkills()
   } catch (e) {
     ElMessage.error(e.message)
+  }
+}
+
+async function loadFurnaceSkills() {
+  try {
+    const r = await api.furnace.skills()
+    furnaceSkills.value = r.skills || []
+    furnaceSkillsWorkspace.value = r.workspace || ''
+  } catch {
+    furnaceSkills.value = []
+    furnaceSkillsWorkspace.value = ''
+  }
+}
+
+async function syncFurnaceSkills() {
+  syncingFurnaceSkills.value = true
+  try {
+    const r = await api.furnace.syncSkills()
+    const n = Array.isArray(r.synced) ? r.synced.length : 0
+    ElMessage.success(prefsT('furnaceSkills.syncOk').replace('{n}', String(n)))
+    await loadFurnaceSkills()
+  } catch (e) {
+    ElMessage.error(e?.message || prefsT('furnaceSkills.syncFail'))
+  } finally {
+    syncingFurnaceSkills.value = false
   }
 }
 

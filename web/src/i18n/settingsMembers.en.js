@@ -78,6 +78,16 @@ export const settingsMembersEn = {
     refineCopyFurnaceSkill: 'Copy furnace refine skill summary',
     refineFurnaceSkillHint:
       'For local Grok furnace; full steps in skills/furnace-refine-skill/SKILL.md (synced to .grok/skills on launch).',
+    refineFormatTitle: 'Saved refine spec (read-only)',
+    refineFormatHeading: 'Doc title',
+    refineFormatEnv: 'Input env',
+    refineFormatOut: 'Output channel',
+    refinePlanTitle: 'Pre-save contract preview (expanded)',
+    refinePlanRefresh: 'Refresh preview',
+    refinePlanEmpty: 'Save or refresh to see ACW-REFINE snippets.',
+    refineVerifyFailedTitle: 'Probe failed',
+    refineVerifyFailedDocs: 'Fix output in docs hub',
+    refineVerifyFailedRestore: 'Use Restore above or docs hub refine restore center',
     refineSkillHint1:
       'When using an external agent such as Cursor, copy this prompt and paste it to the agent. The agent will call ',
     refineSkillHint2:

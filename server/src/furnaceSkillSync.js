@@ -65,3 +65,17 @@ export function listBundledFurnaceSkills() {
     fs.existsSync(path.join(skillSourceDir(id), 'SKILL.md')),
   )
 }
+
+function readSkillFrontmatter(id) {
+  const file = path.join(skillSourceDir(id), 'SKILL.md')
+  if (!fs.existsSync(file)) return { id, version: '', description: '' }
+  const text = fs.readFileSync(file, 'utf8')
+  const version = String(text.match(/^version:\s*(.+)$/m)?.[1] || '').trim()
+  const description = String(text.match(/^description:\s*(.+)$/m)?.[1] || '').trim()
+  const name = String(text.match(/^name:\s*(.+)$/m)?.[1] || id).trim()
+  return { id, name, version, description, repoPath: `skills/${id}/SKILL.md` }
+}
+
+export function listFurnaceSkillsCatalog() {
+  return listBundledFurnaceSkills().map((id) => readSkillFrontmatter(id))
+}

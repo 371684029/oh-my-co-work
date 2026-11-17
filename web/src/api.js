@@ -326,6 +326,10 @@ export const api = {
   heartbeat: () => req('/heartbeat', { method: 'POST', body: '{}' }),
   clientGone: () => req('/client-gone', { method: 'POST', body: '{}' }),
   shutdown: () => req('/shutdown', { method: 'POST', body: '{}' }),
+  furnace: {
+    skills: () => req('/furnace/skills'),
+    syncSkills: () => req('/furnace/skills/sync', { method: 'POST' }),
+  },
   grok: {
     status: () => req('/grok/status'),
   },

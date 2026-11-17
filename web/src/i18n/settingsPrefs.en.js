@@ -85,6 +85,17 @@ export const settingsPrefsEn = {
     flowHuman: 'Human routing',
     save: 'Save furnace settings',
   },
+  furnaceSkills: {
+    title: 'Furnace skills',
+    hint: 'Skill manuals under the Grok workspace .grok/skills/ (synced from repo skills/). Auto-sync on furnace launch; manual refresh here.',
+    workspace: 'Workspace',
+    colId: 'Skill',
+    colVersion: 'Version',
+    colDesc: 'Description',
+    sync: 'Sync to Grok workspace',
+    syncOk: 'Synced {n} skill(s)',
+    syncFail: 'Sync failed',
+  },
   grok: {
     title: 'Grok Build',
     hintPrefix:

@@ -156,6 +156,19 @@ curl -o /dev/null -w "%{http_code}" http://127.0.0.1:3979/docs                  
 
 ---
 
+## 8.1 炼化矩阵（6.3 · RFN-T01）
+
+| 场景 | 单测 / 脚本 |
+| --- | --- |
+| Node `.mjs` plan + verify 预览 | `server/test/refinePlan.test.js` |
+| 炼化字段端到端台账 | `server/test/refineField.test.js` |
+| cmd/ps1/sh 契约插入 | `server/test/refineSource.test.js`、`refineRestore.test.js` |
+| memberVerify 探针 | `server/test/memberVerify.test.js` |
+| 熔炉 Skills 同步 | `server/test/furnaceSkillSync.test.js`、`node scripts/selftest-furnace-skills.mjs` |
+| 炼化冒烟 | `node scripts/selftest-refine-smoke.mjs` |
+
+---
+
 ## 9. 新增测试的约定（checklist）
 
 - [ ] 放 `server/test/*.test.js`（或 web 纯逻辑 `web/test/*.test.mjs`），`node:test` + `assert/strict`，**不引第三方测试库**

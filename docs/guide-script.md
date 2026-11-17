@@ -4,7 +4,7 @@
 |------|------|
 | 状态 | **1.0.0 开发中** · CI03 |
 | 关联 | [tech-data-storage.md](./tech-data-storage.md)、[tech-data-and-ops.md](./tech-data-and-ops.md) §9.1 |
-| 更新日期 | 2026-07-28 |
+| 更新日期 | 2026-11-16 |
 
 面向：在「设置 → 成员」里配置 `script`（file / command）的作者。  
 原则：**一切以成员配置为准**；引擎不包壳、不擅自改 cwd。
@@ -119,6 +119,18 @@
 | `ACW_CWD` / `ACW_FOLDER` / `ACW_SCRIPT_PATH` | 工作目录与脚本路径 |
 
 兼容旧名：`ECW_*` 同步写入。
+
+### 3.0 协同台 ↔ 脚本：输入输出对接（6.3 主叙事）
+
+**熔炉炼化**只做一件事：协同台**注入输入**，脚本产出**稳定正文**进文档中心。不再有单独的「是否适配」产品开关。
+
+| 方向 | 机制 | 脚本的职责 |
+| --- | --- | --- |
+| **输入** | 占位符 `#n` 替换 + `ACW_HUMAN_INPUT` / `ACW_PARAM_*` / `ACW_PARAMS_JSON` + 可选 stdin | 从 env 读参（炼化契约会插入读参代码） |
+| **输出** | stdout 正文（或 JSONL `type:result` 的 summary，终端进阶） | 最先打印 `### 标题`，正文跟在其后 |
+| **落点** | `refineFormatted` → `nodes/step-*.md`「输出」；不准可在文档中心手改台账 | 不要依赖引擎解析 TUI 画面 |
+
+终端常驻（`waitForExit: false`）时，若 stdout 为空，建议在成员上改用 **pipe** 或开启 **JSONL Adapter**（§1.2），以便台账仍能收到 `summary`。
 
 ### 3.1 熔炉炼化契约（保存当下写入源文件）
 
