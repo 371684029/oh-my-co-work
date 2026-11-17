@@ -164,6 +164,39 @@ sequenceDiagram
 - [ ] **RFN-T02 P1** 冒烟：炼化成员保存 → verify 绿 → 开聊一步 → 文档中心 step 输出含 `###`。
 - [ ] **REL-01 P1** 版本号 / CHANGELOG 条目「6.3 炼化 IO 对接」。
 
+### 5.5 熔炉 Skill（RFN-SKILL）— 要不要、做什么
+
+**结论：要，但必须是「熔炉专用炼化 Skill」，不能和现有 `agent-refine-skill` 混为一个。**
+
+| 对象 | 已有 | 缺什么 |
+| --- | --- | --- |
+| **外部 Agent**（Cursor 等） | `skills/agent-refine-skill/SKILL.md` + `POST /api/docs/refine` + 成员抽屉「复制炼化 Skill」 | 只回写**群报告**，**不会**改成员源、`ACW-REFINE`、试跑 verify |
+| **本机熔炉 Grok** | `prompts/refine.md` 角色壳 + `FURNACE_ROLE.REFINE` | `resolveRefineFurnaceRole` **未被 advance 接线**（adapt 删除后熔炉很少自动切 REFINE）；无统一 Skill 教熔炉调 `acw-ctl` / 保存成员炼化 |
+
+**建议拆成两个 Skill（名称固定，避免用户混淆）**
+
+1. **`agent-refine-skill`（保留）**  
+   - 用途：cowork **监听不到的**外部 Agent 干完活后，把输入/改动/结论 **追加到群报告**。  
+   - 触发：`POST /api/docs/refine` 或写 `ANNOUNCEMENT.md`。  
+   - **不**负责给脚本插契约。
+
+2. **`furnace-refine-skill`（新增 · 熔炉专用）**  
+   - 用途：用户在熔炉里说「把这个成员炼化 / 对接 cowork 输入输出」时，熔炉按 checklist **改源 + 备份 + 规格 + 试跑**。  
+   - 应写清：先 `backup-source --kind refine`；遵守 `ACW-REFINE` / `acw-read-params.mjs`；真实入口优先 `node *.mjs` 勿炼 bat 包装；改完后 `PATCH /api/members/:id` 开 `config.refine.enabled` 或引导用户在设置点保存（保存会跑 `applyRefineOnMemberSave`）；`verify-member`；失败走还原中心。  
+   - 落盘：`skills/furnace-refine-skill/SKILL.md`（与现仓库 `skills/` 一致），并 **注入熔炉工作区**（`server/config/furnace` → Grok rules 或会话 `syncFurnaceSessionContext` 可读片段）。
+
+**工程接线（与 Skill 配套，否则 Skill 只停留在文案）**
+
+- [ ] **RFN-SKILL-01 P0** 新增 `skills/furnace-refine-skill/SKILL.md` + `buildFurnaceRefineSkillPrompt()`（可与 `agentRefine.buildRefineSkillPrompt` 并存，内容不同）。
+- [ ] **RFN-SKILL-02 P0** 成员/步骤炼化开启或用户 @熔炉 说「炼化」时：`syncFurnaceSessionContext` 使用 `resolveRefineFurnaceRole({ refine: true })`，加载 `refine.md` + Skill 摘要。
+- [ ] **RFN-SKILL-03 P1** 设置页炼化区增加「复制熔炉炼化 Skill」（外链 skill 路径或内联短 prompt），与「第三方 Agent 炼化 Skill」分开展示。
+- [ ] **RFN-SKILL-04 P2** `acw-ctl.mjs` 帮助与 Skill 交叉引用（`add-member --refine`、`verify-member`、`backup-source`）。
+
+**不建议**
+
+- 用一个大 Skill 同时「改脚本 + 写群报告」——职责混在一起，外部 Agent 会误改本机源文件。  
+- 仅靠 `refine.md` 四行 Grok 短规则、不配套 Skill checklist——熔炉仍容易跳过备份/verify。
+
 ---
 
 ## 六、里程碑与验收
@@ -198,3 +231,4 @@ sequenceDiagram
 1. **终端常驻成员**：默认是否建议在炼化保存时提示「改用 pipe 或开启 JSONL result」？（避免 stdout 空导致台账无正文。）
 2. **format JSON 是否对用户可见可编辑**：6.3 默认只读摘要；若需表单编辑 `title`，可单开 6.4 小版本。
 3. **步骤级 `refine` 勾选**：是否合并进「本步强制按炼化格式化」高级项，避免与成员炼化双勾混淆。
+4. **熔炉 Skill 发布形态**：仅仓库 `skills/` + 设置页复制，还是随安装包同步到用户 `.grok/rules`（默认建议：设置一键「写入熔炉工作区」）。

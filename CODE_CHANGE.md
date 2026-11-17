@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-16 | M | docs/plan-6.3.0.md | §5.5 熔炉 furnace-refine-skill 与 agent-refine-skill 分工
 2026-11-16 | A | docs/plan-6.3.0.md | 熔炉炼化 IO 对接：现状/契约/改进路径与 RFN 清单
 2026-11-16 | M | docs/plan-6.2.0.md, server/src/{engine/{advance,store,sessionLifecycle},services,routes/catalogRoutes}, server/test/{adaptPlan.test.js,refineField.test.js}, web/src/views/{settings/{Members,Groups}.vue,workbench/{components/FlowRailNodeBadges.vue,composables/{sessionDetailInitWatchers,sessionFlowUi}}} | 移除「是否适配」：去 advance 改源路径、删 adapt API/UI，不做迁移
 2026-11-16 | M | docs/plan-6.2.0.md | 增补 REF 炼化合一、DOC-IO 文档中心改产出；明确不分用户分支
