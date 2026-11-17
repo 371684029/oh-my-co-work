@@ -162,13 +162,22 @@ test('openDocsPath opens directories but only the containing dir for files', asy
   await assert.rejects(() => docsHub.openDocsPath(outside, deps), /允许打开/)
 })
 
-test('saveJournalDoc writes step ledger only', () => {
+test('saveJournalDoc writes step ledger and README', () => {
   const session = seedSession('台账编辑')
   writeDoc(session.id, 'nodes/step-03-ed.md', '## 输出\n\n自动')
   const out = docsHub.saveJournalDoc(session.id, 'nodes/step-03-ed.md', '## 输出\n\n人工修正')
   assert.equal(out.kind, 'step')
   assert.equal(docsHub.readDoc(session.id, 'nodes/step-03-ed.md').content, '## 输出\n\n人工修正')
+  writeDoc(session.id, 'README.md', '# 索引\n\n旧')
+  const idx = docsHub.saveJournalDoc(session.id, 'README.md', '# 索引\n\n新')
+  assert.equal(idx.kind, 'index')
+  assert.equal(docsHub.readDoc(session.id, 'README.md').content, '# 索引\n\n新')
   assert.throws(() => docsHub.saveJournalDoc(session.id, 'ANNOUNCEMENT.md', 'x'), /仅允许/)
+  assert.throws(() => docsHub.saveJournalDoc(session.id, 'furnace/archive-x.md', 'x'), /仅允许/)
+})
+
+test('EDITABLE_JOURNAL_KINDS matches DOC-IO whitelist', () => {
+  assert.deepEqual([...docsHub.EDITABLE_JOURNAL_KINDS].sort(), ['index', 'step'])
 })
 
 test('readDoc maps step-*.md alias into nodes/', () => {

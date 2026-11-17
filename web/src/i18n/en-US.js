@@ -717,6 +717,9 @@ export const strings = {
     },
     actions: {
       edit: 'Edit',
+      editAnnounce: 'Edit group report',
+      editStep: 'Edit step ledger',
+      editIndex: 'Edit doc index',
       save: 'Save',
       cancel: 'Cancel',
       readonlyHint: 'Ledger is read-only (audit trail)',

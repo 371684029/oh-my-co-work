@@ -122,7 +122,10 @@ export function docsHubReadingFocusLabel(focus) {
   return focus ? t('docs.reading.exitFocus') : t('docs.reading.focus')
 }
 
-export function docsHubEditLabel() {
+export function docsHubEditLabel(kind) {
+  if (kind === 'step') return t('docs.actions.editStep')
+  if (kind === 'index') return t('docs.actions.editIndex')
+  if (kind === 'announce') return t('docs.actions.editAnnounce')
   return t('docs.actions.edit')
 }
 

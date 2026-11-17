@@ -64,7 +64,7 @@
       <div class="dh-content-actions">
         <template v-if="canEdit">
           <el-button v-if="!editing" size="small" type="primary" @click="startEdit">
-            {{ docsHubEditLabel() }}
+            {{ docsHubEditLabel(file?.kind) }}
           </el-button>
           <template v-else>
             <el-button size="small" type="primary" :loading="saving" @click="save">

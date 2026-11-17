@@ -230,7 +230,7 @@ const currentSession = computed(() => {
 
 const canEdit = computed(() => {
   const k = file.value?.kind
-  return k === 'announce' || k === 'step'
+  return k === 'announce' || k === 'step' || k === 'index'
 })
 const dirty = computed(
   () => editing.value && file.value != null && draft.value !== (file.value.content || ''),
@@ -463,7 +463,7 @@ async function save() {
   const name = current.value.name
   saving.value = true
   try {
-    if (file.value?.kind === 'step') {
+    if (file.value?.kind === 'step' || file.value?.kind === 'index') {
       await api.docs.saveJournal(sessionId, name, draft.value)
     } else {
       await api.docs.saveAnnouncement(sessionId, draft.value)
@@ -474,7 +474,10 @@ async function save() {
     await refreshDocsForSession(sessionId)
     listData.value = await getDocsList(sort.value)
     await loadFile(sessionId, name)
-    ElMessage.success(file.value?.kind === 'step' ? '节点台账已保存' : '群报告已保存')
+    const kind = file.value?.kind
+    const savedMsg =
+      kind === 'step' ? '节点台账已保存' : kind === 'index' ? '文档索引已保存' : '群报告已保存'
+    ElMessage.success(savedMsg)
   } catch (e) {
     ElMessage.error(e?.message || '保存失败')
   } finally {

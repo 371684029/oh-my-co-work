@@ -100,10 +100,10 @@
 
 ### 3.4 文档中心编辑输入/输出（DOC-IO）
 
-- [ ] **DOC-IO-01 P0**：扩展 `canEdit`：除 `announce` 外，允许 `nodes/step-*.md`、`README.md`（与会话导航文件一致的白名单）；只读熔炉归档等只读类不变。
-- [ ] **DOC-IO-02 P0**：复用 `DocsHubContentColumn` 编辑/预览/保存；保存走既有写 journal API；冲突与路径校验与公告相同。
-- [ ] **DOC-IO-03 P1**：编辑按钮文案区分「编辑群报告」/「编辑步骤台账」；保存成功 toast + 可选 `announcement.updated` 同类 WS 刷新工作台链接预览。
-- [ ] **DOC-IO-04 P1**：单测 `useDocsHub` / `docsHub` 白名单；冒烟：打开 step 台账 → 改输出段 → 保存 → 再读一致。
+- [x] **DOC-IO-01 P0**：扩展 `canEdit`：除 `announce` 外，允许 `nodes/step-*.md`、`README.md`（与会话导航文件一致的白名单）；只读熔炉归档等只读类不变。
+- [x] **DOC-IO-02 P0**：复用 `DocsHubContentColumn` 编辑/预览/保存；保存走既有写 journal API；冲突与路径校验与公告相同。
+- [x] **DOC-IO-03 P1**：编辑按钮文案区分「编辑群报告」/「编辑步骤台账」；保存成功 toast + 可选 `announcement.updated` 同类 WS 刷新工作台链接预览。
+- [x] **DOC-IO-04 P1**：单测 `useDocsHub` / `docsHub` 白名单；冒烟：打开 step 台账 → 改输出段 → 保存 → 再读一致。
 
 > **范围说明**：本版**不在文档中心编辑** `config.refine.format` JSON；格式仍以成员设置 + 炼化保存/熔炉为准。用户改的是**已落盘的 Markdown 产出**（输入输出实录），不是改脚本契约。
 

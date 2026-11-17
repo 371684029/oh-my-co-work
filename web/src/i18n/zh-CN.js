@@ -720,6 +720,9 @@ export const strings = {
     },
     actions: {
       edit: '编辑',
+      editAnnounce: '编辑群报告',
+      editStep: '编辑步骤台账',
+      editIndex: '编辑文档索引',
       save: '保存',
       cancel: '取消',
       readonlyHint: '台账为只读（审计留痕）',

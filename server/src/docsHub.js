@@ -446,12 +446,15 @@ export function saveAnnouncement(sessionId, markdown) {
   return out
 }
 
-/** 6.3 DOC-IO：人工修正节点台账 Markdown（仅 nodes/step-*.md）。 */
+/** Whitelist for DOC-IO journal writes (not ANNOUNCEMENT — use saveAnnouncement). */
+export const EDITABLE_JOURNAL_KINDS = new Set(['step', 'index'])
+
+/** 6.3 DOC-IO：人工修正节点台账 / README.md。 */
 export function saveJournalDoc(sessionId, name, markdown) {
   assertSession(sessionId)
   const hit = classify(name)
-  if (!hit || hit.kind !== 'step') {
-    throw Object.assign(new Error('仅允许保存节点台账 step-*.md'), { code: 'NOT_EDITABLE' })
+  if (!hit || !EDITABLE_JOURNAL_KINDS.has(hit.kind)) {
+    throw Object.assign(new Error('仅允许保存节点台账或 README.md'), { code: 'NOT_EDITABLE' })
   }
   const body = String(markdown ?? '')
   if (Buffer.byteLength(body, 'utf8') > MAX_READ_BYTES) {
