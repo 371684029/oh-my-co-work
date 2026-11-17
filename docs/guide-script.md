@@ -136,6 +136,8 @@
 
 成员勾选「熔炉炼化」并点保存后，工作台会立刻改脚本文件（bat/cmd/ps1/sh/py/js），幂等标记 `ACW-REFINE`：
 
+**改源前后 diff**：保存前成员抽屉「契约预览」与保存后 **文档中心 → 节点炼化与还原**（或 `/docs?pane=refine`）展示同一套 **git 式 unified diff**（备份 zip 内文件 vs 当前磁盘）。流程轨上的 git patch 是节点工作区快照，与炼化改源不是同一份 diff。
+
 - 输入：优先读 `ACW_HUMAN_INPUT` / `ACW_PARAM_1`…`ACW_PARAM_n` / `ACW_PARAMS_JSON`；若环境变量为空则回退 `%1` / `argv`。
 - Node 炼化块含 `acwSyncArgvFromEnv`：成员命令只写前几个 `#` 时，仍把 `ACW_PARAM_1…n` 同步进 `process.argv[2…]`（仅 `.js`/`.mjs` 等）。
 - 熔炉改交互读参时勿只读 `ACW_PARAM_3`：自 `#3` 起与 readline 的 `...rest` 一致，可参考 `server/config/furnace/snippets/acw-read-params.mjs`。

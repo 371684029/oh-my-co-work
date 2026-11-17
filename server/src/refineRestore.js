@@ -10,6 +10,7 @@ import {
   writeScriptSource,
 } from './adaptBackup.js'
 import { stripRefineContractText } from './refineContractStrip.js'
+import { buildUnifiedDiff } from './refineDiff.js'
 
 function manifestPathForZip(zipPath) {
   const dir = path.dirname(zipPath)
@@ -75,32 +76,6 @@ function safeMemberDir(id) {
   return String(id || 'member').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80)
 }
 
-function buildLineDiff(beforeText, afterText, maxLines = 160) {
-  const a = String(beforeText || '').split(/\r?\n/)
-  const b = String(afterText || '').split(/\r?\n/)
-  let pre = 0
-  while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++
-  let suf = 0
-  while (
-    suf < a.length - pre &&
-    suf < b.length - pre &&
-    a[a.length - 1 - suf] === b[b.length - 1 - suf]
-  ) {
-    suf++
-  }
-  if (pre === a.length && pre === b.length) return ''
-  const ctxStart = Math.max(0, pre - 2)
-  const aEnd = a.length - suf
-  const bEnd = b.length - suf
-  const ctxAfter = Math.min(b.length, bEnd + 2)
-  const out = []
-  for (let i = ctxStart; i < pre; i++) out.push(`  ${a[i]}`)
-  for (let i = pre; i < aEnd && out.length < maxLines; i++) out.push(`- ${a[i]}`)
-  for (let i = pre; i < bEnd && out.length < maxLines; i++) out.push(`+ ${b[i]}`)
-  for (let i = bEnd; i < ctxAfter && out.length < maxLines; i++) out.push(`  ${b[i]}`)
-  return out.join('\n')
-}
-
 /**
  * 列出某个成员（或全部成员）在 data/backups/{refine,adapt} 下的源码修改历史，附带前后对比。
  */
@@ -132,7 +107,10 @@ export function listMemberSourceHistory(memberId) {
               currentText = ''
             }
           }
-          const diff = beforeBuf && currentExists ? buildLineDiff(beforeText, currentText) : ''
+          const diff =
+            beforeBuf && currentExists
+              ? buildUnifiedDiff(beforeText, currentText, { filePath: f.original })
+              : ''
           return {
             path: f.original,
             bytes: f.bytes || 0,

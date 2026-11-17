@@ -286,9 +286,9 @@
           </el-radio-group>
           <p class="prefs-resolved">{{ prefsT('grok.surfaceHint') }}</p>
         </el-form-item>
-        <el-form-item :label="prefsT('grok.adaptBackup')">
+        <el-form-item :label="prefsT('grok.refineSourceBackup')">
           <el-switch v-model="adaptBackup" />
-          <p class="prefs-resolved">{{ prefsT('grok.adaptBackupHint') }}</p>
+          <p class="prefs-resolved">{{ prefsT('grok.refineSourceBackupHint') }}</p>
         </el-form-item>
       </el-form>
       <el-button type="primary" plain size="small" :loading="savingGrok" @click="saveGrok">

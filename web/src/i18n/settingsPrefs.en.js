@@ -109,8 +109,9 @@ export const settingsPrefsEn = {
     defaultSurface: 'Default furnace surface',
     surfaceTui: 'Full TUI',
     surfaceHint: 'GUI hidden. Use toolbar for fullscreen or return to three-column layout.',
-    adaptBackup: 'Zip backup before editing sources',
-    adaptBackupHint: 'On by default. Backs up scripts under data/backups/adapt before adapt edits.',
+    refineSourceBackup: 'Zip backup before refine edits',
+    refineSourceBackupHint:
+      'On by default. Refine save zips touched scripts to data/backups/refine (legacy adapt zips remain under data/backups/adapt).',
     save: 'Save Grok settings',
   },
   locale: {

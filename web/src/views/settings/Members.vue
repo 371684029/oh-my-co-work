@@ -519,8 +519,8 @@ async function loadRefinePlanPreview() {
     const lines = (plan.files || [])
       .map((f) => {
         const head = f.willPatch ? `【将改】${f.path}` : `【跳过】${f.path}${f.reason ? ` (${f.reason})` : ''}`
-        const snip = String(f.snippet || '').trim()
-        return snip ? `${head}\n${snip}` : head
+        const body = String(f.diffPreview || f.snippet || '').trim()
+        return body ? `${head}\n${body}` : head
       })
       .join('\n\n')
     const warns = (plan.warnings || []).map((w) => `⚠ ${w.message} (${w.path})`).join('\n')
@@ -1006,13 +1006,10 @@ async function save() {
       if (plan?.reason === 'will_patch' && plan.files?.length) {
         const lines = plan.files
           .filter((f) => f.willPatch)
-          .map(
-            (f) =>
-              `· ${f.path}\n  ${String(f.snippet || '')
-                .split('\n')
-                .slice(0, 4)
-                .join('\n  ')}`,
-          )
+          .map((f) => {
+            const body = String(f.diffPreview || f.snippet || '').trim()
+            return `· ${f.path}\n${body.split('\n').map((ln) => `  ${ln}`).join('\n')}`
+          })
           .join('\n\n')
         const vHint = membersRefineVerifyPreviewHint(plan.verifyPreview)
         const warnLines = (plan.warnings || []).map((w) => `⚠ ${w.message}`).join('\n')

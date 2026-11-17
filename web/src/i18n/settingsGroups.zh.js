@@ -77,7 +77,6 @@ export const settingsGroupsZh = {
     offsiteTag: '临时',
     captureParams: '采集项目参数',
     paramBindPlaceholder: '绑定槽位，如 #4,#5（覆盖写入；留空则仅 #a）',
-    adapt: '是否适配',
     refine: '熔炉炼化',
     refineTip: '点保存立刻按炼化契约改该步成员源脚本（ACW 输入 + stdout 标题）；跑完再写入文档中心。',
     moveUp: '上移',

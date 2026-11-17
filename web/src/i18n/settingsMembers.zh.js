@@ -43,20 +43,6 @@ export const settingsMembersZh = {
     displayNamePlaceholder: '如：示例回声',
     desc: '简介',
     descPlaceholder: '可选，一句话说明职责',
-    adapt: '是否适配',
-    adaptHint:
-      '仅新接入或跑不起来时再开。已稳定运行的脚本请关闭，避免每次执行前熔炉改源。与炼化不同：适配走 data/backups/adapt。',
-    adaptPlanWillPatch: '预计节点跑前改写 {n} 个源文件{jsonl}（仅预览，保存不落盘）',
-    adaptPlanJsonlSuffix: '，并将打开 jsonl 适配',
-    adaptPlanAlready: '源文件已含适配标记，预计不会重复改写',
-    adaptPlanNoSource: '未找到可适配脚本路径；运行时将回落仅打步骤标记',
-    adaptPlanReason: {
-      adapt_disabled: '未勾选适配',
-      no_source: '未找到可适配脚本路径',
-      already: '源文件已含适配标记',
-      unreadable: '脚本路径不可读',
-      fallback: '部分源不可写，运行时将回落',
-    },
     refine: '熔炉炼化',
     refineTip:
       '点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。',
@@ -172,6 +158,8 @@ export const settingsMembersZh = {
     plain: '已保存；源文件已按炼化契约处理',
     verifyOk: '试跑验证通过',
     verifyFail: '试跑未通过：{detail}',
+    viewDiff: '文档中心「炼化与还原」可查看 git 式 diff',
+    backupDisabled: '未改源：请在偏好开启「炼化改源前备份」',
   },
   cloneName: '{name} 副本',
   toast: {

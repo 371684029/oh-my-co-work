@@ -22,6 +22,7 @@ import {
   nodeRefineArgvSyncSnippet,
 } from './refineArgvSync.js'
 import { REFINE_MARK, stripRefineContractText } from './refineContractStrip.js'
+import { buildUnifiedDiff } from './refineDiff.js'
 
 export { REFINE_MARK }
 
@@ -198,10 +199,17 @@ export function planRefineOnMemberSave(member) {
   for (const f of needPatch) {
     const r = computeRefineContractContent(f.path, { title })
     if (r.ok) {
+      let before = ''
+      try {
+        before = fs.readFileSync(f.path, 'utf8')
+      } catch {
+        before = ''
+      }
       const idx = r.next.indexOf(REFINE_MARK)
       const snippet =
         idx >= 0 ? r.next.slice(idx, idx + 520) : r.next.slice(0, 520)
-      files.push({ path: f.path, snippet, willPatch: true })
+      const diffPreview = buildUnifiedDiff(before, r.next, { filePath: f.path })
+      files.push({ path: f.path, snippet, diffPreview, willPatch: true })
     } else {
       files.push({ path: f.path, willPatch: false, reason: r.reason })
     }
@@ -262,15 +270,21 @@ export function applyRefineOnMemberSave(member) {
   if (assess.ok && !filesToTouch.length) {
     reason = 'already'
   } else if (assess.ok) {
-    try {
-      backup = createAdaptBackup({
-        files: filesToTouch,
-        memberId: member.id,
-        kind: 'refine',
-      })
-    } catch {
-      reason = 'backup_failed'
+    const backupEnabled = getAppSettings().adapt?.backup !== false
+    if (!backupEnabled) {
+      reason = 'backup_disabled'
       backup = null
+    } else {
+      try {
+        backup = createAdaptBackup({
+          files: filesToTouch,
+          memberId: member.id,
+          kind: 'refine',
+        })
+      } catch {
+        reason = 'backup_failed'
+        backup = null
+      }
     }
     if (reason === 'ok') {
       const staged = []

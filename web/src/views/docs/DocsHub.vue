@@ -219,6 +219,8 @@ onMounted(async () => {
   if (sid && fname) {
     expandFor(String(sid))
     await selectFile(String(sid), String(fname), { force: true })
+  } else if (route.query.pane === 'refine') {
+    openRefineLedger()
   }
 })
 

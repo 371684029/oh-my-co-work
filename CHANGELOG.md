@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.5.0 — 炼化改源 unified diff
+
+- 保存前 `refine/plan` 与文档中心还原区共用 `buildUnifiedDiff`（git 式 `@@` hunk）。
+- 关闭「炼化改源前备份」时不再改写源文件（`backup_disabled`）。
+- 文档中心 `/docs?pane=refine`；成员保存 toast 提示查看 diff。
+- 清理遗留「是否适配」文案与 API 客户端；偏好备份文案对齐炼化。
+
 ## 6.4.0 — 熔炉 Skill 化 + 炼化 IO 收口
 
 - 熔炉 Grok：`skills/furnace-*` 同步至 `.grok/skills/`；`AGENTS.md` 瘦身；`ACTIVE.md` 列 Skills。

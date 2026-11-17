@@ -117,13 +117,6 @@ export function furnaceSkillsForRole(role) {
   const list = FURNACE_ROLE_SKILLS[role]
   return list ? [...list] : ['furnace-core']
 }
-/** @deprecated 6.2+ 产品已移除「是否适配」；保留常量仅供旧 UI 只读兼容。 */
-export const ADAPT_OPTION_HOVER =
-  '（已废弃）历史「是否适配」能力已并入熔炉炼化；请勿再开启适配。'
-
-export const REFINE_VS_ADAPT_HINT =
-  '炼化=保存时写 ACW 输入/stdout 契约；适配=每次执行前熔炉改代码。推荐：入口用 node index.mjs，炼化开、适配关；.bat 仅本地双击用。'
-
 export function isFurnaceMember(m) {
   if (!m) return false
   const name = String(m.name || '')

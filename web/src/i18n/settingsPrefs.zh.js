@@ -109,9 +109,9 @@ export const settingsPrefsZh = {
     defaultSurface: '开熔炉默认',
     surfaceTui: '铺满 TUI',
     surfaceHint: 'GUI 入口已隐藏。工具栏可「满屏 / 退出满屏」或缩小回三栏。',
-    adaptBackup: '改源文件前打压缩包备份',
-    adaptBackupHint:
-      '默认开。只备份即将改动的脚本，写到 data/backups/adapt。改失败则不改文件，只打步骤标记。',
+    refineSourceBackup: '炼化改源前打压缩包备份',
+    refineSourceBackupHint:
+      '默认开。保存炼化前为即将改动的脚本打 zip，落在 data/backups/refine（历史适配备份仍在 data/backups/adapt）。',
     save: '保存 Grok 配置',
   },
   locale: {

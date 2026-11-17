@@ -28,6 +28,7 @@ test('planRefineOnMemberSave lists files without writing', () => {
   assert.equal(plan.reason, 'will_patch')
   assert.equal(plan.files.length, 1)
   assert.match(plan.files[0].snippet, /ACW-REFINE/)
+  assert.match(plan.files[0].diffPreview || '', /@@ -/)
   assert.equal(fs.readFileSync(bat, 'utf8').includes('ACW-REFINE'), false)
 })
 

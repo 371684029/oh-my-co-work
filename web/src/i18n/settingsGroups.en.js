@@ -77,7 +77,6 @@ export const settingsGroupsEn = {
     offsiteTag: 'Temp',
     captureParams: 'Capture project params',
     paramBindPlaceholder: 'Bind slots e.g. #4,#5 (overwrite)',
-    adapt: 'Adapt',
     refine: 'Furnace refine',
     refineTip:
       'On save, this step member\'s source script is rewritten per the refine contract (ACW input + stdout title); output goes to the docs hub after the run.',

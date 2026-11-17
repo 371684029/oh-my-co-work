@@ -4,7 +4,7 @@
       <div>
         <div class="rl-title">节点炼化与源码修改记录</div>
         <p class="rl-sub">
-          展示熔炉炼化/适配时对成员脚本的修改备份，以及工作流各节点执行前后的 Git 代码改动，支持一键还原。
+          炼化改源 diff 为「备份 zip 内文件 → 当前磁盘」的 git 式对比；节点区为工作区 git 快照 patch，二者不同。
         </p>
       </div>
       <el-button size="small" plain :loading="loading" @click="load">刷新</el-button>
@@ -12,19 +12,18 @@
 
     <div v-if="loading" class="rl-empty">加载中…</div>
     <div v-else-if="!refineMembers.length && !sessions.length" class="rl-empty">
-      暂无炼化或节点代码修改记录。开启成员/步骤的「炼化」或「适配」，或运行产生文件改动的节点后，修改记录与还原入口会显示在这里。
+      暂无炼化或节点代码修改记录。为成员开启「炼化」并保存，或运行产生文件改动的节点后，备份与还原入口会显示在这里。
     </div>
 
     <template v-else>
       <section v-if="refineMembers.length" class="rl-section">
-        <h4 class="rl-sec-title">成员炼化 / 适配源码备份</h4>
+        <h4 class="rl-sec-title">成员炼化源码备份</h4>
         <div v-for="m in refineMembers" :key="m.id" class="rl-card">
           <div class="rl-card-head">
             <div class="rl-card-main">
               <strong>{{ m.name }}</strong>
               <span v-if="m.refineEnabled" class="rl-tag rl-tag--ok">已开启炼化</span>
-              <span v-else-if="m.adaptEnabled" class="rl-tag rl-tag--adapt">已开启适配</span>
-              <span v-else class="rl-tag">已还原</span>
+              <span v-else class="rl-tag">未开启炼化</span>
             </div>
             <el-button
               v-if="m.refineBackup || m.history?.length"
@@ -67,8 +66,8 @@
           <div v-if="m.history?.length" class="rl-history">
             <div v-for="h in m.history" :key="h.id" class="rl-hist-item">
               <div class="rl-hist-bar">
-                <span class="rl-tag" :class="h.kind === 'refine' ? 'rl-tag--refine' : 'rl-tag--adapt'">
-                  {{ h.kind === 'refine' ? '炼化' : '适配' }}
+                <span class="rl-tag" :class="h.kind === 'refine' ? 'rl-tag--refine' : 'rl-tag--legacy'">
+                  {{ h.kind === 'refine' ? '炼化' : '历史备份' }}
                 </span>
                 <span class="rl-time">{{ fmtTime(h.createdAt) }}</span>
                 <span class="rl-files-count">{{ h.files?.length || 0 }} 个文件</span>
@@ -90,7 +89,10 @@
                     {{ f.diff ? (openDiffs[`${h.id}:${f.path}`] ? '收起修改对比' : '查看修改对比') : '与备份一致' }}
                   </span>
                 </div>
-                <pre v-if="f.diff && openDiffs[`${h.id}:${f.path}`]" class="rl-diff">{{ f.diff }}</pre>
+                <pre
+                  v-if="f.diff && openDiffs[`${h.id}:${f.path}`]"
+                  class="rl-diff flow-io-pre flow-io-pre--diff"
+                >{{ f.diff }}</pre>
               </div>
             </div>
           </div>
@@ -172,11 +174,7 @@ const openDiffs = reactive({})
 const refineMembers = computed(() =>
   (data.value?.members || []).filter(
     (m) =>
-      m.refineEnabled ||
-      m.refineBackup ||
-      m.adaptEnabled ||
-      m.adaptBackup ||
-      (m.history && m.history.length),
+      m.refineEnabled || m.refineBackup || m.adaptBackup || (m.history && m.history.length),
   ),
 )
 const sessions = computed(() => data.value?.sessions || [])
@@ -372,7 +370,7 @@ onMounted(load)
   background: rgba(0, 122, 255, 0.12);
   color: #0066cc;
 }
-.rl-tag--adapt {
+.rl-tag--legacy {
   background: rgba(255, 149, 0, 0.15);
   color: #b25000;
 }
@@ -439,6 +437,22 @@ onMounted(load)
   font-size: 11.5px;
   color: #0066cc;
   white-space: nowrap;
+}
+.flow-io-pre {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+}
+.flow-io-pre--diff {
+  color: var(--ecw-text-1, #0b0c0f);
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 .rl-diff,
 .rl-stat-block {

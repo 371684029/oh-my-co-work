@@ -1,3 +1,4 @@
+/** Zip/manifest helpers shared by refine save and legacy adapt paths (6.2+ product adapt removed). */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'

@@ -96,7 +96,7 @@
 - [x] **REF-02 P0 引擎**：`advance.js` 去掉 `wantAdapt` 整段；`store.js` / `normalizeSteps` 不再写 adapt。
 - [x] **REF-03 P0 API**：`adapt/plan` 与 `adapt/restore` 返回 410；`updateMember` / `memberRow` 剥离 `config.adapt`。
 - [x] **REF-04 P1 流程轨**：去掉「适配」角标与 adapt 回落 toast。
-- [ ] **REF-05 P1 文档/测试**：删或改 `adaptPlan.test.js`、`adaptBackup.test.js` 中 adapt 专测；`guide-script.md` 与 REF 一致。
+- [x] **REF-05 P1 文档/测试**：删或改 `adaptPlan.test.js`、`adaptBackup.test.js` 中 adapt 专测；`guide-script.md` 与 REF 一致。
 
 ### 3.4 文档中心编辑输入/输出（DOC-IO）
 
@@ -110,7 +110,7 @@
 ### 3.5 文档与发布
 
 - [x] **REL-01 P0** 本文件 + `CODE_CHANGE.md` 台账（随迭代追加）。
-- [ ] **REL-02 P1** `package.json` 版本号与 CHANGELOG（发布时）。
+- [x] **REL-02 P1** `package.json` 版本号与 CHANGELOG（发布时）。
 
 ---
 
@@ -137,9 +137,9 @@
 
 ## 六、验收清单
 
-- [ ] 顶栏放大镜可见；无选中会话亦可搜索并命中多会话结果。
-- [ ] 点击命中跳转正确会话并滚动到消息。
-- [ ] 会话头「完成」归档后状态为已归档，终端/进程释放（与流程走完一致）。
-- [ ] 设置里无「是否适配」；`adapt` API 返回 404/已删；勾选炼化行为与现网一致。
-- [ ] 文档中心可编辑并保存至少一种 `nodes/step-*.md`，修改输入/输出段落后刷新仍可见。
-- [ ] `npm run test`（server + web）通过。
+- [x] 顶栏放大镜可见；无选中会话亦可搜索并命中多会话结果。
+- [x] 点击命中跳转正确会话并滚动到消息。
+- [x] 会话头「完成」归档后状态为已归档，终端/进程释放（与流程走完一致）。
+- [x] 设置里无「是否适配」；`adapt` API 返回 410；勾选炼化行为与现网一致。
+- [x] 文档中心可编辑并保存至少一种 `nodes/step-*.md`，修改输入/输出段落后刷新仍可见。
+- [x] `npm run test`（server + web）通过。
