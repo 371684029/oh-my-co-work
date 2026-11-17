@@ -1,0 +1,67 @@
+/**
+ * Sync bundled furnace skills from repo `skills/` into Grok workspace `.grok/skills/`.
+ */
+import fs from 'node:fs'
+import path from 'node:path'
+import crypto from 'node:crypto'
+import { ROOT } from './db.js'
+import { FURNACE_SKILL_IDS } from '@acw/shared'
+
+const SKILLS_REPO = path.join(ROOT, 'skills')
+
+function skillSourceDir(skillId) {
+  return path.join(SKILLS_REPO, skillId)
+}
+
+function skillDestDir(cwd, skillId) {
+  return path.join(cwd, '.grok', 'skills', skillId)
+}
+
+function hashFile(filePath) {
+  const buf = fs.readFileSync(filePath)
+  return crypto.createHash('sha256').update(buf).digest('hex')
+}
+
+/**
+ * @param {string} cwd Grok / furnace workspace
+ * @param {{ skillIds?: string[] }} [opts]
+ */
+export function syncFurnaceSkillsToWorkspace(cwd, { skillIds } = {}) {
+  const ids = skillIds?.length ? skillIds : [...FURNACE_SKILL_IDS]
+  const resolved = path.resolve(cwd)
+  fs.mkdirSync(path.join(resolved, '.grok', 'skills'), { recursive: true })
+  const synced = []
+  const skipped = []
+  for (const id of ids) {
+    const src = path.join(skillSourceDir(id), 'SKILL.md')
+    if (!fs.existsSync(src)) {
+      skipped.push({ id, reason: 'missing_repo_skill' })
+      continue
+    }
+    const destDir = skillDestDir(resolved, id)
+    const dest = path.join(destDir, 'SKILL.md')
+    fs.mkdirSync(destDir, { recursive: true })
+    const srcHash = hashFile(src)
+    let destHash = null
+    if (fs.existsSync(dest)) {
+      try {
+        destHash = hashFile(dest)
+      } catch {
+        destHash = null
+      }
+    }
+    if (destHash === srcHash) {
+      skipped.push({ id, reason: 'unchanged' })
+      continue
+    }
+    fs.copyFileSync(src, dest)
+    synced.push(id)
+  }
+  return { cwd: resolved, synced, skipped, skillIds: ids }
+}
+
+export function listBundledFurnaceSkills() {
+  return FURNACE_SKILL_IDS.filter((id) =>
+    fs.existsSync(path.join(skillSourceDir(id), 'SKILL.md')),
+  )
+}

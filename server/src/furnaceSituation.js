@@ -16,6 +16,7 @@ import {
   currentFurnaceRole,
   clipFurnaceText,
   SITUATION_LIMITS,
+  resolveFurnaceRoleFromSituation,
 } from './furnaceContext.js'
 import { getAppSettings } from './appSettings.js'
 import {
@@ -49,15 +50,15 @@ function digestOutput(outputJson) {
 function nodeCard(step, node, member) {
   const type = node?.step_type || step?.type || 'member'
   const flow = step?.flow && typeof step.flow === 'object' ? step.flow : {}
-  const adapt = !!(
-    step?.adapt ||
-    parseJson(node?.input_json, {}).adapt
-  )
+  const memberCfg = member ? parseJson(member.config_json, {}) : {}
+  const refineStep = !!(step?.refine || parseJson(node?.input_json, {}).refine)
+  const refineMember = !!memberCfg.refine?.enabled
   return {
     title: node?.title || step?.title || '',
     kind: stepTypeLabel(type),
     member: member?.display_name || member?.name || '',
-    adapt,
+    refineStep,
+    refineMember,
     gateAdmin: !!flow.admin,
     gateHuman: !!flow.human,
     status: node?.status || '',
@@ -164,7 +165,17 @@ export function syncFurnaceSessionContext(
 ) {
   const facts = collectFurnaceSituationFacts(sessionId, { nodeId })
   if (!facts) return null
-  const nextRole = role || (keepRole ? currentFurnaceRole() : FURNACE_ROLE.SESSION)
+  const inferred = resolveFurnaceRoleFromSituation(facts)
+  let nextRole = role
+  if (!nextRole) {
+    if (keepRole) {
+      const cur = currentFurnaceRole()
+      nextRole =
+        inferred === FURNACE_ROLE.REFINE && cur === FURNACE_ROLE.SESSION ? inferred : cur
+    } else {
+      nextRole = inferred
+    }
+  }
   const pack = activateFurnaceRole(nextRole, {
     sessionId,
     nodeId: nodeId || null,

@@ -45,8 +45,12 @@ test('inject writes a compact AGENTS block, including the launch instruction (no
   assert.ok(agents.includes('oh-my-co-work'))
   assert.ok(agents.includes('先把数据拉下来'))
   assert.ok(agents.includes('默认能做用户交代的任何事'))
+  assert.ok(agents.includes('furnace-acw-ctl'))
+  assert.ok(!agents.includes('add-group --title'))
   assert.ok(!agents.includes('只做节点一览'))
   assert.ok(!agents.includes('## Prompt'))
+  const skillFile = path.join(cwd, '.grok', 'skills', 'furnace-core', 'SKILL.md')
+  assert.ok(fs.existsSync(skillFile))
   // 官方 grok CLI 没有能给交互式会话预填第一句话的参数（-p/--single/
   // --prompt-file/--prompt-json 都是单轮问答就退出的无头模式），短启动词
   // 只能跟着规则一起写进 AGENTS.md，交给 grok 自己按目录发现。

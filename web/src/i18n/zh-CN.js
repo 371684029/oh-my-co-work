@@ -190,7 +190,7 @@ export const strings = {
       kickerConnecting: '正在连工作台…',
       kickerStarting: '正在启动本机 {brand}…',
       kickerReadyCursor: '已就绪 · 建议用 TUI 复制粘贴',
-      kickerReadyGrok: '已就绪 · 短规则在 AGENTS.md',
+      kickerReadyGrok: '已就绪 · 熔炉 Skills 已同步',
       kickerNotRunning: '进程未在跑',
       failHeading: '{agent} 没在跑，所以这里是空的',
       failBulletPathBefore: '先确认本机终端能直接运行 ',

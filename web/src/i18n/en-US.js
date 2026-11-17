@@ -190,7 +190,7 @@ export const strings = {
       kickerConnecting: 'Connecting to workbench…',
       kickerStarting: 'Starting local {brand}…',
       kickerReadyCursor: 'Ready · use TUI for copy/paste',
-      kickerReadyGrok: 'Ready · short rules in AGENTS.md',
+      kickerReadyGrok: 'Ready · furnace skills synced',
       kickerNotRunning: 'Process not running',
       failHeading: '{agent} is not running — nothing to show here',
       failBulletPathBefore: 'Confirm the terminal runs ',

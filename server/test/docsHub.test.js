@@ -162,6 +162,15 @@ test('openDocsPath opens directories but only the containing dir for files', asy
   await assert.rejects(() => docsHub.openDocsPath(outside, deps), /允许打开/)
 })
 
+test('saveJournalDoc writes step ledger only', () => {
+  const session = seedSession('台账编辑')
+  writeDoc(session.id, 'nodes/step-03-ed.md', '## 输出\n\n自动')
+  const out = docsHub.saveJournalDoc(session.id, 'nodes/step-03-ed.md', '## 输出\n\n人工修正')
+  assert.equal(out.kind, 'step')
+  assert.equal(docsHub.readDoc(session.id, 'nodes/step-03-ed.md').content, '## 输出\n\n人工修正')
+  assert.throws(() => docsHub.saveJournalDoc(session.id, 'ANNOUNCEMENT.md', 'x'), /仅允许/)
+})
+
 test('readDoc maps step-*.md alias into nodes/', () => {
   const session = seedSession('别名组')
   writeDoc(session.id, 'nodes/step-02-xyz.md', '台账正文')

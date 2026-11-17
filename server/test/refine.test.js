@@ -25,6 +25,13 @@ test('extractMessageText：stdout 优先于 summary', () => {
     }),
     '完整脚本输出\n第二行',
   )
+  assert.equal(
+    extractMessageText({
+      summary: 'PTY 截断摘要',
+      adapterResult: { summary: 'JSONL 完整结论', terminalId: 't1' },
+    }),
+    'JSONL 完整结论',
+  )
 })
 
 test('applyRefineFormat：有 title 包裹 + 去 ANSI；无 title 保原样去 ANSI', () => {

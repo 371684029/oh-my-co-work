@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT, DATA_ROOT } from './db.js'
-import { FURNACE_ROLE, FURNACE_ROLE_LABEL } from '@acw/shared'
+import { FURNACE_ROLE, FURNACE_ROLE_LABEL, furnaceSkillsForRole } from '@acw/shared'
 
 const ROLE_FILES = {
   [FURNACE_ROLE.SESSION]: 'session.md',
@@ -117,7 +117,7 @@ export function formatFurnaceAgendaLine(item, i, nowIndex) {
   const raw = typeof item === 'string' ? { title: item } : item || {}
   const title = raw.title || `步骤 ${n}`
   const flags = []
-  if (raw.adapt) flags.push('适配')
+  if (raw.refineStep || raw.refineMember) flags.push('炼化')
   if (raw.gateAdmin) flags.push('熔炉闸')
   if (raw.gateHuman) flags.push('人闸')
   const meta = [raw.kind, raw.member, ...flags].filter(Boolean).join(' · ')
@@ -148,7 +148,7 @@ export function composeFurnaceSituation(facts = {}) {
   const nowWhat = [
     now.kind,
     now.member ? `执行者 ${now.member}` : '',
-    now.adapt ? '勾了适配' : '',
+    now.refineStep || now.refineMember ? '炼化' : '',
     now.gateAdmin ? '熔炉闸' : '',
     now.gateHuman ? '人闸' : '',
   ]
@@ -198,6 +198,8 @@ export function composeFurnaceContext(role, { situation } = {}) {
       : situation && typeof situation === 'object'
         ? composeFurnaceSituation(situation)
         : ''
+  const skills = furnaceSkillsForRole(role)
+  const skillLines = skills.map((id) => `- \`${id}\` → \`.grok/skills/${id}/SKILL.md\``)
   return [
     `# 熔炉本轮：${label}`,
     '',
@@ -209,7 +211,11 @@ export function composeFurnaceContext(role, { situation } = {}) {
     '',
     sitText || '（尚无会话情境）',
     '',
-    '## Prompt',
+    '## Skills（本轮优先加载）',
+    '',
+    ...skillLines,
+    '',
+    '## Prompt（过渡 · 与 Skills 重复时以 Skill 为准）',
     '',
     prompt || '（缺 prompt 文件）',
     '',
@@ -269,6 +275,7 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
   return {
     role,
     label: FURNACE_ROLE_LABEL[role] || role,
+    skills: furnaceSkillsForRole(role),
     activeMd,
     situationMd,
     situationText: sitText,
@@ -286,4 +293,15 @@ export function resolveAdaptFurnaceRole({ stepAdapt, memberAdapt } = {}) {
 export function resolveRefineFurnaceRole({ refine } = {}) {
   if (refine) return FURNACE_ROLE.REFINE
   return null
+}
+
+/**
+ * 从会话情境推断熔炉角色（6.3/6.4：炼化步或炼化成员 → REFINE）。
+ * @param {object} [facts] collectFurnaceSituationFacts 返回值
+ */
+export function resolveFurnaceRoleFromSituation(facts) {
+  if (!facts || typeof facts !== 'object') return FURNACE_ROLE.SESSION
+  const now = facts.now && typeof facts.now === 'object' ? facts.now : {}
+  if (now.refineStep || now.refineMember) return FURNACE_ROLE.REFINE
+  return FURNACE_ROLE.SESSION
 }

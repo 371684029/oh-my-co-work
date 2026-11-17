@@ -95,6 +95,28 @@ export const FURNACE_ROLE_LABEL = {
   review: '系统审核',
   refine: '炼化',
 }
+
+/** Bundled Grok workspace skills (repo `skills/<id>/SKILL.md`). */
+export const FURNACE_SKILL_IDS = [
+  'furnace-core',
+  'furnace-acw-ctl',
+  'furnace-refine-skill',
+  'furnace-review',
+]
+
+/** Default skill bundle per furnace role (6.4). */
+export const FURNACE_ROLE_SKILLS = {
+  [FURNACE_ROLE.SESSION]: ['furnace-core', 'furnace-acw-ctl'],
+  [FURNACE_ROLE.REFINE]: ['furnace-core', 'furnace-refine-skill'],
+  [FURNACE_ROLE.REVIEW]: ['furnace-core', 'furnace-review'],
+  [FURNACE_ROLE.MEMBER_ADAPT]: ['furnace-core'],
+  [FURNACE_ROLE.NODE_ADAPT]: ['furnace-core'],
+}
+
+export function furnaceSkillsForRole(role) {
+  const list = FURNACE_ROLE_SKILLS[role]
+  return list ? [...list] : ['furnace-core']
+}
 export const ADAPT_OPTION_HOVER =
   '仅在脚本尚未接好工作台时开启：每次执行前由熔炉改代码或打适配标记（备份在 data/backups/adapt）。已能稳定跑的成员请关适配，只保留炼化。'
 

@@ -8,7 +8,7 @@ const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-furnace-'))
 process.env.ACW_DATA_ROOT = dataRoot
 process.env.ACW_APP_SETTINGS_PATH = path.join(dataRoot, 'app-settings.json')
 
-const { initDb } = await import('../src/db.js')
+const { initDb, getDb } = await import('../src/db.js')
 initDb()
 
 const {
@@ -108,7 +108,7 @@ test('ensureAdminMember renames legacy 统一管理员 display name', () => {
   assert.ok(!String(m.config?.defaultText || '').includes('统一管理员'))
 })
 
-test('group steps persist adapt without changing step type', () => {
+test('group steps persist refine without changing step type', () => {
   const echo = createMember({
     name: `echo-adapt-${Date.now()}`,
     displayName: '适配回声',
@@ -130,19 +130,21 @@ test('group steps persist adapt without changing step type', () => {
         title: '回声',
         type: 'member',
         memberId: echo.id,
-        adapt: true,
+        refine: true,
         flow: { admin: false, auto: true, human: false },
       },
     ],
   })
-  assert.equal(group.steps[0].adapt, undefined)
-  assert.equal(group.steps[1].adapt, true)
+  assert.equal(group.steps[0].refine, undefined)
+  assert.equal(group.steps[1].refine, true)
   assert.equal(group.steps[1].type, 'member')
   const session = createSessionFromGroup(group.id)
   const detail = getSessionDetail(session.id)
   const node = detail.nodes.find((n) => n.title === '回声')
   assert.equal(node.step_type, 'member')
-  assert.equal(node.input?.adapt, true)
+  const groupRow = getDb().prepare('SELECT steps_json FROM groups WHERE id = ?').get(group.id)
+  const stepsSaved = JSON.parse(groupRow.steps_json)
+  assert.equal(stepsSaved[1].refine, true)
 })
 
 test('plain member chat still opens after furnace exists', () => {
@@ -198,7 +200,7 @@ test('starting a group injects a node map so furnace sees each step', () => {
         title: '拉数据',
         type: 'member',
         memberId: echo.id,
-        adapt: true,
+        refine: true,
         flow: { admin: false, auto: true, human: false },
       },
     ],
@@ -208,7 +210,7 @@ test('starting a group injects a node map so furnace sees each step', () => {
   assert.ok(sit.includes('节点一览'))
   assert.ok(sit.includes('#1 [人工'))
   assert.ok(sit.includes('填参'))
-  assert.ok(sit.includes('#2 [成员 · 采集器 · 适配]'))
+  assert.ok(sit.includes('#2 [成员 · 采集器 · 炼化]'))
   assert.ok(sit.includes('拉数据'))
   assert.ok(sit.includes('当前节点'))
   const active = fs.readFileSync(path.join(dataRoot, 'furnace', 'ACTIVE.md'), 'utf8')

@@ -61,7 +61,11 @@ export const settingsMembersZh = {
     refineTip:
       '点保存立刻改脚本：写入 ACW 输入环境变量，并在 stdout 打文档标题。跑完后文档中心按该规格收产出。',
     refineHint:
-      '勾上并保存后会马上改源文件。推荐入口 node index.mjs（勿炼化 .bat 包装）；还原用下方按钮或「还原中心」。跑完仍整理进文档中心。',
+      '协同台向脚本注入 ACW 环境变量/参数；stdout 稳定标题正文进 step 台账。保存即改源（ACW-REFINE）+试跑；不准可在文档中心改台账。入口用 node index.mjs，勿炼化 .bat 包装。',
+    refineSkillsAgent: '第三方 Agent 炼化（写群报告）',
+    refineSkillsFurnace: '熔炉炼化 Skill（改源 + 试跑）',
+    refineCopyFurnaceSkill: '复制熔炉炼化 Skill 摘要',
+    refineFurnaceSkillHint: '给本机 Grok 熔炉用；完整步骤见仓库 skills/furnace-refine-skill/SKILL.md，开聊后自动同步到 .grok/skills。',
     refineRestore: '还原到炼化前',
     verifyProbe: '试跑验证',
     verifyLastOk: '最近一次试跑：通过',

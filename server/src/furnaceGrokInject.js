@@ -11,8 +11,9 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { FURNACE_ROLE } from '@acw/shared'
+import { FURNACE_ROLE, furnaceSkillsForRole } from '@acw/shared'
 import { clipFurnaceText, furnaceHomeDir } from './furnaceContext.js'
+import { syncFurnaceSkillsToWorkspace } from './furnaceSkillSync.js'
 import { grokHomeDir } from './grokStatus.js'
 import { getAppSettings } from './appSettings.js'
 
@@ -161,21 +162,15 @@ export function grokRulesWriteAllowed(grok = {}, { ready } = {}) {
 
 function composeAgentsInner(pack) {
   const sit = clipFurnaceText(pack?.situationText || '', 420)
+  const skills = pack?.skills?.length ? pack.skills : furnaceSkillsForRole(pack?.role)
+  const skillLine = skills.map((id) => `\`.grok/skills/${id}/SKILL.md\``).join('、')
   return [
     '你是 oh-my-co-work「熔炉」：本机协同台里的 Agent，不是独立聊天窗。',
-    `本轮侧重：${pack?.label || '主持'}（${pack?.role || ''}）。默认能做用户交代的任何事；系统审核、闸门、流程地图更专业。`,
-    '用户拥有最高指导权。节点一览是地图，默认盯当前格；用户要你做别的，照做。',
-    '菜单和模型在 TUI。需要细节再读 ACTIVE.md，不要把全文贴进对话。',
-    '【管理成员 / 群模板 / 工作流步骤】必须直接执行当前目录下的 `node acw-ctl.mjs`（调本机 HTTP API，自带完整校验与默认字段），严禁直接读写 sqlite 数据库文件或去翻项目源码猜表结构：',
-    '  - 查现有成员/群：`node acw-ctl.mjs members` · `node acw-ctl.mjs groups`',
-    '  - 添加或更新脚本成员：`node acw-ctl.mjs add-member --name "成员名" --cmd "命令 #1 #2" --cwd "脚本所在目录"`（或 `--file "脚本路径"`；常驻 TUI 加 `--keepalive`；静默后台加 `--pipe`；同名自动更新）',
-    '  - 建群并编排步骤：`node acw-ctl.mjs add-group --title "群名" --cwd "工作目录" --steps "human:输入参数,成员名:步骤标题,成员名:步骤标题:gate"`（`:gate` 表示跑完需人工确认）',
-    '  - 往已有群追加步骤：`node acw-ctl.mjs append-step --group "群名" --member "成员名" --title "步骤标题" [--gate]`',
-    '  - 炼化/适配要改成员原代码前，先备份：`node acw-ctl.mjs backup-source --member "成员名" [--files "路径1,路径2"]`（备份后用户可在「文档中心 → 节点炼化与还原」看修改对比并一键还原）',
-    '  - 更多参数：`node acw-ctl.mjs help`',
+    `本轮侧重：${pack?.label || '主持'}（${pack?.role || ''}）。默认能做用户交代的任何事；专业流程见 Skills。`,
+    '用户拥有最高指导权。节点一览在 ACTIVE.md；需要细节先读 ACTIVE，不要把全文贴进对话。',
+    `本轮 Skills（Grok 自动发现）：${skillLine || 'furnace-core'}。管理成员/群/炼化/审核按 Skill 执行，禁止直接改 sqlite。`,
+    '当前目录可用 `node acw-ctl.mjs`（详见 furnace-acw-ctl Skill）。',
     sit ? `此刻：${sit}` : '',
-    // 官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起
-    // 写进来，交给 grok 自己按目录发现（见本文件头注释），不再经命令行传。
     `启动：${buildGrokLaunchPrompt(pack?.role)}`,
   ]
     .filter(Boolean)
@@ -208,6 +203,18 @@ export function maybeInjectGrokFurnace(pack, overrides = {}) {
     fs.writeFileSync(path.join(cwd, 'ACTIVE.md'), pack.text, 'utf8')
   }
 
+  const furnace = overrides.furnace || getAppSettings().furnace || {}
+  let skillsSync = null
+  if (furnace.syncSkills !== false) {
+    try {
+      skillsSync = syncFurnaceSkillsToWorkspace(cwd, {
+        skillIds: pack?.skills?.length ? pack.skills : furnaceSkillsForRole(pack?.role),
+      })
+    } catch (e) {
+      console.warn('[acw] furnace skills sync', e?.message || e)
+    }
+  }
+
   const inner = composeAgentsInner(pack)
   const agents = upsertMarkedBlock(agentsMd, inner)
   fs.writeFileSync(sessionRule, [`# 熔炉：${pack?.label || ''}`, '', inner, ''].join('\n'), 'utf8')
@@ -218,13 +225,16 @@ export function maybeInjectGrokFurnace(pack, overrides = {}) {
     activeMd: pack?.activeMd || path.join(cwd, 'ACTIVE.md'),
     sessionRule,
     agentsMode: agents.mode,
+    skillsSync,
   }
 }
 
 export function formatFurnaceRoleNotice(pack) {
   const label = pack?.label || '熔炉'
   if (pack?.grok?.wrote) {
-    return `熔炉本轮：${label}（短规则已写入 AGENTS.md，详情在 ACTIVE.md）`
+    const synced = pack?.grok?.skillsSync?.synced?.length
+    const skillHint = synced ? `Skills 已同步 ${synced} 项` : 'Skills 已就绪'
+    return `熔炉本轮：${label}（${skillHint}；情境 ACTIVE.md）`
   }
   return `熔炉本轮：${label}（prompt 与记忆已写入 ${pack?.activeMd || 'data/furnace'}）`
 }

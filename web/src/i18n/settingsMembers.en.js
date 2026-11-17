@@ -61,7 +61,7 @@ export const settingsMembersEn = {
     refineTip:
       'On save the script is rewritten right away: the ACW input env var is written and a doc title is printed to stdout. The docs hub collects output by that spec after the run.',
     refineHint:
-      'Checked + save patches source immediately. Prefer node index.mjs as entry (avoid refining a .bat wrapper); use Restore below or Restore center. Output still goes to the docs hub after the run.',
+      'Cowork injects ACW env/params; stable stdout titles flow into step ledgers. Save patches source (ACW-REFINE) and runs probe; fix output in the docs hub if needed. Use node index.mjs, not a .bat wrapper.',
     refineRestore: 'Restore to pre-refine',
     verifyProbe: 'Probe run',
     verifyLastOk: 'Last probe: passed',
@@ -72,7 +72,12 @@ export const settingsMembersEn = {
     verifyPreviewFail: 'Current sources fail probe',
     verifyToastOk: 'Probe run passed',
     refineSkills: 'Refine skills (prompt for third-party agents)',
+    refineSkillsAgent: 'Third-party agent refine (group report)',
+    refineSkillsFurnace: 'Furnace refine skill (source + verify)',
     refineCopySkill: 'Copy refine skill prompt',
+    refineCopyFurnaceSkill: 'Copy furnace refine skill summary',
+    refineFurnaceSkillHint:
+      'For local Grok furnace; full steps in skills/furnace-refine-skill/SKILL.md (synced to .grok/skills on launch).',
     refineSkillHint1:
       'When using an external agent such as Cursor, copy this prompt and paste it to the agent. The agent will call ',
     refineSkillHint2:

@@ -21,6 +21,10 @@ export function extractMessageText(output) {
   if (typeof output === 'string') return output
   const stdout = stdoutOf(output)
   if (stdout) return stdout
+  const adapter = output.adapterResult
+  if (adapter && typeof adapter.summary === 'string' && adapter.summary.trim()) {
+    return adapter.summary
+  }
   if (typeof output.text === 'string') return output.text
   if (Array.isArray(output.choices)) {
     return output.choices

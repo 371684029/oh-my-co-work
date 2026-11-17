@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import fs from 'node:fs'
 import * as docsHub from '../docsHub.js'
-import { appendAgentRefine, buildRefineSkillPrompt } from '../agentRefine.js'
+import { appendAgentRefine, buildRefineSkillPrompt, buildFurnaceRefineSkillPrompt } from '../agentRefine.js'
 
 const router = Router()
 
@@ -60,8 +60,28 @@ router.post('/docs/announcement', (req, res) => {
   }
 })
 
+router.post('/docs/journal', (req, res) => {
+  try {
+    const { sessionId, name, markdown } = req.body || {}
+    res.json(docsHub.saveJournalDoc(sessionId, String(name || ''), markdown))
+  } catch (e) {
+    const code =
+      e.code === 'NOT_EDITABLE' || e.code === 'PAYLOAD_TOO_LARGE'
+        ? 400
+        : e.code === 'NO_FILE' || e.code === 'NO_SESSION'
+          ? 404
+          : 400
+    res.status(code).json({ error: e.message, code: e.code })
+  }
+})
+
 router.get('/docs/refine-prompt', (req, res) => {
-  res.json({ prompt: buildRefineSkillPrompt({ sessionId: req.query.sessionId }) })
+  const kind = String(req.query.kind || 'agent').toLowerCase()
+  const prompt =
+    kind === 'furnace'
+      ? buildFurnaceRefineSkillPrompt()
+      : buildRefineSkillPrompt({ sessionId: req.query.sessionId })
+  res.json({ prompt, kind: kind === 'furnace' ? 'furnace' : 'agent' })
 })
 
 router.post('/docs/refine', (req, res) => {

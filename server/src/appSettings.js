@@ -41,7 +41,7 @@ export function defaultAdaptSettings() {
 
 /** 熔炉 / 炼化高级选项（5.9.0 RAR-06） */
 export function defaultFurnaceSettings() {
-  return { requireVerifyBeforeStamp: false }
+  return { requireVerifyBeforeStamp: false, syncSkills: true }
 }
 
 function normalizeFurnace(raw) {
@@ -49,6 +49,7 @@ function normalizeFurnace(raw) {
   if (!raw || typeof raw !== 'object') return d
   return {
     requireVerifyBeforeStamp: raw.requireVerifyBeforeStamp === true,
+    syncSkills: raw.syncSkills !== false,
   }
 }
 

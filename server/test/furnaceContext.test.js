@@ -77,7 +77,7 @@ test('situation slots copy a node map not a single scenario', () => {
         title: '拉数据',
         kind: '成员',
         member: '采集器',
-        adapt: true,
+        refineStep: true,
         statusLabel: '执行中',
       },
       { title: '确认', kind: '人工', gateHuman: true, statusLabel: '待跑' },
@@ -87,7 +87,7 @@ test('situation slots copy a node map not a single scenario', () => {
       title: '拉数据',
       kind: '成员',
       member: '采集器',
-      adapt: true,
+      refineStep: true,
       statusLabel: '执行中',
       prevOutput: '参数已齐',
     },
@@ -95,9 +95,9 @@ test('situation slots copy a node map not a single scenario', () => {
     announcementPath: 'journals/sessions/s1/ANNOUNCEMENT.md',
   })
   assert.ok(text.includes('节点一览'))
-  assert.ok(text.includes('#2 [成员 · 采集器 · 适配] 拉数据 · 执行中 ← 现在'))
+  assert.ok(text.includes('#2 [成员 · 采集器 · 炼化] 拉数据 · 执行中 ← 现在'))
   assert.ok(text.includes('当前节点：#2 拉数据'))
-  assert.ok(text.includes('勾了适配'))
+  assert.ok(text.includes('炼化'))
   assert.ok(text.includes('上一节点产出：参数已齐'))
   assert.ok(text.includes('默认处理当前节点'))
   assert.ok(text.includes('用户要求其它任务照做'))

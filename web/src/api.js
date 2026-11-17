@@ -60,11 +60,19 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ sessionId, markdown }),
       }),
+    saveJournal: (sessionId, name, markdown) =>
+      req('/docs/journal', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, name, markdown }),
+      }),
     refine: (payload) => req('/docs/refine', { method: 'POST', body: JSON.stringify(payload) }),
-    refinePrompt: (sessionId) =>
-      req(
-        `/docs/refine-prompt${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ''}`,
-      ),
+    refinePrompt: (sessionId, kind) => {
+      const q = new URLSearchParams()
+      if (sessionId) q.set('sessionId', sessionId)
+      if (kind) q.set('kind', kind)
+      const qs = q.toString()
+      return req(`/docs/refine-prompt${qs ? `?${qs}` : ''}`)
+    },
     openPath: (path) =>
       req('/docs/open-path', { method: 'POST', body: JSON.stringify({ path }) }),
     search: (q) => req(`/docs/search?q=${encodeURIComponent(q)}`),

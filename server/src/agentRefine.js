@@ -50,6 +50,14 @@ function clip(value) {
   return `${text.slice(0, MAX_FIELD)}\n\n…（已截断）`
 }
 
+export function buildFurnaceRefineSkillPrompt() {
+  return [
+    '本机熔炉炼化：加载 Skill `furnace-refine-skill`（`.grok/skills/furnace-refine-skill/SKILL.md`）。',
+    '流程：backup-source → 改源 ACW-REFINE → 设置保存炼化 → verify-member → 失败走还原中心。',
+    '契约事实源：docs/guide-script.md；勿与 agent-refine-skill（只写群报告）混淆。',
+  ].join('\n')
+}
+
 export function buildRefineSkillPrompt({ sessionId } = {}) {
   const sid = String(sessionId || '').trim() || '{sessionId}'
   return [

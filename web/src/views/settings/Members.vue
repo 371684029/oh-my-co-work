@@ -112,7 +112,7 @@
           </el-button>
           <div v-if="verifyLastHint" class="field-hint">{{ verifyLastHint }}</div>
         </el-form-item>
-        <el-form-item v-if="form.refine" :label="membersT('form.refineSkills')">
+        <el-form-item v-if="form.refine" :label="membersT('form.refineSkillsAgent')">
           <div class="refine-skill-box">
             <el-input
               v-model="refineSkillPrompt"
@@ -129,7 +129,15 @@
             >{{ membersT('form.refineSkillHint2') }}
           </div>
         </el-form-item>
-
+        <el-form-item v-if="form.refine" :label="membersT('form.refineSkillsFurnace')">
+          <div class="refine-skill-box">
+            <el-input v-model="furnaceRefineSkillPrompt" type="textarea" :rows="3" readonly />
+            <el-button size="small" type="primary" plain @click="copyFurnaceRefineSkillPrompt">
+              {{ membersT('form.refineCopyFurnaceSkill') }}
+            </el-button>
+          </div>
+          <div class="field-hint">{{ membersT('form.refineFurnaceSkillHint') }}</div>
+        </el-form-item>
 
         <template v-if="form.kind === 'script'">
           <el-tabs v-model="scriptTab" class="member-script-tabs">
@@ -424,6 +432,7 @@ const readonly = ref(false)
 const viewRow = ref(null)
 const form = ref(emptyForm())
 const refineSkillPrompt = ref(membersRefineSkillFallback())
+const furnaceRefineSkillPrompt = ref('')
 const restoringRefine = ref(false)
 const verifyingMember = ref(false)
 
@@ -442,6 +451,15 @@ async function refreshRefineSkillPrompt() {
     if (r?.prompt) refineSkillPrompt.value = r.prompt
   } catch {
     /* Keep the local fallback copy */
+  }
+}
+
+async function refreshFurnaceRefineSkillPrompt() {
+  try {
+    const r = await api.docs.refinePrompt(undefined, 'furnace')
+    if (r?.prompt) furnaceRefineSkillPrompt.value = r.prompt
+  } catch {
+    furnaceRefineSkillPrompt.value = ''
   }
 }
 
@@ -531,6 +549,20 @@ async function copyRefineSkillPrompt() {
     /* Non-secure context or permission denied */
   }
   ElMessage.info(refineSkillPrompt.value)
+}
+
+async function copyFurnaceRefineSkillPrompt() {
+  await refreshFurnaceRefineSkillPrompt()
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(furnaceRefineSkillPrompt.value)
+      ElMessage.success(membersToast('copySkillOk'))
+      return
+    }
+  } catch {
+    /* Non-secure context or permission denied */
+  }
+  ElMessage.info(furnaceRefineSkillPrompt.value)
 }
 const scriptTab = ref('basic')
 const installDir = ref('')
@@ -950,6 +982,7 @@ onMounted(() => {
   load()
   loadInstallDir()
   refreshRefineSkillPrompt()
+  refreshFurnaceRefineSkillPrompt()
 })
 </script>
 

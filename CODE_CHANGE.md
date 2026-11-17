@@ -3,6 +3,15 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-16 | A | skills/{furnace-core,furnace-acw-ctl,furnace-refine-skill,furnace-review}/SKILL.md | 6.4 熔炉 Skill 包
+2026-11-16 | A | server/src/furnaceSkillSync.js, server/test/furnaceSkillSync.test.js | 同步 skills 至 .grok/skills
+2026-11-16 | M | server/src/{furnaceGrokInject,furnaceContext,furnaceSituation,refine,agentRefine,docsHub,appSettings}.js | Skills 瘦身 AGENTS、炼化角色推断、JSONL 产出、DOC-IO、熔炉炼化 prompt API
+2026-11-16 | M | shared/index.js | FURNACE_ROLE_SKILLS / FURNACE_SKILL_IDS
+2026-11-16 | M | web/src/{api,views/settings/Members,views/workbench/composables/useDocsHub,i18n/*} | 节点台账可编辑、双 Skill 复制、文案
+2026-11-16 | M | server/test/{furnace,furnaceContext,furnaceGrokInject,refine,docsHub}.test.js | 适配→炼化表征
+2026-11-16 | M | package.json | 版本 6.4.0
+2026-11-16 | A | docs/plan-6.4.0.md | 6.4 熔炉 Skill 化：原生 Grok 对比、AGENTS 瘦身、FSK 清单
+2026-11-16 | M | docs/plan-6.3.0.md | 待决 #4 指向 6.4 skills 同步定稿
 2026-11-16 | M | docs/plan-6.3.0.md | §5.5 熔炉 furnace-refine-skill 与 agent-refine-skill 分工
 2026-11-16 | A | docs/plan-6.3.0.md | 熔炉炼化 IO 对接：现状/契约/改进路径与 RFN 清单
 2026-11-16 | M | docs/plan-6.2.0.md, server/src/{engine/{advance,store,sessionLifecycle},services,routes/catalogRoutes}, server/test/{adaptPlan.test.js,refineField.test.js}, web/src/views/{settings/{Members,Groups}.vue,workbench/{components/FlowRailNodeBadges.vue,composables/{sessionDetailInitWatchers,sessionFlowUi}}} | 移除「是否适配」：去 advance 改源路径、删 adapt API/UI，不做迁移
