@@ -169,7 +169,7 @@ test('persistRefineSpec 只补 refine 键，不覆盖其它 config', () => {
   })
   persistRefineSpec(m, { title: '脚本台账' })
   const after = getMember(m.id)
-  assert.equal(after.config.adapt, true)
+  assert.equal(after.config.adapt, undefined)
   assert.equal(after.config.extraKeep, 'yes')
   assert.equal(after.config.defaultText, 'ok')
   assert.equal(after.config.refine.format.title, '脚本台账')

@@ -22,12 +22,7 @@ import {
   validateAndFillSessionParams,
   resolveGroupParamSpecs,
 } from '@acw/shared'
-import { getAppSettings } from '../appSettings.js'
-import { prepareAdaptForMember, adaptStatusText } from '../adaptBackup.js'
 import { refineOutputForNode, produceRefineSpec, persistRefineSpec } from '../refine.js'
-import {
-  resolveAdaptFurnaceRole,
-} from '../furnaceContext.js'
 import { syncFurnaceSessionContext, touchFurnaceWorkflow } from '../furnaceSituation.js'
 import { formatFurnaceRoleNotice } from '../furnaceGrokInject.js'
 import {
@@ -368,58 +363,7 @@ export async function advance(sessionId) {
         engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
       }
     }
-    const wantAdapt = !!(
-      step?.adapt ||
-      parseJson(node.input_json, {}).adapt ||
-      member.config?.adapt
-    )
-    let runMemberAs = member
-    let adaptPrep = null
-    if (wantAdapt) {
-      const furnaceRole = resolveAdaptFurnaceRole({
-        stepAdapt: !!(step?.adapt || parseJson(node.input_json, {}).adapt),
-        memberAdapt: !!member.config?.adapt,
-      })
-      if (furnaceRole) {
-        try {
-          const pack = syncFurnaceSessionContext(sessionId, {
-            role: furnaceRole,
-            nodeId: node.id,
-          })
-          engineEmit('add_message', sessionId, {
-            role: 'system',
-            type: 'status',
-            node_instance_id: node.id,
-            content: { text: formatFurnaceRoleNotice(pack) },
-          })
-        } catch (e) {
-          console.warn('[acw] furnace role', e?.message || e)
-        }
-      }
-      try {
-        adaptPrep = prepareAdaptForMember(member, {
-          sessionId,
-          nodeId: node.id,
-          backup: getAppSettings().adapt?.backup !== false,
-        })
-      } catch (e) {
-        adaptPrep = {
-          canEdit: false,
-          fallback: true,
-          enableJsonl: false,
-          reason: 'backup_failed',
-          error: e?.message || String(e),
-          member,
-        }
-      }
-      runMemberAs = adaptPrep.member || member
-      engineEmit('add_message', sessionId, {
-        role: 'system',
-        type: 'status',
-        node_instance_id: node.id,
-        content: { text: adaptStatusText(adaptPrep) },
-      })
-    }
+    const runMemberAs = member
     const memberInput = {
       memberId: member.id,
       memberName: member.display_name,
@@ -431,15 +375,6 @@ export async function advance(sessionId) {
       groupCard: paramsMap[SYSTEM_PARAM_KEYS.GROUP_CARD] || '',
       groupFolder: paramsMap[SYSTEM_PARAM_KEYS.GROUP_FOLDER] || '',
       callArgs: paramsMap[SYSTEM_PARAM_KEYS.CALL_ARGS] || '',
-      ...(wantAdapt
-        ? {
-            adapt: true,
-            adaptFallback: !!adaptPrep?.fallback,
-            adaptReason: adaptPrep?.reason || null,
-            adaptBackup: adaptPrep?.backup?.zipPath || null,
-            adaptPatched: adaptPrep?.patched || [],
-          }
-        : {}),
     }
     const stepWorkFolder = memberInput.workFolder
     // 异步 git 快照：不再阻塞事件循环（熔炉/终端输出在节点边界保持流畅）

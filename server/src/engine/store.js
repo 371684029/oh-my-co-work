@@ -25,7 +25,6 @@ export function getMember(id) {
 
 export function stepAdaptInput(step, extra = {}) {
   const input = { ...extra }
-  if (step?.adapt === true || extra.adapt === true) input.adapt = true
   return Object.keys(input).length ? JSON.stringify(input) : null
 }
 
@@ -234,16 +233,6 @@ function inheritCloneMeta(prev = {}, next = {}) {
 
 function inheritNodeInputMeta(prev = {}, next = {}) {
   let out = inheritCloneMeta(prev, next)
-  if (prev?.adapt || next?.adapt) {
-    out = {
-      ...out,
-      adapt: true,
-      adaptBackup: next.adaptBackup || prev.adaptBackup || null,
-      adaptPatched: next.adaptPatched || prev.adaptPatched || [],
-      adaptFallback: next.adaptFallback ?? prev.adaptFallback,
-      adaptReason: next.adaptReason || prev.adaptReason || null,
-    }
-  }
   if (prev?.refine || next?.refine || prev?.refineFormatted || next?.refineFormatted) {
     out = {
       ...out,

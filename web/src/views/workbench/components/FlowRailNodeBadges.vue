@@ -10,15 +10,6 @@
     {{ flowRailJournalButton() }}
   </el-button>
   <el-tag
-    v-if="nodeHasAdapt(node)"
-    size="small"
-    type="warning"
-    effect="plain"
-    round
-  >
-    {{ flowRailTagAdapt() }}
-  </el-tag>
-  <el-tag
     v-if="nodeHasRefine(node)"
     size="small"
     type="success"
@@ -136,7 +127,6 @@ import {
   flowRailSkipped,
   flowRailSkippedBypassed,
   flowRailSuspended,
-  flowRailTagAdapt,
   flowRailTagArchive,
   flowRailTagClone,
   flowRailTagCurrentSegment,
@@ -151,7 +141,6 @@ import {
   isCurrent,
   isCurrentOffsiteSegment,
   nodeBypassed,
-  nodeHasAdapt,
   nodeHasRefine,
   offsiteEntryLabel,
 } from '../composables/useSessionDetail'

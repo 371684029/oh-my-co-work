@@ -182,9 +182,6 @@
                 :placeholder="groupsT('steps.paramBindPlaceholder')"
                 style="max-width: 220px"
               />
-              <el-tooltip :content="adaptHover" placement="top" :show-after="300">
-                <el-checkbox v-model="s.adapt" class="capture-check">{{ groupsT('steps.adapt') }}</el-checkbox>
-              </el-tooltip>
               <el-tooltip :content="groupsT('steps.refineTip')" placement="top" :show-after="300">
                 <el-checkbox v-model="s.refine" class="capture-check">{{ groupsT('steps.refine') }}</el-checkbox>
               </el-tooltip>
@@ -266,16 +263,6 @@
                 {{ groupsT('steps.viewCaptureParams') }}
               </el-tag>
               <el-tag
-                v-if="s.adapt"
-                size="small"
-                effect="plain"
-                round
-                type="warning"
-                class="view-step-tag"
-              >
-                {{ groupsT('steps.viewAdapt') }}
-              </el-tag>
-              <el-tag
                 v-for="t in flowTags(s)"
                 :key="t"
                 size="small"
@@ -306,7 +293,7 @@ import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-import { ADAPT_OPTION_HOVER, isFurnaceMember } from '@acw/shared'
+import { isFurnaceMember } from '@acw/shared'
 import { fuzzySearch } from '@acw/shared'
 import {
   groupsT,
@@ -322,8 +309,6 @@ import {
   groupsAdminInheritHintCurrent,
   groupsFlowTags,
 } from '../../composables/settingsGroupsCopy.js'
-
-const adaptHover = ADAPT_OPTION_HOVER
 
 const router = useRouter()
 const list = ref([])
@@ -486,7 +471,6 @@ function stepForm(s = {}, _index = 0) {
     flowKeys,
     captureParams: !!captureParams,
     paramBindSlotsText,
-    adapt: !!s.adapt,
     refine: !!s.refine,
   }
 }
@@ -564,7 +548,6 @@ function serializeSteps(steps) {
       const slots = parseBindSlotsText(s.paramBindSlotsText)
       if (slots.length) row.paramBindSlots = slots
     }
-    if (s.adapt) row.adapt = true
     if (s.refine) row.refine = true
     return row
   })

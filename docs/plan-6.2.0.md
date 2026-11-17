@@ -54,7 +54,7 @@
 
 1. **全局搜索**（已交付）：顶栏放大镜搜全部会话聊天；命中跳转会话与消息。见 §3.1。
 2. **完成归档**（已交付）：会话头「完成」= 手动 `archiveSession`，与自动归档同样释放资源。见 §3.2。
-3. **熔炉炼化合一**：设置、群模板、成员表里**只保留「熔炉炼化」**；说明即「注入输入 + 稳定产出进文档中心」；旧「是否适配」勾选与独立文案删除；已勾选适配的成员在升级后视为**已开启炼化**（迁移脚本或读库 OR，一次性）。
+3. **熔炉炼化合一**：设置、群模板、成员表里**只保留「熔炉炼化」**；**删除「是否适配」及全部 adapt 逻辑**，不迁移旧数据。
 4. **文档中心改产出**：打开节点台账（`nodes/step-*.md`）或群报告时，与公告一样可**编辑并保存** Markdown，用户自行改正文里的输入记录、输出摘要、标题等；保存写回 `data/journals/...`，聊天/搜索索引按现有刷新策略更新。
 
 ---
@@ -85,18 +85,18 @@
 - 成员列表「炼化」列保留，**不再出现「适配」列或第二勾**。
 - 还原仍用「还原到炼化前」+ 还原中心；备份目录对外统称炼化备份（`refine` 为主，`adapt` 历史包可读可还，不在 UI 分栏）。
 
-**做什么（对代码，尽量不分支）**
+**做什么（对代码）**
 
-- **一条产品开关**：`config.refine.enabled`（或沿用 `enabled` + 保存逻辑）；开启炼化时，**顺序执行**现有炼化保存链（zip、`ACW-REFINE`、可选 verify），并在同一启用条件下 **调用原 `prepareAdaptForMember` 所需步骤**（打标记 / JSONL 环境），不再要求用户单独开 `adapt`。
-- **读库兼容**：`config.adapt === true` 或 `step.adapt` 在加载时映射为炼化已开，写回时只写 `refine`，逐步清空独立 `adapt` 字段（迁移期双读单写）。
-- **不搞**「终端用适配、脚本用炼化」之类用户可见模式；若某脚本必须用 JSONL，由成员已有 `script.adapter` 配置静默生效，**设置页不新增选项**。
-- 同步改 `settingsMembers.*` / `settingsGroups.*` i18n、`guide-script.md`（删掉「与炼化不同：适配走…」对立叙述）、`plan-refine-search-4x.md` 脚注。
+- **唯一开关**：只保留 `config.refine`（熔炉炼化）；**删除** `config.adapt`、`step.adapt`、`prepareAdaptForMember`、适配备份 REST、`/members/adapt/*`、设置页「是否适配」与相关单测/自测。
+- **不做迁移**：旧库里的 `adapt` 字段在读写时 **直接剥离**，引擎 **不再读取** `input.adapt` / 节点 adapt 标记；历史台账里已写的 adapt 字段可留盘，仅作只读遗留，不触发行为。
+- **保留（非「是否适配」）**：成员高级里的 **JSONL 结构化 Adapter**（`script.adapter`）与 `adapterEvents` 终端协议——这是 TUI 事件通道，与已删除的「改源适配」无关，设置文案改名避免「适配」二字。
+- 同步改 `settingsMembers.*` / `settingsGroups.*`、`guide-script.md`（删 adapt 专节对立叙述）。
 
-- [ ] **REF-01 P0 UI**：`Members.vue` / `Groups.vue` 移除「是否适配」表单项与列；炼化 hint 合并为上述一句话 + 还原说明。
-- [ ] **REF-02 P0 保存语义**：成员保存 / 群模板保存时，炼化开启 → 内部串联 `applyRefineOnMemberSave` + 原 adapt 准备（无第二个用户开关）。
-- [ ] **REF-03 P0 数据迁移**：`updateMember` / 列表展示：`adapt` 视为 `refine.enabled`；单测覆盖旧数据升级。
-- [ ] **REF-04 P1 流程轨角标**：仅「炼化」角标，移除「适配」独立标签（若仍有）。
-- [ ] **REF-05 P1 文档**：`guide-script.md`、`AGENTS.md` 能力描述与 REF 一致。
+- [x] **REF-01 P0 UI**：`Members.vue` / `Groups.vue` 移除「是否适配」；炼化 hint 写清「注入输入 + 稳定产出」（hint 文案待 REF-05 收紧）。
+- [x] **REF-02 P0 引擎**：`advance.js` 去掉 `wantAdapt` 整段；`store.js` / `normalizeSteps` 不再写 adapt。
+- [x] **REF-03 P0 API**：`adapt/plan` 与 `adapt/restore` 返回 410；`updateMember` / `memberRow` 剥离 `config.adapt`。
+- [x] **REF-04 P1 流程轨**：去掉「适配」角标与 adapt 回落 toast。
+- [ ] **REF-05 P1 文档/测试**：删或改 `adaptPlan.test.js`、`adaptBackup.test.js` 中 adapt 专测；`guide-script.md` 与 REF 一致。
 
 ### 3.4 文档中心编辑输入/输出（DOC-IO）
 
@@ -118,7 +118,7 @@
 
 1. **搜索样式**：会话头 `.chat-search-*` 样式迁入 `GlobalChatSearch.vue`，保留 `popper-class="chat-search-popper"`。
 2. **归档副作用**：依赖服务端 `archiveSession` 与 WS，前端不重复杀 PTY；归档后列表筛选项「已归档」立即可见。
-3. **炼化不分支**：用户只见一个开关；引擎在 `refine.enabled` 下顺序跑炼化 + 旧 adapt 副作用，避免两套 backup 策略并存于 UI。
+3. **炼化-only**：用户只见炼化开关；adapt 代码路径已移除，备份仅炼化 `data/backups/refine`。
 4. **文档编辑**：扩大 `canEdit` 白名单，不新做富文本；Markdown 即输入输出载体。
 5. **成员单聊**：若产品日后禁止单聊归档，可在 `ARC-01` 加 `kind === adhoc` 禁用；本版与 API 一致，不额外限制。
 
@@ -140,6 +140,6 @@
 - [ ] 顶栏放大镜可见；无选中会话亦可搜索并命中多会话结果。
 - [ ] 点击命中跳转正确会话并滚动到消息。
 - [ ] 会话头「完成」归档后状态为已归档，终端/进程释放（与流程走完一致）。
-- [ ] 设置里仅「熔炉炼化」一项；旧 adapt 成员升级后行为与勾选炼化一致。
+- [ ] 设置里无「是否适配」；`adapt` API 返回 404/已删；勾选炼化行为与现网一致。
 - [ ] 文档中心可编辑并保存至少一种 `nodes/step-*.md`，修改输入/输出段落后刷新仍可见。
 - [ ] `npm run test`（server + web）通过。

@@ -1,7 +1,7 @@
 import { isDiscardedUnexecutedFlowNode } from '@acw/shared'
 
-export function nodeHasAdapt(n) {
-  return !!(n?.input?.adapt || n?.output?.adapt)
+export function nodeHasAdapt(_n) {
+  return false
 }
 
 export function nodeHasRefine(n) {

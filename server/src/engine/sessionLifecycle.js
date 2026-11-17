@@ -270,7 +270,6 @@ export function createSessionFromMember(memberId, { title, dryRun } = {}) {
       memberId: raw.id,
       gate: false,
       flow: { admin: true, auto: true, human: false },
-      ...(raw.config?.adapt ? { adapt: true } : {}),
     },
   ]
   const config = {
@@ -407,7 +406,7 @@ function appendClonedSuffixFrom(sessionId, target, steps) {
       st === STEP_TYPE.HUMAN ? null : step.memberId || src?.member_id || null,
       NODE_STATUS.PENDING,
       flowNeedsWait(flow) || step.gate ? 1 : 0,
-      JSON.stringify({ ...meta, ...(step.adapt ? { adapt: true } : {}) }),
+      stepAdaptInput(step, meta),
       JSON.stringify({ ...meta }),
     )
     created.push(

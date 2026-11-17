@@ -85,13 +85,6 @@
           />
         </el-form-item>
         <el-form-item>
-          <el-tooltip :content="adaptHover" placement="top" :show-after="300">
-            <el-checkbox v-model="form.adapt">{{ membersT('form.adapt') }}</el-checkbox>
-          </el-tooltip>
-          <div class="field-hint">{{ membersT('form.adaptHint') }}</div>
-          <div v-if="adaptPlanHint" class="field-hint adapt-plan-hint">{{ adaptPlanHint }}</div>
-        </el-form-item>
-        <el-form-item>
           <el-tooltip :content="membersT('form.refineTip')" placement="top" :show-after="300">
             <el-checkbox v-model="form.refine">{{ membersT('form.refine') }}</el-checkbox>
           </el-tooltip>
@@ -305,9 +298,6 @@
             {{ viewRow.config?.description || '—' }}
           </el-descriptions-item>
           <el-descriptions-item :label="membersT('table.kind')">{{ viewRow.kind }}</el-descriptions-item>
-          <el-descriptions-item :label="membersT('form.adapt')">
-            {{ viewRow.config?.adapt ? membersT('form.yes') : membersT('form.no') }}
-          </el-descriptions-item>
           <el-descriptions-item :label="membersT('form.viewConfig')">
             <pre class="cfg-pre">{{ JSON.stringify(viewRow.config, null, 2) }}</pre>
           </el-descriptions-item>
@@ -328,7 +318,7 @@ import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
-import { ADAPT_OPTION_HOVER, scanParamKeysInMemberConfig } from '@acw/shared'
+import { scanParamKeysInMemberConfig } from '@acw/shared'
 import { fuzzySearch } from '@acw/shared'
 import {
   membersT,
@@ -342,11 +332,8 @@ import {
   membersRemoveConfirmBody,
   membersRestoreConflictBody,
   membersPlanConfirmBody,
-  membersAdaptPlanHint,
   membersRefineVerifyPreviewHint,
 } from '../../composables/settingsMembersCopy.js'
-
-const adaptHover = ADAPT_OPTION_HOVER
 
 const scriptExts = [
   '.bat',
@@ -439,8 +426,6 @@ const form = ref(emptyForm())
 const refineSkillPrompt = ref(membersRefineSkillFallback())
 const restoringRefine = ref(false)
 const verifyingMember = ref(false)
-const adaptPlanHint = ref('')
-let adaptPlanTimer = null
 
 const verifyLastHint = computed(() => {
   const v = form.value._verifyLast
@@ -606,7 +591,6 @@ function emptyForm() {
     displayName: '',
     description: '',
     kind: 'script',
-    adapt: false,
     paramCheckMode: 'off',
     requiredParamsText: '',
     // 新建成员默认炼化：保存时自动写入 ACW 输入环境变量与 stdout 标题，
@@ -741,7 +725,6 @@ function fillFromRow(row, { asClone = false } = {}) {
     displayName: asClone ? membersCloneName(row.display_name) : row.display_name,
     description: row.config?.description || '',
     kind: row.kind,
-    adapt: !!row.config?.adapt,
     refine: !!row.config?.refine?.enabled,
     ...param,
     script: {
@@ -776,7 +759,6 @@ function openCreate() {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.create')
   drawer.value = true
-  scheduleAdaptPlan()
 }
 
 function openEdit(row) {
@@ -785,7 +767,6 @@ function openEdit(row) {
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.edit')
   drawer.value = true
-  scheduleAdaptPlan()
 }
 
 function memberPayloadFromForm() {
@@ -800,7 +781,6 @@ function memberPayloadFromForm() {
     baseConfig.defaultText = prev.defaultText
   }
   if (prev?.role) baseConfig.role = prev.role
-  if (form.value.adapt) baseConfig.adapt = true
   if (form.value.kind === 'script') {
     const mode = form.value.paramCheckMode || 'off'
     if (mode === 'off') {
@@ -860,42 +840,12 @@ function memberPayloadFromForm() {
   }
 }
 
-async function refreshAdaptPlan() {
-  adaptPlanHint.value = ''
-  if (!drawer.value || readonly.value || !form.value.adapt || form.value.kind !== 'script') return
-  const s = form.value.script
-  const sw = String(s.scriptWorkDir || s.scriptDir || '').trim()
-  if (!sw) return
-  if (s.mode === 'file' && !String(s.filePath || '').trim()) return
-  if (s.mode === 'command' && !String(s.command || '').trim()) return
-  try {
-    const body = memberPayloadFromForm()
-    const plan = await api.members.adaptPlan({
-      memberId: form.value._editId || undefined,
-      displayName: body.displayName,
-      kind: body.kind,
-      config: body.config,
-    })
-    adaptPlanHint.value = membersAdaptPlanHint(plan)
-  } catch {
-    adaptPlanHint.value = ''
-  }
-}
-
-function scheduleAdaptPlan() {
-  clearTimeout(adaptPlanTimer)
-  adaptPlanTimer = setTimeout(() => {
-    refreshAdaptPlan().catch(() => {})
-  }, 350)
-}
-
 function openClone(row) {
   readonly.value = false
   form.value = fillFromRow(row, { asClone: true })
   scriptTab.value = 'basic'
   drawerTitle.value = membersT('drawer.clone')
   drawer.value = true
-  scheduleAdaptPlan()
 }
 
 function view(row) {
@@ -995,23 +945,6 @@ async function remove(row) {
     ElMessage.error(e.message)
   }
 }
-
-watch(
-  () => [
-    drawer.value,
-    form.value.adapt,
-    form.value.kind,
-    form.value.script?.mode,
-    form.value.script?.filePath,
-    form.value.script?.command,
-    form.value.script?.scriptWorkDir,
-    form.value.script?.adapter,
-  ],
-  () => {
-    if (drawer.value && !readonly.value) scheduleAdaptPlan()
-    else adaptPlanHint.value = ''
-  },
-)
 
 onMounted(() => {
   load()

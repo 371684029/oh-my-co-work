@@ -34,12 +34,27 @@ import { readSessionAnnouncement } from './journal.js'
 import { applyRefineOnMemberSave } from './refineSource.js'
 import { shouldAutoVerifyRefine, verifyMemberSync } from './memberVerify.js'
 
+function stripLegacyAdaptFromConfig(config) {
+  if (!config || typeof config !== 'object') return config
+  const next = { ...config }
+  delete next.adapt
+  return next
+}
+
+function stripLegacyAdaptFromSteps(steps) {
+  return (steps || []).map((s) => {
+    if (!s || typeof s !== 'object') return s
+    const { adapt, ...rest } = s
+    return rest
+  })
+}
+
 function memberRow(r) {
   if (!r) return null
   return {
     ...r,
     enabled: !!r.enabled,
-    config: parseJson(r.config_json, {}),
+    config: stripLegacyAdaptFromConfig(parseJson(r.config_json, {})),
   }
 }
 
@@ -48,7 +63,7 @@ function groupRow(r) {
   return {
     ...r,
     enabled: !!r.enabled,
-    steps: parseJson(r.steps_json, []),
+    steps: stripLegacyAdaptFromSteps(parseJson(r.steps_json, [])),
     config: parseJson(r.config_json, {}),
   }
 }
@@ -199,7 +214,7 @@ function refineMembersForSteps(steps) {
 export function createMember(body) {
   const id = uid('mem')
   const t = nowIso()
-  const config = body.config || {}
+  const config = stripLegacyAdaptFromConfig(body.config || {})
   const kind = body.kind || MEMBER_KIND.ECHO
   if (kind === MEMBER_KIND.SCRIPT) {
     const raw = body.script || config.script
@@ -247,7 +262,7 @@ export function updateMember(id, body = {}) {
   const t = nowIso()
   let config = src.config || {}
   if (body.config !== undefined) {
-    config = body.config || {}
+    config = stripLegacyAdaptFromConfig(body.config || {})
     const kindPre = body.kind || src.kind
     if (kindPre === MEMBER_KIND.SCRIPT && config.script) {
       config.script = finalizeMemberScript(config.script)
@@ -325,9 +340,6 @@ function normalizeSteps(steps) {
       row.captureParams = s.captureParams === true
       const slots = normalizeParamBindSlots(s.paramBindSlots)
       if (slots.length) row.paramBindSlots = slots
-    }
-    if (s.adapt === true || s.adapt === 'true' || s.adapt === 1) {
-      row.adapt = true
     }
     if (s.refine === true || s.refine === 'true' || s.refine === 1) {
       row.refine = true
