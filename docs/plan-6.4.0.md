@@ -105,18 +105,18 @@ furnaceSituation.syncFurnaceSessionContext
 
 ### 4.2 运行时同步与瘦身
 
-- [ ] **FSK-10 P0** `server/src/furnaceSkillSync.js`：把 `skills/furnace-*/` 同步到 `resolveGrokWorkspaceDir()` 下 Grok skills 目录；pack 时带上 hash，未变则跳过。
-- [ ] **FSK-11 P0** 瘦身 `composeAgentsInner`：去掉 acw-ctl 长列表，改为「加载 furnace-acw-ctl skill」；`.grok/rules/session.md` 与标记块二选一或只保留标记块（去重复）。
-- [ ] **FSK-12 P0** `activateFurnaceRole`：`## Prompt` 改为 `## Skills`（列路径 + 一句何时用）；`prompts/*.md` 改由构建脚本从 Skill 生成或标记 deprecated。
-- [ ] **FSK-13 P1** `resolveRefineFurnaceRole` / 审核步：advance、gates 里恢复角色解析（adapt 分支删除后的空缺）。
-- [ ] **FSK-14 P1** `npm run test` + `scripts/selftest-furnace-skills.mjs`：`grok inspect` 能列出同步后的 skills（无 grok 时 skip）。
+- [x] **FSK-10 P0** `server/src/furnaceSkillSync.js`：把 `skills/furnace-*/` 同步到 `resolveGrokWorkspaceDir()` 下 Grok skills 目录；pack 时带上 hash，未变则跳过。
+- [x] **FSK-11 P0** 瘦身 `composeAgentsInner`：去掉 acw-ctl 长列表，改为「加载 furnace-acw-ctl skill」；`.grok/rules/session.md` 与标记块二选一或只保留标记块（去重复）。
+- [x] **FSK-12 P0** `activateFurnaceRole`：`## Prompt` 改为 `## Skills`（列路径 + 一句何时用）；`prompts/*.md` 改由构建脚本从 Skill 生成或标记 deprecated。
+- [x] **FSK-13 P1** `resolveRefineFurnaceRole` / 审核步：advance、gates 里恢复角色解析（adapt 分支删除后的空缺）。
+- [x] **FSK-14 P1** `npm run test` + `scripts/selftest-furnace-skills.mjs`：`grok inspect` 能列出同步后的 skills（无 grok 时 skip）。
 
 ### 4.3 文档与兼容
 
-- [ ] **FSK-20 P0** 更新 `docs/tech-crucible-3.2.md`（或 3.7 增补节）：熔炉定制 = Skills，AGENTS 只引导。
-- [ ] **FSK-21 P1** `server/config/furnace/README.md` 改表：prompts 过渡说明 → skills 为主。
-- [ ] **FSK-22 P2** 删除 `shared` 中 `ADAPT_OPTION_HOVER` 等死文案（或 6.4 标记 deprecated）。
-- [ ] **REL-01 P1** 版本号 / CHANGELOG「6.4 熔炉 Skill 化」。
+- [x] **FSK-20 P0** 更新 `docs/tech-crucible-3.2.md`（或 3.7 增补节）：熔炉定制 = Skills，AGENTS 只引导。
+- [x] **FSK-21 P1** `server/config/furnace/README.md` 改表：prompts 过渡说明 → skills 为主。
+- [x] **FSK-22 P2** 删除 `shared` 中 `ADAPT_OPTION_HOVER` 等死文案（或 6.4 标记 deprecated）。
+- [x] **REL-01 P1** 版本号 / CHANGELOG「6.4 熔炉 Skill 化」。
 
 ---
 

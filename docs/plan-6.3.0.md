@@ -187,10 +187,10 @@ sequenceDiagram
 
 **工程接线（与 Skill 配套，否则 Skill 只停留在文案）**
 
-- [ ] **RFN-SKILL-01 P0** 新增 `skills/furnace-refine-skill/SKILL.md` + `buildFurnaceRefineSkillPrompt()`（可与 `agentRefine.buildRefineSkillPrompt` 并存，内容不同）。
-- [ ] **RFN-SKILL-02 P0** 成员/步骤炼化开启或用户 @熔炉 说「炼化」时：`syncFurnaceSessionContext` 使用 `resolveRefineFurnaceRole({ refine: true })`，加载 `refine.md` + Skill 摘要。
-- [ ] **RFN-SKILL-03 P1** 设置页炼化区增加「复制熔炉炼化 Skill」（外链 skill 路径或内联短 prompt），与「第三方 Agent 炼化 Skill」分开展示。
-- [ ] **RFN-SKILL-04 P2** `acw-ctl.mjs` 帮助与 Skill 交叉引用（`add-member --refine`、`verify-member`、`backup-source`）。
+- [x] **RFN-SKILL-01 P0** 新增 `skills/furnace-refine-skill/SKILL.md` + `buildFurnaceRefineSkillPrompt()`（可与 `agentRefine.buildRefineSkillPrompt` 并存，内容不同）。
+- [x] **RFN-SKILL-02 P0** 成员/步骤炼化开启或用户 @熔炉 说「炼化」时：`syncFurnaceSessionContext` 使用 `resolveRefineFurnaceRole({ refine: true })`，加载 `refine.md` + Skill 摘要。
+- [x] **RFN-SKILL-03 P1** 设置页炼化区增加「复制熔炉炼化 Skill」（外链 skill 路径或内联短 prompt），与「第三方 Agent 炼化 Skill」分开展示。
+- [x] **RFN-SKILL-04 P2** `acw-ctl.mjs` 帮助与 Skill 交叉引用（`add-member --refine`、`verify-member`、`backup-source`）。
 
 **不建议**
 

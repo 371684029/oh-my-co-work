@@ -3,6 +3,8 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-16 | A | CHANGELOG.md, scripts/selftest-{furnace-skills,refine-smoke}.mjs | 6.3/6.4 收尾冒烟与变更日志
+2026-11-16 | M | docs/plan-{6.3.0,6.4.0}.md | RFN/FSK 清单勾选完成
 2026-11-16 | A | skills/{furnace-core,furnace-acw-ctl,furnace-refine-skill,furnace-review}/SKILL.md | 6.4 熔炉 Skill 包
 2026-11-16 | A | server/src/furnaceSkillSync.js, server/test/furnaceSkillSync.test.js | 同步 skills 至 .grok/skills
 2026-11-16 | M | server/src/{furnaceGrokInject,furnaceContext,furnaceSituation,refine,agentRefine,docsHub,appSettings}.js | Skills 瘦身 AGENTS、炼化角色推断、JSONL 产出、DOC-IO、熔炉炼化 prompt API
