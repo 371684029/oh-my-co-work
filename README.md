@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-6.1.0-409eff?style=flat-square" alt="version 6.1.0" />
+  <img src="https://img.shields.io/badge/version-6.5.0-409eff?style=flat-square" alt="version 6.5.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -159,12 +159,12 @@
 | 熔炉 | 右侧桌宠；干活面默认 **TUI**；顶栏 **Grok CLI / Cursor CLI** 独立 PTY；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清当前 Agent 对话；短 AGENTS + rules 文件 |
 | 界面缩放 | 顶栏 `− 100% +` 控件缩放整个界面（60%～160%，记住设置） |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认（非阻塞，粘贴后可继续输入）、满屏与全屏；**5.3.2** 起输出按帧合并写入、隐藏 Tab 暂停绘制，减轻熔炉/Cursor CLI 长输出卡顿与黑屏；滚动缓冲跟随设置 |
-| 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续；适配角标 |
+| 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程；折叠态直接标出实际用了哪个成员 |
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown；在文档中心阅读与编辑 |
-| 文档中心 | 6.1.0：侧栏一会话一叶（群报告）；终端历史定格（重启后可看日志预览）；飞书风阅读；全文搜索与按群导出 |
-| 炼化 | 成员勾选后**保存当下**改源（`ACW-REFINE`）并 **pipe 试跑验证**（`verifyLast` / 抽屉「试跑验证」）；`acw-ctl verify-member`；适配 plan 预览；还原中心 diff/还原；开聊闸门 **下一步**（回车带参） |
+| 文档中心 | 侧栏一会话一叶（群报告）；**群报告 / step 台账 / README 可编辑**；「炼化与还原」**git 式 unified diff**（`/docs?pane=refine`）；终端历史定格；全文搜索与按群导出 |
+| 炼化 | 成员勾选后**保存当下**改源（`ACW-REFINE`）+ **保存前/后同一套 diff**；**pipe 试跑**；熔炉 Skills 同步；还原中心一键还原；开聊闸门 **下一步**（回车带参） |
 | 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页提供**一键导入与一键导出**（导入备份包恢复数据，恢复前自动留快照可回退；导出为全量协同文档 ZIP）；备份/还原生产热路径全异步（integrity/checkpoint 走 worker）；关于页状态无缝联动 |
 | 会话治理 | 置顶、改名、删除（顶栏删除会从列表拿掉并清终端行）、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
 | 系统通知 | 分级（需要你/出错了/完成了）、点击深链直达会话/闸门；收件箱落库可回看；托盘待办菜单与暂停通知；Windows 任务栏角标/Dock 徽章；勿扰时段与前台抑制 |
@@ -176,7 +176,7 @@
 
 ### 桌面窗口（推荐）
 
-下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里对应平台的 **`oh-my-co-work-v5-<平台>-desktop.zip`**（`win32-x64` / `linux-x64` / `darwin-arm64`；内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。Linux / macOS 解压后运行 `./start.sh`；macOS 为未签名便携版，被 Gatekeeper 拦截时在解压目录执行 `xattr -dr com.apple.quarantine .`。
+下载 [latest release](https://github.com/371684029/oh-my-co-work/releases/tag/latest) 里对应平台的 **`oh-my-co-work-v6-<平台>-desktop.zip`**（`win32-x64` / `linux-x64` / `darwin-arm64`；内含 Electron 窗口和 Node 运行时，一般不用再装 Node.js）。Linux / macOS 解压后运行 `./start.sh`；macOS 为未签名便携版，被 Gatekeeper 拦截时在解压目录执行 `xattr -dr com.apple.quarantine .`。
 
 **Windows**：解压后双击 `start.bat`（或 `desktop/oh-my-co-work.exe` 同目录下的启动脚本），应立刻出现全屏窗口（先显示 Logo 与「正在启动本机服务」，再进入工作台）。托盘与 exe 图标与首页 Logo 一致。关窗会藏到托盘；要停服务请用托盘菜单 **退出**。
 
@@ -197,14 +197,14 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.1.0**（文档中心侧栏扁平、终端日志定格卡；须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.5.0**（炼化 unified diff、熔炉 Skills、DOC-IO；须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
 
 | 产物 | 路径（本地打包，不进 git） |
 |------|---------------------------|
 | Linux 轻量包 | `packages/oh-my-co-work-v6-linux-x64.zip`（`npm run pack`） |
 | Windows 桌面包 | `release/oh-my-co-work-v6-win32-x64-desktop.zip`（`ACW_PACK_TARGET=win32-x64 npm run pack:desktop`） |
 
-桌面窗口请用 **`*-desktop.zip`**。`packages/` 仅放可入仓的轻量 zip；超过 100MB 的桌面包在 `release/`。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。发布前建议：`npm run lint`、`npm test`、`npm run test:web`、`node scripts/selftest-refine-adapt.mjs`；包内 `BUILD_INFO.json` 可用于排障。
+桌面窗口请用 **`*-desktop.zip`**。`packages/` 仅放可入仓的轻量 zip；超过 100MB 的桌面包在 `release/`。桌宠图集打在前端里：要看 **chatgpt-pets 李慕婉**，请重新下载 zip 解压覆盖，不要沿用旧文件夹。发布前建议：`npm run lint`、`npm test`、`npm run test:web`、`node scripts/selftest-refine-{diff,smoke,adapt}.mjs`；包内 `BUILD_INFO.json` 可用于排障。待办汇总见 [docs/plan-backlog.md](./docs/plan-backlog.md)。
 
 ### 从源码启动
 
@@ -341,6 +341,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 | [5.7.0 需求文档](./docs/plan-5.7.0.md) | 打包链路一劳永逸与发布治理：纯 Node 压缩、Windows 原生打包+启动冒烟、发布重试、配置迁出安装目录、产物出 git、备份导入/导出统一 ZIP；剩运行时升级与签名 |
 | [5.8.0 熔炉/CLI 性能 II](./docs/plan-5.8.0.md) | 5.3.2 已落地项台账与后续增量 parse / 性能 HUD |
 | [6.1.0 文档中心扁平 + 终端定格](./docs/plan-6.1.0.md) | 侧栏一会话一叶；终端 DB+log 历史预览卡 |
+| [6.2～6.5 全局搜索 / 炼化合一 / Skills / diff](./docs/plan-backlog.md) | 6.5.0 炼化改源 git diff；余量见待办栏 |
 
 ## 路线图
 
@@ -381,6 +382,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] 5.3.2：熔炉与内置 CLI 性能 II——xterm 按帧合并写入、大块 replay 分片灌入、WebGL 黑屏兜底、WS 输出不再每包刷新 Vue replay、熔炉 GUI 解析节流、单 xterm 切换 Agent、attach 回放 tail 512KB，见 [docs/plan-5.8.0.md](./docs/plan-5.8.0.md)
 - [x] **5.9.0**：炼化 verifyPreview、试跑矩阵、炼化验证演示种子；闸门「通过+下一步」、`paramBindSlots`；适配回落 toast；见 [docs/plan-5.9.0.md](./docs/plan-5.9.0.md)
 - [x] **6.1.0**：文档中心一会话一叶（侧栏不列 step 台账）；终端 DB+log 历史定格；见 [docs/plan-6.1.0.md](./docs/plan-6.1.0.md)
+- [x] **6.2～6.5**：全局聊天搜索、炼化合一、DOC-IO、熔炉 Skill 化、炼化 **unified diff**；见 [CHANGELOG.md](./CHANGELOG.md)、[docs/plan-6.5.0.md](./docs/plan-6.5.0.md)
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/plan-5.4.0.md](./docs/plan-5.4.0.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/plan-5.5.0.md](./docs/plan-5.5.0.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/plan-5.6.0.md](./docs/plan-5.6.0.md)
