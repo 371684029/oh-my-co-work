@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-17 | A/M | docs/{plan-backlog.md,plan-6.5.0.md} | 产品待办栏汇总与 6.5 §十 交叉引用
 2026-11-17 | A/M | server/src/{refineDiff.js,refineSource.js,refineRestore.js}, server/test/{refineDiff,refinePlan,catalogRoutes}.test.js, scripts/selftest-refine-{adapt,diff}.mjs, web/src/views/{settings/Members,docs/{DocsHub,DocsRefineChangesPane}.vue,settings/Prefs.vue}, web/src/{api,composables/settingsMembersCopy,i18n/*}, shared/index.js, docs/{guide-script,plan-6.{2,5}.0}.md, CHANGELOG.md, */package.json, server/config/about.json | 6.5 unified diff + 6.4 adapt 文案清理
 2026-11-17 | A | docs/plan-6.5.0.md | 炼化改源 git 式 diff 与文档中心审计规划
 2026-11-17 | M | server/src/docsHub.js, server/test/docsHub.test.js, web/src/views/{workbench/composables/useDocsHub.js,docs/{DocsHubContentColumn.vue,docsHubCopy.js}}, web/src/i18n/{zh-CN,en-US}.js, web/test/docsHubCopy.test.mjs, server/config/about.json, docs/plan-{6.2.0,6.3.0}.md | DOC-IO 补 README 与白名单单测；编辑按钮文案；about 6.4.0

@@ -1,0 +1,95 @@
+# 产品待办栏（backlog）
+
+> **用途**：聚合当前发版线及相邻计划的**未勾选项**，供迭代与 Agent 对齐。细则仍以各 `plan-*.md` 为准；本栏只做索引与状态 `[ ]` / `[x]`。
+>
+> **最后对齐**：6.5.0 已上 main（unified diff）· 更新 2026-11-17
+
+---
+
+## A. 6.5.x 炼化 diff 余量（`docs/plan-6.5.0.md`）
+
+| 状态 | ID | 优先级 | 待办 |
+| --- | --- | --- | --- |
+| [ ] | RFD-03 | P1 | 扩充分 history API / catalog：unified diff + 超长折叠（>200 行） |
+| [ ] | RFD-13 | P2 | 导出单次 diff 为 `.patch` 或写入 `journals/.../assets/` |
+| [ ] | RFD-21 | P1 | 流程轨失败节点：深链「该成员最近炼化 diff」 |
+| [ ] | RFD-22 | P2 | 时间线事件 `refine.source_patched` + 工作台筛选 |
+| [ ] | RFD-11+ | P1 | 文档中心「炼化与还原」**按成员名过滤**（入口已有，`pane=refine`） |
+
+---
+
+## B. 6.5+ 体验与设置债
+
+| 状态 | ID | 优先级 | 待办 |
+| --- | --- | --- | --- |
+| [ ] | DEBT-01 | P1 | `settings.refine.backup` 正式键名（读库兼容 `adapt.backup`） |
+| [ ] | RFN-F | P1 | 成员设置 `refine.format.title` **可编辑**（现只读摘要） |
+| [ ] | NTF-R | P2 | 终端长任务炼化完成 **轻量 toast** |
+| [ ] | DEBT-02 | P2 | 再扫 restore-center / 历史 i18n「适配」字样与 `docs.badges.adapt` |
+
+---
+
+## C. 6.4.x 熔炉 Skills 余量（`docs/plan-6.4.0.md` §八）
+
+| 状态 | 待办 |
+| --- | --- |
+| [ ] | **FSK-B**：阶段 B — 设置弱化 `prompts/*.md`，Skill 单写 + 生成 prompt 片段 |
+| [ ] | Grok CLI skills 目录：按 `grok inspect` 探测，必要时 `furnaceSkillSync` 分支 |
+| [ ] | 自定义 `workspaceDir`：覆盖 `.grok/skills` 前是否二次确认 |
+| [ ] | **CUR-F**：`furnaceAgent=cursor` 时 Skills → `.cursor/rules` 镜像（另开任务） |
+| [ ] | prompts 与 Skills **单写**治理（避免双处编辑） |
+
+---
+
+## D. 6.2 / 6.1 后置（非阻塞当前线）
+
+| 状态 | ID | 待办 | 说明 |
+| --- | --- | --- | --- |
+| [ ] | SRC-06 | `Ctrl/Cmd+Shift+F` 打开全局搜索 | `plan-6.2.0.md` · 明确本版不做 |
+| [ ] | TRM-06 | xterm 位图截图落盘 | `plan-6.1.0.md` · 文本定格不满足再开 ADR |
+| [ ] | DOC-06 | `plan-docs-4x.md` §3.2 脚注 6.1 侧栏口径 | 文档一致性 |
+| [ ] | REL-6.1 | 6.1 终端定格对外 changelog 口径 | 可与 about 历史条目合并说明 |
+
+---
+
+## E. 工程 / 协作杂项
+
+| 状态 | 待办 |
+| --- | --- |
+| [ ] | GitHub **PR #173** 若仍 open：标 superseded 或关闭（main 已含 6.3/6.4） |
+| [ ] | `resolveAdaptFurnaceRole` / `MEMBER_ADAPT` 角色：**只读兼容**期满后的删除评估 |
+
+---
+
+## F. 历史大计划（不展开，按需打开）
+
+> 以下文件内仍有大量 `[ ]`，属**旧版本线**（5.x TUI、4.x 文档、3.x 熔炉封板前）。新功能默认不进本栏明细，避免与 6.x 主线混淆。
+
+| 文档 | 主题 |
+| --- | --- |
+| [plan-5.4.0.md](./plan-5.4.0.md) | 系统通知实机 NTF-T3/T4 |
+| [plan-5.5.0.md](./plan-5.5.0.md) / [plan-5.6.0.md](./plan-5.6.0.md) | 桌面包、大文件拆、无障碍、E2E |
+| [plan-5.8.0.md](./plan-5.8.0.md) | 性能 HUD / transcript 真增量 |
+| [plan-tui-2x.md](./plan-tui-2x.md) | TUI 2.x 全量验收表（多数已交付，表未全勾） |
+| [plan-refine-search-4x.md](./plan-refine-search-4x.md) | 4.x 炼化/搜索（已由 6.x 替代，条目标历史） |
+| [plan-docs-4x.md](./plan-docs-4x.md) | 文档中心 4.x / 自更新 UPD-* |
+| [plan-crucible-3x.md](./plan-crucible-3x.md) | 3.x 熔炉封板前待决 |
+
+---
+
+## G. Cursor Agent 待办同步清单（与上表 A–E 一一对应）
+
+1. RFD-03 refine history API + 截断  
+2. RFD-13 导出 patch  
+3. RFD-21 流程轨深链 diff  
+4. RFD-22 时间线 refine.source_patched  
+5. 文档中心炼化列表成员过滤  
+6. settings.refine.backup 迁移  
+7. refine.format.title 可编辑  
+8. 终端炼化 toast  
+9. FSK-B prompts 阶段 B  
+10. Cursor 熔炉 Skills 镜像  
+11. SRC-06 全局搜索快捷键  
+12. PR #173 收尾  
+13. DEBT restore-center / adapt 文案扫尾  
+14. Grok skills 目录探测 + workspace 覆盖确认（6.4 §八）  

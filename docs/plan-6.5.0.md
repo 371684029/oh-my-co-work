@@ -130,5 +130,26 @@
 ## 七、摘要（答复产品讨论）
 
 - **改了哪些代码**：主要是成员脚本源文件插入/升级 `ACW-REFINE` 契约与 argv 同步；元数据写入 `config.refine.format`；备份在 `data/backups/refine`。
-- **文档中心能不能看到**：**能**，在「节点炼化与还原」/ 还原中心，**行级 +/-**；**不能像 git show 那样标准 unified**，也**不会自动写进步台账正文**。
-- **6.5 要不要做**：建议做，把「可审计改源」作为炼化 trust 的最后一环，与 6.3 契约、6.4 Skills 形成闭环。
+- **文档中心能不能看到**：**能**，在「节点炼化与还原」/ 还原中心，**git 式 unified diff**（6.5.0）；不会自动嵌进群报告/step 正文。
+- **6.5 要不要做**：核心 diff 已交付；余量见 **§十** 与 [`plan-backlog.md`](./plan-backlog.md)。
+
+---
+
+## 十、待办栏
+
+> **单一汇总表**：[`docs/plan-backlog.md`](./plan-backlog.md)（含 6.5 余量、6.4 待决、设置债、工程杂项、历史计划索引）。
+
+**本文件内未勾任务（复制跟踪）**
+
+- [ ] RFD-03 history API + diff 截断  
+- [ ] RFD-13 导出 `.patch`  
+- [ ] RFD-21 流程轨 → 炼化 diff  
+- [ ] RFD-22 时间线 `refine.source_patched`  
+- [ ] 文档中心炼化列表按成员过滤  
+- [ ] `settings.refine.backup` 键名迁移  
+- [ ] `refine.format.title` 可编辑  
+- [ ] 终端炼化完成 toast  
+- [ ] 6.4 阶段 B（prompts → Skill 单写）  
+- [ ] Cursor 熔炉 Skills 镜像  
+- [ ] 6.2 SRC-06 全局搜索快捷键（后置）  
+- [ ] PR #173 关闭 / superseded  
