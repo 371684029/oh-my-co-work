@@ -1,4 +1,4 @@
-当前开发线：**v5.9.0**（见仓库根 `package.json`）。
+当前开发线：**v6.5.0**（见仓库根 `package.json`）。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
 
 # 文档索引
 
