@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-18 | M | shared/index.js, server/src/engine/{store,userInput}.js, server/test/sessionAutoTitle.test.js, docs/tech-data-storage.md | 会话自动命名仅首条输入/kickoff，冻结 autoTitle；群聊/@协助不再 sync 标题
 2026-11-17 | M | README.md | 版本 6.5.0、炼化 diff / DOC-IO / backlog 链
 2026-11-17 | A/M | docs/{plan-backlog.md,plan-6.5.0.md} | 产品待办栏汇总与 6.5 §十 交叉引用
 2026-11-17 | A/M | server/src/{refineDiff.js,refineSource.js,refineRestore.js}, server/test/{refineDiff,refinePlan,catalogRoutes}.test.js, scripts/selftest-refine-{adapt,diff}.mjs, web/src/views/{settings/Members,docs/{DocsHub,DocsRefineChangesPane}.vue,settings/Prefs.vue}, web/src/{api,composables/settingsMembersCopy,i18n/*}, shared/index.js, docs/{guide-script,plan-6.{2,5}.0}.md, CHANGELOG.md, */package.json, server/config/about.json | 6.5 unified diff + 6.4 adapt 文案清理
