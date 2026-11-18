@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   buildFurnaceLaunchQuery,
   memberVerifyFailedForLaunch,
+  memberVerifyFailedFromRecord,
   normalizeRefineFurnaceTarget,
   parseFurnaceLaunchQuery,
 } from '../src/composables/refineFurnaceLaunch.js'
@@ -32,4 +33,10 @@ test('memberVerifyFailedForLaunch', () => {
   assert.equal(memberVerifyFailedForLaunch({ _verifyFailed: true }), true)
   assert.equal(memberVerifyFailedForLaunch({ _verifyLast: { ok: false } }), true)
   assert.equal(memberVerifyFailedForLaunch({ _verifyLast: { ok: true } }), false)
+})
+
+test('memberVerifyFailedFromRecord', () => {
+  assert.equal(memberVerifyFailedFromRecord({ verifyFailed: true }), true)
+  assert.equal(memberVerifyFailedFromRecord({ verifyLast: { ok: false } }), true)
+  assert.equal(memberVerifyFailedFromRecord({ verifyLast: { ok: true } }), false)
 })

@@ -56,4 +56,29 @@ const verify = verifyMemberSync({
 })
 assert.equal(verify.ok, true, JSON.stringify(verify.checks))
 
+const { formatVerifyFailureBrief, buildMemberRefineVerifyPrompt } = await import(
+  path.join(root, 'server/src/refineVerifyPrompt.js'),
+)
+const failBrief = formatVerifyFailureBrief(null, {
+  ok: false,
+  checks: [{ id: 'probe_run', ok: false, detail: 'EXIT' }],
+})
+assert.match(failBrief, /进程非零退出/)
+const promptPack = buildMemberRefineVerifyPrompt(
+  {
+    id: 'mem_self',
+    display_name: 'selftest',
+    kind: 'script',
+    config: {
+      refine: {
+        enabled: true,
+        verifyLast: { ok: false, checks: [{ id: 'probe_run', ok: false, detail: 'EXIT' }] },
+      },
+      script: { filePath: mjs, scriptWorkDir: dir },
+    },
+  },
+  { target: 'grok' },
+)
+assert.match(promptPack.prompt, /进程非零退出|EXIT/)
+
 console.log('[selftest-refine-adapt] ok')

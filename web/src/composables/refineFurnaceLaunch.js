@@ -80,3 +80,11 @@ export function memberVerifyFailedForLaunch(form) {
   if (v && v.ok === false && !v.skipped) return true
   return !!form?._verifyFailed
 }
+
+/** 还原中心 / 列表上的成员摘要（verifyLast 在顶层） */
+export function memberVerifyFailedFromRecord(record) {
+  if (!record) return false
+  if (record.verifyFailed) return true
+  const v = record.verifyLast
+  return !!(v && v.ok === false && !v.skipped)
+}

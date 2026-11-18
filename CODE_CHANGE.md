@@ -3,6 +3,8 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-18 | M | web/src/views/docs/DocsRefineChangesPane.vue, web/src/composables/refineFurnaceLaunch.js, web/test/refineFurnaceLaunch.test.mjs, scripts/selftest-refine-adapt.mjs, docs/{spec-frontend-components.md,plan-6.8.0.md,plan-backlog.md} | RFV-15 文档中心同款入口 + RFV-33 selftest EXIT 文案
+2026-11-18 | A/M | server/src/{refineVerifyPrompt.js,routes/catalogRoutes.js}, server/test/refineVerifyPrompt.test.js, web/src/{api.js,composables/refineFurnaceLaunch.js,views/settings/{Members.vue,RefineFurnaceLaunchDialog.vue},views/workbench/composables/useFurnaceSync.js,i18n/settingsMembers.{zh,en}.js}, web/test/refineFurnaceLaunch.test.mjs, docs/{guide-script.md,plan-6.8.0.md,plan-backlog.md} | 6.8 RFV：试跑失败前往熔炉炼化 API + 弹窗 + 跳进熔炉剪贴板
 2026-11-18 | A | docs/{plan-6.8.0.md,plan-backlog.md} | 6.8.0 规划：试跑失败「前往熔炉炼化」弹窗（Grok/Cursor/复制 Prompt）
 2026-11-17 | M | README.md | 版本 6.5.0、炼化 diff / DOC-IO / backlog 链
 2026-11-17 | A/M | docs/{plan-backlog.md,plan-6.5.0.md} | 产品待办栏汇总与 6.5 §十 交叉引用

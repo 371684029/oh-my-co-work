@@ -60,7 +60,7 @@
 | [x] | RFV-10 | P0 | 成员抽屉试跑失败旁「前往熔炉炼化」+ 弹窗 Grok/Cursor/外部 |
 | [x] | RFV-12 | P0 | 跳进工作台熔炉 query + Prompt 预填/复制 |
 | [x] | RFV-13 | P1 | `useFurnaceSync` 开炉 + agent + 剪贴板 |
-| [ ] | RFV-15 | P2 | 文档中心试跑未通过卡同款入口 |
+| [x] | RFV-15 | P2 | 文档中心试跑未通过卡同款入口 |
 | [ ] | RFV-21 | P1 | Cursor 路径降级说明（CUR-F 可选） |
 
 ---

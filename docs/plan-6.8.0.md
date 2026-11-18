@@ -89,7 +89,7 @@ flowchart TD
 - [x] **RFV-12 P0** 复制成功 toast；跳进熔炉：`/workbench?furnace=1&agent=grok|cursor&refineMemberId=`。
 - [x] **RFV-13 P1** `useFurnaceSync`：开炉 + `ensureFurnaceAgent` + 剪贴板任务（TUI 粘贴）。
 - [x] **RFV-14 P1** i18n：`settingsMembers.*` 中英；失败 hint 与弹窗文案统一「试跑」用语。
-- [ ] **RFV-15 P2** 文档中心 `DocsRefineChangesPane` 成员卡「试跑未通过」旁同款按钮（与 RFN-IO-03 失败深链互补）。
+- [x] **RFV-15 P2** 文档中心 `DocsRefineChangesPane` 成员卡「试跑未通过」旁同款按钮（与 RFN-IO-03 失败深链互补）。
 
 ### 4.3 熔炉与 Agent 策略（RFV-FUR）
 
@@ -103,7 +103,7 @@ flowchart TD
 - [x] **RFV-30 P0** 单测：`formatVerifyFailureBrief`、RFV-01 路由（mock member + verifyLast）。
 - [x] **RFV-31 P1** `web/test/refineFurnaceLaunch.test.mjs`：弹窗状态机、query 解析（纯逻辑）。
 - [x] **RFV-32 P0** 更新 `guide-script.md` §炼化「验证失败 → 熔炉」；`CODE_CHANGE.md` 随实现追加。
-- [ ] **RFV-33 P1** `scripts/selftest-refine-adapt.mjs` 可选断言：失败 mock 时 API prompt 含 `EXIT` 映射文案。
+- [x] **RFV-33 P1** `scripts/selftest-refine-adapt.mjs` 可选断言：失败 mock 时 API prompt 含 `EXIT` 映射文案。
 
 ---
 

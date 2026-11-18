@@ -49,6 +49,7 @@ app.use(ElementPlusX)
 | 熔炉桌宠 | `FurnaceSprite` | 贴右、距底约三分之一；chatgpt-pets v2 图集按单帧人物区裁掉左右透明留白，不能把 192px 整格直接缩小；李慕婉 idle / running / waiting + 戳一下 waving，悬停注视；收起后仍是整个人 |
 | 熔炉干活面头像 | `FurnaceAvatar` | 仅 GUI 大头；开干活面时藏桌宠 |
 | 熔炉干活面 | `FurnaceWorkspace` | GUI 对话框气泡可滚动 / TUI 铺满原生 Grok，右侧箭头展开同一份对话记录；**返回群聊**只关皮；顶栏「进程」里**关闭熔炉 / 新开熔炉** |
+| 炼化失败 → 熔炉 | `RefineFurnaceLaunchDialog` + `useFurnaceSync` | 设置或文档中心试跑未通过 → 弹窗选 Grok/Cursor/外部；跳进熔炉：`/workbench?furnace=1&agent=grok\|cursor&refineMemberId=`，任务写入剪贴板后在 TUI 粘贴 |
 | Logo | `components/AppLogo.vue` · `assets/logo.svg` | **左人 · 中文档 · 右机**（人机协同办公）；见 [product-brand-logo.md](./product-brand-logo.md) |
 | 左栏会话 | `Conversations` + 开聊条 | 群模板 / 成员分组下拉 → 开聊；`items` + `v-model:active` |
 | 中栏消息 | `BubbleList` | **`noStyle`** 去组件外壳；`#content` 内 `.bubble-rich` 单层气泡；`#header` 发送人、`#avatar` 首字 |

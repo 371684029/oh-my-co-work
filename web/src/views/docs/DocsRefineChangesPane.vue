@@ -61,6 +61,15 @@
             <el-button v-else size="small" link type="primary" @click="goMembersSettings(m.id)">
               成员试跑记录
             </el-button>
+            <el-button
+              v-if="memberVerifyFailedFromRecord(m)"
+              size="small"
+              type="primary"
+              plain
+              @click="openRefineFurnaceLaunch(m.id)"
+            >
+              前往熔炉炼化
+            </el-button>
           </div>
 
           <div v-if="m.history?.length" class="rl-history">
@@ -147,6 +156,7 @@
         </div>
       </section>
     </template>
+    <RefineFurnaceLaunchDialog v-model="refineFurnaceLaunchOpen" :member-id="refineFurnaceLaunchMemberId" />
   </div>
 </template>
 
@@ -157,6 +167,8 @@ import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
 import { useFlowStore } from '../../stores/flow.js'
+import RefineFurnaceLaunchDialog from '../settings/RefineFurnaceLaunchDialog.vue'
+import { memberVerifyFailedFromRecord } from '../../composables/refineFurnaceLaunch.js'
 
 const props = defineProps({
   sessionId: { type: String, default: '' },
@@ -170,6 +182,14 @@ const data = ref(null)
 const loading = ref(false)
 const restoringKey = ref('')
 const openDiffs = reactive({})
+const refineFurnaceLaunchOpen = ref(false)
+const refineFurnaceLaunchMemberId = ref('')
+
+function openRefineFurnaceLaunch(memberId) {
+  refineFurnaceLaunchMemberId.value = String(memberId || '').trim()
+  if (!refineFurnaceLaunchMemberId.value) return
+  refineFurnaceLaunchOpen.value = true
+}
 
 const refineMembers = computed(() =>
   (data.value?.members || []).filter(
