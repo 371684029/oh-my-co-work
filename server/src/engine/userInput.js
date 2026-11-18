@@ -13,7 +13,7 @@ import {
   mergeSystemParams,
   isMentionAssistOnly,
 } from '@acw/shared'
-import { getSession, getGroup, getMember, syncAutoSessionTitle,  } from './store.js'
+import { getSession, getGroup, getMember,  } from './store.js'
 import { engineEmit } from './events.js'
 import { ensureOffsiteNode, resolveOffsiteMode, appendOffsiteNodeChat } from './offsite.js'
 import { unarchiveSession, refreshSessionAnnouncement } from './archive.js'
@@ -84,10 +84,8 @@ export function recordUserChatInput(
     nodeTitle: nodeTitle || undefined,
     nodeInstanceId: nodeInstanceId || undefined,
   })
-  const autoTitle = syncAutoSessionTitle(ctx, group)
   engineEmit('persist_session', sessionId, {
     context_json: JSON.stringify(ctx),
-    ...(autoTitle ? { title: autoTitle } : {}),
   })
   refreshSessionAnnouncement(sessionId)
   try {

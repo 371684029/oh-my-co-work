@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.8.0 — 试跑失败 → 熔炉炼化 + 会话命名
+
+- 炼化试跑未通过：成员设置与文档中心 **「前往熔炉炼化」**；`GET /api/members/:id/refine/verify-prompt`；弹窗选 Grok/Cursor/外部；跳进工作台熔炉并复制任务到剪贴板（TUI 粘贴）。
+- 会话自动命名：`autoTitleParam1` / `kickoff` 优先；群聊与 @协助不再 `syncAutoSessionTitle`。
+
 ## 6.5.0 — 炼化改源 unified diff
 
 - 保存前 `refine/plan` 与文档中心还原区共用 `buildUnifiedDiff`（git 式 `@@` hunk）。

@@ -313,6 +313,7 @@ export function resolveParamsMap(sessionContext, group) {
  */
 export function syncAutoSessionTitle(ctx, group) {
   if (!ctx || ctx.titleAuto === false) return null
+  if (ctx.autoTitleApplied) return null
   const groupTitle =
     ctx.groupTitle || group?.title || group?.display_name || ctx.pendingStart?.groupTitle || ''
   if (!ctx.groupTitle && groupTitle) ctx.groupTitle = groupTitle
@@ -323,5 +324,10 @@ export function syncAutoSessionTitle(ctx, group) {
     groupTitle: ctx.groupTitle,
     groupTitleAbbr: ctx.groupTitleAbbr,
   })
-  return next || null
+  if (!next) return null
+  if (param1) {
+    ctx.autoTitleParam1 = param1
+    ctx.autoTitleApplied = true
+  }
+  return next
 }

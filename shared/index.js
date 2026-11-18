@@ -413,22 +413,26 @@ export function formatSessionAutoTitle(opts = {}) {
  */
 export function resolveSessionAutoTitleParam1(ctx) {
   if (!ctx || typeof ctx !== 'object') return ''
+  const frozen = ctx.autoTitleParam1
+  if (frozen != null && String(frozen).trim()) return String(frozen).trim()
+
+  const kickoffText = String(ctx.kickoff?.text || '').trim()
+  if (kickoffText) {
+    const { list } = parseProjectParams(kickoffText)
+    if (list[0]) return list[0]
+    return kickoffText.length > 120 ? kickoffText.slice(0, 120) : kickoffText
+  }
+
   const list0 = Array.isArray(ctx.paramsList) ? ctx.paramsList[0] : ''
   if (list0 != null && String(list0).trim()) return String(list0).trim()
   const p = ctx.params && typeof ctx.params === 'object' ? ctx.params : {}
   if (p['#1'] != null && String(p['#1']).trim()) return String(p['#1']).trim()
   if (p['1'] != null && String(p['1']).trim()) return String(p['1']).trim()
-  const kick = String(
-    ctx.kickoff?.text ||
-      p[SYSTEM_PARAM_KEYS.CALL_ARGS] ||
-      p['#a'] ||
-      ctx.lastHumanInput ||
-      '',
-  ).trim()
-  if (!kick) return ''
-  const { list } = parseProjectParams(kick)
+  const callA = String(p['#a'] || '').trim()
+  if (!callA) return ''
+  const { list } = parseProjectParams(callA)
   if (list[0]) return list[0]
-  return kick.length > 120 ? kick.slice(0, 120) : kick
+  return callA.length > 120 ? callA.slice(0, 120) : callA
 }
 
 /**

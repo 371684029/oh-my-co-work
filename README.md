@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-6.5.0-409eff?style=flat-square" alt="version 6.5.0" />
+  <img src="https://img.shields.io/badge/version-6.8.0-409eff?style=flat-square" alt="version 6.8.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -164,7 +164,7 @@
 | 快捷输入 | `/` 指令、`@` 协助、`#` 会话参数与节点输出 |
 | 群报告 | 自动汇总参数、节点输入输出和人工备注，落地 Markdown；在文档中心阅读与编辑 |
 | 文档中心 | 侧栏一会话一叶（群报告）；**群报告 / step 台账 / README 可编辑**；「炼化与还原」**git 式 unified diff**（`/docs?pane=refine`）；终端历史定格；全文搜索与按群导出 |
-| 炼化 | 成员勾选后**保存当下**改源（`ACW-REFINE`）+ **保存前/后同一套 diff**；**pipe 试跑**；熔炉 Skills 同步；还原中心一键还原；开聊闸门 **下一步**（回车带参） |
+| 炼化 | 成员勾选后**保存当下**改源（`ACW-REFINE`）+ **保存前/后同一套 diff**；**pipe 试跑**；失败可 **前往熔炉炼化**（Grok/Cursor Prompt + 跳进熔炉）；熔炉 Skills 同步；还原中心一键还原；开聊闸门 **下一步**（回车带参） |
 | 更新与备份 | 启动检查更新默认开（设置可关，只读版本号、不自动安装）；设置页提供**一键导入与一键导出**（导入备份包恢复数据，恢复前自动留快照可回退；导出为全量协同文档 ZIP）；备份/还原生产热路径全异步（integrity/checkpoint 走 worker）；关于页状态无缝联动 |
 | 会话治理 | 置顶、改名、删除（顶栏删除会从列表拿掉并清终端行）、续跑；群聊完成即归档；设置里释放资源、备份、配额与脱敏 |
 | 系统通知 | 分级（需要你/出错了/完成了）、点击深链直达会话/闸门；收件箱落库可回看；托盘待办菜单与暂停通知；Windows 任务栏角标/Dock 徽章；勿扰时段与前台抑制 |
@@ -197,7 +197,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.5.0**（炼化 unified diff、熔炉 Skills、DOC-IO；须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.8.0**（试跑失败衔接熔炉炼化、会话命名冻结；须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
 
 | 产物 | 路径（本地打包，不进 git） |
 |------|---------------------------|
@@ -383,6 +383,7 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 - [x] **5.9.0**：炼化 verifyPreview、试跑矩阵、炼化验证演示种子；闸门「通过+下一步」、`paramBindSlots`；适配回落 toast；见 [docs/plan-5.9.0.md](./docs/plan-5.9.0.md)
 - [x] **6.1.0**：文档中心一会话一叶（侧栏不列 step 台账）；终端 DB+log 历史定格；见 [docs/plan-6.1.0.md](./docs/plan-6.1.0.md)
 - [x] **6.2～6.5**：全局聊天搜索、炼化合一、DOC-IO、熔炉 Skill 化、炼化 **unified diff**；见 [CHANGELOG.md](./CHANGELOG.md)、[docs/plan-6.5.0.md](./docs/plan-6.5.0.md)
+- [x] **6.8.0**：试跑失败 **前往熔炉炼化**、会话侧栏命名冻结；见 [docs/plan-6.8.0.md](./docs/plan-6.8.0.md)
 - [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/plan-5.4.0.md](./docs/plan-5.4.0.md)
 - [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/plan-5.5.0.md](./docs/plan-5.5.0.md)
 - [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/plan-5.6.0.md](./docs/plan-5.6.0.md)

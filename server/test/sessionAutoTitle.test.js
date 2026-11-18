@@ -34,4 +34,23 @@ test('syncAutoSessionTitle names session from first start input', () => {
   }
   const title = syncAutoSessionTitle(ctx, { title: '原型到提测' })
   assert.equal(title, formatSessionAutoTitle({ param1: '支持星投&决策大师', groupTitle: '原型到提测' }))
+  assert.equal(ctx.autoTitleApplied, true)
+  assert.equal(syncAutoSessionTitle(ctx, { title: '原型到提测' }), null)
+})
+
+test('resolveSessionAutoTitleParam1 prefers kickoff over assist paramsList', () => {
+  const ctx = {
+    autoTitleParam1: '首段任务',
+    kickoff: { text: '应被忽略' },
+    paramsList: ['已通过并开始：协助补参'],
+  }
+  assert.equal(resolveSessionAutoTitleParam1(ctx), '首段任务')
+})
+
+test('resolveSessionAutoTitleParam1 uses kickoff when paramsList came from later chat', () => {
+  const ctx = {
+    kickoff: { text: '@runServe 支持星投 wll/1111' },
+    paramsList: ['已通过并开始：审核结果 wll/1117'],
+  }
+  assert.equal(resolveSessionAutoTitleParam1(ctx), '@runServe')
 })
