@@ -158,6 +158,13 @@ export const api = {
       req('/members/refine/plan', { method: 'POST', body: JSON.stringify(body || {}) }),
     verify: (id, body) =>
       req(`/members/${id}/verify`, { method: 'POST', body: JSON.stringify(body || {}) }),
+    refineVerifyPrompt: (id, { target, sessionId } = {}) => {
+      const q = new URLSearchParams()
+      if (target) q.set('target', target)
+      if (sessionId) q.set('sessionId', sessionId)
+      const qs = q.toString()
+      return req(`/members/${id}/refine/verify-prompt${qs ? `?${qs}` : ''}`)
+    },
     startSession: (id, body) =>
       req(`/members/${id}/sessions`, { method: 'POST', body: JSON.stringify(body || {}) }),
     exportTemplate: (id) => req(`/members/${id}/export-template`),

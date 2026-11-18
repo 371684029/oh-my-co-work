@@ -2,7 +2,7 @@
 
 > **用途**：聚合当前发版线及相邻计划的**未勾选项**，供迭代与 Agent 对齐。细则仍以各 `plan-*.md` 为准；本栏只做索引与状态 `[ ]` / `[x]`。
 >
-> **最后对齐**：6.5.0 已上 main（unified diff）· 更新 2026-11-17
+> **最后对齐**：6.5.0 已上 main（unified diff）· **6.8.0 RFV 已规划** · 更新 2026-11-18
 
 ---
 
@@ -52,6 +52,19 @@
 
 ---
 
+## H. 6.8.0 试跑失败 → 熔炉炼化（`docs/plan-6.8.0.md`）
+
+| 状态 | ID | 优先级 | 待办 |
+| --- | --- | --- | --- |
+| [x] | RFV-01 | P0 | `GET /members/:id/refine/verify-prompt`（或扩 refine-prompt）含试跑失败摘要 |
+| [x] | RFV-10 | P0 | 成员抽屉试跑失败旁「前往熔炉炼化」+ 弹窗 Grok/Cursor/外部 |
+| [x] | RFV-12 | P0 | 跳进工作台熔炉 query + Prompt 预填/复制 |
+| [x] | RFV-13 | P1 | `useFurnaceSync` 开炉 + agent + 剪贴板 |
+| [ ] | RFV-15 | P2 | 文档中心试跑未通过卡同款入口 |
+| [ ] | RFV-21 | P1 | Cursor 路径降级说明（CUR-F 可选） |
+
+---
+
 ## E. 工程 / 协作杂项
 
 | 状态 | 待办 |
@@ -77,7 +90,7 @@
 
 ---
 
-## G. Cursor Agent 待办同步清单（与上表 A–E 一一对应）
+## G. Cursor Agent 待办同步清单（与上表 A–H 一一对应）
 
 1. RFD-03 refine history API + 截断  
 2. RFD-13 导出 patch  
@@ -93,3 +106,5 @@
 12. PR #173 收尾  
 13. DEBT restore-center / adapt 文案扫尾  
 14. Grok skills 目录探测 + workspace 覆盖确认（6.4 §八）  
+15. RFV-01 试跑失败 contextual prompt API  
+16. RFV-10/12 前往熔炉炼化弹窗与跳进熔炉  

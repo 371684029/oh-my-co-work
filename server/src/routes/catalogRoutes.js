@@ -30,10 +30,26 @@ import {
 import { exportMemberTemplate, exportGroupTemplate, importTemplatePack } from '../templatePack.js'
 import { planRefineOnMemberSave } from '../refineSource.js'
 import { previewRefineVerify } from '../memberVerify.js'
+import { buildMemberRefineVerifyPrompt } from '../refineVerifyPrompt.js'
 
 const router = Router()
 
 router.get('/members', (_req, res) => res.json(listMembers()))
+router.get('/members/:id/refine/verify-prompt', (req, res) => {
+  const m = getMember(req.params.id)
+  if (!m) return res.status(404).json({ error: '成员不存在' })
+  if (!m.config?.refine?.enabled) {
+    return res.status(400).json({ error: '该成员未开启炼化', code: 'REFINE_DISABLED' })
+  }
+  try {
+    const target = req.query.target
+    const sessionId = req.query.sessionId ? String(req.query.sessionId) : undefined
+    res.json(buildMemberRefineVerifyPrompt(m, { target, sessionId }))
+  } catch (e) {
+    const status = e.code === 'NOT_FOUND' ? 404 : 400
+    res.status(status).json({ error: e.message, code: e.code })
+  }
+})
 router.get('/members/:id', (req, res) => {
   const m = getMember(req.params.id)
   if (!m) return res.status(404).json({ error: 'not found' })

@@ -16,7 +16,10 @@ import {
   terminalSessions,
   isFurnaceTuiContext,
   reopenFurnaceProcess,
+  ensureFurnaceAgent,
 } from './useTerminalSessions'
+import { consumeFurnaceRefinePrefill } from '../../../composables/refineFurnaceLaunch.js'
+import { writeClipboardText } from '../../../composables/terminalClipboardBridge.js'
 
 /**
  * 桌宠三态同步 + 熔炉开炉 的模块级单例。
@@ -56,9 +59,28 @@ async function launchFurnaceFromSprite() {
     } else {
       ElMessage.success('已打开熔炉')
     }
-    if (_route.query.furnace) {
+    const pre = consumeFurnaceRefinePrefill()
+    const launchAgent = String(_route.query.agent || pre.agent || '').trim().toLowerCase()
+    if (launchAgent === 'grok' || launchAgent === 'cursor') {
+      try {
+        await ensureFurnaceAgent(launchAgent)
+      } catch {
+        /* ignore */
+      }
+    }
+    if (pre.prompt) {
+      try {
+        await writeClipboardText(pre.prompt)
+        ElMessage.success('炼化任务已复制，请在熔炉 TUI 中粘贴发送')
+      } catch {
+        ElMessage.info('炼化任务较长，请在设置弹窗中再次复制')
+      }
+    }
+    if (_route.query.furnace || _route.query.agent || _route.query.refineMemberId) {
       const q = { ..._route.query }
       delete q.furnace
+      delete q.agent
+      delete q.refineMemberId
       _router.replace({ path: _route.path, query: q })
     }
   } finally {

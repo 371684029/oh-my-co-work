@@ -110,6 +110,16 @@
           >
             {{ membersT('form.verifyProbe') }}
           </el-button>
+          <el-button
+            v-if="showRefineFurnaceLaunch"
+            size="small"
+            type="primary"
+            plain
+            class="refine-restore-btn"
+            @click="refineFurnaceLaunchOpen = true"
+          >
+            {{ membersT('form.refineFurnaceLaunch') }}
+          </el-button>
           <div v-if="verifyLastHint" class="field-hint">{{ verifyLastHint }}</div>
           <div v-if="form.refine && refineFormatSummary" class="field-hint refine-format-box">
             <div>{{ membersT('form.refineFormatTitle') }}</div>
@@ -146,8 +156,18 @@
             <router-link to="/docs">{{ membersT('form.refineVerifyFailedDocs') }}</router-link>
             ·
             <span>{{ membersT('form.refineVerifyFailedRestore') }}</span>
+            <template v-if="showRefineFurnaceLaunch">
+              ·
+              <el-button link type="primary" @click="refineFurnaceLaunchOpen = true">
+                {{ membersT('form.refineFurnaceLaunch') }}
+              </el-button>
+            </template>
           </el-alert>
         </el-form-item>
+        <RefineFurnaceLaunchDialog
+          v-model="refineFurnaceLaunchOpen"
+          :member-id="form._editId || ''"
+        />
         <el-form-item v-if="form.refine" :label="membersT('form.refineSkillsAgent')">
           <div class="refine-skill-box">
             <el-input
@@ -378,6 +398,8 @@ import {
   membersPlanConfirmBody,
   membersRefineVerifyPreviewHint,
 } from '../../composables/settingsMembersCopy.js'
+import RefineFurnaceLaunchDialog from './RefineFurnaceLaunchDialog.vue'
+import { memberVerifyFailedForLaunch } from '../../composables/refineFurnaceLaunch.js'
 
 const scriptExts = [
   '.bat',
@@ -484,6 +506,11 @@ const refineFormatSummary = computed(() => {
 })
 const restoringRefine = ref(false)
 const verifyingMember = ref(false)
+const refineFurnaceLaunchOpen = ref(false)
+
+const showRefineFurnaceLaunch = computed(
+  () => !!form.value.refine && !!form.value._editId && memberVerifyFailedForLaunch(form.value),
+)
 
 const verifyLastHint = computed(() => {
   const v = form.value._verifyLast

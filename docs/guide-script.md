@@ -149,7 +149,7 @@
 保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认 30s，不弹终端）：
 
 - 成功：写 `config.refine.verifyLast`（`ok` / `checks` / `elapsedMs`），清除 `verifyFailed`
-- 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证
+- 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证；设置页 **「前往熔炉炼化」** 生成带失败摘要的 Prompt（`GET /api/members/:id/refine/verify-prompt`），可跳进工作台熔炉或复制后在 Grok/Cursor TUI 继续改源
 - API：`POST /api/members/:id/verify`；CLI：`acw-ctl.mjs verify-member --member <名>`
 - 探针输入默认 `ACW_HUMAN_INPUT=acw-verify-probe`（与群聊 `#1` 探针一致）
 
