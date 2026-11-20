@@ -84,6 +84,18 @@ export function storeFurnaceBindIntent(intent) {
   }
 }
 
+/**
+ * Agent chosen in the launch dialog. Read this before startChat replaces the
+ * workbench route, because that navigation drops the query string.
+ * Intent wins: it survives the route change. Empty means the user did not name one.
+ */
+export function resolveFurnaceLaunchAgent({ intent, query } = {}) {
+  const raw = String(intent?.agent || query?.agent || '').trim().toLowerCase()
+  if (raw === 'cursor') return 'cursor'
+  if (raw === 'grok') return 'grok'
+  return ''
+}
+
 export function consumeFurnaceBindIntent() {
   try {
     const raw = sessionStorage.getItem(FURNACE_BIND_INTENT_KEY) || ''

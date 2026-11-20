@@ -24,6 +24,7 @@ import {
   consumeFurnaceRefinePrefill,
   decideFurnaceProcess,
   furnacePlainTextHasUserTask,
+  resolveFurnaceLaunchAgent,
 } from '../../../composables/refineFurnaceLaunch.js'
 import { pickLiveFurnaceTerminal } from '../../../composables/furnaceReopen.js'
 import { writeClipboardText } from '../../../composables/terminalClipboardBridge.js'
@@ -51,6 +52,10 @@ async function launchFurnaceFromSprite() {
     }
     const intent = consumeFurnaceBindIntent()
     const nextMemberId = String(intent?.memberId || _route.query.refineMemberId || '').trim()
+    // startChat replaces /workbench?agent= with /workbench/:id and drops the query.
+    const launchAgent = resolveFurnaceLaunchAgent({ intent, query: _route.query })
+    const agent = launchAgent === 'cursor' ? 'cursor' : 'grok'
+    const agentLabel = agent === 'cursor' ? 'Cursor' : 'Grok'
     const anyLiveBefore = (terminalSessions.value || []).some(
       (t) => isFurnaceTuiContext(t) && isTerminalRunning(t.status),
     )
@@ -64,10 +69,6 @@ async function launchFurnaceFromSprite() {
     startTarget.value = `m:${m.id}`
     const s = await startChat({ quiet: true })
     if (!s) return
-    const launchAgent = String(
-      _route.query.agent || intent?.agent || '',
-    ).trim().toLowerCase()
-    const agent = launchAgent === 'cursor' ? 'cursor' : 'grok'
     const anyLive = (terminalSessions.value || []).some(
       (t) => isFurnaceTuiContext(t) && isTerminalRunning(t.status),
     )
@@ -111,7 +112,7 @@ async function launchFurnaceFromSprite() {
         })
         didReopen = true
         if (opened && decision === 'restart') ElMessage.success('已换到这个工具，熔炉已新开')
-        if (opened && decision === 'start') ElMessage.success('已新开熔炉，Grok 对话已清空')
+        if (opened && decision === 'start') ElMessage.success(`已新开熔炉，${agentLabel} 对话已清空`)
         if (!opened && decision === 'start') ElMessage.warning('没能新开熔炉')
       } else if (!s.reused) {
         ElMessage.success('已打开熔炉')
@@ -120,7 +121,7 @@ async function launchFurnaceFromSprite() {
       if (s.reused && !live) {
         const opened = await reopenFurnaceProcess({ skipConfirm: true, quiet: true, agent })
         didReopen = true
-        if (opened) ElMessage.success('已新开熔炉，Grok 对话已清空')
+        if (opened) ElMessage.success(`已新开熔炉，${agentLabel} 对话已清空`)
         else ElMessage.warning('没能新开熔炉')
       } else {
         ElMessage.success('已打开熔炉')

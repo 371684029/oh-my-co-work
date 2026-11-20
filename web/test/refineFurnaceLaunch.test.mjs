@@ -8,6 +8,7 @@ import {
   decideFurnaceProcess,
   furnacePlainTextHasUserTask,
   parseFurnaceLaunchQuery,
+  resolveFurnaceLaunchAgent,
 } from '../src/composables/refineFurnaceLaunch.js'
 
 test('normalizeRefineFurnaceTarget defaults to grok', () => {
@@ -21,6 +22,15 @@ test('parseFurnaceLaunchQuery reads workbench deep link', () => {
   assert.equal(q.openFurnace, true)
   assert.equal(q.agent, 'cursor')
   assert.equal(q.refineMemberId, 'm1')
+})
+
+test('resolveFurnaceLaunchAgent prefers the stored intent over the route query', () => {
+  assert.equal(
+    resolveFurnaceLaunchAgent({ intent: { agent: 'cursor' }, query: { agent: 'grok' } }),
+    'cursor',
+  )
+  assert.equal(resolveFurnaceLaunchAgent({ query: { agent: 'cursor' } }), 'cursor')
+  assert.equal(resolveFurnaceLaunchAgent({ intent: {}, query: {} }), '')
 })
 
 test('buildFurnaceLaunchQuery omits empty fields', () => {

@@ -331,13 +331,13 @@ stateDiagram-v2
 ### 6.2 探针（RCL-PROBE）
 
 - [x] **RCL-05 P0** 不再往契约里插 `ACW_VERIFY` 早退。正式执行清掉该变量。保存时去掉已经插过的早退行。
-- [x] **RCL-06 P0** 短脚本的非 0 退出码试跑失败。打印 `###` 后仍不退出的进程，探针短等后按常驻通过。
+- [x] **RCL-06 P0** 短脚本的非 0 退出码试跑失败。打印 `###` 后仍不退出的进程，探针短等后按常驻通过。非 0 退出记「退出码 N」，不再把原因码 `EXIT` 当成探针故障提前返回。探针子进程起不来时立刻失败，不再把服务干等到整段超时。
 - [ ] **RCL-07 P1** 纯包装 bat（仅 `start` / `call` 到 node）保存时默认不改该 bat，提示改炼 node 入口。显式「就炼这个文件」可覆盖。
 
 ### 6.3 熔炉绑定与换工具（RCL-FUR）
 
 - [x] **RCL-10 P0** `active.json.toolPin.stance`（`active` / `paused` / `none`）+ `lastTool`。只有 `active` 渲染成「本轮要改的工具」并保持角色 `refine`；`paused` 渲染成「已挂起」。`touchFurnaceWorkflow` 不改姿态。
-- [x] **RCL-11 P0** 开炉顺序：先写姿态和 ACTIVE，再按 §5.3 与 §5.5 决定启动或接着聊。换成员才新开；先聊别的、解除、继续改同一成员都接着聊。桌宠开炉且无活进程时，遗留的 `active` 收成 `lastTool`，新进程以 `none` 启动。
+- [x] **RCL-11 P0** 开炉顺序：先写姿态和 ACTIVE，再按 §5.3 与 §5.5 决定启动或接着聊。换成员才新开；先聊别的、解除、继续改同一成员都接着聊。桌宠开炉且无活进程时，遗留的 `active` 收成 `lastTool`，新进程以 `none` 启动。所选 Grok/Cursor 写在进入意图里，并在 `startChat` 改掉地址之前读出。`configured` 尚未打开时，只要没关 `writeRules`，绑定仍把工具提示写入 `AGENTS.md`。
 - [x] **RCL-15 P0** `FurnaceWorkspaceHead` 焦点条：正在改 / 已挂起 / 未绑定，对应「先聊别的」「继续改」「解除」。TUI 里打字不改姿态。
 - [x] **RCL-12 P1** 弹窗去掉「外部 Agent（只写群报告）」。该 Skill 留在抽屉里原有的复制框。
 - [x] **RCL-13 P1** `furnace-refine-skill`：先读 ACTIVE 的工具节；只改列出的文件；改源前 `backup-source`；禁止改 `ACW-REFINE` 标记行。用户这句若不是在说该成员，就回答，不要顺手改文件。用户没要求炼化时不插入契约。同一失败签名 3 次即停。

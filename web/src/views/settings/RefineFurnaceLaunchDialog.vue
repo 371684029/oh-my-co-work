@@ -68,6 +68,7 @@ async function onPrimary() {
       memberId: focus?.memberId || props.memberId,
       seenMemberId: seen,
       displayName: focus?.displayName || '',
+      agent,
     })
     visible.value = false
     router.push({

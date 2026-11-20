@@ -171,6 +171,8 @@ test('patched script keeps a later non-zero exit; a heading that stays up counts
     },
   })
   assert.equal(failed.ok, false, JSON.stringify(failed.checks))
+  assert.match(JSON.stringify(failed.checks), /退出码 2/)
+  assert.equal(failed.checks.some((c) => c.detail === 'EXIT'), false)
   const bare = spawnSync(process.execPath, [file], { cwd: dir, encoding: 'utf8' })
   assert.equal(bare.status, 2)
 
@@ -189,4 +191,26 @@ test('patched script keeps a later non-zero exit; a heading that stays up counts
   )
   assert.equal(resident.ok, true, JSON.stringify(resident.checks))
   assert.match(JSON.stringify(resident.checks), /常驻/)
+})
+
+test('a probe program that cannot start fails without waiting out the script timeout', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-verify-bad-worker-'))
+  const file = path.join(dir, 'ok.mjs')
+  fs.writeFileSync(file, 'console.log("### 标题")\n', 'utf8')
+  const broken = path.join(dir, 'broken.js')
+  fs.writeFileSync(broken, 'not valid javascript {{{', 'utf8')
+  const t0 = Date.now()
+  const v = verifyMemberSync(
+    {
+      kind: 'script',
+      config: {
+        refine: { enabled: true, format: { title: '标题', output: { heading: '标题' } } },
+        script: { mode: 'file', filePath: file, scriptWorkDir: dir, executionMode: 'pipe' },
+      },
+    },
+    { workerPath: broken, timeoutMs: 30000 },
+  )
+  assert.ok(Date.now() - t0 < 5000, `probe hung for ${Date.now() - t0}ms`)
+  assert.equal(v.ok, false)
+  assert.match(v.checks[0].detail, /进程启动失败/)
 })
