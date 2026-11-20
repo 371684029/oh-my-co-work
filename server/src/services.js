@@ -44,7 +44,8 @@ function stripLegacyAdaptFromConfig(config) {
 function stripLegacyAdaptFromSteps(steps) {
   return (steps || []).map((s) => {
     if (!s || typeof s !== 'object') return s
-    const { adapt, ...rest } = s
+    const rest = { ...s }
+    delete rest.adapt
     return rest
   })
 }

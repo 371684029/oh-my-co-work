@@ -206,8 +206,6 @@ import {
   docsSessionStatusLabel,
 } from './docsHubStatusUi.js'
 import {
-  docsHubBadgeAdaptLabel,
-  docsHubBadgeClonedLabel,
   docsHubColTitle,
   docsHubExportAllAria,
   docsHubExportAllLabel,
