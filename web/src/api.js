@@ -142,11 +142,6 @@ export const api = {
     recordParseSample: (body) =>
       req('/agent-registry/parse-samples', { method: 'POST', body: JSON.stringify(body || {}) }),
   },
-  furnace: {
-    focus: () => req('/furnace/focus'),
-    setFocus: (body) =>
-      req('/furnace/focus', { method: 'POST', body: JSON.stringify(body || {}) }),
-  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),
@@ -331,14 +326,15 @@ export const api = {
   heartbeat: () => req('/heartbeat', { method: 'POST', body: '{}' }),
   clientGone: () => req('/client-gone', { method: 'POST', body: '{}' }),
   shutdown: () => req('/shutdown', { method: 'POST', body: '{}' }),
-  furnace: {
-    skills: () => req('/furnace/skills'),
-    syncSkills: () => req('/furnace/skills/sync', { method: 'POST' }),
-  },
   grok: {
     status: () => req('/grok/status'),
   },
   furnace: {
+    focus: () => req('/furnace/focus'),
+    setFocus: (body) =>
+      req('/furnace/focus', { method: 'POST', body: JSON.stringify(body || {}) }),
+    skills: () => req('/furnace/skills'),
+    syncSkills: () => req('/furnace/skills/sync', { method: 'POST' }),
     prepare: (body) =>
       req('/furnace/prepare', { method: 'POST', body: JSON.stringify(body || {}) }),
   },

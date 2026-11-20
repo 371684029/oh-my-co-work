@@ -955,6 +955,17 @@ async function mainAsync() {
     entry: path.join(ROOT, 'server/src/index.js'),
     outfile: bundleOut,
   })
+  const probeWorkerOut = path.join(stage, 'server', 'dist', 'refineProbeWorker.js')
+  console.log('[pack] bundle probe worker →', probeWorkerOut)
+  const esbuild = require('esbuild')
+  await esbuild.build({
+    entryPoints: [path.join(ROOT, 'server/src/refineProbeWorker.js')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile: probeWorkerOut,
+    logLevel: 'warning',
+  })
 
   // 配置与前端产物（无源码）
   copyDir(path.join(ROOT, 'server/config'), path.join(stage, 'server/config'))

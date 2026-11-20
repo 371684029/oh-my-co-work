@@ -2,12 +2,14 @@
  * 5.9.0：成员炼化/适配探针（保存后自动试跑 + 手动 verify API）。
  * 默认用 spawnSync + pipe（不弹窗），避免改动 createMember 同步契约。
  */
+import { spawnSync } from 'node:child_process'
 import { Worker } from 'node:worker_threads'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { applyParamPlaceholders, injectCallArgsParam, isFurnaceMember } from '@acw/shared'
-import { consoleChildEnv } from './consoleEncoding.js'
+import { consoleChildEnv, decodeConsoleBytes } from './consoleEncoding.js'
 import { enrichScriptConfig } from './runners/scriptMemberConfig.js'
 import { getScriptWorkDir } from './runners/scriptWorkDir.js'
 import { resolveCwdForScript, resolveScriptFilePath } from './runners/cwdResolve.js'
@@ -109,6 +111,53 @@ function buildProbeLaunch(member, { humanInput = DEFAULT_PROBE_INPUT, param1 } =
   return { ok: true, launch, cwd, env, successCodes, filePath, command, label: member.display_name || member.name || 'script' }
 }
 
+function probeFailure(reason, extra = {}) {
+  return {
+    exitCode: -1,
+    exitOk: false,
+    stdout: '',
+    stderr: '',
+    reason,
+    ...extra,
+  }
+}
+
+/** Used when the worker file is not next to the bundle. A heading plus a hang counts as resident. */
+function runProbeSpawnSync({ launch, cwd, env, successCodes, timeoutMs }) {
+  let child
+  try {
+    child = spawnSync(launch.cmd, launch.args || [], {
+      cwd,
+      env,
+      windowsHide: true,
+      shell: launch.shell === true,
+      timeout: timeoutMs,
+      maxBuffer: 2 * 1024 * 1024,
+    })
+  } catch (e) {
+    return probeFailure('SPAWN', { stderr: String(e.message || e) })
+  }
+  const stdout = decodeConsoleBytes(child.stdout || Buffer.alloc(0))
+  const stderr = decodeConsoleBytes(child.stderr || Buffer.alloc(0))
+  if (child.error) {
+    const timedOut = child.error.code === 'ETIMEDOUT'
+    if (timedOut && /^###\s+\S/m.test(stdout)) {
+      return { exitCode: 0, exitOk: true, stdout, stderr, reason: 'resident' }
+    }
+    return {
+      exitCode: -1,
+      exitOk: false,
+      stdout,
+      stderr,
+      reason: timedOut ? 'TIMEOUT' : 'SPAWN',
+      error: child.error,
+    }
+  }
+  const exitCode = child.status == null ? -1 : child.status
+  const exitOk = successCodes.includes(exitCode)
+  return { exitCode, exitOk, stdout, stderr, reason: exitOk ? 'ok' : 'EXIT' }
+}
+
 export function runScriptProbeSync(member, options = {}) {
   const timeoutMs = options.timeoutMs ?? MEMBER_VERIFY_TIMEOUT_MS
   const humanInput = options.humanInput ?? DEFAULT_PROBE_INPUT
@@ -133,6 +182,16 @@ export function runScriptProbeSync(member, options = {}) {
     if (value == null) continue
     plainEnv[key] = String(value)
   }
+  const workerUrl = new URL('./refineProbeWorker.js', import.meta.url)
+  let workerPath = ''
+  try {
+    workerPath = fileURLToPath(workerUrl)
+  } catch {
+    workerPath = ''
+  }
+  if (!workerPath || !fs.existsSync(workerPath)) {
+    return runProbeSpawnSync({ launch, cwd, env: plainEnv, successCodes, timeoutMs })
+  }
   const resultPath = path.join(
     os.tmpdir(),
     `acw-probe-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
@@ -141,7 +200,7 @@ export function runScriptProbeSync(member, options = {}) {
   const flag = new Int32Array(sab)
   let worker
   try {
-    worker = new Worker(new URL('./refineProbeWorker.js', import.meta.url), {
+    worker = new Worker(workerUrl, {
       workerData: {
         cmd: launch.cmd,
         args: launch.args || [],
@@ -156,14 +215,11 @@ export function runScriptProbeSync(member, options = {}) {
       },
     })
   } catch (e) {
-    return {
-      exitCode: -1,
-      exitOk: false,
-      stdout: '',
-      stderr: String(e.message || e),
-      reason: 'SPAWN',
-    }
+    return probeFailure('SPAWN', { stderr: String(e.message || e) })
   }
+  // A missing or crashing worker emits 'error'. Without a listener Node exits,
+  // and the desktop window then shows Failed to fetch.
+  worker.on('error', () => {})
   Atomics.wait(flag, 0, 0, timeoutMs + 2000)
   let payload = null
   try {
