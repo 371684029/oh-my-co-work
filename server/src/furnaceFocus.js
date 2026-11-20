@@ -13,6 +13,7 @@ import {
   furnaceHomeDir,
   readFurnaceActiveFile,
 } from './furnaceContext.js'
+import { getAppSettings } from './appSettings.js'
 import { maybeInjectGrokFurnace } from './furnaceGrokInject.js'
 import { formatVerifyFailureBrief } from './refineVerifyPrompt.js'
 
@@ -204,7 +205,15 @@ function redraw(stance) {
     situation,
   })
   try {
-    pack.grok = maybeInjectGrokFurnace(pack)
+    // configured=false only means the furnace member is not wired to the grok
+    // command yet. The tool section still has to land in AGENTS.md, or the CLI
+    // never sees which file to edit. writeRules=false stays an explicit opt-out.
+    const grok = getAppSettings().grok || {}
+    const overrides =
+      grok.writeRules === false
+        ? { grok }
+        : { grok: { ...grok, configured: true }, ready: true }
+    pack.grok = maybeInjectGrokFurnace(pack, overrides)
   } catch {
     /* rules file is optional; ACTIVE.md is the binding */
   }

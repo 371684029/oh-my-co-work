@@ -80,6 +80,8 @@ test('bind, workflow refresh, pause, clear, and open-free keep one pin file cons
   const activeMd = fs.readFileSync(path.join(home, 'ACTIVE.md'), 'utf8')
   assert.match(activeMd, /本轮要改的工具/)
   assert.match(activeMd, /runServe\.mjs/)
+  const agents = fs.readFileSync(path.join(home, 'AGENTS.md'), 'utf8')
+  assert.match(agents, /本轮要改的工具/)
   assert.match(activeMd, /试跑：无/)
   const before = JSON.parse(fs.readFileSync(path.join(home, 'active.json'), 'utf8'))
   assert.equal(before.role, FURNACE_ROLE.REFINE)

@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-20 | M | server/src/{memberVerify.js,refineProbeWorker.js,furnaceFocus.js}, scripts/pack-release.mjs, web/src/{composables/refineFurnaceLaunch.js,views/settings/RefineFurnaceLaunchDialog.vue,views/workbench/composables/useFurnaceSync.js}, server/test/{memberVerify,furnaceFocus}.test.js, web/test/refineFurnaceLaunch.test.mjs, docs/plan-6.9.0.md | 进入熔炉先记住 CLI；非 0 退出写退出码；探针子进程起不来不再卡住服务；未配置 Grok 时仍写 AGENTS 工具提示
 2026-11-20 | M | web/src/api.js, server/src/memberVerify.js, scripts/pack-release.mjs, web/test/apiFurnace.test.mjs | 合并 api.furnace，避免 setFocus 被后写的对象盖掉；探针线程出错不把服务打崩，桌面包带上 worker
 2026-11-20 | M | {package,server,shared,web}/package.json, README.md, CHANGELOG.md, server/config/about.json, docs/{README.md,plan-6.9.0.md,plan-backlog.md} | 版本 6.9.0；README 写明进入熔炉改工具与 ACTIVE 绑定
 2026-11-20 | M | server/src/{memberVerify.js,refineProbeWorker.js,refineSource.js,refineVerifyExit.js,runners/runMember.js,furnaceContext.js}, web/src/{composables/refineFurnaceLaunch.js,composables/furnaceWorkspaceCopy.js,components/terminal/FurnaceWorkspaceHead.vue,views/workbench/composables/useFurnaceSync.js,i18n/*}, server/test/{memberVerify,refineSource,furnaceFocus}.test.js, web/test/refineFurnaceLaunch.test.mjs, skills/furnace-refine-skill/SKILL.md, docs/{guide-script.md,plan-6.9.0.md,plan-backlog.md} | 试跑看见短脚本退出码；常驻短等通过；桌宠认任意活进程；避免重复开 Grok

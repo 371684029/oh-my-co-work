@@ -956,7 +956,7 @@ async function mainAsync() {
     outfile: bundleOut,
   })
   const probeWorkerOut = path.join(stage, 'server', 'dist', 'refineProbeWorker.js')
-  console.log('[pack] bundle probe worker →', probeWorkerOut)
+  console.log('[pack] bundle probe child →', probeWorkerOut)
   const esbuild = require('esbuild')
   await esbuild.build({
     entryPoints: [path.join(ROOT, 'server/src/refineProbeWorker.js')],

@@ -3,7 +3,6 @@
  * 默认用 spawnSync + pipe（不弹窗），避免改动 createMember 同步契约。
  */
 import { spawnSync } from 'node:child_process'
-import { Worker } from 'node:worker_threads'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -182,64 +181,79 @@ export function runScriptProbeSync(member, options = {}) {
     if (value == null) continue
     plainEnv[key] = String(value)
   }
-  const workerUrl = new URL('./refineProbeWorker.js', import.meta.url)
-  let workerPath = ''
-  try {
-    workerPath = fileURLToPath(workerUrl)
-  } catch {
-    workerPath = ''
-  }
+  const workerPath = options.workerPath || defaultProbeWorkerPath()
   if (!workerPath || !fs.existsSync(workerPath)) {
     return runProbeSpawnSync({ launch, cwd, env: plainEnv, successCodes, timeoutMs })
   }
+  return runProbeChild({
+    launch,
+    cwd,
+    env: plainEnv,
+    successCodes,
+    timeoutMs,
+    graceMs: options.residentGraceMs ?? RESIDENT_GRACE_MS,
+    workerPath,
+  })
+}
+
+function defaultProbeWorkerPath() {
+  try {
+    return fileURLToPath(new URL('./refineProbeWorker.js', import.meta.url))
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * The probe child owns the grace timer. spawnSync returns when that process
+ * exits, so a file that fails to parse comes back immediately instead of
+ * holding the server for the whole timeout.
+ */
+function runProbeChild({ launch, cwd, env, successCodes, timeoutMs, graceMs, workerPath }) {
   const resultPath = path.join(
     os.tmpdir(),
     `acw-probe-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
   )
-  const sab = new SharedArrayBuffer(4)
-  const flag = new Int32Array(sab)
-  let worker
+  const inputPath = `${resultPath}.in.json`
+  fs.writeFileSync(
+    inputPath,
+    JSON.stringify({
+      cmd: launch.cmd,
+      args: launch.args || [],
+      cwd,
+      env,
+      shell: launch.shell === true,
+      timeoutMs,
+      graceMs,
+      successCodes,
+      resultPath,
+    }),
+  )
+  let child
   try {
-    worker = new Worker(workerUrl, {
-      workerData: {
-        cmd: launch.cmd,
-        args: launch.args || [],
-        cwd,
-        env: plainEnv,
-        shell: launch.shell === true,
-        timeoutMs,
-        graceMs: options.residentGraceMs ?? RESIDENT_GRACE_MS,
-        successCodes,
-        resultPath,
-        sab,
-      },
+    child = spawnSync(process.execPath, [workerPath, inputPath], {
+      timeout: timeoutMs + 2500,
+      windowsHide: true,
+      env: process.env,
+      maxBuffer: 1024 * 1024,
     })
   } catch (e) {
     return probeFailure('SPAWN', { stderr: String(e.message || e) })
+  } finally {
+    fs.rmSync(inputPath, { force: true })
   }
-  // A missing or crashing worker emits 'error'. Without a listener Node exits,
-  // and the desktop window then shows Failed to fetch.
-  worker.on('error', () => {})
-  Atomics.wait(flag, 0, 0, timeoutMs + 2000)
   let payload = null
   try {
     payload = JSON.parse(fs.readFileSync(resultPath, 'utf8'))
   } catch {
-    payload = {
-      exitCode: -1,
-      exitOk: false,
-      stdout: '',
-      stderr: '',
-      reason: 'SPAWN',
-    }
+    payload = null
   }
-  try {
-    fs.rmSync(resultPath, { force: true })
-  } catch {
-    /* ignore */
-  }
-  worker.terminate().catch(() => {})
-  return payload
+  fs.rmSync(resultPath, { force: true })
+  if (payload) return payload
+  const stderr = decodeConsoleBytes(child.stderr || Buffer.alloc(0)).trim()
+  const timedOut = child.error?.code === 'ETIMEDOUT' || !!child.signal
+  if (timedOut) return probeFailure('TIMEOUT', { stderr })
+  return probeFailure('SPAWN', { stderr: stderr || String(child.error?.message || '') })
 }
 
 export function verifyMemberSync(member, options = {}) {
@@ -290,7 +304,15 @@ export function verifyMemberSync(member, options = {}) {
   }
 
   const probe = runProbe(member, options)
-  if (probe.reason && probe.reason !== 'ok' && !probe.exitOk) {
+  // EXIT is a finished process with a non-zero code. Keep going so the check
+  // says the exit code, and so a printed ### heading is still recorded.
+  const infraFailure =
+    probe.reason &&
+    probe.reason !== 'ok' &&
+    probe.reason !== 'EXIT' &&
+    probe.reason !== 'resident' &&
+    !probe.exitOk
+  if (infraFailure) {
     const map = {
       NO_FILE: '未配置脚本文件',
       FILE_MISSING: '脚本文件不存在',
@@ -299,10 +321,15 @@ export function verifyMemberSync(member, options = {}) {
       TIMEOUT: `试跑超时（>${options.timeoutMs ?? MEMBER_VERIFY_TIMEOUT_MS}ms）`,
       SPAWN: '进程启动失败',
     }
+    let detail = map[probe.reason] || probe.reason
+    if (probe.reason === 'SPAWN' && probe.stderr) {
+      const extra = String(probe.stderr).trim().split('\n').filter(Boolean).pop()
+      if (extra) detail = `${detail}：${extra.slice(0, 160)}`
+    }
     checks.push({
       id: 'probe_run',
       ok: false,
-      detail: map[probe.reason] || probe.reason,
+      detail,
     })
     return {
       ok: false,
