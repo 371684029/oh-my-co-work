@@ -142,12 +142,12 @@
 - Node 炼化块含 `acwSyncArgvFromEnv`：成员命令只写前几个 `#` 时，仍把 `ACW_PARAM_1…n` 同步进 `process.argv[2…]`（仅 `.js`/`.mjs` 等）。
 - 熔炉改交互读参时勿只读 `ACW_PARAM_3`：自 `#3` 起与 readline 的 `...rest` 一致，可参考 `server/config/furnace/snippets/acw-read-params.mjs`。
 - 输出：脚本开头向 stdout 打 `### <标题>`，文档中心按该规格收。
-- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步，以及 `ACW_VERIFY` 早退。
-- 常驻脚本（会一直占着端口或进程）在契约里识别 `ACW_VERIFY=1`：打印标题后退出。正式执行不设置该变量，仍会跑到后面的服务。
+- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步，并去掉旧的 `ACW_VERIFY` 早退行。
+- 常驻脚本会一直占着进程。试跑看到 `###` 标题后若约 1 秒内还没退出，就结束探针并算通过。脚本自己非 0 退出仍然失败。正式执行会清掉环境里的 `ACW_VERIFY`，避免旧契约被提前退出。
 
 ### 3.2 炼化试跑验证（5.3.7+）
 
-保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认 30s，不弹终端），并带上 `ACW_VERIFY=1`：
+保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认最长 30s，不弹终端）：
 
 - 成功：写 `config.refine.verifyLast`（`ok` / `checks` / `elapsedMs`），清除 `verifyFailed`
 - 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证。还原会清掉 `verifyFailed`，并把 `verifyLast` 标成过期

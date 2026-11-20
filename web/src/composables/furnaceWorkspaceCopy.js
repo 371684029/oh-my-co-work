@@ -54,6 +54,10 @@ export function furnaceFocusPauseToast() {
   return t('furnace.focus.pauseToast')
 }
 
+export function furnaceFocusResumeToast() {
+  return t('furnace.focus.resumeToast')
+}
+
 export function furnaceGuiLabel() {
   return t('furnace.gui')
 }

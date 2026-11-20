@@ -6,6 +6,7 @@ import {
   memberVerifyFailedFromRecord,
   normalizeRefineFurnaceTarget,
   decideFurnaceProcess,
+  furnacePlainTextHasUserTask,
   parseFurnaceLaunchQuery,
 } from '../src/composables/refineFurnaceLaunch.js'
 
@@ -28,6 +29,15 @@ test('buildFurnaceLaunchQuery omits empty fields', () => {
     agent: 'grok',
     refineMemberId: 'x',
   })
+})
+
+test('furnacePlainTextHasUserTask ignores a one-line greeting', () => {
+  assert.equal(furnacePlainTextHasUserTask(''), false)
+  assert.equal(furnacePlainTextHasUserTask('hello'), false)
+  assert.equal(
+    furnacePlainTextHasUserTask('请把 runServe.bat 的端口改成 3780，改完先备份再试跑，不要动别的脚本。'),
+    true,
+  )
 })
 
 test('decideFurnaceProcess continues the same member and restarts a different one', () => {

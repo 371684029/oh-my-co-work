@@ -200,6 +200,7 @@ export async function runMember(
       env.ACW_FOLDER = String(cwd)
       env.ECW_FOLDER = String(cwd)
     }
+    delete env.ACW_VERIFY
 
     const launch =
       furnaceLaunch ||

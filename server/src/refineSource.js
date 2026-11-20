@@ -23,7 +23,7 @@ import {
 } from './refineArgvSync.js'
 import { REFINE_MARK, stripRefineContractText } from './refineContractStrip.js'
 import { buildUnifiedDiff } from './refineDiff.js'
-import { ensureRefineVerifyExitInSource } from './refineVerifyExit.js'
+import { stripRefineVerifyExitInSource } from './refineVerifyExit.js'
 
 export { REFINE_MARK }
 
@@ -84,7 +84,6 @@ function refineBlock(filePath, title, nl) {
       'if not defined ACW_HUMAN_INPUT set "ACW_HUMAN_INPUT=%ACW_PARAM_1%"',
       `echo ### ${title}`,
       'echo.',
-      'if defined ACW_VERIFY exit /b 0',
     ].join('\r\n')
   }
   if (ext === '.ps1') {
@@ -94,7 +93,6 @@ function refineBlock(filePath, title, nl) {
       'if (-not $env:ACW_HUMAN_INPUT) { $env:ACW_HUMAN_INPUT = $env:ACW_PARAM_1 }',
       `Write-Output "### ${title}"`,
       'Write-Output ""',
-      "if ($env:ACW_VERIFY -eq '1') { exit 0 }",
     ].join(nl)
   }
   if (ext === '.sh') {
@@ -104,7 +102,6 @@ function refineBlock(filePath, title, nl) {
       ': "${ACW_HUMAN_INPUT:=${ACW_PARAM_1:-}}"',
       `echo "### ${title}"`,
       'echo',
-      'if [ "${ACW_VERIFY:-}" = "1" ]; then exit 0; fi',
     ].join(nl)
   }
   if (ext === '.py') {
@@ -114,8 +111,6 @@ function refineBlock(filePath, title, nl) {
       "_acw_os.environ.setdefault('ACW_PARAM_1', _acw_sys.argv[1] if len(_acw_sys.argv) > 1 else '')",
       "_acw_os.environ.setdefault('ACW_HUMAN_INPUT', _acw_os.environ.get('ACW_PARAM_1', ''))",
       `print("### ${title}\\n")`,
-      "if _acw_os.environ.get('ACW_VERIFY') == '1':",
-      '    raise SystemExit(0)',
     ].join(nl)
   }
   const lines = [
@@ -124,7 +119,6 @@ function refineBlock(filePath, title, nl) {
     "if (!process.env.ACW_HUMAN_INPUT) process.env.ACW_HUMAN_INPUT = process.env.ACW_PARAM_1 || ''",
     `console.log("### ${title}\\n")`,
     nodeRefineArgvSyncSnippet(),
-    "if (process.env.ACW_VERIFY === '1') process.exit(0)",
   ]
   return lines.join(nl)
 }
@@ -273,15 +267,15 @@ export function applyRefineOnMemberSave(member) {
       return false
     }
   })
-  const needVerifyExit = (assess.files || []).filter((f) => {
+  const needVerifyStrip = (assess.files || []).filter((f) => {
     try {
       const t = fs.readFileSync(f.path, 'utf8')
-      return t.includes(REFINE_MARK) && !t.includes('ACW_VERIFY')
+      return t.includes(REFINE_MARK) && t.includes('ACW_VERIFY')
     } catch {
       return false
     }
   })
-  const filesToTouch = [...needPatch, ...needArgvUpgrade, ...needBatRepair, ...needVerifyExit]
+  const filesToTouch = [...needPatch, ...needArgvUpgrade, ...needBatRepair, ...needVerifyStrip]
   if (assess.ok && !filesToTouch.length) {
     reason = 'already'
   } else if (assess.ok) {
@@ -330,18 +324,18 @@ export function applyRefineOnMemberSave(member) {
           if (!r.ok) continue
           staged.push({ path: f.path, next: r.next, hasBom: r.hasBom })
         }
-        for (const f of needVerifyExit) {
+        for (const f of needVerifyStrip) {
           if (reason !== 'ok') break
           const hit = staged.find((s) => s.path === f.path)
           if (hit) {
-            const up = ensureRefineVerifyExitInSource(hit.next, f.path)
+            const up = stripRefineVerifyExitInSource(hit.next)
             if (up.ok && up.next) hit.next = up.next
             continue
           }
           const raw = fs.readFileSync(f.path)
           const src = readScriptSource(raw)
           if (!src.ok) continue
-          const up = ensureRefineVerifyExitInSource(src.text, f.path)
+          const up = stripRefineVerifyExitInSource(src.text)
           if (!up.ok || !up.next) continue
           staged.push({ path: f.path, next: up.next, hasBom: src.hasBom })
         }

@@ -2,12 +2,12 @@
  * 5.9.0：成员炼化/适配探针（保存后自动试跑 + 手动 verify API）。
  * 默认用 spawnSync + pipe（不弹窗），避免改动 createMember 同步契约。
  */
-import { spawnSync } from 'node:child_process'
+import { Worker } from 'node:worker_threads'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { applyParamPlaceholders, injectCallArgsParam, isFurnaceMember } from '@acw/shared'
 import { consoleChildEnv } from './consoleEncoding.js'
-import { decodeConsoleBytes } from './consoleEncoding.js'
 import { enrichScriptConfig } from './runners/scriptMemberConfig.js'
 import { getScriptWorkDir } from './runners/scriptWorkDir.js'
 import { resolveCwdForScript, resolveScriptFilePath } from './runners/cwdResolve.js'
@@ -16,6 +16,8 @@ import { collectAdaptSourcePaths } from './adaptBackup.js'
 import { REFINE_MARK } from './refineContractStrip.js'
 
 export const MEMBER_VERIFY_TIMEOUT_MS = 30_000
+/** After a ### heading, wait this long for a real exit before treating the process as resident. */
+export const RESIDENT_GRACE_MS = 1200
 
 export const DEFAULT_PROBE_INPUT = 'acw-verify-probe'
 
@@ -84,8 +86,8 @@ function buildProbeLaunch(member, { humanInput = DEFAULT_PROBE_INPUT, param1 } =
     ACW_PARAMS_JSON: JSON.stringify(paramsMap || {}),
     ACW_SCRIPT_PATH: filePath || '',
     ACW_CWD: cwd || '',
-    ACW_VERIFY: '1',
   })
+  delete env.ACW_VERIFY
   Object.keys(paramsMap || {}).forEach((k) => {
     const v = String(paramsMap[k] ?? '')
     if (k.startsWith('#')) {
@@ -126,15 +128,32 @@ export function runScriptProbeSync(member, options = {}) {
   }
 
   const { launch, cwd, env, successCodes } = built
-  let child
+  const plainEnv = {}
+  for (const [key, value] of Object.entries(env || {})) {
+    if (value == null) continue
+    plainEnv[key] = String(value)
+  }
+  const resultPath = path.join(
+    os.tmpdir(),
+    `acw-probe-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+  )
+  const sab = new SharedArrayBuffer(4)
+  const flag = new Int32Array(sab)
+  let worker
   try {
-    child = spawnSync(launch.cmd, launch.args || [], {
-      cwd,
-      env,
-      windowsHide: true,
-      shell: launch.shell === true,
-      timeout: timeoutMs,
-      maxBuffer: 2 * 1024 * 1024,
+    worker = new Worker(new URL('./refineProbeWorker.js', import.meta.url), {
+      workerData: {
+        cmd: launch.cmd,
+        args: launch.args || [],
+        cwd,
+        env: plainEnv,
+        shell: launch.shell === true,
+        timeoutMs,
+        graceMs: options.residentGraceMs ?? RESIDENT_GRACE_MS,
+        successCodes,
+        resultPath,
+        sab,
+      },
     })
   } catch (e) {
     return {
@@ -145,24 +164,26 @@ export function runScriptProbeSync(member, options = {}) {
       reason: 'SPAWN',
     }
   }
-
-  if (child.error) {
-    const timedOut = child.error.code === 'ETIMEDOUT'
-    return {
+  Atomics.wait(flag, 0, 0, timeoutMs + 2000)
+  let payload = null
+  try {
+    payload = JSON.parse(fs.readFileSync(resultPath, 'utf8'))
+  } catch {
+    payload = {
       exitCode: -1,
       exitOk: false,
-      stdout: decodeConsoleBytes(child.stdout || Buffer.alloc(0)),
-      stderr: decodeConsoleBytes(child.stderr || Buffer.alloc(0)),
-      reason: timedOut ? 'TIMEOUT' : 'SPAWN',
-      error: child.error,
+      stdout: '',
+      stderr: '',
+      reason: 'SPAWN',
     }
   }
-
-  const exitCode = child.status == null ? -1 : child.status
-  const stdout = decodeConsoleBytes(child.stdout || Buffer.alloc(0))
-  const stderr = decodeConsoleBytes(child.stderr || Buffer.alloc(0))
-  const exitOk = successCodes.includes(exitCode)
-  return { exitCode, exitOk, stdout, stderr, reason: exitOk ? 'ok' : 'EXIT' }
+  try {
+    fs.rmSync(resultPath, { force: true })
+  } catch {
+    /* ignore */
+  }
+  worker.terminate().catch(() => {})
+  return payload
 }
 
 export function verifyMemberSync(member, options = {}) {
@@ -240,7 +261,11 @@ export function verifyMemberSync(member, options = {}) {
   checks.push({
     id: 'exit_code',
     ok: !!probe.exitOk,
-    detail: probe.exitOk ? `退出码 ${probe.exitCode}` : `退出码 ${probe.exitCode}（非成功）`,
+    detail: probe.reason === 'resident'
+      ? '进程仍在运行，已看到标题，按常驻脚本通过'
+      : probe.exitOk
+        ? `退出码 ${probe.exitCode}`
+        : `退出码 ${probe.exitCode}（非成功）`,
   })
 
   if (member.config?.refine?.enabled) {

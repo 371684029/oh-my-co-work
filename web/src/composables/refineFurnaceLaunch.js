@@ -100,6 +100,18 @@ export function consumeFurnaceBindIntent() {
  * How to attach a live furnace process to the member the user just picked.
  * Stance itself never changes from TUI text; this only chooses start / continue / restart.
  */
+/**
+ * Plain transcript already had TUI chrome removed. A short status line is not a user task.
+ * Two real lines, or one line long enough to be a sentence, counts.
+ */
+export function furnacePlainTextHasUserTask(text) {
+  const lines = String(text || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 12)
+  return lines.length >= 2 || lines.some((s) => s.length >= 40)
+}
+
 export function decideFurnaceProcess({ live, seenMemberId, nextMemberId, hasUserTask } = {}) {
   const next = String(nextMemberId || '').trim()
   const seen = String(seenMemberId || '').trim()

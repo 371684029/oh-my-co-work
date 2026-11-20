@@ -14,7 +14,7 @@ const {
   nextFurnaceFocus,
   stampFurnaceSeen,
 } = await import('../src/furnaceFocus.js')
-const { activateFurnaceRole, furnaceHomeDir } = await import('../src/furnaceContext.js')
+const { activateFurnaceRole, furnaceHomeDir, renderFurnaceToolSection } = await import('../src/furnaceContext.js')
 
 function memberStub() {
   return {
@@ -26,6 +26,18 @@ function memberStub() {
     },
   }
 }
+
+test('tool section keeps a quoted member name on one line', () => {
+  const text = renderFurnaceToolSection({
+    stance: 'active',
+    memberId: 'mem',
+    displayName: 'say "hi"\nnext',
+    filePath: '/tmp/a.js',
+  })
+  const memberLine = text.split('\n').find((line) => line.startsWith('- 成员：'))
+  assert.equal(memberLine.includes('"'), false)
+  assert.match(memberLine, /next/)
+})
 
 test('nextFurnaceFocus: pause and resume keep generation; a different member bumps it', () => {
   const bound = nextFurnaceFocus({}, 'bind', {

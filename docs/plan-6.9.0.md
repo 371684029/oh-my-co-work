@@ -330,8 +330,8 @@ stateDiagram-v2
 
 ### 6.2 探针（RCL-PROBE）
 
-- [x] **RCL-05 P0** 契约块增加 `ACW_VERIFY=1` 早退（bat/cmd、ps1、sh、py、js）。正式执行不设置该变量。`runScriptProbeSync` 的 env 带上 `ACW_VERIFY=1`。
-- [x] **RCL-06 P0** 常驻成员试跑用早退语义；短脚本仍要求进程成功码 + `###`。`memberVerify.test.js` 加一支：bat 在契约之后 `exit /b 1`，探针仍因早退通过。
+- [x] **RCL-05 P0** 不再往契约里插 `ACW_VERIFY` 早退。正式执行清掉该变量。保存时去掉已经插过的早退行。
+- [x] **RCL-06 P0** 短脚本的非 0 退出码试跑失败。打印 `###` 后仍不退出的进程，探针短等后按常驻通过。
 - [ ] **RCL-07 P1** 纯包装 bat（仅 `start` / `call` 到 node）保存时默认不改该 bat，提示改炼 node 入口。显式「就炼这个文件」可覆盖。
 
 ### 6.3 熔炉绑定与换工具（RCL-FUR）

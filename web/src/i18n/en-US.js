@@ -136,6 +136,7 @@ export const strings = {
       clear: 'Unbind',
       pauseToast:
         'Paused. Say the next thing directly. If it is still editing the script, tell it the tool is paused.',
+      resumeToast: 'Editing again. It will not re-read on its own; if it is still paused, tell it to read ACTIVE.',
     },
     gui: 'GUI',
     tui: 'TUI',

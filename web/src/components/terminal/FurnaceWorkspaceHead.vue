@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onBeforeUnmount, onMounted, ref, computed, watch } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import { api } from '../../api.js'
 import {
@@ -161,6 +161,7 @@ import {
   furnaceFocusPausedLabel,
   furnaceFocusPauseToast,
   furnaceFocusResumeLabel,
+  furnaceFocusResumeToast,
   furnaceFullscreenLabel,
   furnaceGuiLabel,
   furnaceGuiModeTitle,
@@ -173,7 +174,7 @@ import {
   furnaceTuiModeTitle,
 } from '../../composables/furnaceWorkspaceCopy.js'
 
-defineProps({
+const props = defineProps({
   surface: { type: String, default: 'tui' },
   activeAgent: { type: String, default: 'grok' },
   guiEnabled: { type: Boolean, default: false },
@@ -205,12 +206,28 @@ async function onFocus(action) {
   try {
     focus.value = await api.furnace.setFocus({ action })
     if (action === 'pause') ElMessage.success(furnaceFocusPauseToast())
+    if (action === 'resume') ElMessage.success(furnaceFocusResumeToast())
   } catch (e) {
     ElMessage.error(e?.message || '没能改熔炉焦点')
   }
 }
 
-onMounted(loadFocus)
+function onVisible() {
+  if (document.visibilityState === 'visible') loadFocus()
+}
+
+watch(() => props.isRunning, () => {
+  loadFocus()
+})
+
+onMounted(() => {
+  loadFocus()
+  document.addEventListener('visibilitychange', onVisible)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisible)
+})
 
 defineEmits([
   'close',

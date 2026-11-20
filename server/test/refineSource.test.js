@@ -26,7 +26,7 @@ test('applyRefineContract：bat 立刻绑定 ACW 输入并打 stdout 标题', ()
   assert.match(text, /ACW_PARAM_1/)
   assert.match(text, /ACW_HUMAN_INPUT/)
   assert.match(text, /echo ### 切分支台账/)
-  assert.match(text, /if defined ACW_VERIFY exit \/b 0/)
+  assert.doesNotMatch(text, /ACW_VERIFY/)
   assert.match(text, /echo old/)
   assert.match(text, /\r\n/, 'bat refine should use CRLF')
   assert.doesNotMatch(text, /缺则用/)
@@ -90,7 +90,31 @@ test('applyRefineOnMemberSave：已有炼化契约可补 argv 同步', () => {
   assert.equal(prep.patched.length, 1)
   const upgraded = fs.readFileSync(js, 'utf8')
   assert.match(upgraded, /acwSyncArgvFromEnv/)
-  assert.match(upgraded, /ACW_VERIFY/)
+  assert.doesNotMatch(upgraded, /ACW_VERIFY/)
+})
+
+test('applyRefineOnMemberSave：去掉旧的 ACW_VERIFY 早退，保留后面的命令', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-mem-strip-'))
+  const bat = path.join(dir, 'run.bat')
+  fs.writeFileSync(
+    bat,
+    '@echo off\r\nrem ACW-REFINE: old\r\necho ### t\r\nif defined ACW_VERIFY exit /b 0\r\necho work\r\n',
+    'utf8',
+  )
+  const member = {
+    id: 'mem_strip',
+    kind: MEMBER_KIND.SCRIPT,
+    display_name: 'strip',
+    config: {
+      refine: { enabled: true },
+      script: { mode: 'file', filePath: bat, scriptWorkDir: dir },
+    },
+  }
+  const { prep } = applyRefineOnMemberSave(member)
+  assert.equal(prep.patched.length, 1)
+  const text = fs.readFileSync(bat, 'utf8')
+  assert.doesNotMatch(text, /ACW_VERIFY/)
+  assert.match(text, /echo work/)
 })
 
 test('applyRefineOnMemberSave：无源文件仍保存规格', () => {

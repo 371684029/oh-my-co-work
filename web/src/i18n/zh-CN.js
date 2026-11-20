@@ -137,6 +137,7 @@ export const strings = {
       resume: '继续改',
       clear: '解除',
       pauseToast: '已挂起。下一句直接说事；若它还在改脚本，告诉它工具已挂起。',
+      resumeToast: '已继续改。它不会自动重读；若还停在挂起，告诉它重新看 ACTIVE。',
     },
     gui: 'GUI',
     tui: 'TUI',

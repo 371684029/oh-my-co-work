@@ -202,7 +202,7 @@ export function readFurnaceActiveFile() {
 export function renderFurnaceToolSection(pin) {
   if (!pin || pin.stance === 'none' || !pin.memberId) return ''
   const paused = pin.stance === 'paused'
-  const name = String(pin.displayName || pin.memberId)
+  const name = String(pin.displayName || pin.memberId).replace(/[\r\n"]/g, ' ').trim() || String(pin.memberId)
   const files = Array.isArray(pin.files) ? pin.files.filter(Boolean) : []
   const lines = [
     paused ? '## 已挂起的工具' : '## 本轮要改的工具',

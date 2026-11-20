@@ -155,37 +155,38 @@ test('verifyMemberSync accepts injected runProbe', () => {
   assert.equal(v.ok, true)
 })
 
-test('ACW_VERIFY returns before a later non-zero exit; a short script without the guard still fails', () => {
+test('patched script keeps a later non-zero exit; a heading that stays up counts as resident', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-verify-resident-'))
-  const file = path.join(dir, 'serve.mjs')
-  fs.writeFileSync(file, 'console.log("server")\nprocess.exit(1)\n', 'utf8')
-  const patched = applyRefineContract(file, { title: '常驻标题' })
+  const file = path.join(dir, 'short.mjs')
+  fs.writeFileSync(file, 'console.log("work")\nprocess.exit(2)\n', 'utf8')
+  const patched = applyRefineContract(file, { title: '短标题' })
   assert.equal(patched.patched, true)
-  const member = {
-    kind: 'script',
-    display_name: '常驻',
-    config: {
-      refine: {
-        enabled: true,
-        format: { title: '常驻标题', output: { heading: '常驻标题' } },
-      },
-      script: { mode: 'file', filePath: file, scriptWorkDir: dir, executionMode: 'pipe' },
-    },
-  }
-  const v = verifyMemberSync(member)
-  assert.equal(v.ok, true, JSON.stringify(v.checks))
-  const bare = spawnSync(process.execPath, [file], { cwd: dir, encoding: 'utf8' })
-  assert.notEqual(bare.status, 0)
-  assert.match(bare.stdout || '', /常驻标题/)
-
-  const short = path.join(dir, 'short.mjs')
-  fs.writeFileSync(short, 'console.log("### 短标题")\nprocess.exit(2)\n', 'utf8')
+  assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /ACW_VERIFY/)
   const failed = verifyMemberSync({
     kind: 'script',
+    display_name: '短脚本',
     config: {
       refine: { enabled: true, format: { title: '短标题', output: { heading: '短标题' } } },
-      script: { mode: 'file', filePath: short, scriptWorkDir: dir, executionMode: 'pipe' },
+      script: { mode: 'file', filePath: file, scriptWorkDir: dir, executionMode: 'pipe' },
     },
   })
-  assert.equal(failed.ok, false)
+  assert.equal(failed.ok, false, JSON.stringify(failed.checks))
+  const bare = spawnSync(process.execPath, [file], { cwd: dir, encoding: 'utf8' })
+  assert.equal(bare.status, 2)
+
+  const live = path.join(dir, 'serve.mjs')
+  fs.writeFileSync(live, 'console.log("### 常驻标题")\nsetInterval(() => {}, 1000)\n', 'utf8')
+  const resident = verifyMemberSync(
+    {
+      kind: 'script',
+      display_name: '常驻',
+      config: {
+        refine: { enabled: true, format: { title: '常驻标题', output: { heading: '常驻标题' } } },
+        script: { mode: 'file', filePath: live, scriptWorkDir: dir, executionMode: 'pipe' },
+      },
+    },
+    { residentGraceMs: 300, timeoutMs: 4000 },
+  )
+  assert.equal(resident.ok, true, JSON.stringify(resident.checks))
+  assert.match(JSON.stringify(resident.checks), /常驻/)
 })
