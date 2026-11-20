@@ -1,4 +1,4 @@
-当前开发线：**v6.8.0**（见仓库根 `package.json`）。下一份规划：[plan-6.9.0.md](./plan-6.9.0.md)（熔炉用 ACTIVE 绑定当前工具，尚未开工）。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
+当前开发线：**v6.9.0**（见仓库根 `package.json`）。熔炉炼化已按 ACTIVE 绑定当前工具；纯包装 bat 默认不改仍未做。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
 
 # 文档索引
 
@@ -95,8 +95,8 @@
 | [plan-6.3.0.md](./plan-6.3.0.md) | **6.3.0**：炼化输入输出契约与 `furnace-refine-skill` |
 | [plan-6.4.0.md](./plan-6.4.0.md) | **6.4.0**：熔炉定制从 AGENTS 标记块迁到 Skills |
 | [plan-6.5.0.md](./plan-6.5.0.md) | **6.5.0**：炼化改源 unified diff 与文档中心审计 |
-| [plan-6.8.0.md](./plan-6.8.0.md) | **6.8.0**：试跑失败后前往熔炉（当前版本） |
-| [plan-6.9.0.md](./plan-6.9.0.md) | **6.9.0 规划**：熔炉炼化闭环。ACTIVE 绑定当前工具；姿态为改工具 / 挂起 / 自由对话；换成员才新开 |
+| [plan-6.8.0.md](./plan-6.8.0.md) | **6.8.0**：试跑失败后前往熔炉 |
+| [plan-6.9.0.md](./plan-6.9.0.md) | **6.9.0**：熔炉炼化闭环。ACTIVE 绑定当前工具；姿态为改工具 / 挂起 / 自由对话；换成员才新开 |
 
 配套文件：[author-contact.example.json](./author-contact.example.json) — 支持与交流配置示例。
 
