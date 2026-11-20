@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-20 | M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9：熔炉姿态 active/paused/none；先聊别的接着聊，换成员才新开
 2026-11-20 | M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9：进熔炉不看试跑成败；用 ACTIVE 工具节绑定；同成员接着聊、换成员新开
 2026-11-20 | A/M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9 规划：熔炉炼化未保存误报、常驻试跑早退、残留失败进熔炉
 2026-11-18 | M | {package,server,shared,web}/package.json, README.md, CHANGELOG.md, server/config/about.json | 版本 6.8.0 与发版说明

@@ -96,7 +96,7 @@
 | [plan-6.4.0.md](./plan-6.4.0.md) | **6.4.0**：熔炉定制从 AGENTS 标记块迁到 Skills |
 | [plan-6.5.0.md](./plan-6.5.0.md) | **6.5.0**：炼化改源 unified diff 与文档中心审计 |
 | [plan-6.8.0.md](./plan-6.8.0.md) | **6.8.0**：试跑失败后前往熔炉（当前版本） |
-| [plan-6.9.0.md](./plan-6.9.0.md) | **6.9.0 规划**：熔炉炼化闭环。随时可进熔炉；用 ACTIVE「本轮要改的工具」绑定；同成员接着聊、换成员新开 |
+| [plan-6.9.0.md](./plan-6.9.0.md) | **6.9.0 规划**：熔炉炼化闭环。ACTIVE 绑定当前工具；姿态为改工具 / 挂起 / 自由对话；换成员才新开 |
 
 配套文件：[author-contact.example.json](./author-contact.example.json) — 支持与交流配置示例。
 
