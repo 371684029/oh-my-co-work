@@ -41,6 +41,10 @@ test('refine save → verify ok → break script → verify fail → restore →
   assert.equal(bad.ok, false)
 
   restoreMemberRefine(saved.id, { force: true })
+  const restored = getMember(saved.id)
+  assert.equal(restored.config.refine.enabled, false)
+  assert.equal(restored.config.refine.verifyFailed, undefined)
+  assert.equal(restored.config.refine.verifyLast?.stale, true)
   const after = verifyMemberById(saved.id)
   assert.equal(after.ok, true, JSON.stringify(after))
   assert.equal(fs.readFileSync(file, 'utf8'), origBytes)

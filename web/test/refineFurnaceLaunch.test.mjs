@@ -5,6 +5,7 @@ import {
   memberVerifyFailedForLaunch,
   memberVerifyFailedFromRecord,
   normalizeRefineFurnaceTarget,
+  decideFurnaceProcess,
   parseFurnaceLaunchQuery,
 } from '../src/composables/refineFurnaceLaunch.js'
 
@@ -27,6 +28,24 @@ test('buildFurnaceLaunchQuery omits empty fields', () => {
     agent: 'grok',
     refineMemberId: 'x',
   })
+})
+
+test('decideFurnaceProcess continues the same member and restarts a different one', () => {
+  assert.equal(
+    decideFurnaceProcess({ live: true, seenMemberId: 'a', nextMemberId: 'a', hasUserTask: true }),
+    'continue',
+  )
+  assert.equal(
+    decideFurnaceProcess({ live: true, seenMemberId: 'a', nextMemberId: 'b', hasUserTask: true }),
+    'confirm-restart',
+  )
+  assert.equal(
+    decideFurnaceProcess({ live: true, seenMemberId: '', nextMemberId: 'b', hasUserTask: false }),
+    'restart',
+  )
+  assert.equal(decideFurnaceProcess({ live: false, nextMemberId: 'b' }), 'start')
+  assert.equal(decideFurnaceProcess({ live: true, nextMemberId: '' }), 'focus')
+  assert.equal(decideFurnaceProcess({ live: false, nextMemberId: '' }), 'start-free')
 })
 
 test('memberVerifyFailedForLaunch', () => {

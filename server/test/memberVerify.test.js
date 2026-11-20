@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -17,6 +18,7 @@ const {
   shouldAutoVerifyRefine,
   DEFAULT_PROBE_INPUT,
 } = await import('../src/memberVerify.js')
+const { applyRefineContract } = await import('../src/refineSource.js')
 
 test('shouldAutoVerifyRefine skips patch_failed', () => {
   const m = { kind: 'script', config: { refine: { enabled: true }, script: { command: 'node x.js' } } }
@@ -151,4 +153,39 @@ test('verifyMemberSync accepts injected runProbe', () => {
     }),
   })
   assert.equal(v.ok, true)
+})
+
+test('ACW_VERIFY returns before a later non-zero exit; a short script without the guard still fails', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acw-verify-resident-'))
+  const file = path.join(dir, 'serve.mjs')
+  fs.writeFileSync(file, 'console.log("server")\nprocess.exit(1)\n', 'utf8')
+  const patched = applyRefineContract(file, { title: '常驻标题' })
+  assert.equal(patched.patched, true)
+  const member = {
+    kind: 'script',
+    display_name: '常驻',
+    config: {
+      refine: {
+        enabled: true,
+        format: { title: '常驻标题', output: { heading: '常驻标题' } },
+      },
+      script: { mode: 'file', filePath: file, scriptWorkDir: dir, executionMode: 'pipe' },
+    },
+  }
+  const v = verifyMemberSync(member)
+  assert.equal(v.ok, true, JSON.stringify(v.checks))
+  const bare = spawnSync(process.execPath, [file], { cwd: dir, encoding: 'utf8' })
+  assert.notEqual(bare.status, 0)
+  assert.match(bare.stdout || '', /常驻标题/)
+
+  const short = path.join(dir, 'short.mjs')
+  fs.writeFileSync(short, 'console.log("### 短标题")\nprocess.exit(2)\n', 'utf8')
+  const failed = verifyMemberSync({
+    kind: 'script',
+    config: {
+      refine: { enabled: true, format: { title: '短标题', output: { heading: '短标题' } } },
+      script: { mode: 'file', filePath: short, scriptWorkDir: dir, executionMode: 'pipe' },
+    },
+  })
+  assert.equal(failed.ok, false)
 })

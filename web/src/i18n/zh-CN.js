@@ -129,6 +129,15 @@ export const strings = {
     processMenu: '进程',
     reopen: '新开熔炉',
     closeFurnace: '关闭熔炉',
+    focus: {
+      bound: '正在改 {name}',
+      paused: '已挂起 {name}',
+      none: '未绑定工具',
+      pause: '先聊别的',
+      resume: '继续改',
+      clear: '解除',
+      pauseToast: '已挂起。下一句直接说事；若它还在改脚本，告诉它工具已挂起。',
+    },
     gui: 'GUI',
     tui: 'TUI',
     chips: {

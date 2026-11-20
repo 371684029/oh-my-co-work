@@ -15,9 +15,11 @@ import {
   activateFurnaceRole,
   currentFurnaceRole,
   clipFurnaceText,
+  readFurnaceActiveFile,
   SITUATION_LIMITS,
   resolveFurnaceRoleFromSituation,
 } from './furnaceContext.js'
+import { applyFurnaceFocus, furnaceRoleForPin, stampFurnaceSeen } from './furnaceFocus.js'
 import { getAppSettings } from './appSettings.js'
 import {
   maybeInjectGrokFurnace,
@@ -176,6 +178,7 @@ export function syncFurnaceSessionContext(
       nextRole = inferred
     }
   }
+  nextRole = furnaceRoleForPin(nextRole, readFurnaceActiveFile().toolPin)
   const pack = activateFurnaceRole(nextRole, {
     sessionId,
     nodeId: nodeId || null,
@@ -221,8 +224,20 @@ export function prepareFurnaceGrokLaunch({ sessionId } = {}) {
  */
 export async function applyFurnaceGrokRuntime({ member, sessionId, command, furnaceAgent } = {}) {
   if (!isFurnaceMember(member)) return null
+  if (readFurnaceActiveFile().armFree) {
+    try {
+      await applyFurnaceFocus({ action: 'open-free' })
+    } catch (e) {
+      console.warn('[acw] furnace open-free', e?.message || e)
+    }
+  }
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
   const agent = normalizeFurnaceAgent(furnaceAgent)
+  try {
+    stampFurnaceSeen(agent)
+  } catch (e) {
+    console.warn('[acw] furnace seen', e?.message || e)
+  }
   const grok = getAppSettings().grok || {}
   let rawCmd
   if (agent === 'cursor') {

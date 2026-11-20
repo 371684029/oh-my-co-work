@@ -170,6 +170,7 @@ function composeAgentsInner(pack) {
     '用户拥有最高指导权。节点一览在 ACTIVE.md；需要细节先读 ACTIVE，不要把全文贴进对话。',
     `本轮 Skills（Grok 自动发现）：${skillLine || 'furnace-core'}。管理成员/群/炼化/审核按 Skill 执行，禁止直接改 sqlite。`,
     '当前目录可用 `node acw-ctl.mjs`（详见 furnace-acw-ctl Skill）。',
+    pack?.toolHint || '',
     sit ? `此刻：${sit}` : '',
     `启动：${buildGrokLaunchPrompt(pack?.role)}`,
   ]

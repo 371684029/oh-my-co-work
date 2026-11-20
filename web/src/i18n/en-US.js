@@ -127,6 +127,16 @@ export const strings = {
     processMenu: 'Process',
     reopen: 'New furnace',
     closeFurnace: 'Close furnace',
+    focus: {
+      bound: 'Editing {name}',
+      paused: 'Paused {name}',
+      none: 'No tool bound',
+      pause: 'Chat about something else',
+      resume: 'Resume editing',
+      clear: 'Unbind',
+      pauseToast:
+        'Paused. Say the next thing directly. If it is still editing the script, tell it the tool is paused.',
+    },
     gui: 'GUI',
     tui: 'TUI',
     chips: {

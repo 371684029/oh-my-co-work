@@ -436,7 +436,13 @@ router.post('/sessions/:id/furnace/close', (req, res) => {
 })
 router.post('/sessions/:id/furnace/reopen', async (req, res) => {
   try {
-    res.json(await reopenFurnace(req.params.id, { agent: req.body?.agent }))
+    res.json(
+      await reopenFurnace(req.params.id, {
+        agent: req.body?.agent,
+        archiveTranscript: !!req.body?.archiveTranscript,
+        terminalId: req.body?.terminalId || null,
+      }),
+    )
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

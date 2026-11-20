@@ -188,7 +188,52 @@ export function composeFurnaceSituation(facts = {}) {
   return clipFurnaceText(text, lim.total)
 }
 
-export function composeFurnaceContext(role, { situation } = {}) {
+export function readFurnaceActiveFile() {
+  try {
+    const raw = fs.readFileSync(path.join(furnaceHomeDir(), 'active.json'), 'utf8')
+    const data = JSON.parse(raw)
+    return data && typeof data === 'object' ? data : {}
+  } catch {
+    return {}
+  }
+}
+
+/** Project toolPin into ACTIVE. Empty when stance is none or unbound. */
+export function renderFurnaceToolSection(pin) {
+  if (!pin || pin.stance === 'none' || !pin.memberId) return ''
+  const paused = pin.stance === 'paused'
+  const name = String(pin.displayName || pin.memberId)
+  const files = Array.isArray(pin.files) ? pin.files.filter(Boolean) : []
+  const lines = [
+    paused ? '## 已挂起的工具' : '## 本轮要改的工具',
+    '',
+    `- 成员：${name}（${pin.memberId}）`,
+    `- 脚本：${pin.filePath || pin.command || '（未配置）'}`,
+    `- 工作目录：${pin.workDir || '（未配置）'}`,
+  ]
+  if (files.length) lines.push(`- 只改这些文件：${files.join('；')}`)
+  lines.push(`- 炼化：${pin.refineLabel || '未开启'}`)
+  lines.push(`- 试跑：${pin.verifyLine || '无'}`)
+  if (pin.unsaved) lines.push('- 尚未落库：按抽屉里的路径，和已保存成员可能不一致')
+  lines.push(`- 改之前：node acw-ctl.mjs backup-source --member "${name}"`)
+  lines.push(`- 改完可核对：node acw-ctl.mjs verify-member --member "${name}"`)
+  lines.push(
+    paused
+      ? '本轮不要改这些文件，除非用户点名这个成员。'
+      : '用户这句若不是在说该成员，就回答，不要顺手改文件。',
+  )
+  return `${lines.join('\n')}\n\n`
+}
+
+export function furnaceToolHint(pin) {
+  if (!pin || !pin.memberId || pin.stance === 'none') return ''
+  if (pin.stance === 'paused') {
+    return '工具已挂起，见 ACTIVE。本轮按用户刚说的做，不要改那些文件，除非用户点名。'
+  }
+  return '本轮要改的工具在 ACTIVE.md 那一节，先读再改文件。'
+}
+
+export function composeFurnaceContext(role, { situation, toolPin } = {}) {
   const prompt = loadFurnacePrompt(role)
   const memory = loadFurnaceMemory(role)
   const label = FURNACE_ROLE_LABEL[role] || role
@@ -198,6 +243,7 @@ export function composeFurnaceContext(role, { situation } = {}) {
       : situation && typeof situation === 'object'
         ? composeFurnaceSituation(situation)
         : ''
+  const toolSection = renderFurnaceToolSection(toolPin)
   const skills = furnaceSkillsForRole(role)
   const skillLines = skills.map((id) => `- \`${id}\` → \`.grok/skills/${id}/SKILL.md\``)
   return [
@@ -211,6 +257,7 @@ export function composeFurnaceContext(role, { situation } = {}) {
     '',
     sitText || '（尚无会话情境）',
     '',
+    toolSection,
     '## Skills（本轮优先加载）',
     '',
     ...skillLines,
@@ -242,13 +289,15 @@ export function currentFurnaceRole() {
 export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {}) {
   if (!isFurnaceRole(role)) throw new Error(`未知熔炉角色: ${role}`)
   const home = ensureFurnaceWorkspace()
+  const prev = readFurnaceActiveFile()
   const sitText =
     typeof situation === 'string'
       ? situation
       : situation && typeof situation === 'object'
         ? composeFurnaceSituation(situation)
         : ''
-  const composed = composeFurnaceContext(role, { situation: sitText || situation })
+  const toolPin = prev.toolPin && typeof prev.toolPin === 'object' ? prev.toolPin : null
+  const composed = composeFurnaceContext(role, { situation: sitText || situation, toolPin })
   const activeMd = path.join(home, 'ACTIVE.md')
   const situationMd = path.join(home, 'SITUATION.md')
   const activeJson = path.join(home, 'active.json')
@@ -260,12 +309,15 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
       {
         role,
         label: FURNACE_ROLE_LABEL[role] || role,
-        sessionId: sessionId || null,
-        nodeId: nodeId || null,
+        sessionId: sessionId || prev.sessionId || null,
+        nodeId: nodeId || prev.nodeId || null,
         at: new Date().toISOString(),
         promptFile: ROLE_FILES[role],
         memoryFile: path.join('memory', ROLE_FILES[role]),
-        situationFile: sitText ? 'SITUATION.md' : null,
+        situationFile: sitText ? 'SITUATION.md' : prev.situationFile || null,
+        toolPin,
+        lastTool: prev.lastTool || null,
+        seenBy: prev.seenBy && typeof prev.seenBy === 'object' ? prev.seenBy : {},
       },
       null,
       2,
@@ -280,6 +332,8 @@ export function activateFurnaceRole(role, { sessionId, nodeId, situation } = {})
     situationMd,
     situationText: sitText,
     text: composed,
+    toolPin,
+    toolHint: furnaceToolHint(toolPin),
   }
 }
 

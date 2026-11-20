@@ -101,6 +101,33 @@
         </details>
       </div>
     </header>
+    <div v-if="focus" class="furnace-focus" role="status">
+      <span class="furnace-focus-label">{{ focusLabel }}</span>
+      <button
+        v-if="focus.stance === 'active'"
+        type="button"
+        class="furnace-btn"
+        @click="onFocus('pause')"
+      >
+        {{ furnaceFocusPauseLabel() }}
+      </button>
+      <button
+        v-if="focus.stance === 'paused' || focus.lastTool"
+        type="button"
+        class="furnace-btn"
+        @click="onFocus('resume')"
+      >
+        {{ furnaceFocusResumeLabel() }}
+      </button>
+      <button
+        v-if="focus.stance === 'active' || focus.stance === 'paused'"
+        type="button"
+        class="furnace-btn"
+        @click="onFocus('clear')"
+      >
+        {{ furnaceFocusClearLabel() }}
+      </button>
+    </div>
     <div
       v-if="cliBanner"
       class="furnace-cli-banner"
@@ -114,6 +141,9 @@
 </template>
 
 <script setup>
+import { onMounted, ref, computed } from 'vue'
+import ElMessage from 'element-plus/es/components/message/index.mjs'
+import { api } from '../../api.js'
 import {
   furnaceAgentCursorTabLabel,
   furnaceAgentCursorTitle,
@@ -124,6 +154,13 @@ import {
   furnaceBackToChatTitle,
   furnaceBrowserFullscreenTitle,
   furnaceCloseFurnaceLabel,
+  furnaceFocusBoundLabel,
+  furnaceFocusClearLabel,
+  furnaceFocusNoneLabel,
+  furnaceFocusPauseLabel,
+  furnaceFocusPausedLabel,
+  furnaceFocusPauseToast,
+  furnaceFocusResumeLabel,
   furnaceFullscreenLabel,
   furnaceGuiLabel,
   furnaceGuiModeTitle,
@@ -147,6 +184,33 @@ defineProps({
   isRunning: { type: Boolean, default: false },
   isChatSurface: { type: Boolean, default: false },
 })
+
+const focus = ref(null)
+const focusLabel = computed(() => {
+  const f = focus.value
+  if (!f || f.stance === 'none' || !f.memberId) return furnaceFocusNoneLabel()
+  const name = f.displayName || f.memberId
+  return f.stance === 'paused' ? furnaceFocusPausedLabel(name) : furnaceFocusBoundLabel(name)
+})
+
+async function loadFocus() {
+  try {
+    focus.value = await api.furnace.focus()
+  } catch {
+    focus.value = null
+  }
+}
+
+async function onFocus(action) {
+  try {
+    focus.value = await api.furnace.setFocus({ action })
+    if (action === 'pause') ElMessage.success(furnaceFocusPauseToast())
+  } catch (e) {
+    ElMessage.error(e?.message || '没能改熔炉焦点')
+  }
+}
+
+onMounted(loadFocus)
 
 defineEmits([
   'close',
@@ -174,6 +238,22 @@ defineEmits([
   background: linear-gradient(180deg, #23262e, #1e2128);
   color: #cfd4de;
   border-color: rgba(255, 255, 255, 0.07);
+}
+
+.furnace-focus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 6px;
+  font-size: 12px;
+}
+
+.furnace-focus-label {
+  color: #3a3a3c;
+}
+
+.furnace-head-root.is-dark .furnace-focus-label {
+  color: #d0d3dc;
 }
 
 .furnace-cli-banner {

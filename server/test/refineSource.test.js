@@ -26,6 +26,7 @@ test('applyRefineContract：bat 立刻绑定 ACW 输入并打 stdout 标题', ()
   assert.match(text, /ACW_PARAM_1/)
   assert.match(text, /ACW_HUMAN_INPUT/)
   assert.match(text, /echo ### 切分支台账/)
+  assert.match(text, /if defined ACW_VERIFY exit \/b 0/)
   assert.match(text, /echo old/)
   assert.match(text, /\r\n/, 'bat refine should use CRLF')
   assert.doesNotMatch(text, /缺则用/)
@@ -87,7 +88,9 @@ test('applyRefineOnMemberSave：已有炼化契约可补 argv 同步', () => {
   }
   const { prep } = applyRefineOnMemberSave(member)
   assert.equal(prep.patched.length, 1)
-  assert.match(fs.readFileSync(js, 'utf8'), /acwSyncArgvFromEnv/)
+  const upgraded = fs.readFileSync(js, 'utf8')
+  assert.match(upgraded, /acwSyncArgvFromEnv/)
+  assert.match(upgraded, /ACW_VERIFY/)
 })
 
 test('applyRefineOnMemberSave：无源文件仍保存规格', () => {

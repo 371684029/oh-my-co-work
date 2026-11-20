@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-20 | A/M | server/src/{furnaceFocus.js,furnaceContext.js,furnaceSituation.js,furnaceGrokInject.js,refineSource.js,refineVerifyExit.js,refineRestore.js,routes.js,routes/furnaceFocusRoutes.js,routes/sessionsRoutes.js}, web/src/{api.js,composables/refineFurnaceLaunch.js,composables/furnaceWorkspaceCopy.js,components/terminal/FurnaceWorkspaceHead.vue,views/settings/{Members.vue,RefineFurnaceLaunchDialog.vue},views/workbench/composables/useFurnaceSync.js,i18n/*}, server/test/{furnaceFocus,memberVerify,memberVerifyRoundtrip,refineSource}.test.js, web/test/refineFurnaceLaunch.test.mjs, skills/furnace-refine-skill/SKILL.md, docs/{guide-script.md,plan-6.9.0.md,plan-backlog.md} | 6.9：ACTIVE 绑定工具；姿态 active/paused/none；进熔炉不看试跑；ACW_VERIFY 早退
 2026-11-20 | M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9：熔炉姿态 active/paused/none；先聊别的接着聊，换成员才新开
 2026-11-20 | M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9：进熔炉不看试跑成败；用 ACTIVE 工具节绑定；同成员接着聊、换成员新开
 2026-11-20 | A/M | docs/{plan-6.9.0.md,plan-backlog.md,README.md} | 6.9 规划：熔炉炼化未保存误报、常驻试跑早退、残留失败进熔炉

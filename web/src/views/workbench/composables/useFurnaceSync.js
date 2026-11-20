@@ -18,7 +18,16 @@ import {
   reopenFurnaceProcess,
   ensureFurnaceAgent,
 } from './useTerminalSessions'
-import { consumeFurnaceRefinePrefill } from '../../../composables/refineFurnaceLaunch.js'
+import { api } from '../../../api.js'
+import {
+  consumeFurnaceBindIntent,
+  consumeFurnaceRefinePrefill,
+  decideFurnaceProcess,
+} from '../../../composables/refineFurnaceLaunch.js'
+import {
+  estimateFromTerminalReplay,
+  pickLiveFurnaceTerminal,
+} from '../../../composables/furnaceReopen.js'
 import { writeClipboardText } from '../../../composables/terminalClipboardBridge.js'
 
 /**
@@ -42,28 +51,71 @@ async function launchFurnaceFromSprite() {
       ElMessage.warning('未找到熔炉成员')
       return
     }
+    const intent = consumeFurnaceBindIntent()
+    const nextMemberId = String(intent?.memberId || _route.query.refineMemberId || '').trim()
+    if (!nextMemberId) {
+      try {
+        await api.furnace.setFocus({ action: 'arm-free' })
+      } catch {
+        /* focus file is optional until the process starts */
+      }
+    }
     startTarget.value = `m:${m.id}`
     const s = await startChat({ quiet: true })
     if (!s) return
-    if (s.reused) {
-      const live = (terminalSessions.value || []).some(
-        (t) =>
-          isFurnaceTuiContext(t) && isTerminalRunning(t.status),
-      )
-      if (!live) {
-        await reopenFurnaceProcess({ skipConfirm: true, quiet: true })
+    const launchAgent = String(
+      _route.query.agent || intent?.agent || '',
+    ).trim().toLowerCase()
+    const agent = launchAgent === 'cursor' ? 'cursor' : 'grok'
+    const liveTerminal = pickLiveFurnaceTerminal(terminalSessions.value, {
+      agent,
+      isFurnaceTuiContext,
+      isTerminalRunning,
+    })
+    const live = !!liveTerminal
+    const hasUserTask = (estimateFromTerminalReplay(liveTerminal, agent)?.chars || 0) >= 80
+    const decision = decideFurnaceProcess({
+      live,
+      seenMemberId: intent?.seenMemberId || '',
+      nextMemberId,
+      hasUserTask,
+    })
+    if (decision === 'focus') {
+      try {
+        await api.furnace.setFocus({ action: 'disarm-free' })
+      } catch {
+        /* ignore */
+      }
+      ElMessage.success('已打开熔炉')
+    } else if (decision === 'continue') {
+      const name = intent?.displayName || '这个工具'
+      ElMessage.success(`还是 ${name}，接着聊`)
+    } else if (decision === 'confirm-restart' || decision === 'restart' || decision === 'start') {
+      if (s.reused && (decision !== 'start' || !live)) {
+        const opened = await reopenFurnaceProcess({
+          skipConfirm: decision !== 'confirm-restart',
+          quiet: decision !== 'confirm-restart',
+          agent,
+        })
+        if (opened && decision === 'restart') ElMessage.success('已换到这个工具，熔炉已新开')
+        if (opened && decision === 'start') ElMessage.success('已新开熔炉，Grok 对话已清空')
+      } else if (!s.reused) {
+        ElMessage.success('已打开熔炉')
+      }
+    } else if (decision === 'start-free') {
+      if (s.reused && !live) {
+        await reopenFurnaceProcess({ skipConfirm: true, quiet: true, agent })
         ElMessage.success('已新开熔炉，Grok 对话已清空')
       } else {
         ElMessage.success('已打开熔炉')
       }
-    } else {
-      ElMessage.success('已打开熔炉')
     }
     const pre = consumeFurnaceRefinePrefill()
-    const launchAgent = String(_route.query.agent || pre.agent || '').trim().toLowerCase()
-    if (launchAgent === 'grok' || launchAgent === 'cursor') {
+    const focusAgent =
+      launchAgent === 'cursor' || String(pre.agent || '').toLowerCase() === 'cursor' ? 'cursor' : agent
+    if (launchAgent === 'grok' || launchAgent === 'cursor' || pre.agent) {
       try {
-        await ensureFurnaceAgent(launchAgent)
+        await ensureFurnaceAgent(focusAgent === 'cursor' ? 'cursor' : 'grok')
       } catch {
         /* ignore */
       }

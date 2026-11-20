@@ -28,6 +28,7 @@ import docsRoutes from './routes/docsRoutes.js'
 import updateRoutes from './routes/updateRoutes.js'
 import settingsRoutes from './routes/settingsRoutes.js'
 import catalogRoutes from './routes/catalogRoutes.js'
+import furnaceFocusRoutes from './routes/furnaceFocusRoutes.js'
 import sessionsRoutes from './routes/sessionsRoutes.js'
 import sessionsSystemRoutes from './routes/sessionsSystemRoutes.js'
 import notificationInboxRoutes from './routes/notificationInboxRoutes.js'
@@ -195,6 +196,7 @@ router.get('/fs/stat', (req, res) => {
 })
 
 router.use(catalogRoutes)
+router.use(furnaceFocusRoutes)
 router.use(sessionsSystemRoutes)
 router.use(sessionsRoutes)
 

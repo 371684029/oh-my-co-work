@@ -1,5 +1,6 @@
 /** 6.8 RFV：试跑失败 → 熔炉炼化深链与预填 */
 
+export const FURNACE_BIND_INTENT_KEY = 'acw.furnaceBindIntent'
 export const FURNACE_REFINE_PREFILL_KEY = 'acw.furnaceRefinePrefill'
 export const FURNACE_REFINE_AGENT_KEY = 'acw.furnaceRefineAgent'
 export const REFINE_FURNACE_TARGET_KEY = 'acw.refineFurnaceTarget'
@@ -73,6 +74,39 @@ export function buildFurnaceLaunchQuery({ agent, memberId, jump = true } = {}) {
   }
   if (memberId) q.refineMemberId = String(memberId)
   return Object.fromEntries(Object.entries(q).filter(([, v]) => v != null && v !== ''))
+}
+
+export function storeFurnaceBindIntent(intent) {
+  try {
+    sessionStorage.setItem(FURNACE_BIND_INTENT_KEY, JSON.stringify(intent || {}))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeFurnaceBindIntent() {
+  try {
+    const raw = sessionStorage.getItem(FURNACE_BIND_INTENT_KEY) || ''
+    sessionStorage.removeItem(FURNACE_BIND_INTENT_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    return data && typeof data === 'object' ? data : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * How to attach a live furnace process to the member the user just picked.
+ * Stance itself never changes from TUI text; this only chooses start / continue / restart.
+ */
+export function decideFurnaceProcess({ live, seenMemberId, nextMemberId, hasUserTask } = {}) {
+  const next = String(nextMemberId || '').trim()
+  const seen = String(seenMemberId || '').trim()
+  if (!next) return live ? 'focus' : 'start-free'
+  if (!live) return 'start'
+  if (seen && seen === next) return 'continue'
+  return hasUserTask ? 'confirm-restart' : 'restart'
 }
 
 export function memberVerifyFailedForLaunch(form) {

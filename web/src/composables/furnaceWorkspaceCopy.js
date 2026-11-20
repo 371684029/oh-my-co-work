@@ -26,6 +26,34 @@ export function furnaceCloseFurnaceLabel() {
   return t('furnace.closeFurnace')
 }
 
+export function furnaceFocusBoundLabel(name) {
+  return t('furnace.focus.bound').replace('{name}', String(name || ''))
+}
+
+export function furnaceFocusPausedLabel(name) {
+  return t('furnace.focus.paused').replace('{name}', String(name || ''))
+}
+
+export function furnaceFocusNoneLabel() {
+  return t('furnace.focus.none')
+}
+
+export function furnaceFocusPauseLabel() {
+  return t('furnace.focus.pause')
+}
+
+export function furnaceFocusResumeLabel() {
+  return t('furnace.focus.resume')
+}
+
+export function furnaceFocusClearLabel() {
+  return t('furnace.focus.clear')
+}
+
+export function furnaceFocusPauseToast() {
+  return t('furnace.focus.pauseToast')
+}
+
 export function furnaceGuiLabel() {
   return t('furnace.gui')
 }

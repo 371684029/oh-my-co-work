@@ -111,7 +111,7 @@
             {{ membersT('form.verifyProbe') }}
           </el-button>
           <el-button
-            v-if="showRefineFurnaceLaunch"
+            v-if="canEnterFurnaceTool"
             size="small"
             type="primary"
             plain
@@ -120,8 +120,14 @@
           >
             {{ membersT('form.refineFurnaceLaunch') }}
           </el-button>
+          <div v-else-if="furnaceNeedsSaveFirst" class="field-hint">
+            {{ membersT('form.refineFurnaceNeedSave') }}
+          </div>
           <div v-if="verifyLastHint" class="field-hint">{{ verifyLastHint }}</div>
-          <div v-if="form.refine && refineFormatSummary" class="field-hint refine-format-box">
+          <div
+            v-if="form.refine && form.config?.refine?.enabled && refineFormatSummary"
+            class="field-hint refine-format-box"
+          >
             <div>{{ membersT('form.refineFormatTitle') }}</div>
             <div>
               {{ membersT('form.refineFormatHeading') }}：<code>{{ refineFormatSummary.title }}</code>
@@ -138,7 +144,7 @@
             v-model="refinePlanCollapse"
             class="refine-plan-collapse"
           >
-            <el-collapse-item :title="membersT('form.refinePlanTitle')" name="plan">
+            <el-collapse-item :title="refinePlanTitle" name="plan">
               <el-button size="small" plain :loading="refinePlanLoading" @click="loadRefinePlanPreview">
                 {{ membersT('form.refinePlanRefresh') }}
               </el-button>
@@ -156,7 +162,7 @@
             <router-link to="/docs">{{ membersT('form.refineVerifyFailedDocs') }}</router-link>
             ·
             <span>{{ membersT('form.refineVerifyFailedRestore') }}</span>
-            <template v-if="showRefineFurnaceLaunch">
+            <template v-if="canEnterFurnaceTool">
               ·
               <el-button link type="primary" @click="refineFurnaceLaunchOpen = true">
                 {{ membersT('form.refineFurnaceLaunch') }}
@@ -167,6 +173,7 @@
         <RefineFurnaceLaunchDialog
           v-model="refineFurnaceLaunchOpen"
           :member-id="form._editId || ''"
+          :draft="furnaceDraft"
         />
         <el-form-item v-if="form.refine" :label="membersT('form.refineSkillsAgent')">
           <div class="refine-skill-box">
@@ -399,8 +406,6 @@ import {
   membersRefineVerifyPreviewHint,
 } from '../../composables/settingsMembersCopy.js'
 import RefineFurnaceLaunchDialog from './RefineFurnaceLaunchDialog.vue'
-import { memberVerifyFailedForLaunch } from '../../composables/refineFurnaceLaunch.js'
-
 const scriptExts = [
   '.bat',
   '.cmd',
@@ -508,8 +513,36 @@ const restoringRefine = ref(false)
 const verifyingMember = ref(false)
 const refineFurnaceLaunchOpen = ref(false)
 
-const showRefineFurnaceLaunch = computed(
-  () => !!form.value.refine && !!form.value._editId && memberVerifyFailedForLaunch(form.value),
+const canEnterFurnaceTool = computed(() => {
+  const f = form.value
+  if (!f?._editId || f.kind !== 'script') return false
+  const script = f.script || {}
+  return !!(String(script.filePath || '').trim() || String(script.command || '').trim())
+})
+
+const furnaceNeedsSaveFirst = computed(() => {
+  const f = form.value
+  if (f?._editId || f?.kind !== 'script') return false
+  const script = f.script || {}
+  return !!(String(script.filePath || '').trim() || String(script.command || '').trim())
+})
+
+const furnaceDraft = computed(() => {
+  const f = form.value
+  const script = f?.script || {}
+  return {
+    displayName: f?.displayName || '',
+    filePath: script.filePath || '',
+    workDir: script.scriptWorkDir || script.scriptDir || '',
+    command: script.command || '',
+    refine: !!f?.refine,
+  }
+})
+
+const refinePlanTitle = computed(() =>
+  form.value?.config?.refine?.enabled
+    ? membersT('form.refinePlanTitle')
+    : membersT('form.refinePlanTitleUnsaved'),
 )
 
 const verifyLastHint = computed(() => {

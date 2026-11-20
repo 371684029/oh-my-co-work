@@ -37,6 +37,20 @@ export function stripRefineContract(filePath) {
   return { ok: true, reason: 'stripped' }
 }
 
+function refineConfigAfterRestore(prev) {
+  const next = {
+    ...(prev && typeof prev === 'object' ? prev : {}),
+    enabled: false,
+    restoredAt: new Date().toISOString(),
+    patchReason: 'restored',
+  }
+  delete next.verifyFailed
+  if (next.verifyLast && typeof next.verifyLast === 'object') {
+    next.verifyLast = { ...next.verifyLast, stale: true }
+  }
+  return next
+}
+
 export function restoreMemberRefine(memberId, { force = false } = {}) {
   const member = getMember(memberId)
   if (!member) throw Object.assign(new Error('成员不存在'), { code: 'NOT_FOUND' })
@@ -61,12 +75,7 @@ export function restoreMemberRefine(memberId, { force = false } = {}) {
   const prev = refine && typeof refine === 'object' ? refine : {}
   const nextConfig = {
     ...(member.config || {}),
-    refine: {
-      ...prev,
-      enabled: false,
-      restoredAt: new Date().toISOString(),
-      patchReason: 'restored',
-    },
+    refine: refineConfigAfterRestore(prev),
   }
   updateMember(memberId, { config: nextConfig })
   return { ok: true, restored, memberId }
@@ -150,12 +159,7 @@ export function restoreSourceByManifest(memberId, manifestId, { force = false } 
     updateMember(memberId, {
       config: {
         ...(member.config || {}),
-        refine: {
-          ...member.config.refine,
-          enabled: false,
-          restoredAt: new Date().toISOString(),
-          patchReason: 'restored',
-        },
+        refine: refineConfigAfterRestore(member.config.refine),
       },
     })
   } else if (hit.kind === 'adapt') {

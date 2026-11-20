@@ -142,6 +142,11 @@ export const api = {
     recordParseSample: (body) =>
       req('/agent-registry/parse-samples', { method: 'POST', body: JSON.stringify(body || {}) }),
   },
+  furnace: {
+    focus: () => req('/furnace/focus'),
+    setFocus: (body) =>
+      req('/furnace/focus', { method: 'POST', body: JSON.stringify(body || {}) }),
+  },
   members: {
     list: () => req('/members'),
     create: (body) => req('/members', { method: 'POST', body: JSON.stringify(body) }),

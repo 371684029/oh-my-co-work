@@ -142,18 +142,20 @@
 - Node 炼化块含 `acwSyncArgvFromEnv`：成员命令只写前几个 `#` 时，仍把 `ACW_PARAM_1…n` 同步进 `process.argv[2…]`（仅 `.js`/`.mjs` 等）。
 - 熔炉改交互读参时勿只读 `ACW_PARAM_3`：自 `#3` 起与 readline 的 `...rest` 一致，可参考 `server/config/furnace/snippets/acw-read-params.mjs`。
 - 输出：脚本开头向 stdout 打 `### <标题>`，文档中心按该规格收。
-- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步。
+- 改之前 zip 备份到 `data/backups/refine/`。已有标记不再重复插契约；保存成员时可补 argv 同步，以及 `ACW_VERIFY` 早退。
+- 常驻脚本（会一直占着端口或进程）在契约里识别 `ACW_VERIFY=1`：打印标题后退出。正式执行不设置该变量，仍会跑到后面的服务。
 
 ### 3.2 炼化试跑验证（5.3.7+）
 
-保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认 30s，不弹终端）：
+保存或手动 **试跑验证** 时，服务端用 **pipe** 同步探针（默认 30s，不弹终端），并带上 `ACW_VERIFY=1`：
 
 - 成功：写 `config.refine.verifyLast`（`ok` / `checks` / `elapsedMs`），清除 `verifyFailed`
-- 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证；设置页 **「前往熔炉炼化」** 生成带失败摘要的 Prompt（`GET /api/members/:id/refine/verify-prompt`），可跳进工作台熔炉或复制后在 Grok/Cursor TUI 继续改源
+- 失败：设 `verifyFailed`；抽屉与保存 toast 提示；可在 **还原中心** 按备份还原后再验证。还原会清掉 `verifyFailed`，并把 `verifyLast` 标成过期
+- 进熔炉改脚本不要求试跑失败，也不看是否已勾选炼化。已保存且有脚本路径的成员用 **「进入熔炉改这个工具」**。连接写在熔炉目录的 `ACTIVE.md`「本轮要改的工具」，姿态在 `active.json`：`active` 才改这个成员，`paused` 是挂起（接着聊、不改那些文件），`none` 是自由对话。换成员才新开进程；先聊别的、解除、继续改同一成员都接着聊
 - API：`POST /api/members/:id/verify`；CLI：`acw-ctl.mjs verify-member --member <名>`
 - 探针输入默认 `ACW_HUMAN_INPUT=acw-verify-probe`（与群聊 `#1` 探针一致）
 
-仅 **启用炼化** 的脚本/回声成员会校验 stdout `###` 标题；熔炉成员跳过自动试跑。
+仅 **启用炼化** 的脚本/回声成员会校验 stdout `###` 标题；熔炉成员跳过自动试跑。短脚本没有 `###`，或进程不是成功退出码，试跑仍然失败。
 
 群聊跑完仍会把本次产出整理进 `step-*.md` / 群报告；那是归档，不是第一次才改脚本。
 

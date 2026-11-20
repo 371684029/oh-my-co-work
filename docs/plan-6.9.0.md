@@ -323,31 +323,31 @@ stateDiagram-v2
 
 ### 6.1 状态与误报（RCL-STATE）
 
-- [ ] **RCL-01 P0** 成员抽屉：有 id 且有脚本路径时始终显示「进入熔炉改这个工具」，不看试跑成败、不看 `enabled`。没有 id 时提示先保存成员。炼化五态只驱动「保存并试跑 / 试跑验证」。
-- [ ] **RCL-02 P0** 还原（成员按钮与按 manifest 还原）清除 `verifyFailed`，`verifyLast` 标过期。过期失败不再写进新绑定。
-- [ ] **RCL-03 P0** 「已保存的炼化规格」与契约预览文案分开：未保存时预览标题写「保存后将写入」，不叫已保存。
-- [ ] **RCL-04 P0** `RefineFurnaceLaunchDialog`：去掉「打开即请求」和 watch 内回写 `target`。进入熔炉不调用 `verify-prompt`。
+- [x] **RCL-01 P0** 成员抽屉：有 id 且有脚本路径时始终显示「进入熔炉改这个工具」，不看试跑成败、不看 `enabled`。没有 id 时提示先保存成员。炼化五态只驱动「保存并试跑 / 试跑验证」。
+- [x] **RCL-02 P0** 还原（成员按钮与按 manifest 还原）清除 `verifyFailed`，`verifyLast` 标过期。过期失败不再写进新绑定。
+- [x] **RCL-03 P0** 「已保存的炼化规格」与契约预览文案分开：未保存时预览标题写「保存后将写入」，不叫已保存。
+- [x] **RCL-04 P0** `RefineFurnaceLaunchDialog`：去掉「打开即请求」和 watch 内回写 `target`。进入熔炉不调用 `verify-prompt`。
 
 ### 6.2 探针（RCL-PROBE）
 
-- [ ] **RCL-05 P0** 契约块增加 `ACW_VERIFY=1` 早退（bat/cmd、ps1、sh、py、js）。正式执行不设置该变量。`runScriptProbeSync` 的 env 带上 `ACW_VERIFY=1`。
-- [ ] **RCL-06 P0** 常驻成员试跑用早退语义；短脚本仍要求进程成功码 + `###`。`memberVerify.test.js` 加一支：bat 在契约之后 `exit /b 1`，探针仍因早退通过。
+- [x] **RCL-05 P0** 契约块增加 `ACW_VERIFY=1` 早退（bat/cmd、ps1、sh、py、js）。正式执行不设置该变量。`runScriptProbeSync` 的 env 带上 `ACW_VERIFY=1`。
+- [x] **RCL-06 P0** 常驻成员试跑用早退语义；短脚本仍要求进程成功码 + `###`。`memberVerify.test.js` 加一支：bat 在契约之后 `exit /b 1`，探针仍因早退通过。
 - [ ] **RCL-07 P1** 纯包装 bat（仅 `start` / `call` 到 node）保存时默认不改该 bat，提示改炼 node 入口。显式「就炼这个文件」可覆盖。
 
 ### 6.3 熔炉绑定与换工具（RCL-FUR）
 
-- [ ] **RCL-10 P0** `active.json.toolPin.stance`（`active` / `paused` / `none`）+ `lastTool`。只有 `active` 渲染成「本轮要改的工具」并保持角色 `refine`；`paused` 渲染成「已挂起」。`touchFurnaceWorkflow` 不改姿态。
-- [ ] **RCL-11 P0** 开炉顺序：先写姿态和 ACTIVE，再按 §5.3 与 §5.5 决定启动或接着聊。换成员才新开；先聊别的、解除、继续改同一成员都接着聊。桌宠开炉且无活进程时，遗留的 `active` 收成 `lastTool`，新进程以 `none` 启动。
-- [ ] **RCL-15 P0** `FurnaceWorkspaceHead` 焦点条：正在改 / 已挂起 / 未绑定，对应「先聊别的」「继续改」「解除」。TUI 里打字不改姿态。
-- [ ] **RCL-12 P1** 弹窗去掉「外部 Agent（只写群报告）」。该 Skill 留在抽屉里原有的复制框。
-- [ ] **RCL-13 P1** `furnace-refine-skill`：先读 ACTIVE 的工具节；只改列出的文件；改源前 `backup-source`；禁止改 `ACW-REFINE` 标记行。用户这句若不是在说该成员，就回答，不要顺手改文件。用户没要求炼化时不插入契约。同一失败签名 3 次即停。
-- [ ] **RCL-14 P2** Cursor 与 Grok 共用同一份 `toolPin`，各自记 `seenBy`。CUR-F 仍不做；弹窗写明 Cursor 侧 Skills 未镜像。
+- [x] **RCL-10 P0** `active.json.toolPin.stance`（`active` / `paused` / `none`）+ `lastTool`。只有 `active` 渲染成「本轮要改的工具」并保持角色 `refine`；`paused` 渲染成「已挂起」。`touchFurnaceWorkflow` 不改姿态。
+- [x] **RCL-11 P0** 开炉顺序：先写姿态和 ACTIVE，再按 §5.3 与 §5.5 决定启动或接着聊。换成员才新开；先聊别的、解除、继续改同一成员都接着聊。桌宠开炉且无活进程时，遗留的 `active` 收成 `lastTool`，新进程以 `none` 启动。
+- [x] **RCL-15 P0** `FurnaceWorkspaceHead` 焦点条：正在改 / 已挂起 / 未绑定，对应「先聊别的」「继续改」「解除」。TUI 里打字不改姿态。
+- [x] **RCL-12 P1** 弹窗去掉「外部 Agent（只写群报告）」。该 Skill 留在抽屉里原有的复制框。
+- [x] **RCL-13 P1** `furnace-refine-skill`：先读 ACTIVE 的工具节；只改列出的文件；改源前 `backup-source`；禁止改 `ACW-REFINE` 标记行。用户这句若不是在说该成员，就回答，不要顺手改文件。用户没要求炼化时不插入契约。同一失败签名 3 次即停。
+- [x] **RCL-14 P2** Cursor 与 Grok 共用同一份 `toolPin`，各自记 `seenBy`。CUR-F 仍不做；弹窗写明 Cursor 侧 Skills 未镜像。
 
 ### 6.4 文档与测试（RCL-QA）
 
-- [ ] **RCL-20 P0** `guide-script.md` §3.2：进熔炉不要求试跑失败；工具连接在 ACTIVE；姿态 `active` / `paused` / `none`；换成员新开，先聊别的和解除都接着聊；常驻脚本靠 `ACW_VERIFY`。
-- [ ] **RCL-21 P0** 单测：工作流刷新不改姿态；同成员不重启、换成员要新开；`active`→`paused` 不重启；无成员的新进程把遗留 `active` 收成 `lastTool`；还原清掉失败标记；常驻早退探针；进熔炉不调用 verify-prompt。
-- [ ] **RCL-22 P1** `CODE_CHANGE.md` 随实现追加。本规划文件的台账记在添加规划的那次提交。
+- [x] **RCL-20 P0** `guide-script.md` §3.2：进熔炉不要求试跑失败；工具连接在 ACTIVE；姿态 `active` / `paused` / `none`；换成员新开，先聊别的和解除都接着聊；常驻脚本靠 `ACW_VERIFY`。
+- [x] **RCL-21 P0** 单测：工作流刷新不改姿态；同成员不重启、换成员要新开；`active`→`paused` 不重启；无成员的新进程把遗留 `active` 收成 `lastTool`；还原清掉失败标记；常驻早退探针；进熔炉不调用 verify-prompt。
+- [x] **RCL-22 P1** `CODE_CHANGE.md` 随实现追加。本规划文件的台账记在添加规划的那次提交。
 
 ---
 

@@ -356,7 +356,7 @@ async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent 
       confirmButtonText: '新开并归档',
       type: 'warning',
     })
-    if (!ok) return
+    if (!ok) return false
   }
   try {
     const r = await api.sessions.reopenFurnace(activeId.value, {
@@ -370,16 +370,20 @@ async function reopenFurnaceProcess({ skipConfirm = false, quiet = false, agent 
     }
     const tid = r?.terminalId
     if (tid) revealFurnaceTui(tid)
-    if (quiet) return
+    if (quiet) return !!r?.ok
     if (r?.ok) {
       const archivedNote = r?.archived?.name ? '，旧对话已写入文档中心' : ''
       ElMessage.success(
         (furnaceAgent === 'cursor' ? '已新开 Cursor CLI' : '已新开熔炉，Grok 对话已清空') +
           archivedNote,
       )
-    } else ElMessage.warning(r?.summary || '新开熔炉未成功')
+      return true
+    }
+    ElMessage.warning(r?.summary || '新开熔炉未成功')
+    return false
   } catch (e) {
     ElMessage.error(e.message || '新开熔炉失败')
+    return false
   }
 }
 
