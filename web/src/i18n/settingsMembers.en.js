@@ -56,7 +56,7 @@ export const settingsMembersEn = {
     refineFurnaceLaunchHint:
       'The furnace edits this member using the script path in the drawer. Probe result does not block entry.',
     refineFurnaceCursorNote:
-      'Cursor and Grok share one tool binding. Cursor skills are not mirrored; follow ACTIVE.md.',
+      'Cursor and Grok share the same ACTIVE binding. Cursor furnace mirrors skills into `.cursor/rules` (same sources as Grok `.grok/skills`).',
     refineFurnaceTargetGrok: 'Grok furnace',
     refineFurnaceTargetCursor: 'Cursor furnace (CLI)',
     refineFurnaceTargetExternal: 'External agent (group report only)',

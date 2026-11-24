@@ -16,7 +16,12 @@ function gateEventTitle(m) {
   return m.type === 'gate.request' ? '等待人工确认' : '闸门'
 }
 
-export function buildSessionTimeline({ nodes = [], messages = [], terminals = [] } = {}) {
+export function buildSessionTimeline({
+  nodes = [],
+  messages = [],
+  terminals = [],
+  refinePatches = [],
+} = {}) {
   /** @type {Array<object>} */
   const events = []
 
@@ -117,6 +122,22 @@ export function buildSessionTimeline({ nodes = [], messages = [], terminals = []
         messageId: m.id,
       })
     }
+  }
+
+  for (const p of refinePatches) {
+    if (!p?.createdAt) continue
+    const fileCount = Array.isArray(p.files) ? p.files.filter((f) => f.diff).length : 0
+    const memberLabel = String(p.memberName || p.memberId || '成员').trim()
+    events.push({
+      id: `refine-patch-${p.id || p.manifestPath || p.createdAt}`,
+      at: p.createdAt,
+      category: 'refine',
+      kind: 'refine.source_patched',
+      title: `炼化改源 · ${memberLabel}（${fileCount} 个文件）`,
+      memberId: p.memberId || null,
+      manifestId: p.id || null,
+      nodeId: p.nodeId || null,
+    })
   }
 
   for (const t of terminals) {

@@ -111,6 +111,15 @@
                   <span class="rl-diff-toggle">
                     {{ f.diff ? (openDiffs[`${h.id}:${f.path}`] ? '收起修改对比' : '查看修改对比') : '与备份一致' }}
                   </span>
+                  <el-button
+                    v-if="f.diff"
+                    size="small"
+                    link
+                    type="primary"
+                    @click.stop="downloadRefinePatch(m.id, h.id, f.path, f.diff)"
+                  >
+                    导出 .patch
+                  </el-button>
                 </div>
                 <pre
                   v-if="f.diff && openDiffs[`${h.id}:${f.path}`]"
@@ -233,6 +242,44 @@ function docsRefineFilterPlaceholder() {
 
 function toggleDiff(key) {
   openDiffs[key] = !openDiffs[key]
+}
+
+function patchDownloadName(filePath) {
+  const base = String(filePath || 'refine')
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop()
+    .replace(/[^\w.-]+/g, '_')
+  return `${base || 'refine'}.patch`
+}
+
+function downloadRefinePatch(memberId, manifestId, filePath, diffText) {
+  const text = String(diffText || '').trim()
+  if (!text) {
+    ElMessage.warning('没有可导出的 diff')
+    return
+  }
+  try {
+    const blob = new Blob([text], { type: 'text/x-patch;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = patchDownloadName(filePath)
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch {
+    const q = new URLSearchParams({
+      file: String(filePath || ''),
+    })
+    window.open(
+      `/api/members/${encodeURIComponent(memberId)}/refine/history/${encodeURIComponent(manifestId)}/patch?${q}`,
+      '_blank',
+      'noopener',
+    )
+  }
 }
 
 function openVerifyTimeline() {

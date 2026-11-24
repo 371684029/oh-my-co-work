@@ -15,6 +15,8 @@ import { createSessionComposerFilterComputeds } from './sessionComposerFilterCom
 import { createSessionWorkbenchListComputeds } from './sessionWorkbenchListComputeds.js'
 import { resetSessionDetailState } from './sessionDetailResetState.js'
 import { registerSessionDetailWatchers } from './sessionDetailInitWatchers.js'
+import { registerAdaptFallbackToastWatcher } from './sessionAdaptToast.js'
+import { registerRefineCompleteToastWatcher } from './sessionRefineToast.js'
 import { formatSessionTime } from './sessionFormatUtils.js'
 import { isClonedNode, nodeHasAdapt, nodeHasRefine } from './sessionFlowUi.js'
 import { CONVERSATION_MENU } from './sessionListUi.js'
@@ -264,6 +266,13 @@ export function initSessionDetail({ route, router }) {
     selectSession,
     flowAnchorNodeId,
     scrollFlowToAnchor,
+  })
+  registerAdaptFallbackToastWatcher({ stopWatchers: _stopWatchers, detail, activeId })
+  registerRefineCompleteToastWatcher({
+    stopWatchers: _stopWatchers,
+    detail,
+    activeId,
+    members,
   })
 }
 

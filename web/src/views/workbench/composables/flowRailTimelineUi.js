@@ -8,6 +8,7 @@ const TIMELINE_CAT_KEYS = {
   docs: 'workbench.flowRail.timeline.catDocs',
   offsite: 'workbench.flowRail.timeline.catOffsite',
   verify: 'workbench.flowRail.timeline.catVerify',
+  refine: 'workbench.flowRail.timeline.catRefine',
 }
 
 export function flowRailTimelineCatLabel(cat) {
@@ -39,5 +40,6 @@ export function flowRailTimelineFilterOptions() {
     { value: 'docs', label: t('workbench.flowRail.timeline.filterDocs') },
     { value: 'offsite', label: t('workbench.flowRail.timeline.filterOffsite') },
     { value: 'verify', label: t('workbench.flowRail.timeline.filterVerify') },
+    { value: 'refine', label: t('workbench.flowRail.timeline.filterRefine') },
   ]
 }

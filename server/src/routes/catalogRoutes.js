@@ -21,6 +21,7 @@ import {
   restoreMemberRefine,
   restoreSourceByManifest,
   listMemberSourceHistory,
+  refinePatchTextForFile,
 } from '../refineRestore.js'
 import {
   assessAdaptFiles,
@@ -125,6 +126,22 @@ function respondMemberRefineHistory(req, res) {
 
 router.get('/members/:id/source-history', respondMemberRefineHistory)
 router.get('/members/:id/refine/history', respondMemberRefineHistory)
+router.get('/members/:id/refine/history/:manifestId/patch', (req, res) => {
+  const m = getMember(req.params.id)
+  if (!m) return res.status(404).json({ error: '成员不存在' })
+  const manifestId = decodeURIComponent(String(req.params.manifestId || '').trim())
+  const file = String(req.query.file || req.query.path || '').trim()
+  if (!file) return res.status(400).json({ error: '缺少 query file' })
+  const history = listMemberSourceHistory(m.id)
+  const hit = history.find((h) => h.id === manifestId)
+  if (!hit) return res.status(404).json({ error: '找不到备份记录' })
+  const patch = refinePatchTextForFile(hit, file)
+  if (!patch) return res.status(404).json({ error: '该文件无 diff 或路径不匹配' })
+  const base = path.basename(file).replace(/[^\w.-]+/g, '_') || 'refine.patch'
+  res.setHeader('Content-Type', 'text/x-patch; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="${base}.patch"`)
+  res.send(patch)
+})
 router.post('/members/:id/source-backup', (req, res) => {
   try {
     const m = getMember(req.params.id)

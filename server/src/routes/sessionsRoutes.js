@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   listMembers,
   listSessions,
+  getMember,
   getSessionDetail,
   renameSession,
   pinSession,
@@ -25,7 +26,7 @@ import {
   resolveWorkDirFromNode,
 } from '../stepRevert.js'
 import { buildSessionTimeline, filterTimelineEvents } from '../sessionTimeline.js'
-import { listMemberSourceHistory } from '../refineRestore.js'
+import { listMemberSourceHistory, listRefineHistoryForSession } from '../refineRestore.js'
 import { buildSessionAuditMarkdown } from '../auditExport.js'
 import { readJournalRelative, readSessionAnnouncement } from '../journal.js'
 import { killSessionProcesses, listSessionProcesses } from '../processRegistry.js'
@@ -130,10 +131,20 @@ router.get('/sessions/:id/timeline', (req, res) => {
   const terminals = getDb()
     .prepare('SELECT * FROM terminal_sessions WHERE session_id = ? ORDER BY started_at ASC')
     .all(req.params.id)
+  const memberIds = [
+    ...new Set(
+      (d.nodes || []).map((n) => n.memberId || n.member_id).filter(Boolean),
+    ),
+  ]
+  const refinePatches = listRefineHistoryForSession(req.params.id, memberIds).map((h) => {
+    const mem = h.memberId ? getMember(h.memberId) : null
+    return { ...h, memberName: mem?.display_name || mem?.name || h.memberId }
+  })
   const events = buildSessionTimeline({
     nodes: d.nodes,
     messages: d.messages,
     terminals,
+    refinePatches,
   })
   const category = String(req.query.category || 'all')
   res.json({ events: filterTimelineEvents(events, category), total: events.length })

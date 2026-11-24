@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.12.0 — backlog P2 + 体验收口
+
+- **RFD-13**：文档中心炼化 diff **导出 `.patch`**；`GET /members/:id/refine/history/:manifestId/patch?file=`。
+- **RFD-22**：时间线事件 `refine.source_patched`；工作台时间线分类 **炼化改源**。
+- **NTF-R**：终端/Agent 步炼化整理完成后轻量 toast；炼化回落 toast 接线。
+- **CUR-F**：Cursor 熔炉启动时镜像 bundled Skills 到 `.cursor/rules/*.mdc`。
+- **fix**：首屏预载 `ElDropdown` CSS，修复会话列表 ⋯ 菜单重启后竖排裸样式。
+
 ## 6.11.0 — 产品 backlog P1 收口
 
 - 设置：`settings.refine.backup`（兼容 `adapt.backup`）；成员炼化 **文档标题** 可编辑。

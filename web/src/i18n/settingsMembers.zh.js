@@ -70,7 +70,8 @@ export const settingsMembersZh = {
     refineFurnaceNeedSave: '先保存成员，再进入熔炉改这个工具',
     refineFurnaceLaunchTitle: '进入熔炉改这个工具',
     refineFurnaceLaunchHint: '熔炉会按当前抽屉里的脚本路径改这个成员。试跑成败不拦进入。',
-    refineFurnaceCursorNote: 'Cursor 与 Grok 读同一份工具绑定。Cursor 侧 Skills 未镜像，改脚本以 ACTIVE 为准。',
+    refineFurnaceCursorNote:
+      'Cursor 与 Grok 共用 ACTIVE 绑定；进入 Cursor 熔炉时会镜像 Skills 到工作区 `.cursor/rules`（与 Grok `.grok/skills` 同源）。',
     refineFurnaceTargetGrok: 'Grok 熔炉',
     refineFurnaceTargetCursor: 'Cursor 熔炉（CLI）',
     refineFurnaceTargetExternal: '外部 Agent（只写群报告）',

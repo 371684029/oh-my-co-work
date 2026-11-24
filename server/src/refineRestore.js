@@ -147,6 +147,37 @@ export function listMemberSourceHistory(memberId) {
   return out.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
 }
 
+/**
+ * 某会话关联的炼化改源备份（manifest.sessionId 或 node 所属成员在该会话内）。
+ * @param {string} sessionId
+ * @param {string[]} [memberIds] 会话节点上的成员 id，用于无 sessionId 的旧 manifest 兜底（跳过）
+ */
+export function listRefineHistoryForSession(sessionId, memberIds = []) {
+  const sid = String(sessionId || '').trim()
+  if (!sid) return []
+  const ids = [...new Set((memberIds || []).map((x) => String(x || '').trim()).filter(Boolean))]
+  const out = []
+  for (const mid of ids) {
+    for (const h of listMemberSourceHistory(mid)) {
+      if (h.kind !== 'refine') continue
+      if (h.sessionId !== sid) continue
+      if (!h.files?.some((f) => f.diff)) continue
+      out.push(h)
+    }
+  }
+  return out.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+}
+
+/** 从 history 条目取出单文件 unified diff，供导出 .patch */
+export function refinePatchTextForFile(historyEntry, filePath) {
+  const fp = String(filePath || '').trim()
+  if (!historyEntry?.files?.length || !fp) return ''
+  const hit = historyEntry.files.find(
+    (f) => f.path === fp || String(f.path || '').replace(/\\/g, '/') === fp.replace(/\\/g, '/'),
+  )
+  return hit?.diff ? String(hit.diff) : ''
+}
+
 /** 按指定 manifest 还原某一次炼化/适配改过的源文件 */
 export function restoreSourceByManifest(memberId, manifestId, { force = false } = {}) {
   const member = getMember(memberId)

@@ -76,6 +76,13 @@ export function createFlowRailTimelineActions({
       const node = detail.value?.nodes?.find((n) => n.id === ev.nodeId)
       if (node) openNodeJournal(node)
     }
+    if (ev.category === 'refine' && ev.memberId) {
+      const q = new URLSearchParams({
+        pane: 'refine',
+        memberId: String(ev.memberId),
+      })
+      window.open(`/docs?${q}`, '_blank', 'noopener')
+    }
   }
 
   return { loadSessionTimeline, downloadSessionAudit, openTerminalReplay, onTimelineEvent }

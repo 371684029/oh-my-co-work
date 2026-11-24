@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-24 | A/M | docs/plan-6.12.0.md, server/src/{refineRestore,sessionTimeline,furnaceSkillSync,furnaceSituation,routes/{catalog,sessions}Routes}, web/src/views/{docs/DocsRefineChangesPane,workbench/{composables/*,components/FlowRailTimelinePane}}, i18n/*, server/test/{sessionTimeline,furnaceSkillSync}.test.js, {package,about,CHANGELOG,README,plan-backlog,plan-docs-4x} | 6.12：patch 导出、时间线炼化、NTF-R toast、CUR-F Cursor rules、版本 6.12.0
 2026-11-24 | M | web/src/main.js, docs/spec-frontend-components.md | 首屏补全 ElDropdown 样式，修复 Conversations 会话菜单重启后竖排裸奔
 2026-11-24 | A/M | docs/plan-6.11.0.md, server/src/{appSettings,refineSource,routes/catalogRoutes}, web/src/{App,GlobalChatSearch,settings/{Members,Prefs},docs/*,workbench/components/FlowRailNodeCard}, i18n/*, server/test/{refinePlan,appSettingsRefine}.test.js, {package,server,shared,web}/package.json, about.json, CHANGELOG.md, plan-backlog.md, README.md | 6.11 backlog P1：refine.backup、标题编辑、diff 深链、过滤、RCL-07、全局搜索
 2026-11-24 | M | scripts/ci-e2e-smoke.mjs, docs/plan-6.10.0.md, CHANGELOG.md | E2E 多会话切换搜索按钮对齐全局 searchChatAria

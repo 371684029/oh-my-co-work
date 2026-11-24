@@ -57,6 +57,24 @@ test('buildSessionTimeline captures verify status messages', () => {
   assert.equal(filterTimelineEvents(events, 'verify').length, 1)
 })
 
+test('buildSessionTimeline includes refine.source_patched', () => {
+  const events = buildSessionTimeline({
+    refinePatches: [
+      {
+        id: 'refine/foo',
+        createdAt: '2026-01-02T12:00:00.000Z',
+        memberId: 'm1',
+        memberName: 'Demo',
+        files: [{ diff: '--- a\n+++ b\n', path: '/x.mjs' }],
+      },
+    ],
+  })
+  const r = events.find((e) => e.kind === 'refine.source_patched')
+  assert.ok(r)
+  assert.equal(r.category, 'refine')
+  assert.equal(filterTimelineEvents(events, 'refine').length, 1)
+})
+
 test('filterTimelineEvents by category', () => {
   const events = [
     { category: 'node', at: '1' },

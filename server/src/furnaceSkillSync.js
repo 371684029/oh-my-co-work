@@ -79,3 +79,43 @@ function readSkillFrontmatter(id) {
 export function listFurnaceSkillsCatalog() {
   return listBundledFurnaceSkills().map((id) => readSkillFrontmatter(id))
 }
+
+const CURSOR_RULE_PREFIX = 'acw-furnace-'
+
+/**
+ * CUR-F：Cursor 熔炉无 .grok/skills，将 bundled Skills 镜像到工作区 `.cursor/rules/*.mdc`。
+ * @param {string} cwd
+ * @param {{ skillIds?: string[] }} [opts]
+ */
+export function syncFurnaceSkillsToCursorRules(cwd, { skillIds } = {}) {
+  const ids = skillIds?.length ? skillIds : [...FURNACE_SKILL_IDS]
+  const resolved = path.resolve(cwd)
+  const rulesDir = path.join(resolved, '.cursor', 'rules')
+  fs.mkdirSync(rulesDir, { recursive: true })
+  const synced = []
+  const skipped = []
+  for (const id of ids) {
+    const src = path.join(skillSourceDir(id), 'SKILL.md')
+    if (!fs.existsSync(src)) {
+      skipped.push({ id, reason: 'missing_repo_skill' })
+      continue
+    }
+    const safe = String(id).replace(/[^a-zA-Z0-9._-]+/g, '-')
+    const dest = path.join(rulesDir, `${CURSOR_RULE_PREFIX}${safe}.mdc`)
+    const body = fs.readFileSync(src, 'utf8')
+    const next = `---\ndescription: oh-my-co-work furnace skill ${id}\nglobs:\nalwaysApply: true\n---\n\n${body.trim()}\n`
+    let prev = ''
+    try {
+      prev = fs.readFileSync(dest, 'utf8')
+    } catch {
+      prev = ''
+    }
+    if (prev === next) {
+      skipped.push({ id, reason: 'unchanged' })
+      continue
+    }
+    fs.writeFileSync(dest, next, 'utf8')
+    synced.push(id)
+  }
+  return { cwd: resolved, rulesDir, synced, skipped, skillIds: ids }
+}

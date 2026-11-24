@@ -2,7 +2,7 @@
 
 > **用途**：聚合当前发版线及相邻计划的**未勾选项**，供迭代与 Agent 对齐。细则仍以各 `plan-*.md` 为准；本栏只做索引与状态 `[ ]` / `[x]`。
 >
-> **最后对齐**：6.11.0 backlog P1 收口 · RCL-07 已默认跳过包装 bat · 更新 2026-11-24
+> **最后对齐**：6.12.0 backlog P2 · Cursor Skills 镜像 · 更新 2026-11-24
 
 ---
 
@@ -11,9 +11,9 @@
 | 状态 | ID | 优先级 | 待办 |
 | --- | --- | --- | --- |
 | [x] | RFD-03 | P1 | 扩充分 history API / catalog：`GET /members/:id/refine/history`（diff 仍由 restore-center / refineDiff 截断） |
-| [ ] | RFD-13 | P2 | 导出单次 diff 为 `.patch` 或写入 `journals/.../assets/` |
+| [x] | RFD-13 | P2 | 导出单次 diff 为 `.patch`（文档中心 + API） |
 | [x] | RFD-21 | P1 | 流程轨失败节点：深链「该成员最近炼化 diff」 |
-| [ ] | RFD-22 | P2 | 时间线事件 `refine.source_patched` + 工作台筛选 |
+| [x] | RFD-22 | P2 | 时间线事件 `refine.source_patched` + 工作台筛选 |
 | [x] | RFD-11+ | P1 | 文档中心「炼化与还原」**按成员名过滤** + `memberId` 深链高亮 |
 
 ---
@@ -24,7 +24,7 @@
 | --- | --- | --- | --- |
 | [x] | DEBT-01 | P1 | `settings.refine.backup` 正式键名（读库兼容 `adapt.backup`） |
 | [x] | RFN-F | P1 | 成员设置 `refine.format.title` **可编辑** |
-| [ ] | NTF-R | P2 | 终端长任务炼化完成 **轻量 toast** |
+| [x] | NTF-R | P2 | 终端长任务炼化完成 **轻量 toast** |
 | [x] | DEBT-02 | P2 | 工作台/文档核心 i18n「适配」→「炼化」（余量见 plan-6.11.0） |
 
 ---
@@ -36,7 +36,7 @@
 | [ ] | **FSK-B**：阶段 B — 设置弱化 `prompts/*.md`，Skill 单写 + 生成 prompt 片段 |
 | [ ] | Grok CLI skills 目录：按 `grok inspect` 探测，必要时 `furnaceSkillSync` 分支 |
 | [ ] | 自定义 `workspaceDir`：覆盖 `.grok/skills` 前是否二次确认 |
-| [ ] | **CUR-F**：`furnaceAgent=cursor` 时 Skills → `.cursor/rules` 镜像（另开任务） |
+| [x] | **CUR-F**：`furnaceAgent=cursor` 时 Skills → `.cursor/rules` 镜像 |
 | [ ] | prompts 与 Skills **单写**治理（避免双处编辑） |
 
 ---
@@ -47,7 +47,7 @@
 | --- | --- | --- | --- |
 | [x] | SRC-06 | `Ctrl/Cmd+Shift+F` 打开全局搜索 | `plan-6.11.0.md` |
 | [ ] | TRM-06 | xterm 位图截图落盘 | `plan-6.1.0.md` · 文本定格不满足再开 ADR |
-| [ ] | DOC-06 | `plan-docs-4x.md` §3.2 脚注 6.1 侧栏口径 | 文档一致性 |
+| [x] | DOC-06 | `plan-docs-4x.md` §3.2 脚注 6.1 侧栏口径 | 文档一致性 |
 | [ ] | REL-6.1 | 6.1 终端定格对外 changelog 口径 | 可与 about 历史条目合并说明 |
 
 ---
@@ -61,7 +61,7 @@
 | [x] | RFV-12 | P0 | 跳进工作台熔炉 query + Prompt 预填/复制 |
 | [x] | RFV-13 | P1 | `useFurnaceSync` 开炉 + agent + 剪贴板 |
 | [x] | RFV-15 | P2 | 文档中心试跑未通过卡同款入口 |
-| [ ] | RFV-21 | P1 | Cursor 路径降级说明（CUR-F 可选） |
+| [x] | RFV-21 | P1 | Cursor 路径说明（Skills 镜像 + ACTIVE） |
 
 ---
 

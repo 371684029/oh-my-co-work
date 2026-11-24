@@ -5,6 +5,7 @@ import path from 'node:path'
 import { getDb, parseJson } from './db.js'
 import {
   FURNACE_ROLE,
+  furnaceSkillsForRole,
   isFurnaceMember,
   nodeStatusLabel,
   normalizeFurnaceAgent,
@@ -21,6 +22,7 @@ import {
 } from './furnaceContext.js'
 import { applyFurnaceFocus, furnaceRoleForPin, stampFurnaceSeen } from './furnaceFocus.js'
 import { getAppSettings } from './appSettings.js'
+import { syncFurnaceSkillsToCursorRules } from './furnaceSkillSync.js'
 import {
   maybeInjectGrokFurnace,
   resolveGrokWorkspaceDir,
@@ -233,6 +235,7 @@ export async function applyFurnaceGrokRuntime({ member, sessionId, command, furn
   }
   const prepared = prepareFurnaceGrokLaunch({ sessionId })
   const agent = normalizeFurnaceAgent(furnaceAgent)
+  let cursorRulesSync = null
   try {
     stampFurnaceSeen(agent)
   } catch (e) {
@@ -247,12 +250,23 @@ export async function applyFurnaceGrokRuntime({ member, sessionId, command, furn
   }
   const launch = grokPtyLaunch(rawCmd)
   launch.label = agent === 'cursor' ? 'cursor' : 'grok'
+  if (agent === 'cursor' && prepared.cwd && getAppSettings().furnace?.syncSkills !== false) {
+    try {
+      const role = currentFurnaceRole()
+      cursorRulesSync = syncFurnaceSkillsToCursorRules(prepared.cwd, {
+        skillIds: furnaceSkillsForRole(role),
+      })
+    } catch (e) {
+      console.warn('[acw] cursor rules mirror', e?.message || e)
+    }
+  }
   return {
     command: rawCmd,
     launch,
     cwd: prepared.cwd,
     wrote: prepared.wrote,
     furnaceAgent: agent,
+    cursorRulesSync,
   }
 }
 
