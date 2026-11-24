@@ -23,6 +23,7 @@
     "pack": "node scripts/pack-release.mjs",
     "pack:desktop": "node scripts/pack-release.mjs --desktop",
     "pack:desktop-win": "node scripts/pack-release.mjs --desktop",
+    "capture:readme": "node scripts/capture-readme-screenshots.mjs",
     "validate:packages": "node scripts/validate-release-packages.mjs",
     "release:gate": "node scripts/release-gate.mjs",
     "build": "npm run build -w web",

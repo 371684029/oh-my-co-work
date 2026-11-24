@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-6.13.0-409eff?style=flat-square" alt="version 6.12.0" />
+  <img src="https://img.shields.io/badge/version-6.13.0-409eff?style=flat-square" alt="version 6.13.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -123,11 +123,11 @@
 
 <img src="./docs/assets/screenshots/furnace-grok-guide.webp" alt="点熔炉桌宠后弹出的 Grok Build 教程" width="100%" />
 
-<img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：GUI 欢迎卡、李慕婉头像、底部输入、可缩小回三栏" width="100%" />
+<img src="./docs/assets/screenshots/furnace-workspace-chat.webp" alt="熔炉铺满页面：默认 TUI 或干活面，李慕婉桌宠仍在右侧，可缩小回三栏" width="100%" />
 
 - 桌宠用 [chatgpt-pets](https://github.com/xiongxianzhu/chatgpt-pets) **v2 图集**（李慕婉）：闲置 `idle` / 干活 `running` / 等人 `waiting`；戳一下播 `waving`；悬停看向指针。系统要求减少动效时停在 idle 第一帧。立绘从该 git 复制，**MIT © 2026 zhuxiongxian / chatgpt-pets 贡献者**（见 `web/src/assets/pets/LICENSE`）。
 - 3.7 当时默认 **GUI**（欢迎卡 + 可读正文）。**4.8 起**产品默认铺满 **TUI**，GUI 入口已隐藏。附件仍可落到熔炉 `inbox/`，发送时把相对路径写成一行写进同一进程。
-- 开炉写入 `data/furnace/AGENTS.md` 短规则 + `.grok/rules/session.md`（官方 CLI 没有能给交互式会话预填第一句话的参数，短启动词跟着规则一起写进去，由 grok 自己按目录发现）。长文在 `ACTIVE.md`，禁止复述。不写 `~/.grok/AGENTS.md`。
+- 开炉写入 `data/furnace/AGENTS.md` 短合同 + 同步 **bundled Skills** 到 `.grok/skills/`（6.13 起自定义工作目录覆盖前需确认）。`session.md` 仅为占位；专业流程在 **Skills** 与 `ACTIVE.md`。不写 `~/.grok/AGENTS.md`。
 - **要改哪个工具**写在 `ACTIVE.md`「本轮要改的工具」，并写进 `AGENTS.md` 的工具提示（没关规则写入时，即使还没标成已配置 Grok 也会写）。设置里已保存且有脚本路径的成员用 **「进入熔炉改这个工具」**，不看试跑成败；弹窗里选的 Grok 或 Cursor 会记下来，打开会话时按它接活进程。顶栏可先聊别的、继续改、解除。换成员才新开进程；同一成员接着聊，进程不会自动重读，需要时告诉它再看 ACTIVE。
 - **TUI**：原 Grok / Cursor 终端。菜单和快捷键走这里。隐藏时不把 PTY 缩成几列。首次进入后切皮不拆终端。
 - **双 Agent**：顶栏切换 Grok CLI 与 Cursor CLI；熔炉聚焦时 `Ctrl/Cmd+1`、`Ctrl/Cmd+2` 有效。Cursor 命令默认为 `cursor-agent`（设置可改）。未安装时不会假装已登录。
@@ -184,7 +184,7 @@
 请用 **`*-win32-x64-desktop.zip`**（不要用轻量 `*-win32-x64.zip`）。解压到新文件夹再打开。若黑窗停住并提示失败，把解压目录里的 `data/electron.log`、`data/desktop-launch.log` 发出来。
 
 <img src="./docs/assets/screenshots/windows-desktop.png" alt="Windows 桌面窗口：oh-my-co-work 工作台" width="100%" />
-<p align="center"><sub>4.9.1 桌面包：Logo 图标 exe、默认全屏打开工作台并拉起本机服务</sub></p>
+<p align="center"><sub>6.13 桌面包界面（Linux 重拍示意；Windows 解压 <code>*-win32-x64-desktop.zip</code> 后体验一致）</sub></p>
 
 源码开发也可以：`npm install` 后执行 `npm run dev:desktop`（需本机已能访问工作台 API，或让 Electron 自行拉起 `server`）。
 
