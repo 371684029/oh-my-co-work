@@ -9,6 +9,11 @@ import 'element-plus/es/components/message/style/css'
 import 'element-plus/es/components/message-box/style/css'
 import 'element-plus/es/components/loading/style/css'
 import 'element-plus/es/components/notification/style/css'
+// vue-element-plus-x Conversations 在依赖包内直接 import ElDropdown，不会触发
+// unplugin-vue-components 的样式注入；首屏无此 CSS 时侧栏「⋯」菜单会裸奔成竖排文字。
+import 'element-plus/es/components/dropdown/style/css'
+import 'element-plus/es/components/dropdown-menu/style/css'
+import 'element-plus/es/components/dropdown-item/style/css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import en from 'element-plus/es/locale/lang/en'
 import { getLocale } from './i18n/index.js'

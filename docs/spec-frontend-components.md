@@ -130,6 +130,7 @@ Enter 发送：`submit-type="enter"`（Shift+Enter 换行）。自测脚本：`s
 1. 对话/会话能力 **优先 Plus-X**，避免再手写气泡列表。  
 2. 颜色：组件 `type` + `var(--el-color-*)` + 布局 `--ecw-*`。  
 3. 新增 AI 交互前先查 [Plus-X 组件文档](https://v2.element-plus-x.com)。  
+3.1 Plus-X 在包内直接 `import` 的 Element Plus 组件（如 `Conversations` 的 `ElDropdown`）**不会**被 `unplugin-vue-components` 注入样式；须在 `main.js` 显式 `import 'element-plus/es/components/…/style/css'`，否则生产首屏菜单会无样式。  
 4. 改布局/氛围时同步更新本文与 [product-mvp.md](./product-mvp.md) 修订记录。  
 5. 构建产物较大属正常（全量注册）；后续可按需引入优化。
 
