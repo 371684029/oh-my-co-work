@@ -1,7 +1,7 @@
 # oh-my-co-work 架构图 / 代码结构图
 
 > 面向「第一次读这个仓库」的人：先看三张图建立骨架，再按「读码路线」钻进具体文件。
-> 本文只描述**当前代码的真实形态**（v5.3.2），愿景与规划见 [tech-design.md](./tech-design.md)。
+> 本文只描述**当前代码的真实形态**（**v6.10.0 / main**），愿景与规划见 [tech-design.md](./tech-design.md)。产品待办见 [plan-backlog.md](./plan-backlog.md)。
 > 所有路径均以仓库根为基准，可直接 `Ctrl+P` 搜索。
 
 ## 0. 60 秒速览

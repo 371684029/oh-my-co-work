@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-6.9.0-409eff?style=flat-square" alt="version 6.9.0" />
+  <img src="https://img.shields.io/badge/version-6.10.0-409eff?style=flat-square" alt="version 6.10.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -198,7 +198,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.9.0**（进入熔炉改当前工具：绑定写在 ACTIVE，工具提示写入 AGENTS，并记住 Grok / Cursor；短脚本试跑显示退出码，探针起不来立刻失败。须用 **含本次提交** 的桌面包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.10.0**（6.9 行为：进入熔炉改当前工具，ACTIVE 绑定 + Grok/Cursor 记忆；6.10 为文档与协作指引对齐，无业务行为变化）。须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
 
 | 产物 | 路径（本地打包，不进 git） |
 |------|---------------------------|
@@ -346,59 +346,27 @@ packages/  本地 npm run pack 输出（gitignore；正式下载见 Release）
 
 ## 路线图
 
-- [x] 1.x：群聊工作台、流程引擎、闸门、归档与续跑
-- [x] 2.0：真实 PTY、终端卡、中栏 TUI 工作区与全屏
-- [x] 2.0.1：本机令牌与 Origin 防护、PID/长输出/重连修复
-- [x] 2.2：常驻交互终端、start.bat 修复、终端卡与闸门打磨
-- [x] 2.2.1：内嵌终端默认常驻、非 Windows 运行时自动、bootstrap 要 Origin
-- [x] 2.3.0 最终封板：设置释放资源、去掉超时/归档闸门、终端守护者
-- [x] 2.4.0 最终封板：终端偏好、配额、日志脱敏、重连缺口提示、JSONL Adapter 提问转闸门
-- [x] 2.5.0 最终封板：首页「皆可 Workflow」后加重标识终端守护者
-- [x] 2.6.0 最终封板：终端满屏（铺满 HTML 页面）与全屏并存
-- [x] 3.3.0：熔炉桌宠、适配、工作流 prompt、Grok Build 教程；群聊完成即归档
-- [x] 3.5.0：熔炉铺满 GUI（可缩小回三栏、可切 TUI）
-- [x] 3.7.0 最终封板：chatgpt-pets 桌宠图集（李慕婉）、干活面头像、GUI 可读正文与短合同开炉、GUI 附件（路径写入 PTY）、Grok 原理文档
-- [x] 3.7.1：熔炉桌宠/头像裁切修复、修复 Windows 内嵌终端「File not found」启动失败、收回适配筛选 Tab、三平台生产包发布流水线加固（打包即验 + CI 成本收紧）
-- [x] 3.7.2：修复熔炉启动报错 `unexpected argument '--prompt'`——官方 grok CLI 没有 --prompt 参数，短启动词改经 AGENTS.md/rules 文件传，不再走命令行
-- [x] 3.7.3：临时协助节点折叠状态直接标出实际 @ 的成员，不用展开就知道用了哪个工具
-- [x] 3.7.4：支持与交流补邮箱联系方式（371684029@qq.com）
-- [x] 3.8.0：引擎拆分——engine.js 模块化（store/offsite/archive/adapterEvents/advance/sessionLifecycle/gates/mentions/userInput，单向依赖无环），gate 与 advance 补 14 个直接单测
-- [x] 3.8.1：工作台拆分——Workbench.vue 799 行布局壳、三栏组件化（SessionRail/FlowRail/ComposerPanel）、终端状态收敛进 composables、复制逻辑单一来源（terminalStatus/pagefill/localUploads）
-- [x] 3.8.2：工程加固——ESLint 进 CI（0 error）、REST 收紧 `?token=`（WS 例外）、web 纯逻辑测试 13 例；浏览器人工冒烟与三平台打包交由后续流水线补验
-- [x] 4.0.0：协同文档中心——本地聚合群报告/节点台账，新标签打开独立页面（左菜单右内容），默认群模板排序可切时间排序，群公告 MD 可编辑，超链/文档互链/本地文件夹链接可点
-- [x] 4.1.0：文档中心增强——全文搜索、节点文档徽标、打包本群全部 MD 导出
-- [x] 4.2.0：发布更新与本地历史保留——启动检查更新（默认开、设置可关；只读版本号、不自动安装）、更新面板、更新前一键备份、备份恢复、schema 迁移链；更新动作永不触碰数据目录
-- [x] 4.2.1：文档中心解耦与工作台三栏集成（内嵌台账预览与群导出）、设置页新增一键备份（本地快照+下载）与一键导出（全量文档 ZIP）、熔炉通栏满屏与元信息胶囊卡片美化（深度思考与耗时结构化呈现）、下载安全与竞态加固
-- [x] 4.5.0：熔炉炼化——成员/步骤炼化字段、执行后格式化进台账（stdout 优先）、规格回写不覆盖其它 config；**保存当下按契约改源文件**
-- [x] 4.6.0：四维模糊搜索 + 审查修复——拼音阈值与打分排序、文档中心竞态、备份恢复拒绝符号链接、活库损坏可恢复、协议相对链接外链处理
-- [x] 4.7.0：Windows 桌面窗口包——`*-win32-x64-desktop.zip` 双击 start.bat 打开 Electron 工作台并拉起服务（包内 Node+Electron，关窗藏托盘）；轻量 zip 仍进 `packages/`
-- [x] 4.8.0：群聊第三栏 Cursor CLI / 熔炉双 Tab、独立 PTY；熔炉默认 TUI；桌面启动全屏；熔炉默认通用 Agent（审核/闸门更专业）
-- [x] 4.9.0：托盘与 `oh-my-co-work.exe` 用首页 Logo；第三栏只留文档中心；炼化 Skill 可复制；设置抽屉不被桌宠挡住
-- [x] 4.9.1：顶栏缩放；一键备份改为一键导入；文档中心飞书风阅读样式；熔炉精灵缩小约 1/3 且设置页可见；修复终端粘贴后无法输入
-- [x] 5.0.0：性能优化 / 交互优化，重点内置 CLI 与熔炉精灵，见 [docs/plan-5.0.0.md](./docs/plan-5.0.0.md)
-- [x] 5.1.0：全量优化台账——CLI / 桌面壳 / 安全 / 发布，多数已合入，残留 bracket 见 [docs/plan-5.1.0.md](./docs/plan-5.1.0.md)
-- [x] 5.2.0：终端复制粘贴 / 炼化还原 / 文档中心入口 / 通知基础层，见 [docs/plan-5.2.0.md](./docs/plan-5.2.0.md)
-- [x] 5.3.0：可追溯与扩展——步骤快照/diff、一键回退、时间线、模板导入导出（含覆盖导入）、命令面板、Agent 注册表、大文件拆分，见 [docs/plan-5.3.0.md](./docs/plan-5.3.0.md)
-- [x] 5.3.1：熔炉卡死修复——节点快照/步骤回退 git 全异步（旧 execFileSync 每节点最多 6 次同步 git 卡事件循环）、Windows taskkill 非阻塞、PTY spawn 命令缓存、终端回放缓冲与通知 Map 防泄漏
-- [x] 5.3.2：熔炉与内置 CLI 性能 II——xterm 按帧合并写入、大块 replay 分片灌入、WebGL 黑屏兜底、WS 输出不再每包刷新 Vue replay、熔炉 GUI 解析节流、单 xterm 切换 Agent、attach 回放 tail 512KB，见 [docs/plan-5.8.0.md](./docs/plan-5.8.0.md)
-- [x] **5.9.0**：炼化 verifyPreview、试跑矩阵、炼化验证演示种子；闸门「通过+下一步」、`paramBindSlots`；适配回落 toast；见 [docs/plan-5.9.0.md](./docs/plan-5.9.0.md)
-- [x] **6.1.0**：文档中心一会话一叶（侧栏不列 step 台账）；终端 DB+log 历史定格；见 [docs/plan-6.1.0.md](./docs/plan-6.1.0.md)
-- [x] **6.2～6.5**：全局聊天搜索、炼化合一、DOC-IO、熔炉 Skill 化、炼化 **unified diff**；见 [CHANGELOG.md](./CHANGELOG.md)、[docs/plan-6.5.0.md](./docs/plan-6.5.0.md)
-- [x] **6.8.0**：试跑失败 **前往熔炉炼化**、会话侧栏命名冻结；见 [docs/plan-6.8.0.md](./docs/plan-6.8.0.md)
-- [x] **6.9.0**：随时 **进入熔炉改这个工具**，ACTIVE 绑定正在改 / 已挂起 / 未绑定，并写入 AGENTS 工具提示；进入时记住 Grok 或 Cursor；短脚本显示退出码，探针起不来不再卡住服务；换成员才新开；见 [docs/plan-6.9.0.md](./docs/plan-6.9.0.md)
-- [x] 5.4.0：完整桌面系统通知——分级、深链、托盘角标、任务栏/Dock、三平台适配，实机 QA（NTF-T3/T4）待勾，见 [docs/plan-5.4.0.md](./docs/plan-5.4.0.md)
-- [ ] 5.5.0（进行中）：收尾 5.x——备份/还原生产热路径已全异步（worker 级 integrity/checkpoint）、全站 E2E、设置页 i18n/aria、Element Plus 按需分块、FlowRail/FurnaceWorkspace 拆分、三平台桌面包（macOS/Linux Electron）、`useSessionDetail` 拆分（614→295 行）均已落地；剩实机通知 QA（NTF-T3/T4），见 [docs/plan-5.5.0.md](./docs/plan-5.5.0.md)
-- [ ] 5.6.0：5.x 收尾加固与三平台桌面补全——`useSessionDetail` 拆分收尾、Workbench 无障碍、macOS/Linux 打包签名、选中即复制、文档 DOMPurify 净化均已落地；剩通知实机验收（NTF-T3/T4）与 P1/P2 残留项，见 [docs/plan-5.6.0.md](./docs/plan-5.6.0.md)
-- [ ] 5.7.0：打包链路一劳永逸——PKG-01~10、14~16 已落地（纯 Node zip/tar 去系统工具依赖、Windows runner 原生打包+真机启动冒烟、Release 缺 win32 包即阻断+上传 5 次重试、产物只发 Release、配置迁至数据目录、备份导入/导出统一 ZIP、熔炉预置 acw-ctl.mjs 管理 CLI、文档中心新增「节点炼化与还原」（源码 diff 与一键还原）、桌面窗口不盖任务栏、熔炉 Grok/Cursor 切换保活不截断且等宽字体/WebGL 图集对齐不乱码、首屏 JS -16%）；**当前 Web / Linux / macOS 功能冻结，全力攻坚 Windows 桌面端最小可用**（见上文「当前开发策略」）；剩 Node/Electron 运行时升级、Windows 签名与历史大文件清理，见 [docs/plan-5.7.0.md](./docs/plan-5.7.0.md)
-- [ ] 后续：无边框/vibrancy、多终端标签治理、更多 CLI Adapter
+逐版本明细见 [CHANGELOG.md](./CHANGELOG.md)。**未勾产品任务**见 [docs/plan-backlog.md](./docs/plan-backlog.md)。
+
+| 阶段 | 状态 | 摘要 |
+|------|------|------|
+| 1.x～2.6 | 已封板 | 群聊引擎、PTY/TUI、终端守护者 |
+| 3.7 熔炉 | 已封板 | 桌宠、GUI/TUI、官方 Grok CLI 宿主 |
+| 4.x～5.3 | 已交付 | 文档中心、炼化、桌面包、性能与可追溯 |
+| 5.4～5.7 | 收尾中 | 系统通知代码已合，**NTF-T3/T4 实机 QA 待勾**；Windows 桌面最小可用（见上文策略） |
+| 6.1～6.9 | 已交付 | 搜索、炼化 diff、熔炉 Skill、**ACTIVE 绑定工具** |
+| **6.10.0** | **当前** | 文档与 [AGENTS.md](./AGENTS.md) 对齐；README 路线图瘦身 |
+| 后续 | 计划中 | 炼化 backlog（RFD/DEBT/RCL-07）、大文件拆分、多终端标签 |
 
 ## 参与项目
 
 欢迎提交 [Issue](https://github.com/371684029/oh-my-co-work/issues) 或 Pull Request：
 
 1. 先描述使用场景和希望解决的问题。
-2. 行为变化同步更新文档。
+2. 行为变化同步更新文档（含 `CODE_CHANGE.md`）。
 3. 新执行体优先保持可插拔，不把具体工具写死在 Workflow 内核。
+4. 开工前读 [AGENTS.md](./AGENTS.md) 与待办索引 [docs/plan-backlog.md](./docs/plan-backlog.md)。
+5. **Windows 桌面攻坚期**：新功能默认只收 Windows 桌面包相关；Web / Linux / macOS 仅阻断性修复（崩溃、白屏、数据丢失），见「当前开发策略」。
 
 技术交流也可到工作台 **设置 → 支持与交流**，邮箱 `371684029@qq.com`。
 

@@ -1,6 +1,6 @@
 # AGENTS.md — oh-my-co-work 项目协作指引
 
-> 最后更新: 2026-11-09 · 适用于 oh-my-co-work v5.3.1
+> 最后更新: 2026-11-24 · 适用于 oh-my-co-work **v6.10.0**（行为细节以 `package.json` 为准）
 
 本文件面向所有在该仓库工作的贡献者和 AI Agent。阅读后再动手，能减少 80% 的格式和路径翻车。
 
@@ -15,7 +15,7 @@ oh-my-co-work 是一个**本地优先的群聊式多智能体协同工作台**�
 - 执行端支持交互式 TUI（node-pty + xterm.js）和普通 pipe 两种模式
 - 数据全部留在本机：SQLite + Markdown + 本地附件
 
-版本现状：**5.3.1**。3.x 已封板；4.x 文档中心 / 检索导出 / 更新备份 / 炼化 / 模糊搜索；5.0 性能交互；5.1 全量优化；5.2 复制粘贴与通知；5.3 可追溯扩展；5.4 系统通知；5.5～5.7 收尾加固与打包治理（进行中）。
+版本现状：**6.10.0**（当前 main）。**3.7** 熔炉已封板；**4.x** 文档中心 / 备份更新 / 炼化打底；**5.x** 性能、通知、打包治理（部分实机 QA 待勾）；**6.1～6.9** 全局搜索、炼化 unified diff、熔炉 Skill、**ACTIVE 绑定当前工具**（见 `docs/plan-6.9.0.md`）。未勾产品项见 **`docs/plan-backlog.md`**。开发策略：**Windows 桌面端最小可用优先**，其它平台仅阻断性修复（见根目录 README「当前开发策略」）。
 
 ---
 
@@ -30,11 +30,13 @@ oh-my-co-work 是一个**本地优先的群聊式多智能体协同工作台**�
 │   │   ├── views/        # 工作台、设置页
 │   │   └── main.js
 │   └── package.json
+├── electron/             # Electron 桌面壳（main / preload / 托盘与通知）
+├── skills/               # 熔炉 Grok Skills（同步至 .grok/skills）
 ├── server/               # Node.js + Express + Workflow 引擎
 │   ├── src/
 │   │   ├── index.js      # Express / WebSocket 入口
-│   │   ├── routes.js     # REST 路由
-│   │   ├── engine.js     # 会话与节点状态机
+│   │   ├── routes.js     # REST 路由聚合
+│   │   ├── engine/       # 会话与节点状态机（advance / gates / store …）
 │   │   ├── runners.js    # 执行体抽象（pipe / terminal）
 │   │   ├── processRegistry.js  # PTY / 子进程生命周期
 │   │   ├── terminal/terminalService.js  # node-pty 封装
@@ -209,4 +211,7 @@ start.bat
 - `docs/tech-crucible-grok-client.md` — 熔炉如何托管本机 `grok` CLI（PTY，不是 Chat API）
 - `docs/guide-script.md` — 脚本成员接入（BAT / PowerShell / CLI）
 - `docs/guide-demo.md` — 演示流完整操作路径
-- `docs/plan-4.8.0.md` / `docs/plan-4.9.0.md` — 当前小版本计划与落地跟踪（只放 `docs/`，改行为时同步顶部跟踪表）
+- `docs/plan-6.9.0.md` — 6.9 熔炉炼化闭环（ACTIVE / 姿态 / 试跑信号）
+- `docs/plan-backlog.md` — **产品待办单一索引**（新任务先查再开 plan）
+- `docs/plan-6.10.0.md` — 本版文档对齐台账
+- `docs/tech-architecture-map.md` — 新人读码第一张地图（版本脚注随 main）

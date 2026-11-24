@@ -105,6 +105,14 @@ node scripts/verify-pack.mjs --zip packages/oh-my-co-work-v5-win32-x64.zip --pla
 | **自托管 Runner（self-hosted runner）** | 用自己的电脑/服务器注册 Actions runner，跑多少分钟都不计入 GitHub 账单，且可以装 VS Build Tools 后走原生 `windows-latest` 一样的路径 | 需要一台常开的机器，并在仓库 Settings → Actions → Runners 里添加 |
 | **手动交叉打包兜底** | 出问题时，任何人（或本项目里的云端 Agent）可以在一台 Linux 机器上执行 `ACW_PACK_TARGET=win32-x64 npm run pack` / `ACW_PACK_TARGET=darwin-arm64 npm run pack`，本地生成对应平台的 zip 后手动上传到 Release，不依赖 Actions 是否可用 | 需要人工触发，不是自动化 |
 
+## 参与贡献（源码仓库）
+
+若从 GitHub 克隆后改代码并提 PR：
+
+1. 先读仓库根 [AGENTS.md](../AGENTS.md) 与 [plan-backlog.md](./plan-backlog.md)（未勾任务索引）。
+2. **当前开发策略（2026-10-27 起）**：新功能优先 **Windows 桌面包**（`oh-my-co-work.exe`）；Web / Linux / macOS 仅接受阻断性修复（崩溃、白屏、数据丢失）。
+3. 行为变化须同步 `docs/`、`CODE_CHANGE.md`，并跑 `npm run lint`、`npm test`、`npm run test:web`（见 [spec-selftest.md](./spec-selftest.md)）。
+
 ## 注意
 
 - 包内是 **前端 dist + 后端 bundle + 内置 node_modules**，不是完整源码树

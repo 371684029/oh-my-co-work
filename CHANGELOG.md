@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.10.0 — 文档与协作指引对齐
+
+- `AGENTS.md` 升至 6.10.0：补充 `electron/`、`skills/`、`engine/` 目录与 `plan-backlog` 入口。
+- `README` 路线图瘦身为阶段表，版本史移交 `CHANGELOG` / `plan-backlog`。
+- `docs/product-mvp.md`、`docs/tech-architecture-map.md`、`docs/README.md` 当前发布线对齐。
+- `docs/guide-release-user.md` 补充贡献期 PR 策略；`docs/plan-6.10.0.md` 本版台账。
+
 ## 6.9.0 — 熔炉按 ACTIVE 绑定要改的工具
 
 - 已保存且有脚本路径的成员可「进入熔炉改这个工具」，不看炼化开关和试跑成败。

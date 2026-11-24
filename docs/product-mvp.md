@@ -2,10 +2,10 @@
 
 | 属性 | 内容 |
 |------|------|
-| 状态 | **3.7.0 最终封板**；`3.3.0` 已封；`2.6.0` 已封；`2.5.0` 已封；`2.4.0` 已封；`2.3.0` 已封；`2.2.0` 已封；`1.x` 已封 |
-| 代码 | `server/` + `web/` + `shared/` |
-| 关联 | [tech-design.md](./tech-design.md)、[tech-data-and-ops.md](./tech-data-and-ops.md)、[spec-frontend-components.md](./spec-frontend-components.md) |
-| 更新日期 | 2026-08-20（`3.7.0` 最终封板） |
+| 状态 | **当前发布线 6.10.0**（见根 `package.json`）；**3.7.0 熔炉最终封板**；`2.6.0`～`1.x` 已封 |
+| 代码 | `server/` + `web/` + `shared/` + `electron/` |
+| 关联 | [tech-design.md](./tech-design.md)、[tech-data-and-ops.md](./tech-data-and-ops.md)、[spec-frontend-components.md](./spec-frontend-components.md)、[plan-backlog.md](./plan-backlog.md) |
+| 更新日期 | 2026-11-24（6.10.0 文档对齐；MVP 宗旨不变） |
 
 ---
 

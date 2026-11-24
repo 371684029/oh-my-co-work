@@ -1,4 +1,4 @@
-当前开发线：**v6.9.0**（见仓库根 `package.json`）。熔炉炼化已按 ACTIVE 绑定当前工具；纯包装 bat 默认不改仍未做。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
+当前开发线：**v6.10.0**（见仓库根 `package.json`）。上一功能线 6.9.0（熔炉 ACTIVE 绑定工具）已合 main；纯包装 bat 默认不改（RCL-07）仍未做。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
 
 # 文档索引
 
@@ -29,7 +29,7 @@
 
 | 文档 | 用途 |
 |------|------|
-| [product-mvp.md](./product-mvp.md) | 宗旨、验收；`1.x` 已封 · `2.6.0` 已封 · `3.8.0` 已封（3.x）· 当前发布线 `4.9.0`（双引擎 TUI + 文档中心合并 + 桌面 Logo） |
+| [product-mvp.md](./product-mvp.md) | 宗旨、验收；历史封板见文内表 · **当前发布线 6.10.0**（炼化 / 熔炉 / 文档中心已交付；细节见 CHANGELOG） |
 | [product-ai-case-blog.md](./product-ai-case-blog.md) | **对外案例博客**（单一事实源）：标题/简介/分类/标签/封面/场景/痛点/AI 工具/用户/覆盖范围/频率/层级/提效/规划；README 对外叙事对齐本文 |
 | [product-brand-logo.md](./product-brand-logo.md) | **Logo 含义与资产** |
 
@@ -97,6 +97,8 @@
 | [plan-6.5.0.md](./plan-6.5.0.md) | **6.5.0**：炼化改源 unified diff 与文档中心审计 |
 | [plan-6.8.0.md](./plan-6.8.0.md) | **6.8.0**：试跑失败后前往熔炉 |
 | [plan-6.9.0.md](./plan-6.9.0.md) | **6.9.0**：熔炉炼化闭环。ACTIVE 绑定当前工具；姿态为改工具 / 挂起 / 自由对话；换成员才新开 |
+| [plan-6.10.0.md](./plan-6.10.0.md) | **6.10.0**：文档与协作指引对齐（AGENTS / README 瘦身 / 版本脚注） |
+| [plan-backlog.md](./plan-backlog.md) | **产品待办栏**（跨版本未勾项索引） |
 
 配套文件：[author-contact.example.json](./author-contact.example.json) — 支持与交流配置示例。
 
@@ -110,12 +112,14 @@
 6. 改代码导致行为变化时，至少更新 README + tech-data-storage（或 product-mvp 对照）；涉及架构再改 tech-design。  
 7. 改工作台布局 / 视觉氛围 / 组件用法时，同步 [spec-frontend-components.md](./spec-frontend-components.md)。  
 8. **及时维护**：合并功能当天补文档修订记录，避免实现与文档漂移。  
-9. **版本纪律**：`1.x` / `2.x` / **`3.7.0` 熔炉 3.x** 均已封板。
+9. **版本纪律**：`1.x` / `2.x` / **`3.7.0` 熔炉 3.x** 均已封板；当前行为以 **6.x** + [CHANGELOG.md](../CHANGELOG.md) 为准。  
+10. **CODE_CHANGE 台账**：根目录 `CODE_CHANGE.md` 保留近期明细（建议 ≤3 个月）；更早记录按月归档到 `docs/archive/code-change-YYYY-MM.md`，归档时在本文「版本修订记录」登记一行。
 
 ## 版本修订记录
 
 | 版本 | 说明 |
 |------|------|
+| 6.10.0 | 文档与协作指引对齐（`plan-6.10.0.md`）；README 路线图瘦身。 |
 | 1.7.0 | 产品统一更名为 `oh-my-co-work`。 |
 | 1.8.0 | **1.x 最终封板**：跳过未执行流程默认折叠，可展开查看。 |
 | 2.0.1+ | 折叠改为「未跑过的废弃节点」；去掉默认全屏。 |
