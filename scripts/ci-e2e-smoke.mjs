@@ -641,7 +641,9 @@ async function main() {
       await dismissFirstRunIfVisible(page)
       assert.ok(page.url().includes(`/workbench/${id}`), `URL should land on session ${id}`)
       await page
-        .getByRole('button', { name: /搜索本会话聊天|Search this session/i })
+        .getByRole('button', {
+          name: /搜索全部会话聊天|Search messages across all sessions/i,
+        })
         .waitFor({ state: 'visible', timeout: 20000 })
     }
     await gotoWorkbenchSession(session2.id) // A → B

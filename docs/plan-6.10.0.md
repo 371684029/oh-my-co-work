@@ -21,6 +21,7 @@
 | [x] | DOC-10-07 | P0 | 四包 `package.json` + `about.json` + `CHANGELOG.md` → **6.10.0** |
 | [x] | DOC-10-08 | P0 | `plan-backlog.md` 顶部对齐 6.10.0 |
 | [x] | DOC-10-09 | P0 | `npm ci` + `npm run lint` + `npm test` + `npm run test:web` + `npm run test:electron` 通过 |
+| [x] | DOC-10-10 | P0 | `ci-e2e-smoke` 多会话切换：搜索按钮文案对齐全局搜索（`searchChatAria`） |
 
 ---
 
