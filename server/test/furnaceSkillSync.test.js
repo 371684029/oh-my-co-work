@@ -10,6 +10,7 @@ process.env.ACW_DATA_ROOT = dataRoot
 const {
   syncFurnaceSkillsToWorkspace,
   syncFurnaceSkillsToCursorRules,
+  skillExcerptForRole,
   listBundledFurnaceSkills,
 } = await import('../src/furnaceSkillSync.js')
 const { FURNACE_ROLE } = await import('@acw/shared')
@@ -45,6 +46,11 @@ test('syncFurnaceSkillsToCursorRules mirrors to .cursor/rules', () => {
   const rule = path.join(cwd, '.cursor', 'rules', 'acw-furnace-furnace-core.mdc')
   assert.ok(fs.existsSync(rule))
   assert.ok(fs.readFileSync(rule, 'utf8').includes('furnace-core'))
+})
+
+test('skillExcerptForRole reads bundled SKILL.md', () => {
+  const text = skillExcerptForRole(FURNACE_ROLE.REFINE, { maxChars: 2000 })
+  assert.ok(text.includes('furnace-refine-skill') || text.includes('炼化'))
 })
 
 test('ACTIVE.md lists Skills section', () => {

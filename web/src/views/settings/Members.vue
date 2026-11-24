@@ -1,67 +1,25 @@
 <template>
   <div>
-    <div class="page-head">
-      <div>
-        <h2 class="page-title">{{ membersT('title') }}</h2>
-        <p class="page-desc">
-          {{ membersT('desc1') }}<strong>{{ membersT('descStrong1') }}</strong
-          >{{ membersT('desc2') }}<strong>{{ membersT('descStrong2') }}</strong
-          >{{ membersT('desc3') }}<strong>{{ membersT('descStrong3') }}</strong
-          >{{ membersT('desc4') }}
-        </p>
-      </div>
-      <div class="page-head-actions">
-        <el-button @click="triggerImportTemplate">{{ membersT('importBtn') }}</el-button>
-        <input
-          ref="importFileRef"
-          type="file"
-          accept=".json,.acw.json"
-          class="hidden-file-input"
-          :aria-label="membersT('a11y.importFile')"
-          @change="onImportFile"
-        />
-        <el-button type="primary" @click="openCreate()">{{ membersT('createBtn') }}</el-button>
-      </div>
-    </div>
-
-    <el-input
-      v-model="searchQ"
-      class="page-search"
-      :placeholder="membersT('searchPlaceholder')"
-      clearable
-      :prefix-icon="SearchIcon"
-      :aria-label="membersT('a11y.search')"
+    <input
+      ref="importFileRef"
+      type="file"
+      accept=".json,.acw.json"
+      class="hidden-file-input"
+      :aria-label="membersT('a11y.importFile')"
+      @change="onImportFile"
     />
-
-    <el-table :data="filteredList" stripe :aria-label="membersT('a11y.list')">
-      <el-table-column prop="display_name" :label="membersT('table.displayName')" min-width="120" />
-      <el-table-column :label="membersT('table.desc')" min-width="140" show-overflow-tooltip>
-        <template #default="{ row }">
-          {{ row.config?.description || '—' }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="kind" :label="membersT('table.kind')" width="90" />
-      <el-table-column :label="membersT('table.refine')" width="88">
-        <template #default="{ row }">
-          <el-tag v-if="row.config?.refine?.enabled" size="small" type="success" effect="plain">{{ membersT('table.refineOn') }}</el-tag>
-          <span v-else class="muted-dash">—</span>
-        </template>
-      </el-table-column>
-      <el-table-column :label="membersT('table.run')" min-width="160" show-overflow-tooltip>
-        <template #default="{ row }">
-          {{ runSummary(row) }}
-        </template>
-      </el-table-column>
-      <el-table-column :label="membersT('table.actions')" width="320">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="openEdit(row)">{{ membersT('actions.edit') }}</el-button>
-          <el-button link type="primary" @click="openClone(row)">{{ membersT('actions.clone') }}</el-button>
-          <el-button link type="primary" @click="exportTemplate(row)">{{ membersT('actions.export') }}</el-button>
-          <el-button link type="info" @click="view(row)">{{ membersT('actions.view') }}</el-button>
-          <el-button link type="danger" @click="remove(row)">{{ membersT('actions.remove') }}</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <MembersListPanel
+      :filtered-list="filteredList"
+      v-model:search-q="searchQ"
+      :run-summary="runSummary"
+      @import="triggerImportTemplate"
+      @create="openCreate()"
+      @edit="openEdit"
+      @clone="openClone"
+      @export="exportTemplate"
+      @view="view"
+      @remove="remove"
+    />
 
     <el-drawer
       v-model="drawer"
@@ -392,7 +350,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
-import { Search } from '@element-plus/icons-vue'
 import { api } from '../../api'
 import PathPicker from '../../components/PathPicker.vue'
 import { scanParamKeysInMemberConfig } from '@acw/shared'
@@ -412,6 +369,7 @@ import {
   membersRefineVerifyPreviewHint,
 } from '../../composables/settingsMembersCopy.js'
 import RefineFurnaceLaunchDialog from './RefineFurnaceLaunchDialog.vue'
+import MembersListPanel from './MembersListPanel.vue'
 const scriptExts = [
   '.bat',
   '.cmd',
@@ -432,8 +390,6 @@ const scriptExts = [
 const list = ref([])
 const searchQ = ref('')
 const importFileRef = ref(null)
-const SearchIcon = Search
-
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')

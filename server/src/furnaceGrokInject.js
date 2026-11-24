@@ -13,7 +13,10 @@ import os from 'node:os'
 import path from 'node:path'
 import { FURNACE_ROLE, furnaceSkillsForRole } from '@acw/shared'
 import { clipFurnaceText, furnaceHomeDir } from './furnaceContext.js'
-import { syncFurnaceSkillsToWorkspace } from './furnaceSkillSync.js'
+import {
+  assessFurnaceWorkspaceSync,
+  syncFurnaceSkillsToWorkspace,
+} from './furnaceSkillSync.js'
 import { grokHomeDir } from './grokStatus.js'
 import { getAppSettings } from './appSettings.js'
 
@@ -207,18 +210,32 @@ export function maybeInjectGrokFurnace(pack, overrides = {}) {
   const furnace = overrides.furnace || getAppSettings().furnace || {}
   let skillsSync = null
   if (furnace.syncSkills !== false) {
-    try {
-      skillsSync = syncFurnaceSkillsToWorkspace(cwd, {
-        skillIds: pack?.skills?.length ? pack.skills : furnaceSkillsForRole(pack?.role),
-      })
-    } catch (e) {
-      console.warn('[acw] furnace skills sync', e?.message || e)
+    const risk = assessFurnaceWorkspaceSync(cwd)
+    const ackPath = String(furnace.workspaceSyncAckPath || '')
+    const ackOk = !risk.needsAcknowledgement || path.resolve(ackPath) === risk.cwd
+    if (!ackOk) {
+      skillsSync = { skipped: [{ id: '*', reason: 'needs_workspace_ack' }], synced: [] }
+    } else {
+      try {
+        skillsSync = syncFurnaceSkillsToWorkspace(cwd, {
+          skillIds: pack?.skills?.length ? pack.skills : furnaceSkillsForRole(pack?.role),
+        })
+      } catch (e) {
+        console.warn('[acw] furnace skills sync', e?.message || e)
+      }
     }
   }
 
   const inner = composeAgentsInner(pack)
   const agents = upsertMarkedBlock(agentsMd, inner)
-  fs.writeFileSync(sessionRule, [`# 熔炉：${pack?.label || ''}`, '', inner, ''].join('\n'), 'utf8')
+  const sessionBody = [
+    `# 熔炉：${pack?.label || ''}`,
+    '',
+    '本文件为占位规则；**勿手改**。角色细则见 `.grok/skills/*/SKILL.md` 与 ACTIVE.md。',
+    `启动：${buildGrokLaunchPrompt(pack?.role)}`,
+    '',
+  ].join('\n')
+  fs.writeFileSync(sessionRule, sessionBody, 'utf8')
   return {
     wrote: true,
     cwd,

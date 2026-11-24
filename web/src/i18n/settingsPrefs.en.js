@@ -95,6 +95,11 @@ export const settingsPrefsEn = {
     sync: 'Sync to Grok workspace',
     syncOk: 'Synced {n} skill(s)',
     syncFail: 'Sync failed',
+    workspaceAckHint: 'Custom workspace with existing .grok/skills — confirm before overwrite.',
+    workspaceAckTitle: 'Overwrite workspace skills?',
+    workspaceAckBody:
+      'Bundled skills will sync to: {path}\n\nIf this is your own repo, existing .grok/skills may be overwritten. Continue?',
+    workspaceAckOk: 'Overwrite and sync',
   },
   grok: {
     title: 'Grok Build',
@@ -103,6 +108,10 @@ export const settingsPrefsEn = {
     hintLink: 'Grok Build guide',
     configured: 'Grok configured',
     configuredHint: 'On by default: furnace member runs local grok; off keeps chat echo only.',
+    workspaceDir: 'Grok furnace workspace',
+    workspaceDirPlaceholder: 'Empty = data/furnace',
+    workspaceDirHint:
+      'Custom path receives AGENTS.md / skill sync. Non-default dirs require confirmation before sync. Do not point at ~/.grok home.',
     command: 'Launch command',
     cursorCommand: 'Cursor CLI command',
     cursorHint: 'Furnace “Cursor CLI” tab spawns this command (default cursor-agent).',

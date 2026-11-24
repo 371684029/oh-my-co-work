@@ -12,6 +12,7 @@ import { probeGrokStatusAsync, probeCursorStatusAsync, loadGrokExampleConfig } f
 import { prepareFurnaceGrokLaunch } from '../furnaceSituation.js'
 import { resolveGrokWorkspaceDir } from '../furnaceGrokInject.js'
 import {
+  assessFurnaceWorkspaceSync,
   listFurnaceSkillsCatalog,
   syncFurnaceSkillsToWorkspace,
 } from '../furnaceSkillSync.js'
@@ -56,22 +57,38 @@ router.get('/furnace/skills', (_req, res) => {
   try {
     const grok = getAppSettings().grok || {}
     const workspace = resolveGrokWorkspaceDir(grok)
+    const risk = assessFurnaceWorkspaceSync(workspace)
     res.json({
       skills: listFurnaceSkillsCatalog(),
       workspace,
       syncSkills: getAppSettings().furnace?.syncSkills !== false,
+      workspaceCustom: risk.custom,
+      needsWorkspaceAck: risk.needsAcknowledgement,
     })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
 })
 
-router.post('/furnace/skills/sync', (_req, res) => {
+router.post('/furnace/skills/sync', (req, res) => {
   try {
     const grok = getAppSettings().grok || {}
     const cwd = resolveGrokWorkspaceDir(grok)
+    const risk = assessFurnaceWorkspaceSync(cwd)
+    if (risk.needsAcknowledgement && !req.body?.acknowledgeExternalWorkspace) {
+      return res.status(409).json({
+        error: '自定义工作区已有 .grok/skills，需确认覆盖后再同步',
+        code: 'NEEDS_WORKSPACE_ACK',
+        workspace: risk.cwd,
+      })
+    }
     const out = syncFurnaceSkillsToWorkspace(cwd)
-    res.json({ ok: true, ...out })
+    if (req.body?.acknowledgeExternalWorkspace) {
+      updateAppSettings({
+        furnace: { workspaceSyncAckPath: risk.cwd },
+      })
+    }
+    res.json({ ok: true, ...out, workspace: risk.cwd })
   } catch (e) {
     res.status(400).json({ error: e.message })
   }

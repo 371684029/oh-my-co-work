@@ -95,6 +95,11 @@ export const settingsPrefsZh = {
     sync: '同步到 Grok 工作区',
     syncOk: '已同步 {n} 个 Skill',
     syncFail: '同步失败',
+    workspaceAckHint: '自定义目录且已有 .grok/skills，同步前需确认覆盖。',
+    workspaceAckTitle: '覆盖工作区 Skills？',
+    workspaceAckBody:
+      '将把协同台 bundled Skills 同步到：{path}\n\n若该目录是你自己的仓库，可能覆盖已有 .grok/skills。是否继续？',
+    workspaceAckOk: '确认覆盖并同步',
   },
   grok: {
     title: 'Grok Build',
@@ -103,6 +108,10 @@ export const settingsPrefsZh = {
     hintLink: 'Grok Build 教程',
     configured: '已配置 Grok',
     configuredHint: '默认开。熔炉成员接到本机 grok 命令；关掉则只留聊天回声。',
+    workspaceDir: 'Grok 熔炉工作目录',
+    workspaceDirPlaceholder: '留空 = data/furnace',
+    workspaceDirHint:
+      '自定义路径时写入 AGENTS.md / 同步 Skills；非默认目录同步前会二次确认。勿指到 ~/.grok 家目录。',
     command: '启动命令',
     cursorCommand: 'Cursor CLI 命令',
     cursorHint: '熔炉顶栏「Cursor CLI」会 spawn 此命令（默认 cursor-agent，探测时也会试 agent）。',

@@ -334,7 +334,8 @@ export const api = {
     setFocus: (body) =>
       req('/furnace/focus', { method: 'POST', body: JSON.stringify(body || {}) }),
     skills: () => req('/furnace/skills'),
-    syncSkills: () => req('/furnace/skills/sync', { method: 'POST' }),
+    syncSkills: (body) =>
+      req('/furnace/skills/sync', { method: 'POST', body: JSON.stringify(body || {}) }),
     prepare: (body) =>
       req('/furnace/prepare', { method: 'POST', body: JSON.stringify(body || {}) }),
   },

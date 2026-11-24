@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.13.0 — FSK-B、工作区确认、设置拆分
+
+- **FSK-B**：`furnace.promptsFromSkills`；会话/炼化/审核 ACTIVE 嵌入 bundled **Skill 正文**；`session.md` 不再重复整段手册。
+- 自定义 **Grok workspace**：同步 Skills 前 **二次确认**（`NEEDS_WORKSPACE_ACK`）；Prefs 可编辑 `grok.workspaceDir`。
+- **工程**：`MembersListPanel` / `PrefsFurnaceSkillsCard` / `PrefsGrokCard` 拆分。
+- **治理**：[`docs/plan-backlog-wont-do.md`](docs/plan-backlog-wont-do.md) 明确禁止项。
+
 ## 6.12.0 — backlog P2 + 体验收口
 
 - **RFD-13**：文档中心炼化 diff **导出 `.patch`**；`GET /members/:id/refine/history/:manifestId/patch?file=`。
@@ -16,6 +23,11 @@
 - **RCL-07**：纯包装 `.bat` 默认不插契约（`patchBatWrapper` 覆盖）。
 - **SRC-06**：`Ctrl/Cmd+Shift+F` 打开全局聊天搜索。
 - 文案：核心「适配」标签改为「炼化/回落」口径。
+
+## 6.1.0 — 文档中心扁平 + 终端历史定格（口径）
+
+- 文档中心「按群模板」：**一会话一行**，点开会话群报告；节点台账不进侧栏（仍可搜索/深链）。
+- 工作台终端：进程结束或服务重启后，从 `terminal_sessions` + 日志尾部 **只读回填** 会话内定格卡（文本回放，非位图截图）。
 
 ## 6.10.0 — 文档与协作指引对齐
 

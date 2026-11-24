@@ -7,7 +7,7 @@
 | 文件 | 作用 |
 | --- | --- |
 | **skills/**（仓库根） | **主维护**：`furnace-core` / `furnace-acw-ctl` / `furnace-refine-skill` / `furnace-review` → 同步到工作区 `.grok/skills/` |
-| `prompts/*.md` | **过渡**：仍拼进 `ACTIVE.md`；与 Skill 重复时以 Skill 为准 |
+| `prompts/*.md` | **legacy（6.13+）**：仅 member/node **adapt** 角色回退；其余角色 ACTIVE 只嵌 `skills/*/SKILL.md` |
 | `prompts/session.md` | 群聊主持壳（过渡） |
 | `prompts/refine.md` | 炼化角色壳（过渡） |
 

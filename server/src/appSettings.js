@@ -60,7 +60,13 @@ export function refineSourceBackupEnabled() {
 
 /** 熔炉 / 炼化高级选项（5.9.0 RAR-06） */
 export function defaultFurnaceSettings() {
-  return { requireVerifyBeforeStamp: false, syncSkills: true, warnBatWrapper: true }
+  return {
+    requireVerifyBeforeStamp: false,
+    syncSkills: true,
+    warnBatWrapper: true,
+    /** FSK-B：ACTIVE 内 Prompt 段来自 skills/，不再拼 prompts/*.md（adapt 角色暂保留 legacy） */
+    promptsFromSkills: true,
+  }
 }
 
 function normalizeFurnace(raw) {
@@ -70,6 +76,9 @@ function normalizeFurnace(raw) {
     requireVerifyBeforeStamp: raw.requireVerifyBeforeStamp === true,
     syncSkills: raw.syncSkills !== false,
     warnBatWrapper: raw.warnBatWrapper !== false,
+    promptsFromSkills: raw.promptsFromSkills !== false,
+    workspaceSyncAckPath:
+      raw.workspaceSyncAckPath != null ? String(raw.workspaceSyncAckPath).trim() : '',
   }
 }
 

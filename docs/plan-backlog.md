@@ -2,7 +2,8 @@
 
 > **用途**：聚合当前发版线及相邻计划的**未勾选项**，供迭代与 Agent 对齐。细则仍以各 `plan-*.md` 为准；本栏只做索引与状态 `[ ]` / `[x]`。
 >
-> **最后对齐**：6.12.0 backlog P2 · Cursor Skills 镜像 · 更新 2026-11-24
+> **最后对齐**：6.13.0 FSK-B + workspace 确认 + 拆分 · 更新 2026-11-24  
+> **明确不做**：[plan-backlog-wont-do.md](./plan-backlog-wont-do.md)（Agent **禁止**默认实现表中项）
 
 ---
 
@@ -33,11 +34,11 @@
 
 | 状态 | 待办 |
 | --- | --- |
-| [ ] | **FSK-B**：阶段 B — 设置弱化 `prompts/*.md`，Skill 单写 + 生成 prompt 片段 |
-| [ ] | Grok CLI skills 目录：按 `grok inspect` 探测，必要时 `furnaceSkillSync` 分支 |
-| [ ] | 自定义 `workspaceDir`：覆盖 `.grok/skills` 前是否二次确认 |
+| [x] | **FSK-B**：ACTIVE 主路径 Skill 单写（`promptsFromSkills`；adapt 角色暂 legacy） |
+| [ ] | Grok CLI skills 目录探测 → **禁止**（见 wont-do） |
+| [x] | 自定义 `workspaceDir`：覆盖 `.grok/skills` 前二次确认 |
 | [x] | **CUR-F**：`furnaceAgent=cursor` 时 Skills → `.cursor/rules` 镜像 |
-| [ ] | prompts 与 Skills **单写**治理（避免双处编辑） |
+| [x] | prompts 与 Skills **单写**（会话/炼化/审核；member/node adapt 仍读 prompts） |
 
 ---
 
@@ -46,9 +47,9 @@
 | 状态 | ID | 待办 | 说明 |
 | --- | --- | --- | --- |
 | [x] | SRC-06 | `Ctrl/Cmd+Shift+F` 打开全局搜索 | `plan-6.11.0.md` |
-| [ ] | TRM-06 | xterm 位图截图落盘 | `plan-6.1.0.md` · 文本定格不满足再开 ADR |
+| [ ] | TRM-06 | **禁止**（wont-do） |
 | [x] | DOC-06 | `plan-docs-4x.md` §3.2 脚注 6.1 侧栏口径 | 文档一致性 |
-| [ ] | REL-6.1 | 6.1 终端定格对外 changelog 口径 | 可与 about 历史条目合并说明 |
+| [x] | REL-6.1 | 6.1 终端定格对外 changelog 口径（CHANGELOG + about） |
 
 ---
 

@@ -56,6 +56,7 @@ test('inject writes a compact AGENTS block, including the launch instruction (no
   // 只能跟着规则一起写进 AGENTS.md，交给 grok 自己按目录发现。
   assert.ok(agents.includes(buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)))
   const sessionRule = fs.readFileSync(path.join(cwd, '.grok', 'rules', 'session.md'), 'utf8')
+  assert.ok(sessionRule.includes('SKILL.md'))
   assert.ok(sessionRule.includes(buildGrokLaunchPrompt(FURNACE_ROLE.SESSION)))
 })
 

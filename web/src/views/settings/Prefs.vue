@@ -239,62 +239,24 @@
       </el-button>
     </section>
 
-    <section class="prefs-card">
-      <div class="prefs-title">{{ prefsT('furnaceSkills.title') }}</div>
-      <p class="prefs-hint">{{ prefsT('furnaceSkills.hint') }}</p>
-      <p v-if="furnaceSkillsWorkspace" class="prefs-resolved">
-        {{ prefsT('furnaceSkills.workspace') }}：{{ furnaceSkillsWorkspace }}
-      </p>
-      <el-table v-if="furnaceSkills.length" :data="furnaceSkills" size="small" class="furnace-skills-table">
-        <el-table-column prop="id" :label="prefsT('furnaceSkills.colId')" width="200" />
-        <el-table-column prop="version" :label="prefsT('furnaceSkills.colVersion')" width="88" />
-        <el-table-column prop="description" :label="prefsT('furnaceSkills.colDesc')" />
-      </el-table>
-      <el-button
-        type="primary"
-        plain
-        size="small"
-        class="furnace-skills-sync"
-        :loading="syncingFurnaceSkills"
-        @click="syncFurnaceSkills"
-      >
-        {{ prefsT('furnaceSkills.sync') }}
-      </el-button>
-    </section>
+    <PrefsFurnaceSkillsCard
+      :skills="furnaceSkills"
+      :workspace="furnaceSkillsWorkspace"
+      :needs-workspace-ack="furnaceNeedsWorkspaceAck"
+      :syncing="syncingFurnaceSkills"
+      @sync="syncFurnaceSkills"
+    />
 
-    <section class="prefs-card">
-      <div class="prefs-title">{{ prefsT('grok.title') }}</div>
-      <p class="prefs-hint">
-        {{ prefsT('grok.hintPrefix') }}
-        <router-link to="/settings/grok">{{ prefsT('grok.hintLink') }}</router-link>。
-      </p>
-      <el-form label-position="top" class="admin-form">
-        <el-form-item :label="prefsT('grok.configured')">
-          <el-switch v-model="grok.configured" />
-          <p class="prefs-resolved">{{ prefsT('grok.configuredHint') }}</p>
-        </el-form-item>
-        <el-form-item :label="prefsT('grok.command')">
-          <el-input v-model="grok.command" placeholder="grok" />
-        </el-form-item>
-        <el-form-item :label="prefsT('grok.cursorCommand')">
-          <el-input v-model="grok.cursorCommand" placeholder="cursor-agent" />
-          <p class="prefs-resolved">{{ prefsT('grok.cursorHint') }}</p>
-        </el-form-item>
-        <el-form-item :label="prefsT('grok.defaultSurface')">
-          <el-radio-group v-model="grok.surface">
-            <el-radio value="tui">{{ prefsT('grok.surfaceTui') }}</el-radio>
-          </el-radio-group>
-          <p class="prefs-resolved">{{ prefsT('grok.surfaceHint') }}</p>
-        </el-form-item>
-        <el-form-item :label="prefsT('grok.refineSourceBackup')">
-          <el-switch v-model="adaptBackup" />
-          <p class="prefs-resolved">{{ prefsT('grok.refineSourceBackupHint') }}</p>
-        </el-form-item>
-      </el-form>
-      <el-button type="primary" plain size="small" :loading="savingGrok" @click="saveGrok">
-        {{ prefsT('grok.save') }}
-      </el-button>
-    </section>
+    <PrefsGrokCard
+      v-model:workspace-dir="grok.workspaceDir"
+      v-model:configured="grok.configured"
+      v-model:command="grok.command"
+      v-model:cursor-command="grok.cursorCommand"
+      v-model:surface="grok.surface"
+      v-model:refine-source-backup="adaptBackup"
+      :saving="savingGrok"
+      @save="saveGrok"
+    />
 
     <section class="prefs-card">
       <div class="prefs-title">{{ prefsT('locale.title') }}</div>
@@ -498,6 +460,8 @@ import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
 import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
 import { getLocale, setLocale, LOCALE_OPTIONS } from '../../i18n/index.js'
+import PrefsFurnaceSkillsCard from './PrefsFurnaceSkillsCard.vue'
+import PrefsGrokCard from './PrefsGrokCard.vue'
 import {
   prefsTitle,
   prefsDesc,
@@ -577,7 +541,14 @@ const lastImportTime = ref('')
 const exportingBackup = ref(false)
 const exportingDocs = ref(false)
 const lastExportTime = ref('')
-const grok = ref({ command: 'grok', cursorCommand: 'cursor-agent', configured: true, surface: 'tui' })
+const grok = ref({
+  command: 'grok',
+  cursorCommand: 'cursor-agent',
+  configured: true,
+  surface: 'tui',
+  workspaceDir: '',
+})
+const furnaceNeedsWorkspaceAck = ref(false)
 const adaptBackup = ref(true)
 const savingGrok = ref(false)
 const furnaceSkills = ref([])
@@ -647,6 +618,7 @@ async function load() {
         cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
+        workspaceDir: s.grok.workspaceDir || '',
       }
     }
     adaptBackup.value =
@@ -689,16 +661,31 @@ async function loadFurnaceSkills() {
     const r = await api.furnace.skills()
     furnaceSkills.value = r.skills || []
     furnaceSkillsWorkspace.value = r.workspace || ''
+    furnaceNeedsWorkspaceAck.value = !!r.needsWorkspaceAck
   } catch {
     furnaceSkills.value = []
     furnaceSkillsWorkspace.value = ''
+    furnaceNeedsWorkspaceAck.value = false
   }
 }
 
 async function syncFurnaceSkills() {
+  let acknowledge = false
+  if (furnaceNeedsWorkspaceAck.value) {
+    try {
+      await ElMessageBox.confirm(
+        prefsT('furnaceSkills.workspaceAckBody').replace('{path}', furnaceSkillsWorkspace.value),
+        prefsT('furnaceSkills.workspaceAckTitle'),
+        { type: 'warning', confirmButtonText: prefsT('furnaceSkills.workspaceAckOk') },
+      )
+      acknowledge = true
+    } catch {
+      return
+    }
+  }
   syncingFurnaceSkills.value = true
   try {
-    const r = await api.furnace.syncSkills()
+    const r = await api.furnace.syncSkills({ acknowledgeExternalWorkspace: acknowledge })
     const n = Array.isArray(r.synced) ? r.synced.length : 0
     ElMessage.success(prefsT('furnaceSkills.syncOk').replace('{n}', String(n)))
     await loadFurnaceSkills()
@@ -933,6 +920,7 @@ async function saveGrok() {
         cursorCommand: String(grok.value.cursorCommand || 'cursor-agent').trim() || 'cursor-agent',
         configured: !!grok.value.configured,
         surface: grok.value.surface === 'chat' ? 'chat' : 'tui',
+        workspaceDir: String(grok.value.workspaceDir || '').trim(),
       },
       adapt: { backup: adaptBackup.value !== false },
       refine: { backup: adaptBackup.value !== false },
@@ -943,10 +931,12 @@ async function saveGrok() {
         cursorCommand: s.grok.cursorCommand || 'cursor-agent',
         configured: !!s.grok.configured,
         surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
+        workspaceDir: s.grok.workspaceDir || '',
       }
     }
     if (s.refine) adaptBackup.value = s.refine.backup !== false
     else if (s.adapt) adaptBackup.value = s.adapt.backup !== false
+    await loadFurnaceSkills()
     ElMessage.success(prefsToast('grokSaved'))
   } catch (e) {
     ElMessage.error(e.message)

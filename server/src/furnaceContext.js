@@ -7,6 +7,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { ROOT, DATA_ROOT } from './db.js'
 import { FURNACE_ROLE, FURNACE_ROLE_LABEL, furnaceSkillsForRole } from '@acw/shared'
+import { skillExcerptForRole } from './furnaceSkillSync.js'
+import { getAppSettings } from './appSettings.js'
 
 const ROLE_FILES = {
   [FURNACE_ROLE.SESSION]: 'session.md',
@@ -233,8 +235,23 @@ export function furnaceToolHint(pin) {
   return '本轮要改的工具在 ACTIVE.md 那一节，先读再改文件。'
 }
 
+const LEGACY_PROMPT_ONLY_ROLES = new Set([
+  FURNACE_ROLE.MEMBER_ADAPT,
+  FURNACE_ROLE.NODE_ADAPT,
+])
+
+export function resolveFurnaceRoleGuide(role) {
+  const furnace = getAppSettings().furnace || {}
+  if (furnace.promptsFromSkills !== false && !LEGACY_PROMPT_ONLY_ROLES.has(role)) {
+    const fromSkill = skillExcerptForRole(role)
+    if (fromSkill) return { text: fromSkill, source: 'skill' }
+  }
+  const legacy = loadFurnacePrompt(role)
+  return { text: legacy, source: legacy ? 'prompt' : 'none' }
+}
+
 export function composeFurnaceContext(role, { situation, toolPin } = {}) {
-  const prompt = loadFurnacePrompt(role)
+  const guide = resolveFurnaceRoleGuide(role)
   const memory = loadFurnaceMemory(role)
   const label = FURNACE_ROLE_LABEL[role] || role
   const sitText =
@@ -262,9 +279,11 @@ export function composeFurnaceContext(role, { situation, toolPin } = {}) {
     '',
     ...skillLines,
     '',
-    '## Prompt（过渡 · 与 Skills 重复时以 Skill 为准）',
+    guide.source === 'skill'
+      ? '## Skill 指引（维护请只改仓库 `skills/`）'
+      : '## Prompt（legacy · 维护将迁至 Skill）',
     '',
-    prompt || '（缺 prompt 文件）',
+    guide.text || '（缺 Skill / prompt）',
     '',
     '## 本机记忆',
     '',
