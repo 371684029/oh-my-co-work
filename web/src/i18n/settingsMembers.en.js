@@ -80,8 +80,9 @@ export const settingsMembersEn = {
     refineCopyFurnaceSkill: 'Copy furnace refine skill summary',
     refineFurnaceSkillHint:
       'For local Grok furnace; full steps in skills/furnace-refine-skill/SKILL.md (synced to .grok/skills on launch).',
-    refineFormatTitle: 'Saved refine spec (read-only)',
+    refineFormatTitle: 'Refine output spec',
     refineFormatHeading: 'Doc title',
+    refineFormatHeadingPlaceholder: 'e.g. MyMember output (stdout ### heading)',
     refineFormatEnv: 'Input env',
     refineFormatOut: 'Output channel',
     refinePlanTitle: 'Pre-save contract preview (expanded)',

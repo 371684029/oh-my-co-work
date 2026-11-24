@@ -104,6 +104,12 @@ async function fireSearch() {
   }
 }
 
+function openSearchPanel() {
+  open.value = true
+}
+
+defineExpose({ openSearchPanel })
+
 async function jumpToHit(hit) {
   open.value = false
   query.value = ''

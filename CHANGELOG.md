@@ -1,5 +1,14 @@
 # Changelog
 
+## 6.11.0 — 产品 backlog P1 收口
+
+- 设置：`settings.refine.backup`（兼容 `adapt.backup`）；成员炼化 **文档标题** 可编辑。
+- 文档中心炼化台账 **按成员名过滤**；`?pane=refine&memberId=` 高亮；`GET /members/:id/refine/history`。
+- 流程轨失败节点深链「查看该成员炼化 diff」。
+- **RCL-07**：纯包装 `.bat` 默认不插契约（`patchBatWrapper` 覆盖）。
+- **SRC-06**：`Ctrl/Cmd+Shift+F` 打开全局聊天搜索。
+- 文案：核心「适配」标签改为「炼化/回落」口径。
+
 ## 6.10.0 — 文档与协作指引对齐
 
 - `AGENTS.md` 升至 6.10.0：补充 `electron/`、`skills/`、`engine/` 目录与 `plan-backlog` 入口。

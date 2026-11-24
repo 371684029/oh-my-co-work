@@ -116,11 +116,15 @@ router.post('/members/refine/plan', (req, res) => {
     res.status(400).json({ error: e.message })
   }
 })
-router.get('/members/:id/source-history', (req, res) => {
+function respondMemberRefineHistory(req, res) {
   const m = getMember(req.params.id)
   if (!m) return res.status(404).json({ error: '成员不存在' })
-  res.json({ memberId: m.id, history: listMemberSourceHistory(m.id) })
-})
+  const history = listMemberSourceHistory(m.id)
+  res.json({ memberId: m.id, memberName: m.name, history })
+}
+
+router.get('/members/:id/source-history', respondMemberRefineHistory)
+router.get('/members/:id/refine/history', respondMemberRefineHistory)
 router.post('/members/:id/source-backup', (req, res) => {
   try {
     const m = getMember(req.params.id)

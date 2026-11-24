@@ -41,6 +41,8 @@
         :expand-for="expandFor"
         :show-refine-ledger="refineLedgerOpen"
         :refine-session-id="refineSessionId"
+        :highlight-member-id="refineHighlightMemberId"
+        :initial-member-filter="refineMemberFilter"
         @go-workbench="goWorkbench"
       />
     </div>
@@ -116,6 +118,8 @@ const exportingAll = ref(false)
 const refineLedgerOpen = ref(false)
 
 const refineSessionId = computed(() => String(route.query.session || '').trim())
+const refineHighlightMemberId = computed(() => String(route.query.memberId || '').trim())
+const refineMemberFilter = computed(() => String(route.query.memberName || route.query.memberFilter || '').trim())
 
 function onTogglePin(item) {
   toggleDocsPin(item)
@@ -220,6 +224,10 @@ onMounted(async () => {
     expandFor(String(sid))
     await selectFile(String(sid), String(fname), { force: true })
   } else if (route.query.pane === 'refine') {
+    openRefineLedger()
+  }
+  const mid = refineHighlightMemberId.value
+  if (mid && route.query.pane === 'refine') {
     openRefineLedger()
   }
 })

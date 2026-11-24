@@ -46,6 +46,7 @@ test('planRefineOnMemberSave warns on bat node wrapper', () => {
   }
   const plan = planRefineOnMemberSave(member)
   assert.ok(plan.warnings?.some((w) => w.code === 'bat_wrapper'))
+  assert.equal(plan.fileCount, 0, 'RCL-07: pure wrapper bat is not patched by default')
 })
 
 test('previewRefineVerify simulates before first patch', () => {

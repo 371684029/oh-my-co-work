@@ -39,6 +39,25 @@ export function defaultAdaptSettings() {
   return { backup: true }
 }
 
+/** 炼化改源备份开关（6.11 DEBT-01）；读库兼容 legacy `adapt.backup` */
+export function defaultRefineSettings() {
+  return { backup: true }
+}
+
+function normalizeRefine(raw) {
+  const d = defaultRefineSettings()
+  if (!raw || typeof raw !== 'object') return d
+  return { backup: raw.backup !== false }
+}
+
+export function refineSourceBackupEnabled() {
+  const s = getAppSettings()
+  if (s.refine && typeof s.refine === 'object' && s.refine.backup !== undefined) {
+    return s.refine.backup !== false
+  }
+  return s.adapt?.backup !== false
+}
+
 /** 熔炉 / 炼化高级选项（5.9.0 RAR-06） */
 export function defaultFurnaceSettings() {
   return { requireVerifyBeforeStamp: false, syncSkills: true, warnBatWrapper: true }
@@ -410,6 +429,13 @@ export function getAppSettings() {
       admin: normalizeAdmin(raw.admin),
       grok: normalizeGrok(raw.grok),
       adapt: normalizeAdapt(raw.adapt),
+      refine: normalizeRefine(
+        raw.refine && typeof raw.refine === 'object'
+          ? raw.refine
+          : raw.adapt && typeof raw.adapt === 'object'
+            ? { backup: raw.adapt.backup }
+            : undefined,
+      ),
       furnace: normalizeFurnace(raw.furnace),
       /** 归档确认超时（小时），超时系统自动归档释放资源；默认 3 */
       autoArchiveHours: normalizeAutoArchiveHours(
@@ -435,6 +461,7 @@ export function getAppSettings() {
       admin: defaultAdminSettings(),
       grok: defaultGrokSettings(),
       adapt: defaultAdaptSettings(),
+      refine: defaultRefineSettings(),
       furnace: defaultFurnaceSettings(),
       autoArchiveHours: 3,
       showScriptPopup: true,
@@ -492,6 +519,10 @@ export function updateAppSettings(patch = {}) {
       patch.adapt !== undefined
         ? normalizeAdapt({ ...cur.adapt, ...patch.adapt })
         : cur.adapt,
+    refine:
+      patch.refine !== undefined
+        ? normalizeRefine({ ...(cur.refine || defaultRefineSettings()), ...patch.refine })
+        : cur.refine || defaultRefineSettings(),
     furnace:
       patch.furnace !== undefined
         ? normalizeFurnace({ ...cur.furnace, ...patch.furnace })

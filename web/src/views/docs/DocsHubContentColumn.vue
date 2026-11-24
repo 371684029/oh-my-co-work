@@ -1,7 +1,11 @@
 <template>
   <main class="dh-col dh-col-content" :class="readingClasses" :style="readingStyle">
     <div v-if="showRefineLedger" class="dh-refine-wrap">
-      <DocsRefineChangesPane :session-id="refineSessionId" />
+      <DocsRefineChangesPane
+        :session-id="refineSessionId"
+        :highlight-member-id="highlightMemberId"
+        :initial-member-filter="initialMemberFilter"
+      />
     </div>
 
     <template v-else>
@@ -237,6 +241,8 @@ const props = defineProps({
   expandFor: { type: Function, required: true },
   showRefineLedger: { type: Boolean, default: false },
   refineSessionId: { type: String, default: '' },
+  highlightMemberId: { type: String, default: '' },
+  initialMemberFilter: { type: String, default: '' },
 })
 
 defineEmits(['go-workbench'])

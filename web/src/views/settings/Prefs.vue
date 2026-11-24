@@ -649,7 +649,8 @@ async function load() {
         surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
       }
     }
-    adaptBackup.value = s.adapt?.backup !== false
+    adaptBackup.value =
+      s.refine?.backup !== undefined ? s.refine.backup !== false : s.adapt?.backup !== false
     startupUpdateCheck.value = s.updateCheck?.startup !== false
     if (s.notifications) {
       const n = s.notifications
@@ -934,6 +935,7 @@ async function saveGrok() {
         surface: grok.value.surface === 'chat' ? 'chat' : 'tui',
       },
       adapt: { backup: adaptBackup.value !== false },
+      refine: { backup: adaptBackup.value !== false },
     })
     if (s.grok) {
       grok.value = {
@@ -943,7 +945,8 @@ async function saveGrok() {
         surface: s.grok.surface === 'chat' ? 'chat' : 'tui',
       }
     }
-    if (s.adapt) adaptBackup.value = s.adapt.backup !== false
+    if (s.refine) adaptBackup.value = s.refine.backup !== false
+    else if (s.adapt) adaptBackup.value = s.adapt.backup !== false
     ElMessage.success(prefsToast('grokSaved'))
   } catch (e) {
     ElMessage.error(e.message)

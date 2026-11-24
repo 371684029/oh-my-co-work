@@ -125,6 +125,10 @@ export function flowRailRefineFailMembers() {
   return t('workbench.flowRail.refineFailMembers')
 }
 
+export function flowRailRefineFailDiff() {
+  return t('workbench.flowRail.refineFailDiff')
+}
+
 export function flowRailOpenInDocsHub() {
   return t('workbench.flowRail.openInDocsHub')
 }

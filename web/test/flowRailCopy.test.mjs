@@ -9,7 +9,7 @@ import {
 
 test('flowRailCopy node chrome labels', () => {
   assert.match(flowRailJournalButton(), /台账|Journal/)
-  assert.match(flowRailTagAdapt(), /适配|Adapt/)
+  assert.match(flowRailTagAdapt(), /炼化回落|Refine fallback/)
   assert.match(flowRailIoInputLabel(), /输入|Input/)
   assert.match(flowRailSkippedExpandLabel(3), /3/)
 })

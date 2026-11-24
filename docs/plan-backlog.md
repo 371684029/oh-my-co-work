@@ -2,7 +2,7 @@
 
 > **用途**：聚合当前发版线及相邻计划的**未勾选项**，供迭代与 Agent 对齐。细则仍以各 `plan-*.md` 为准；本栏只做索引与状态 `[ ]` / `[x]`。
 >
-> **最后对齐**：6.10.0 文档对齐已上 main · 功能线 6.9.0（ACTIVE）· RCL-07 仍开着 · 更新 2026-11-24
+> **最后对齐**：6.11.0 backlog P1 收口 · RCL-07 已默认跳过包装 bat · 更新 2026-11-24
 
 ---
 
@@ -10,11 +10,11 @@
 
 | 状态 | ID | 优先级 | 待办 |
 | --- | --- | --- | --- |
-| [ ] | RFD-03 | P1 | 扩充分 history API / catalog：unified diff + 超长折叠（>200 行） |
+| [x] | RFD-03 | P1 | 扩充分 history API / catalog：`GET /members/:id/refine/history`（diff 仍由 restore-center / refineDiff 截断） |
 | [ ] | RFD-13 | P2 | 导出单次 diff 为 `.patch` 或写入 `journals/.../assets/` |
-| [ ] | RFD-21 | P1 | 流程轨失败节点：深链「该成员最近炼化 diff」 |
+| [x] | RFD-21 | P1 | 流程轨失败节点：深链「该成员最近炼化 diff」 |
 | [ ] | RFD-22 | P2 | 时间线事件 `refine.source_patched` + 工作台筛选 |
-| [ ] | RFD-11+ | P1 | 文档中心「炼化与还原」**按成员名过滤**（入口已有，`pane=refine`） |
+| [x] | RFD-11+ | P1 | 文档中心「炼化与还原」**按成员名过滤** + `memberId` 深链高亮 |
 
 ---
 
@@ -22,10 +22,10 @@
 
 | 状态 | ID | 优先级 | 待办 |
 | --- | --- | --- | --- |
-| [ ] | DEBT-01 | P1 | `settings.refine.backup` 正式键名（读库兼容 `adapt.backup`） |
-| [ ] | RFN-F | P1 | 成员设置 `refine.format.title` **可编辑**（现只读摘要） |
+| [x] | DEBT-01 | P1 | `settings.refine.backup` 正式键名（读库兼容 `adapt.backup`） |
+| [x] | RFN-F | P1 | 成员设置 `refine.format.title` **可编辑** |
 | [ ] | NTF-R | P2 | 终端长任务炼化完成 **轻量 toast** |
-| [ ] | DEBT-02 | P2 | 再扫 restore-center / 历史 i18n「适配」字样与 `docs.badges.adapt` |
+| [x] | DEBT-02 | P2 | 工作台/文档核心 i18n「适配」→「炼化」（余量见 plan-6.11.0） |
 
 ---
 
@@ -45,7 +45,7 @@
 
 | 状态 | ID | 待办 | 说明 |
 | --- | --- | --- | --- |
-| [ ] | SRC-06 | `Ctrl/Cmd+Shift+F` 打开全局搜索 | `plan-6.2.0.md` · 明确本版不做 |
+| [x] | SRC-06 | `Ctrl/Cmd+Shift+F` 打开全局搜索 | `plan-6.11.0.md` |
 | [ ] | TRM-06 | xterm 位图截图落盘 | `plan-6.1.0.md` · 文本定格不满足再开 ADR |
 | [ ] | DOC-06 | `plan-docs-4x.md` §3.2 脚注 6.1 侧栏口径 | 文档一致性 |
 | [ ] | REL-6.1 | 6.1 终端定格对外 changelog 口径 | 可与 about 历史条目合并说明 |
@@ -86,7 +86,7 @@
 
 | 状态 | 待办 |
 | --- | --- |
-| [ ] | GitHub **PR #173** 若仍 open：标 superseded 或关闭（main 已含 6.3/6.4） |
+| [x] | GitHub **PR #173** 已合并关闭（main 已含 6.3/6.4） |
 | [ ] | `resolveAdaptFurnaceRole` / `MEMBER_ADAPT` 角色：**只读兼容**期满后的删除评估 |
 
 ---

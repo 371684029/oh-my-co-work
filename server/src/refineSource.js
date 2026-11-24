@@ -13,7 +13,7 @@ import {
   stampManifestAfterPatch,
   writeScriptSource,
 } from './adaptBackup.js'
-import { getAppSettings } from './appSettings.js'
+import { getAppSettings, refineSourceBackupEnabled } from './appSettings.js'
 import { verifyMemberSync } from './memberVerify.js'
 import { defaultRefineSpecAuthor, produceRefineSpec } from './refine.js'
 import {
@@ -70,8 +70,32 @@ function nlOf(text) {
 }
 
 function safeTitle(member) {
+  const custom = member?.config?.refine?.format?.title
+  if (typeof custom === 'string' && custom.trim()) {
+    return custom.trim().replace(/[\r\n"]/g, '')
+  }
   const spec = produceRefineSpec(member)
   return String(spec.title || defaultRefineSpecAuthor(member).title).replace(/[\r\n"]/g, '').trim()
+}
+
+function isRefinePatchableWrapperBat(filePath) {
+  const ext = path.extname(String(filePath || '')).toLowerCase()
+  if (ext !== '.bat' && ext !== '.cmd') return false
+  try {
+    return isBatWrapperScript(fs.readFileSync(filePath, 'utf8'))
+  } catch {
+    return false
+  }
+}
+
+/** RCL-07：纯包装 bat 默认不插契约，除非成员显式 patchBatWrapper */
+function filterRefinePatchTargets(member, fileRows) {
+  const allowWrapper = member?.config?.refine?.patchBatWrapper === true
+  if (allowWrapper) return fileRows
+  return (fileRows || []).filter((f) => {
+    const p = f.path || f
+    return !isRefinePatchableWrapperBat(p)
+  })
 }
 
 function refineBlock(filePath, title, nl) {
@@ -189,13 +213,14 @@ export function planRefineOnMemberSave(member) {
   const title = safeTitle(member)
   const paths = collectAdaptSourcePaths(member)
   const assess = assessAdaptFiles(paths)
-  const needPatch = (assess.files || []).filter((f) => {
+  let needPatch = (assess.files || []).filter((f) => {
     try {
       return !fs.readFileSync(f.path, 'utf8').includes(REFINE_MARK)
     } catch {
       return false
     }
   })
+  needPatch = filterRefinePatchTargets(member, needPatch)
   const files = []
   for (const f of needPatch) {
     const r = computeRefineContractContent(f.path, { title })
@@ -238,13 +263,14 @@ export function applyRefineOnMemberSave(member) {
   let backup = null
   const patched = []
   let reason = assess.ok ? 'ok' : assess.reason
-  const needPatch = (assess.files || []).filter((f) => {
+  let needPatch = (assess.files || []).filter((f) => {
     try {
       return !fs.readFileSync(f.path, 'utf8').includes(REFINE_MARK)
     } catch {
       return false
     }
   })
+  needPatch = filterRefinePatchTargets(member, needPatch)
   const needArgvUpgrade = (assess.files || []).filter((f) => {
     try {
       const t = fs.readFileSync(f.path, 'utf8')
@@ -279,7 +305,7 @@ export function applyRefineOnMemberSave(member) {
   if (assess.ok && !filesToTouch.length) {
     reason = 'already'
   } else if (assess.ok) {
-    const backupEnabled = getAppSettings().adapt?.backup !== false
+    const backupEnabled = refineSourceBackupEnabled()
     if (!backupEnabled) {
       reason = 'backup_disabled'
       backup = null

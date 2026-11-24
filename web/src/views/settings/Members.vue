@@ -129,9 +129,15 @@
             class="field-hint refine-format-box"
           >
             <div>{{ membersT('form.refineFormatTitle') }}</div>
-            <div>
-              {{ membersT('form.refineFormatHeading') }}：<code>{{ refineFormatSummary.title }}</code>
-            </div>
+            <el-form-item :label="membersT('form.refineFormatHeading')" label-width="96px" class="refine-title-field">
+              <el-input
+                v-model="form._refineTitle"
+                :placeholder="refineFormatSummary?.title || membersT('form.refineFormatHeadingPlaceholder')"
+                maxlength="120"
+                show-word-limit
+                :disabled="readonly"
+              />
+            </el-form-item>
             <div v-if="refineFormatSummary.env?.length">
               {{ membersT('form.refineFormatEnv') }}：{{ refineFormatSummary.env.join(', ') }}
             </div>
@@ -918,6 +924,7 @@ function fillFromRow(row, { asClone = false } = {}) {
     _cloneFrom: asClone ? row.id : undefined,
     _verifyLast: row.config?.refine?.verifyLast || null,
     _verifyFailed: !!row.config?.refine?.verifyFailed,
+    _refineTitle: String(row.config?.refine?.format?.title || '').trim(),
     config: row.config ? { ...row.config } : {},
   }
 }
@@ -972,9 +979,19 @@ function memberPayloadFromForm() {
     }
   }
   if (form.value.refine) {
+    const titleDraft = String(form.value._refineTitle || '').trim()
+    const prevFmt = prev?.refine?.format
     baseConfig.refine = {
       ...(prev?.refine || {}),
       enabled: true,
+      ...(titleDraft || prevFmt
+        ? {
+            format: {
+              ...(typeof prevFmt === 'object' && prevFmt ? prevFmt : {}),
+              ...(titleDraft ? { title: titleDraft } : {}),
+            },
+          }
+        : {}),
     }
   } else if (prev?.refine) {
     baseConfig.refine = {

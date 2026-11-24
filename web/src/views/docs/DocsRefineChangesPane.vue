@@ -7,6 +7,14 @@
           炼化改源 diff 为「备份 zip 内文件 → 当前磁盘」的 git 式对比；节点区为工作区 git 快照 patch，二者不同。
         </p>
       </div>
+      <el-input
+        v-model="memberFilter"
+        class="rl-filter"
+        size="small"
+        clearable
+        :placeholder="docsRefineFilterPlaceholder()"
+        :aria-label="docsRefineFilterPlaceholder()"
+      />
       <el-button size="small" plain :loading="loading" @click="load">刷新</el-button>
     </div>
 
@@ -18,7 +26,13 @@
     <template v-else>
       <section v-if="refineMembers.length" class="rl-section">
         <h4 class="rl-sec-title">成员炼化源码备份</h4>
-        <div v-for="m in refineMembers" :key="m.id" class="rl-card">
+        <div
+          v-for="m in filteredRefineMembers"
+          :key="m.id"
+          class="rl-card"
+          :data-member-id="m.id"
+          :class="{ 'rl-card--focus': m.id === props.highlightMemberId }"
+        >
           <div class="rl-card-head">
             <div class="rl-card-main">
               <strong>{{ m.name }}</strong>
@@ -161,7 +175,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ElMessage from 'element-plus/es/components/message/index.mjs'
 import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
@@ -173,6 +187,8 @@ import { memberVerifyFailedFromRecord } from '../../composables/refineFurnaceLau
 const props = defineProps({
   sessionId: { type: String, default: '' },
   compact: { type: Boolean, default: false },
+  highlightMemberId: { type: String, default: '' },
+  initialMemberFilter: { type: String, default: '' },
 })
 
 const router = useRouter()
@@ -184,6 +200,7 @@ const restoringKey = ref('')
 const openDiffs = reactive({})
 const refineFurnaceLaunchOpen = ref(false)
 const refineFurnaceLaunchMemberId = ref('')
+const memberFilter = ref(String(props.initialMemberFilter || '').trim())
 
 function openRefineFurnaceLaunch(memberId) {
   refineFurnaceLaunchMemberId.value = String(memberId || '').trim()
@@ -197,7 +214,22 @@ const refineMembers = computed(() =>
       m.refineEnabled || m.refineBackup || m.adaptBackup || (m.history && m.history.length),
   ),
 )
+
+const filteredRefineMembers = computed(() => {
+  const q = memberFilter.value.trim().toLowerCase()
+  if (!q) return refineMembers.value
+  return refineMembers.value.filter((m) => {
+    const name = String(m.name || '').toLowerCase()
+    const id = String(m.id || '').toLowerCase()
+    return name.includes(q) || id.includes(q)
+  })
+})
+
 const sessions = computed(() => data.value?.sessions || [])
+
+function docsRefineFilterPlaceholder() {
+  return '按成员名过滤'
+}
 
 function toggleDiff(key) {
   openDiffs[key] = !openDiffs[key]
@@ -221,16 +253,32 @@ function fmtTime(iso) {
   }
 }
 
+async function focusHighlightMember() {
+  await nextTick()
+  const id = String(props.highlightMemberId || '').trim()
+  if (!id) return
+  const el = document.querySelector(`.rl-card[data-member-id="${id}"]`)
+  el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+}
+
 async function load() {
   loading.value = true
   try {
     data.value = await api.restoreCenter.list(props.sessionId || '')
+    await focusHighlightMember()
   } catch (e) {
     ElMessage.error(e?.message || '加载修改记录失败')
   } finally {
     loading.value = false
   }
 }
+
+watch(
+  () => props.highlightMemberId,
+  () => {
+    if (data.value) void focusHighlightMember()
+  },
+)
 
 async function restoreMember(member, manifestId = '') {
   try {

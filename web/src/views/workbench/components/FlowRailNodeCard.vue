@@ -91,6 +91,10 @@
           <router-link :to="docsHubStepLink(node)">{{ flowRailRefineFailDocs() }}</router-link>
           ·
           <router-link to="/settings/members">{{ flowRailRefineFailMembers() }}</router-link>
+          <template v-if="refineDiffLink(node)">
+            ·
+            <router-link :to="refineDiffLink(node)">{{ flowRailRefineFailDiff() }}</router-link>
+          </template>
         </div>
         <div v-if="node.journalPath" class="flow-io-path">
           {{ flowRailJournalPathPrefix() }}{{ node.journalPath }}
@@ -117,6 +121,7 @@ import {
   flowRailOpenInDocsHub,
   flowRailRefineFailDocs,
   flowRailRefineFailMembers,
+  flowRailRefineFailDiff,
   flowRailRevertStepButton,
 } from '../composables/flowRailCopy.js'
 import {
@@ -159,6 +164,12 @@ function docsHubStepLink(node) {
   const name = journalPathToDocFile(node?.journalPath)
   if (!sessionId || !name) return { path: '/docs' }
   return { path: '/docs', query: { sessionId: String(sessionId), name } }
+}
+
+function refineDiffLink(node) {
+  const memberId = node?.member_id || node?.memberId
+  if (!memberId) return null
+  return { path: '/docs', query: { pane: 'refine', memberId: String(memberId) } }
 }
 
 function openNodeJournal(n) {

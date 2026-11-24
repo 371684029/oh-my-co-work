@@ -143,7 +143,7 @@
           </nav>
         </div>
         <div class="top-right">
-          <GlobalChatSearch />
+          <GlobalChatSearch ref="globalChatSearchRef" />
           <div class="zoom-ctrl" data-fullscreen-control role="group" :aria-label="shellZoomGroupAria()">
             <button
               type="button"
@@ -328,6 +328,7 @@ import {
 
 const route = useRoute()
 const { paletteOpen, showPalette, hidePalette } = useCommandPalette()
+const globalChatSearchRef = ref(null)
 const flowStore = useFlowStore()
 // DocsHub 全文搜索输入共享同一 ref（文档中心顶栏 <-> 会话列搜索结果联动）
 const docsSearchQuery = docsHubSearchQuery
@@ -462,6 +463,11 @@ function onGlobalKeydown(ev) {
   if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'd') {
     ev.preventDefault()
     goDocs()
+    return
+  }
+  if (mod && ev.shiftKey && String(ev.key || '').toLowerCase() === 'f') {
+    ev.preventDefault()
+    globalChatSearchRef.value?.openSearchPanel?.()
     return
   }
   if (mod && (ev.key === '=' || ev.key === '+' || ev.key === '-')) {
