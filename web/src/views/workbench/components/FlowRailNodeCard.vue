@@ -70,7 +70,7 @@
         </div>
         <div v-if="flowRailNodeChangePatch(node)" class="flow-io-block">
           <div class="flow-io-label">{{ flowRailIoDiffLabel() }}</div>
-          <pre class="flow-io-pre flow-io-pre--diff">{{ flowRailNodeChangePatch(node) }}</pre>
+          <UnifiedDiffView :diff="flowRailNodeChangePatch(node)" theme="light" />
           <el-button
             size="small"
             type="warning"
@@ -149,6 +149,7 @@ import {
   toggleNodeExpand,
 } from '../composables/useSessionDetail'
 import FlowRailNodeBadges from './FlowRailNodeBadges.vue'
+import UnifiedDiffView from '../../../components/UnifiedDiffView.vue'
 
 defineProps({
   node: { type: Object, required: true },

@@ -121,10 +121,11 @@
                     导出 .patch
                   </el-button>
                 </div>
-                <pre
+                <UnifiedDiffView
                   v-if="f.diff && openDiffs[`${h.id}:${f.path}`]"
-                  class="rl-diff flow-io-pre flow-io-pre--diff"
-                >{{ f.diff }}</pre>
+                  :diff="f.diff"
+                  theme="dark"
+                />
               </div>
             </div>
           </div>
@@ -174,7 +175,11 @@
               </div>
             </div>
             <pre v-if="n.summary" class="rl-stat-block">{{ n.summary }}</pre>
-            <pre v-if="n.patch && openDiffs[`node:${n.id}`]" class="rl-diff">{{ n.patch }}</pre>
+            <UnifiedDiffView
+              v-if="n.patch && openDiffs[`node:${n.id}`]"
+              :diff="n.patch"
+              theme="dark"
+            />
           </div>
         </div>
       </section>
@@ -191,6 +196,7 @@ import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
 import { useFlowStore } from '../../stores/flow.js'
 import RefineFurnaceLaunchDialog from '../settings/RefineFurnaceLaunchDialog.vue'
+import UnifiedDiffView from '../../components/UnifiedDiffView.vue'
 import { memberVerifyFailedFromRecord } from '../../composables/refineFurnaceLaunch.js'
 
 const props = defineProps({
@@ -563,13 +569,6 @@ onMounted(load)
   word-break: break-word;
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
 }
-.flow-io-pre--diff {
-  color: var(--ecw-text-1, #0b0c0f);
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-.rl-diff,
 .rl-stat-block {
   margin: 6px 0 0;
   padding: 8px 10px;

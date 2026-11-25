@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-25 | A/M | web/src/{components/UnifiedDiffView.vue,composables/unifiedDiffLines.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailNodeCard.vue}, web/test/unifiedDiffLines.test.mjs | 炼化/节点 diff 红绿行+行号（类 Cursor git diff）
 2026-11-25 | M | server/src/engine/{userInput,mentions}.js, server/test/mentionParams.test.js | 临时协助 @ 保留绑定槽与 env；与 advance 一致校验 params
 2026-11-24 | A/M | docs/assets/screenshots/*, scripts/capture-readme-screenshots.mjs, README.md, package.json | README 截图 6.13 重拍；capture:readme 脚本
 2026-11-24 | A/M | docs/{plan-6.13.0,plan-backlog-wont-do}.md, server/src/{furnaceSkillSync,furnaceContext,furnaceGrokInject,appSettings,routes/settingsRoutes}, web/src/views/settings/{Prefs,Members,MembersListPanel,PrefsFurnaceSkillsCard,PrefsGrokCard}, i18n/settingsPrefs.*, web/src/api.js, server/test/furnace*, server/config/furnace/README.md, CHANGELOG, plan-backlog | 6.13 FSK-B、workspace 确认、Vue 拆分、禁止清单
