@@ -10,6 +10,8 @@ import {
   nowIso,
   extractCallArgsFromMention,
   injectCallArgsParam,
+  validateAndFillSessionParams,
+  resolveGroupParamSpecs,
 } from '@acw/shared'
 import { getSession, getGroup, resolveParamsMap,  } from './store.js'
 import { ensureOffsiteNode, resolveOffsiteMode, isOffsiteArchived } from './offsite.js'
@@ -87,10 +89,21 @@ async function runMentionedMembers(sessionId, text) {
 
   let offsite = ensureOffsiteNode(sessionId, { expand: true })
   const group = getGroup(session.group_id)
-  const ctx = parseJson(session.context_json, {})
+  let ctx = parseJson(session.context_json, {})
   const mode = resolveOffsiteMode(session, offsite)
   const callArgs = extractCallArgsFromMention(text, mentioned)
-  const paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
+  let paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
+  const paramSpecs = resolveGroupParamSpecs(group)
+  if (paramSpecs.length) {
+    const validated = validateAndFillSessionParams(paramSpecs, paramsMap)
+    if (validated.ok) {
+      paramsMap = validated.params
+      if (JSON.stringify(validated.params) !== JSON.stringify(ctx.params || {})) {
+        ctx = { ...ctx, params: { ...(ctx.params || {}), ...validated.params } }
+        engineEmit('persist_session', sessionId, { context_json: JSON.stringify(ctx) })
+      }
+    }
+  }
   const invoked = []
   const startedAt = nowIso()
   const startNodeId = offsite.id
@@ -167,6 +180,15 @@ async function runMentionedMembers(sessionId, text) {
 
     let result
     try {
+      const fresh = getSession(sessionId)
+      if (fresh) {
+        ctx = parseJson(fresh.context_json, {})
+        paramsMap = injectCallArgsParam(resolveParamsMap(ctx, group), callArgs)
+        if (paramSpecs.length) {
+          const validated = validateAndFillSessionParams(paramSpecs, paramsMap)
+          if (validated.ok) paramsMap = validated.params
+        }
+      }
       result = await runMember(member, {
         group,
         sessionContext: {
