@@ -3,6 +3,7 @@
     <div class="furnace-tui-stage">
       <TerminalView
         v-if="terminal?.id"
+        ref="terminalViewRef"
         :key="terminal.id"
         :terminal="terminal"
         :prefs="prefs"
@@ -26,8 +27,17 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import TerminalView from './TerminalView.vue'
 import FurnaceTuiDrawer from './FurnaceTuiDrawer.vue'
+
+const terminalViewRef = ref(null)
+
+function scrollToBottom() {
+  terminalViewRef.value?.scrollToBottom?.()
+}
+
+defineExpose({ scrollToBottom })
 
 defineProps({
   terminal: { type: Object, required: true },

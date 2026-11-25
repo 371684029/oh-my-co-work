@@ -41,9 +41,13 @@
   overflow-y: scroll;
   overflow-x: hidden;
   overscroll-behavior: contain;
+}
+
+.furnace-log-scroll {
   display: flex;
   align-items: flex-start;
   gap: 16px 14px;
+  min-height: min-content;
 }
 
 .furnace-buddy {

@@ -26,6 +26,7 @@
 
       <div v-show="surface === 'chat'" class="furnace-chat">
         <div ref="logEl" class="furnace-log" @scroll.passive="onLogScroll">
+          <div class="furnace-log-scroll">
           <FurnaceBuddyPanel
             :mood="buddyMood"
             :live="isRunning"
@@ -51,6 +52,7 @@
             @send-chip="sendChip"
             @copy-turn="copyTurn"
           />
+          </div>
         </div>
         <button
           v-if="!stickBottom && chatTurns.length"
@@ -84,6 +86,7 @@
       <FurnaceTuiSurface
         v-if="tuiEverShown"
         v-show="surface === 'tui'"
+        ref="tuiSurfaceRef"
         :terminal="terminal"
         :terminals="furnaceTerminals"
         :prefs="prefs"
@@ -99,6 +102,14 @@
         @update:history-open="tuiHistoryOpen = $event"
         @copy-turn="copyTurn"
       />
+      <button
+        v-if="surface === 'tui' && isRunning"
+        type="button"
+        class="furnace-jump-latest furnace-tui-jump"
+        @click="scrollFurnaceTuiBottom"
+      >
+        {{ furnaceJumpLatestLabel() }}
+      </button>
 
       <footer class="furnace-foot">
         <span>{{ furnaceStatusBarLine(isPagefill, surface) }}</span>
@@ -164,6 +175,11 @@ const furnaceTerminals = computed(() => {
 })
 const agentLabel = computed(() => furnaceAgentDisplayLabel(activeAgent.value))
 const tuiHistoryOpen = ref(false)
+const tuiSurfaceRef = ref(null)
+
+function scrollFurnaceTuiBottom() {
+  tuiSurfaceRef.value?.scrollToBottom?.()
+}
 
 const {
   isFullscreen,
@@ -307,7 +323,13 @@ onUnmounted(() => {
   scrollbar-gutter: stable;
   scrollbar-width: auto;
   scrollbar-color: rgba(60, 60, 67, 0.55) rgba(0, 0, 0, 0.06);
+  padding: 0;
+}
+
+.furnace-log-scroll {
   padding: 16px 3% 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .furnace-log::-webkit-scrollbar {
@@ -336,6 +358,12 @@ onUnmounted(() => {
   background: rgba(29, 29, 31, 0.82);
   color: #fff;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.furnace-tui-jump {
+  bottom: 52px;
+  background: rgba(41, 45, 54, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .furnace-foot {

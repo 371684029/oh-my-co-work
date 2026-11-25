@@ -80,7 +80,6 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function scheduleTranscriptReplay() {
-    if (surface.value !== 'chat') return
     if (transcriptThrottleTimer) return
     transcriptThrottleTimer = window.setTimeout(() => {
       transcriptThrottleTimer = 0
@@ -112,15 +111,16 @@ export function useFurnaceWorkspace(props, emit, refs) {
   )
   const furnaceAgentKind = computed(() => inferFurnaceAgent(props.terminal))
 
-  const liveText = computed(() => {
-    if (surface.value !== 'chat') return ''
-    return furnaceGuiTranscript(transcriptReplay.value || '', {
+  const parsedTranscript = computed(() =>
+    furnaceGuiTranscript(transcriptReplay.value || '', {
       cols: props.terminal.cols || 120,
       rows: props.terminal.rows || 40,
       maxLines: 2000,
       profile: furnaceAgentKind.value === 'cursor' ? 'cursor' : 'grok',
-    })
-  })
+    }),
+  )
+
+  const liveText = computed(() => (surface.value !== 'chat' ? '' : parsedTranscript.value))
   const showBody = computed(() => furnaceGuiReadable(liveText.value) || chatTurns.value.length > 0)
   const showFail = computed(() => isStopped.value && !showBody.value)
   const showWelcome = computed(() => !showBody.value && !showFail.value)
@@ -246,7 +246,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
   }
 
   function syncAssistantFromTranscript() {
-    const text = liveText.value
+    const text = parsedTranscript.value
     if (!furnaceGuiReadable(text)) return
     const last = chatTurns.value[chatTurns.value.length - 1]
     const body = collapseDupBlocks(stripUserEchoes(takeFurnaceAssistantDelta(text, priorAssistantText())))
@@ -365,10 +365,9 @@ export function useFurnaceWorkspace(props, emit, refs) {
     { immediate: true },
   )
 
-  watch(liveText, () => {
-    if (surface.value !== 'chat') return
+  watch(parsedTranscript, () => {
     syncAssistantFromTranscript()
-    nextTick(scrollLog)
+    if (surface.value === 'chat') nextTick(scrollLog)
   })
 
   watch(
@@ -386,9 +385,7 @@ export function useFurnaceWorkspace(props, emit, refs) {
       if (id) {
         transcriptUnsub = terminalOutputSubscribe(id, () => scheduleTranscriptReplay())
       }
-      nextTick(() => {
-        if (surface.value === 'chat') syncAssistantFromTranscript()
-      })
+      nextTick(() => syncAssistantFromTranscript())
     },
     { immediate: true },
   )

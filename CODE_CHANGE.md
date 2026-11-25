@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-25 | M | web/src/{composables/useFurnaceWorkspace.js,components/terminal/{FurnaceWorkspace.vue,FurnaceTuiSurface.vue,furnaceLayout.css},test/furnaceScroll.test.mjs} | TUI 节流解析 replay 喂抽屉；GUI 滚动容器内层 flex；熔炉 TUI「回到最新」
 2026-11-24 | A/M | docs/assets/screenshots/*, scripts/capture-readme-screenshots.mjs, README.md, package.json | README 截图 6.13 重拍；capture:readme 脚本
 2026-11-24 | A/M | docs/{plan-6.13.0,plan-backlog-wont-do}.md, server/src/{furnaceSkillSync,furnaceContext,furnaceGrokInject,appSettings,routes/settingsRoutes}, web/src/views/settings/{Prefs,Members,MembersListPanel,PrefsFurnaceSkillsCard,PrefsGrokCard}, i18n/settingsPrefs.*, web/src/api.js, server/test/furnace*, server/config/furnace/README.md, CHANGELOG, plan-backlog | 6.13 FSK-B、workspace 确认、Vue 拆分、禁止清单
 2026-11-24 | A/M | docs/plan-6.12.0.md, server/src/{refineRestore,sessionTimeline,furnaceSkillSync,furnaceSituation,routes/{catalog,sessions}Routes}, web/src/views/{docs/DocsRefineChangesPane,workbench/{composables/*,components/FlowRailTimelinePane}}, i18n/*, server/test/{sessionTimeline,furnaceSkillSync}.test.js, {package,about,CHANGELOG,README,plan-backlog,plan-docs-4x} | 6.12：patch 导出、时间线炼化、NTF-R toast、CUR-F Cursor rules、版本 6.12.0

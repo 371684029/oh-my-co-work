@@ -33,6 +33,7 @@ test('GUI 对话区是独立滚动容器，不靠撑高整页', () => {
   assert.match(layoutCss, /\.furnace-log[\s\S]*flex:\s*1 1 0%/)
   assert.match(layoutCss, /\.furnace-log[\s\S]*overflow-y:\s*scroll/)
   assert.match(layoutCss, /\.furnace-log[\s\S]*min-height:\s*0/)
+  assert.match(layoutCss, /\.furnace-log-scroll[\s\S]*min-height:\s*min-content/)
   assert.match(layoutCss, /\.furnace-chat[\s\S]*overflow:\s*hidden/)
   assert.match(vueSrc, /class="furnace-log"/)
   assert.match(chatTurnsSrc, /furnace-chat-turns/)
@@ -69,6 +70,18 @@ test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => 
   assert.match(vueSrc, /ensure-agent/)
   assert.match(headSrc, /furnaceAgentGrokTitle/)
   assert.match(headSrc, /role="tablist"/)
+})
+
+test('TUI 仍节流解析 replay 供抽屉，并提供回到底部', () => {
+  assert.match(
+    hookSrc,
+    /function scheduleTranscriptReplay\(\) \{\n    if \(transcriptThrottleTimer\) return/,
+  )
+  assert.match(hookSrc, /parsedTranscript/)
+  assert.match(hookSrc, /function syncAssistantFromTranscript\(\) \{[\s\S]*parsedTranscript/)
+  assert.match(hookSrc, /watch\(parsedTranscript/)
+  assert.match(vueSrc, /scrollFurnaceTuiBottom/)
+  assert.match(tuiSurfaceSrc, /defineExpose\(\{ scrollToBottom \}\)/)
 })
 
 test('xterm 尊重 prefs.scrollback 与 fontSize，不再强行抬到 10000', () => {
