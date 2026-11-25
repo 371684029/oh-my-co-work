@@ -8,10 +8,14 @@ import {
   SYSTEM_PARAM_KEYS,
   nowIso,
   appendProjectParams,
+  applyProjectParamBind,
+  parseProjectParams,
+  resolveStepParamBindSlots,
   formatGroupCard,
   resolveGroupFolder,
   mergeSystemParams,
   isMentionAssistOnly,
+  extractCallArgsFromMention,
 } from '@acw/shared'
 import { getSession, getGroup, getMember,  } from './store.js'
 import { engineEmit } from './events.js'
@@ -19,10 +23,34 @@ import { ensureOffsiteNode, resolveOffsiteMode, appendOffsiteNodeChat } from './
 import { unarchiveSession, refreshSessionAnnouncement } from './archive.js'
 import { syncFurnaceSessionContext } from '../furnaceSituation.js'
 import { handleGateAction } from './gates.js'
-import { invokeMentionedMembers } from './mentions.js'
+import { invokeMentionedMembers, parseMemberMentions } from './mentions.js'
+
+function recordOffsiteOrChatInput(sessionId, text, enabledMembers, meta = {}) {
+  const note = String(text || '').trim()
+  if (!note) return null
+  if (/@/.test(note)) {
+    const mentioned = parseMemberMentions(note, enabledMembers)
+    const callArgs = extractCallArgsFromMention(note, mentioned)
+    return recordUserChatInput(sessionId, note, {
+      ...meta,
+      mentionAssist: true,
+      callArgs,
+      actionLabel: meta.actionLabel || '临时协助',
+    })
+  }
+  return recordUserChatInput(sessionId, note, meta)
+}
+
+function memberNameResolver() {
+  return (id) => {
+    const m = getMember(id)
+    return m?.display_name || m?.name || id
+  }
+}
 
 /**
  * 群聊用户消息：追加 #1… 参数并记入群报告 userNotes（与人工闸门提交共用同一套 paramsList）
+ * @param {{ mentionAssist?: boolean, callArgs?: string }} [opts] 临时协助 @：只写 #a，保留「下一步」绑定槽，不按正文递增 #n
  */
 export function recordUserChatInput(
   sessionId,
@@ -32,6 +60,8 @@ export function recordUserChatInput(
     actionLabel = '群聊',
     nodeTitle,
     nodeInstanceId,
+    mentionAssist = false,
+    callArgs,
   } = {},
 ) {
   const note = text != null ? String(text).trim() : ''
@@ -41,40 +71,65 @@ export function recordUserChatInput(
   const group = getGroup(session.group_id)
   const steps = parseJson(group?.steps_json, [])
   const ctx = parseJson(session.context_json, {})
-  ctx.lastHumanInput = note
-  const parsed = appendProjectParams(ctx, note)
-  ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
-    .filter((s) => s != null && String(s).trim())
-    .join('\n')
-  ctx.paramsList = parsed.list
   const gObj = group ? { ...group, steps } : null
-  const sysCard =
-    ctx.params?.[SYSTEM_PARAM_KEYS.GROUP_CARD] ||
-    ctx.groupCard ||
-    (gObj
-      ? formatGroupCard(gObj, {
-          memberNameOf: (id) => {
-            const m = getMember(id)
-            return m?.display_name || m?.name || id
-          },
-        })
-      : '')
-  if (sysCard) ctx.groupCard = sysCard
-  if (gObj) ctx.groupFolder = resolveGroupFolder(gObj, ctx)
-  ctx.params = mergeSystemParams(
-    {
-      ...parsed.map,
-      [SYSTEM_PARAM_KEYS.CALL_ARGS]: note,
-    },
-    {
-      group: gObj,
-      sessionContext: ctx,
-      memberNameOf: (id) => {
-        const m = getMember(id)
-        return m?.display_name || m?.name || id
+  const mergeOpts = {
+    group: gObj,
+    sessionContext: ctx,
+    memberNameOf: memberNameResolver(),
+  }
+
+  let parsed = null
+  const assistCallArgs =
+    callArgs != null ? String(callArgs).trim() : mentionAssist ? '' : note
+
+  if (mentionAssist) {
+    ctx.lastHumanInput = assistCallArgs || note
+    const bindSlots = resolveStepParamBindSlots(null, group)
+    const bindTokens = assistCallArgs ? parseProjectParams(assistCallArgs).list : []
+    if (assistCallArgs && bindSlots.length && bindTokens.length >= bindSlots.length) {
+      const bind = applyProjectParamBind(ctx, assistCallArgs, bindSlots, { overwrite: true })
+      if (!bind.useAppend) {
+        parsed = {
+          map: bind.map,
+          bound: bind.bound,
+          raw: bind.raw,
+          added: bind.added,
+        }
+      }
+    }
+    ctx.params = mergeSystemParams(
+      {
+        ...(ctx.params && typeof ctx.params === 'object' ? ctx.params : {}),
+        ...(parsed?.map || {}),
+        [SYSTEM_PARAM_KEYS.CALL_ARGS]: assistCallArgs,
       },
-    },
-  )
+      mergeOpts,
+    )
+  } else {
+    ctx.lastHumanInput = note
+    parsed = appendProjectParams(ctx, note)
+    ctx.projectInfoRaw = [ctx.projectInfoRaw, parsed.raw]
+      .filter((s) => s != null && String(s).trim())
+      .join('\n')
+    ctx.paramsList = parsed.list
+    ctx.params = mergeSystemParams(
+      {
+        ...(ctx.params && typeof ctx.params === 'object' ? ctx.params : {}),
+        ...parsed.map,
+        [SYSTEM_PARAM_KEYS.CALL_ARGS]: note,
+      },
+      mergeOpts,
+    )
+  }
+
+  if (gObj) {
+    const sysCard =
+      ctx.params?.[SYSTEM_PARAM_KEYS.GROUP_CARD] ||
+      ctx.groupCard ||
+      formatGroupCard(gObj, { memberNameOf: mergeOpts.memberNameOf })
+    if (sysCard) ctx.groupCard = sysCard
+    ctx.groupFolder = resolveGroupFolder(gObj, ctx)
+  }
   ctx.userNotes = Array.isArray(ctx.userNotes) ? ctx.userNotes : []
   ctx.userNotes.push({
     at: nowIso(),
@@ -224,7 +279,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       if (node && !mentionOnly) {
         appendPendingGateNote(sessionId, node, content.text)
       } else {
-        recordUserChatInput(sessionId, content.text, {
+        recordOffsiteOrChatInput(sessionId, content.text, enabledMembers, {
           nodeTitle: offsiteNode?.title || node?.title,
           nodeInstanceId: offsiteNode?.id || node?.id,
         })
@@ -252,6 +307,13 @@ export async function postUserMessage(sessionId, text, attachments = []) {
   }
   {
     const hasMention = /@/.test(content.text || '')
+    const enabledMembers = getDb()
+      .prepare('SELECT * FROM members WHERE enabled = 1')
+      .all()
+      .map((r) => ({
+        ...r,
+        config: parseJson(r.config_json, {}),
+      }))
     const offsiteNode = hasMention
       ? ensureOffsiteNode(sessionId, { expand: true })
       : null
@@ -263,7 +325,7 @@ export async function postUserMessage(sessionId, text, attachments = []) {
       content: hasMention ? { ...content, offsite: true } : content,
     })
     if ((content.text || '').trim()) {
-      recordUserChatInput(sessionId, content.text, {
+      recordOffsiteOrChatInput(sessionId, content.text, enabledMembers, {
         nodeTitle: offsiteNode?.title,
         nodeInstanceId: offsiteNode?.id,
       })
