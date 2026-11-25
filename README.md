@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/371684029/oh-my-co-work/stargazers"><img src="https://img.shields.io/github/stars/371684029/oh-my-co-work?style=flat-square&color=409eff" alt="GitHub stars" /></a>
-  <img src="https://img.shields.io/badge/version-6.13.0-409eff?style=flat-square" alt="version 6.13.0" />
+  <img src="https://img.shields.io/badge/version-6.14.0-409eff?style=flat-square" alt="version 6.14.0" />
   <img src="https://img.shields.io/badge/2.0-hardened-67c23a?style=flat-square" alt="2.0 hardened" />
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A518-43853d?style=flat-square" alt="Node.js >= 18" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6e6e73?style=flat-square" alt="platforms" />
@@ -198,7 +198,7 @@ macOS    → 解压后运行 ./start.sh
 Linux    → 解压后运行 ./start.sh
 ```
 
-运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.10.0**（6.9 行为：进入熔炉改当前工具，ACTIVE 绑定 + Grok/Cursor 记忆；6.10 为文档与协作指引对齐，无业务行为变化）。须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
+运行包已包含依赖，通常不需要再次执行 `npm install`。当前源码版本 **6.14.0**（6.14：熔炉 TUI 抽屉/回到底部、临时协助 @ 保留工作流参数、炼化 diff 红绿对比；详见 [CHANGELOG](./CHANGELOG.md)）。须用 **含本次提交** 的包或 `git pull` + `npm run build` + 重启服务，旧文件夹不会自动更新前端）。
 
 | 产物 | 路径（本地打包，不进 git） |
 |------|---------------------------|

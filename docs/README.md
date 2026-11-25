@@ -1,4 +1,4 @@
-当前开发线：**v6.10.0**（见仓库根 `package.json`）。上一功能线 6.9.0（熔炉 ACTIVE 绑定工具）已合 main；纯包装 bat 默认不改（RCL-07）仍未做。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
+当前开发线：**v6.14.0**（见仓库根 `package.json`）。上一功能线 6.9.0（熔炉 ACTIVE 绑定工具）已合 main；纯包装 bat 默认不改（RCL-07）仍未做。未勾任务汇总：**[plan-backlog.md](./plan-backlog.md)**。
 
 # 文档索引
 

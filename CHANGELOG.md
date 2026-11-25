@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.14.0 — 熔炉 TUI / 临时协助 / 炼化 diff
+
+- **熔炉**：TUI 下节流解析 PTY replay，右侧对话抽屉有正文；**「回到最新」** 回 xterm 底部。
+- **临时协助**：`@成员` 不再用群聊正文 `appendProjectParams` 冲掉「下一步」绑定的 `#n`；与主线一致校验 `ctx.params`。
+- **文档中心**：炼化/节点 **unified diff 红绿对比**（行号 + 删红增绿），流程轨同步。
+
 ## 6.13.0 — FSK-B、工作区确认、设置拆分
 
 - **FSK-B**：`furnace.promptsFromSkills`；会话/炼化/审核 ACTIVE 嵌入 bundled **Skill 正文**；`session.md` 不再重复整段手册。
