@@ -19,8 +19,8 @@
       <template v-if="file && !fileLoading">
       <div class="dh-content-head">
         <div class="dh-content-title-row">
-          <h2 class="dh-file-title">{{ fileLabel(file) }}</h2>
-          <span class="dh-kind-chip">{{ file.title }}</span>
+          <h2 class="dh-file-title">{{ docPrimaryTitle }}</h2>
+          <span class="dh-kind-chip">{{ docFileSubtitle }}</span>
         </div>
         <div class="dh-content-meta">
           <span v-if="currentSession?.sessionTitle">{{ currentSession.sessionTitle }}</span>
@@ -188,6 +188,8 @@ import {
   formatSize,
   formatTime,
   fileLabel,
+  docPrimaryTitle,
+  docFileSubtitle,
   selectFile,
   startEdit,
   cancelEdit,
@@ -250,7 +252,7 @@ defineEmits(['go-workbench'])
 function onExportHtml() {
   if (!file.value) return
   const html = buildDocExportHtml({
-    title: fileLabel(file.value),
+    title: docPrimaryTitle.value || fileLabel(file.value),
     bodyHtml: renderedHtml.value,
     proseCss,
   })
@@ -261,7 +263,7 @@ function onExportHtml() {
 function onExportPrint() {
   if (!file.value) return
   const html = buildDocExportHtml({
-    title: fileLabel(file.value),
+    title: docPrimaryTitle.value || fileLabel(file.value),
     bodyHtml: renderedHtml.value,
     proseCss,
   })

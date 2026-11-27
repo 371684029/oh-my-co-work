@@ -107,7 +107,7 @@
             @click="$emit('select-file', it.sessionId, it.name)"
           >
             <span class="dh-tree-chevron" aria-hidden="true" />
-            <span class="dh-tree-label">{{ docsFileLabel(it) }}</span>
+            <span class="dh-tree-label">{{ docsHubListItemLabel(it) }}</span>
             <span class="dh-tree-meta">{{ relativeTime(it.mtimeMs) }}</span>
           </button>
           <div v-if="!displayedTimeItems.length" class="dh-empty-tip">{{ docsHubNoDocsInRange() }}</div>
@@ -201,7 +201,7 @@ import AcwIcon from '../../components/icons/AcwIcon.vue'
 import { docsGroupKey } from './docsHubFilterUi.js'
 import { highlightSearchSnippet } from './docsHubSearchUi.js'
 import {
-  docsFileLabel,
+  docsHubListItemLabel,
   docsSessionStatusClass,
   docsSessionStatusLabel,
 } from './docsHubStatusUi.js'

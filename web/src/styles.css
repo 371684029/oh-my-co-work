@@ -25,6 +25,7 @@
   --ecw-surface-active: rgba(0, 122, 255, 0.1);
   --ecw-glass: rgba(255, 255, 255, 0.55);
   --ecw-glass-strong: rgba(255, 255, 255, 0.78);
+  --ecw-surface-2: #f2f2f7;
 
   /* ink — SF / 系统灰 */
   --ecw-text-1: #1d1d1f;
@@ -84,6 +85,7 @@ html.ecw-theme-dark {
   --ecw-surface-active: rgba(10, 132, 255, 0.18);
   --ecw-glass: rgba(44, 44, 46, 0.72);
   --ecw-glass-strong: rgba(58, 58, 60, 0.92);
+  --ecw-surface-2: #3a3a3c;
   --ecw-text-1: #f5f5f7;
   --ecw-text-2: #aeaeb2;
   --ecw-text-3: #98989d;
@@ -97,19 +99,152 @@ html.ecw-theme-dark {
   --ecw-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
 }
 
+html.ecw-theme-dark .ecw-topbar {
+  background: rgba(28, 28, 30, 0.82);
+  backdrop-filter: saturate(180%) blur(28px);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+  border-bottom: 0.5px solid var(--ecw-border);
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.05) inset;
+}
+
+/* —— 深色：压低壁纸饱和度，主面板统一毛玻璃灰 —— */
+html.ecw-theme-dark .ecw-layout {
+  background:
+    radial-gradient(ellipse 85% 55% at 12% 8%, rgba(10, 132, 255, 0.12), transparent 52%),
+    radial-gradient(ellipse 70% 50% at 88% 12%, rgba(94, 92, 230, 0.1), transparent 48%),
+    radial-gradient(ellipse 55% 45% at 72% 92%, rgba(48, 209, 88, 0.06), transparent 50%),
+    linear-gradient(168deg, #1a1a1c 0%, #242426 42%, #1c1c1e 100%);
+}
+
+html.ecw-theme-dark .ecw-layout::before {
+  background: rgba(0, 0, 0, 0.28);
+}
+
 html.ecw-theme-dark .wb-center {
-  background: rgba(44, 44, 46, 0.92);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--ecw-glass-strong);
+  border: 0.5px solid var(--ecw-border-strong);
+  box-shadow: var(--ecw-shadow-lg);
+}
+
+html.ecw-theme-dark .wb-center::before {
+  background: linear-gradient(180deg, rgba(10, 132, 255, 0.07), transparent 82%);
 }
 
 html.ecw-theme-dark .wb-left,
 html.ecw-theme-dark .wb-right {
-  border-color: rgba(255, 255, 255, 0.1);
+  border: 0.5px solid var(--ecw-border-strong);
 }
 
-html.ecw-theme-dark .ecw-topbar {
-  background: rgba(44, 44, 46, 0.88);
+html.ecw-theme-dark .wb-left-head {
   border-bottom-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .wb-left-filter .el-segmented {
+  --el-segmented-bg-color: rgba(255, 255, 255, 0.08);
+  --el-segmented-item-selected-bg-color: rgba(255, 255, 255, 0.14);
+  --el-segmented-item-selected-color: var(--ecw-text-1);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.35);
+}
+
+html.ecw-theme-dark .settings-body {
+  background: var(--ecw-glass-strong);
+  border: 0.5px solid var(--ecw-border-strong);
+  box-shadow: var(--ecw-shadow-lg);
+}
+
+html.ecw-theme-dark .settings-side {
+  border: 0.5px solid var(--ecw-border-strong);
+}
+
+html.ecw-theme-dark .settings-side .settings-menu:not(.settings-menu--meta) .el-menu-item.is-active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--ecw-accent) !important;
+  box-shadow: none;
+}
+
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item {
+  color: var(--ecw-text-3) !important;
+}
+
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item:hover {
+  background: var(--ecw-surface-hover) !important;
+  color: var(--ecw-text-2) !important;
+}
+
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item.is-active {
+  background: var(--ecw-surface-hover) !important;
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .ecw-layout {
+  --el-bg-color: #1c1c1e;
+  --el-bg-color-overlay: #2c2c2e;
+  --el-bg-color-page: #1c1c1e;
+  --el-fill-color-blank: #2c2c2e;
+  --el-fill-color-light: rgba(255, 255, 255, 0.06);
+  --el-text-color-primary: var(--ecw-text-1);
+  --el-text-color-regular: var(--ecw-text-2);
+  --el-text-color-secondary: var(--ecw-text-3);
+  --el-border-color: var(--ecw-border-strong);
+  --el-border-color-light: var(--ecw-border);
+  --el-mask-color: rgba(0, 0, 0, 0.55);
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner {
+  background: rgba(44, 44, 46, 0.88) !important;
+  box-shadow: 0 0 0 0.5px var(--ecw-border-strong) inset !important;
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper:hover,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner:hover {
+  background: rgba(58, 58, 60, 0.92) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper.is-focus,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner:focus {
+  background: rgba(44, 44, 46, 1) !important;
+  box-shadow:
+    0 0 0 0.5px var(--ecw-accent) inset,
+    0 0 0 3px var(--ecw-accent-soft) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-segmented {
+  --el-segmented-bg-color: rgba(255, 255, 255, 0.08);
+  --el-segmented-item-selected-bg-color: rgba(255, 255, 255, 0.16);
+  --el-segmented-item-selected-color: var(--ecw-text-1);
+  color: var(--ecw-text-2);
+}
+
+html.ecw-theme-dark .ecw-layout .el-card,
+html.ecw-theme-dark .ecw-layout .el-drawer {
+  --el-drawer-bg-color: var(--ecw-surface-solid);
+  background-color: var(--ecw-surface-solid);
+  border-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .ecw-layout .el-dialog {
+  --el-dialog-bg-color: var(--ecw-surface-solid);
+  background: var(--ecw-surface-solid);
+}
+
+html.ecw-theme-dark .ecw-layout .el-message-box {
+  background: var(--ecw-surface-solid);
+  border: 0.5px solid var(--ecw-border-strong);
+}
+
+html.ecw-theme-dark .flow-step {
+  border-left-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .flow-current-bar.is-human-attention {
+  background: linear-gradient(135deg, rgba(255, 69, 58, 0.12), var(--ecw-surface));
+}
+
+html.ecw-theme-dark .gate-card--attention {
+  background: linear-gradient(160deg, rgba(255, 69, 58, 0.1) 0%, var(--ecw-surface) 55%);
 }
 
 .ecw-text-min {

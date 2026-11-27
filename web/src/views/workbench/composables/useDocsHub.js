@@ -30,6 +30,9 @@ import {
 } from '../../docs/docsReadingHistory.js'
 import {
   docsFileLabel,
+  docsHubFileSubtitle,
+  docsHubListItemLabel,
+  docsHubPrimaryTitle,
   docsKindTag,
   docsSessionStatusClass,
   docsSessionStatusLabel,
@@ -283,7 +286,7 @@ function pinCurrentDoc() {
   docsHistory.value = toggleDocsPin({
     sessionId: current.value.sessionId,
     name: current.value.name,
-    label: fileLabel(file.value || { name: current.value.name }),
+    label: docsHubOpenLabel(),
     sessionTitle: currentSession.value?.sessionTitle || '',
   })
 }
@@ -341,6 +344,19 @@ function formatTime(v) {
 }
 
 const fileLabel = docsFileLabel
+const docPrimaryTitle = computed(() => docsHubPrimaryTitle(file.value, currentSession.value))
+const docFileSubtitle = computed(() => docsHubFileSubtitle(file.value))
+
+function docsHubOpenLabel() {
+  const f = file.value
+  if (!f) return fileLabel({ name: current.value?.name })
+  return docsHubListItemLabel({
+    ...f,
+    sessionTitle: currentSession.value?.sessionTitle || f.sessionTitle,
+    groupTitle: currentSession.value?.groupTitle || f.groupTitle,
+  })
+}
+
 const kindTag = docsKindTag
 const statusLabel = docsSessionStatusLabel
 const statusClass = docsSessionStatusClass
@@ -439,7 +455,7 @@ async function selectFile(sessionId, name, { force = false } = {}) {
     docsHistory.value = recordDocsOpen({
       sessionId,
       name,
-      label: fileLabel(file.value),
+      label: docsHubOpenLabel(),
       sessionTitle: currentSession.value?.sessionTitle || '',
     })
   }
@@ -627,6 +643,8 @@ export {
   formatSize,
   formatTime,
   fileLabel,
+  docPrimaryTitle,
+  docFileSubtitle,
   kindTag,
   statusLabel,
   statusClass,
