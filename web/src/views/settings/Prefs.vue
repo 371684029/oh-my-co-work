@@ -458,7 +458,11 @@ import ElMessageBox from 'element-plus/es/components/message-box/index.mjs'
 import { api } from '../../api'
 import { useDesktopBridge } from '../../composables/useDesktopBridge.js'
 import { loadNotificationPrefs } from '../../composables/useNotificationPrefs.js'
-import { applyColorScheme, normalizeColorScheme } from '../../composables/uiColorScheme.js'
+import {
+  applyColorScheme,
+  normalizeColorScheme,
+  writeStoredColorScheme,
+} from '../../composables/uiColorScheme.js'
 import { getLocale, setLocale, LOCALE_OPTIONS } from '../../i18n/index.js'
 import PrefsFurnaceSkillsCard from './PrefsFurnaceSkillsCard.vue'
 import PrefsGrokCard from './PrefsGrokCard.vue'
@@ -596,6 +600,7 @@ async function load() {
         colorScheme: normalizeColorScheme(s.ui.colorScheme),
       }
       applyColorScheme(ui.value.colorScheme)
+      writeStoredColorScheme(ui.value.colorScheme)
     }
     if (s.terminal) {
       terminal.value = {
@@ -787,8 +792,9 @@ async function saveUi() {
   savingUi.value = true
   try {
     ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
-    await api.appSettings.update({ ui: { ...ui.value } })
     applyColorScheme(ui.value.colorScheme)
+    writeStoredColorScheme(ui.value.colorScheme)
+    await api.appSettings.update({ ui: { ...ui.value } })
     ElMessage.success(prefsToast('uiSaved'))
   } catch (e) {
     ElMessage.error(e.message)

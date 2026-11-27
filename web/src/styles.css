@@ -1185,3 +1185,197 @@ select:focus-visible,
   outline: 2px solid var(--ecw-accent, #007aff);
   outline-offset: 2px;
 }
+
+/* ========== 深色：浅色字不能再落在写死的白底上 ========== */
+html.ecw-theme-dark .ecw-layout {
+  background:
+    radial-gradient(ellipse 90% 70% at 8% 12%, rgba(40, 80, 140, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 92% 8%, rgba(90, 50, 140, 0.28), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 70% 95%, rgba(20, 90, 80, 0.22), transparent 55%),
+    linear-gradient(165deg, #121418 0%, #1a1c22 48%, #14161c 100%);
+}
+
+html.ecw-theme-dark .ecw-layout::before {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+html.ecw-theme-dark .wb-center,
+html.ecw-theme-dark .settings-body {
+  background: rgba(44, 44, 46, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+html.ecw-theme-dark .wb-welcome {
+  background: linear-gradient(180deg, #1c1c1e 0%, #242426 100%);
+}
+
+html.ecw-theme-dark .core-slogan .dot {
+  color: var(--ecw-text-3);
+}
+
+html.ecw-theme-dark .wb-chat-main {
+  background: linear-gradient(180deg, rgba(28, 28, 30, 0.2) 0%, rgba(44, 44, 46, 0.35) 100%);
+}
+
+html.ecw-theme-dark .wb-chat-header {
+  background: rgba(44, 44, 46, 0.72);
+  border-bottom-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .wb-chat-header.is-human-attention {
+  background: linear-gradient(90deg, rgba(92, 28, 28, 0.96) 0%, rgba(44, 44, 46, 0.88) 52%);
+  border-bottom-color: rgba(255, 69, 58, 0.4);
+}
+
+html.ecw-theme-dark .wb-right-tab.active {
+  background: #3a3a3c;
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .bubble-rich.is-start.kind-agent,
+html.ecw-theme-dark .bubble-rich.is-start.kind-system,
+html.ecw-theme-dark .bubble-rich.is-start.kind-gate,
+html.ecw-theme-dark .file-card,
+html.ecw-theme-dark .footer-toggle,
+html.ecw-theme-dark .composer-shell,
+html.ecw-theme-dark .prefs-card,
+html.ecw-theme-dark .be-card {
+  background: var(--ecw-surface-solid);
+  color: var(--ecw-text-1);
+  border-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .wb-chat-footer.is-collapsed .footer-toggle,
+html.ecw-theme-dark .wb-chat-footer.is-collapsed.has-gate .footer-toggle {
+  background: var(--ecw-surface-solid);
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .bubble-rich.is-archive,
+html.ecw-theme-dark .bubble-rich.kind-archive {
+  background: linear-gradient(160deg, #1c3324 0%, #243028 60%) !important;
+  color: var(--ecw-text-1) !important;
+  border-color: rgba(103, 194, 58, 0.45) !important;
+}
+
+html.ecw-theme-dark .prefs-card--danger {
+  background: rgba(72, 28, 26, 0.72);
+  border-color: rgba(255, 69, 58, 0.35);
+}
+
+html.ecw-theme-dark .fullscreen-button,
+html.ecw-theme-dark .zoom-ctrl,
+html.ecw-theme-dark .dh-back-btn,
+html.ecw-theme-dark .top-nav {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ecw-text-1);
+  box-shadow: inset 0 0 0 0.5px var(--ecw-border);
+}
+
+html.ecw-theme-dark .fullscreen-button:hover,
+html.ecw-theme-dark .nav-item:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .zoom-ctrl button {
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .nav-item.active {
+  background: #3a3a3c;
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .settings-side .settings-menu:not(.settings-menu--meta) .el-menu-item.is-active {
+  background: var(--ecw-surface-active) !important;
+  color: #8ec5ff !important;
+}
+
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item {
+  color: var(--ecw-text-2) !important;
+}
+
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item:hover,
+html.ecw-theme-dark .settings-side .settings-menu--meta .el-menu-item.is-active {
+  background: var(--ecw-surface-hover) !important;
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .el-segmented,
+html.ecw-theme-dark .wb-left-filter .el-segmented {
+  --el-segmented-color: var(--ecw-text-2);
+  --el-segmented-bg-color: rgba(255, 255, 255, 0.08);
+  --el-segmented-item-selected-bg-color: #48484a;
+  --el-segmented-item-selected-color: var(--ecw-text-1);
+  --el-segmented-item-hover-color: var(--ecw-text-1);
+  --el-segmented-item-hover-bg-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ecw-text-2);
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner,
+html.ecw-theme-dark .ecw-layout .el-select__wrapper {
+  background: var(--ecw-surface) !important;
+  box-shadow: 0 0 0 0.5px var(--ecw-border-strong) inset !important;
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper:hover,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner:hover,
+html.ecw-theme-dark .ecw-layout .el-select__wrapper:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__wrapper.is-focus,
+html.ecw-theme-dark .ecw-layout .el-select__wrapper.is-focused {
+  background: var(--ecw-surface-solid) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__inner,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner,
+html.ecw-theme-dark .ecw-layout .el-select__selected-item {
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .ecw-layout .el-input__inner::placeholder,
+html.ecw-theme-dark .ecw-layout .el-textarea__inner::placeholder {
+  color: var(--ecw-text-3);
+}
+
+html.ecw-theme-dark .title-input .el-input__wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations,
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations__list {
+  --elx-conversations-list-auto-bg-color: transparent !important;
+  background-color: transparent !important;
+  color: var(--ecw-text-1);
+}
+
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations__group-title,
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations__group-title--sticky {
+  background-color: transparent !important;
+  color: var(--ecw-text-2) !important;
+}
+
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations-item__timestamp {
+  color: var(--ecw-text-3) !important;
+}
+
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations-item__label {
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations-item--active,
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations-item:hover,
+html.ecw-theme-dark .wb-conv-wrap .elx-conversations-item--hovered {
+  background-color: var(--ecw-surface-hover) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-drawer {
+  --el-drawer-bg-color: var(--ecw-surface-solid);
+}

@@ -3,6 +3,7 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-27 | M | web/src/{styles.css,main.js,composables/uiColorScheme.js,components/CommandPalette.vue,components/terminal/{TerminalView.vue,terminalPrefs.js},views/settings/Prefs.vue}, web/test/{uiColorScheme,terminalTheme}.test.mjs, docs/tech-tui-2x.md | 深色外壳与 Element Plus 控件对齐；气泡/设置/会话列表不再白字白底；终端主题保存后换色
 2026-11-25 | M | {package,server,shared,web}/package.json, README.md, CHANGELOG.md, server/config/about.json, docs/README.md | 版本 6.14.0；README/CHANGELOG 发版说明
 2026-11-25 | A/M | web/src/{components/UnifiedDiffView.vue,composables/unifiedDiffLines.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailNodeCard.vue}, web/test/unifiedDiffLines.test.mjs | 炼化/节点 diff 红绿行+行号（类 Cursor git diff）
 2026-11-25 | M | server/src/engine/{userInput,mentions}.js, server/test/mentionParams.test.js | 临时协助 @ 保留绑定槽与 env；与 advance 一致校验 params

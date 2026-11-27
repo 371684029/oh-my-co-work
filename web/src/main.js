@@ -14,6 +14,8 @@ import 'element-plus/es/components/notification/style/css'
 import 'element-plus/es/components/dropdown/style/css'
 import 'element-plus/es/components/dropdown-menu/style/css'
 import 'element-plus/es/components/dropdown-item/style/css'
+// Official variable sheet only (not dist/index.css). Active when <html> has .dark.
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import en from 'element-plus/es/locale/lang/en'
 import { getLocale } from './i18n/index.js'

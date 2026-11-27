@@ -43,7 +43,10 @@ export function applyColorScheme(preference) {
   if (typeof document === 'undefined') return 'light'
   const effective = resolveEffectiveScheme(preference)
   const root = document.documentElement
-  root.classList.toggle('ecw-theme-dark', effective === 'dark')
+  const dark = effective === 'dark'
+  root.classList.toggle('ecw-theme-dark', dark)
+  // Element Plus dark css-vars are keyed off `html.dark`.
+  root.classList.toggle('dark', dark)
   root.dataset.ecwTheme = effective
   return effective
 }

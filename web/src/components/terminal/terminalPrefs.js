@@ -44,6 +44,10 @@ export const TERMINAL_THEMES = {
   },
 }
 
+export function resolveTerminalTheme(name) {
+  return TERMINAL_THEMES[name] || TERMINAL_THEMES['project-dark']
+}
+
 export function defaultTerminalPrefs() {
   return {
     theme: 'project-dark',

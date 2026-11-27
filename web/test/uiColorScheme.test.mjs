@@ -29,8 +29,10 @@ test('normalizeColorScheme', () => {
 test('applyColorScheme toggles class', () => {
   applyColorScheme('dark')
   assert.ok(document.documentElement.classList.contains('ecw-theme-dark'))
+  assert.ok(document.documentElement.classList.contains('dark'))
   applyColorScheme('light')
   assert.equal(document.documentElement.classList.contains('ecw-theme-dark'), false)
+  assert.equal(document.documentElement.classList.contains('dark'), false)
 })
 
 test('resolveEffectiveScheme respects preference', () => {

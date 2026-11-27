@@ -51,7 +51,11 @@ import {
   persistZoom,
   readStoredZoom,
 } from '../composables/uiZoom.js'
-import { applyColorScheme, normalizeColorScheme } from '../composables/uiColorScheme.js'
+import {
+  applyColorScheme,
+  normalizeColorScheme,
+  writeStoredColorScheme,
+} from '../composables/uiColorScheme.js'
 import { t } from '../i18n/index.js'
 import {
   commandPaletteTitle,
@@ -149,6 +153,7 @@ const staticCommands = computed(() => [
       const cur = normalizeColorScheme(s?.ui?.colorScheme || 'system')
       const next = cur === 'dark' ? 'light' : 'dark'
       applyColorScheme(next)
+      writeStoredColorScheme(next)
       await api.appSettings.update({ ui: { colorScheme: next } })
     },
   },

@@ -3,6 +3,7 @@
     ref="host"
     class="terminal-view"
     :class="{ 'is-dead': !isRunning, 'force-selection': forceSelection }"
+    :style="{ background: terminalShellBg }"
     :aria-label="terminalViewAriaLabel()"
   >
     <div
@@ -40,7 +41,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
-import { TERMINAL_THEMES, defaultTerminalPrefs } from './terminalPrefs'
+import { resolveTerminalTheme, defaultTerminalPrefs } from './terminalPrefs'
 import { isTerminalRunning } from '../../composables/terminalStatus'
 import { createInputSequencer } from '../../composables/terminalInput'
 import {
@@ -114,6 +115,21 @@ const props = defineProps({
 })
 
 const isRunning = computed(() => isTerminalRunning(props.terminal.status))
+const terminalShellBg = computed(() => resolveTerminalTheme(props.prefs?.theme).background)
+
+function syncTerminalOptions() {
+  if (!xterm) return
+  const prefs = { ...defaultTerminalPrefs(), ...(props.prefs || {}) }
+  xterm.options.theme = resolveTerminalTheme(prefs.theme)
+  xterm.options.fontFamily = prefs.fontFamily || defaultTerminalPrefs().fontFamily
+  xterm.options.fontSize = Number(prefs.fontSize) || 13
+  xterm.options.lineHeight = Number(prefs.lineHeight) > 0 ? Number(prefs.lineHeight) : 1.35
+  xterm.options.letterSpacing = Number.isFinite(Number(prefs.letterSpacing))
+    ? Math.round(Number(prefs.letterSpacing))
+    : 0
+  xterm.options.cursorBlink = prefs.cursorBlink !== false
+  scheduleFit()
+}
 
 const emit = defineEmits(['input', 'resize', 'gap', 'focus-change'])
 const host = ref(null)
@@ -390,7 +406,7 @@ async function resetToReplay(value) {
 
 onMounted(async () => {
   const prefs = { ...defaultTerminalPrefs(), ...(props.prefs || {}) }
-  const theme = TERMINAL_THEMES[prefs.theme] || TERMINAL_THEMES['project-dark']
+  const theme = resolveTerminalTheme(prefs.theme)
   xterm = new Terminal({
     allowProposedApi: true,
     convertEol: false,
@@ -573,6 +589,18 @@ onMounted(async () => {
   registerTerminalFocus(xterm.textarea)
   emit('focus-change', true)
 })
+
+watch(
+  () => [
+    props.prefs?.theme,
+    props.prefs?.fontSize,
+    props.prefs?.fontFamily,
+    props.prefs?.lineHeight,
+    props.prefs?.letterSpacing,
+    props.prefs?.cursorBlink,
+  ],
+  () => syncTerminalOptions(),
+)
 
 watch(
   () => props.terminal.snapshotKey,
