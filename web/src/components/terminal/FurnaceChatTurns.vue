@@ -123,7 +123,7 @@ function meta(turn) {
   margin: 0;
   padding: 10px 14px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   font-size: 14px;
   line-height: 1.55;

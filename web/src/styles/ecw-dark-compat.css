@@ -147,6 +147,12 @@ html.ecw-theme-dark .file-card:hover {
   background: var(--ecw-file-card-hover);
 }
 
+html.ecw-theme-dark .furnace-ws-head,
+html.ecw-theme-dark .furnace-chat-welcome,
+html.ecw-theme-dark .furnace-turn {
+  border-color: var(--ecw-border);
+}
+
 html.ecw-theme-dark .bubble-avatar {
   border-color: var(--ecw-surface-solid);
 }

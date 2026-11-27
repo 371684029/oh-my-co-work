@@ -87,7 +87,7 @@ defineEmits(['view-tui', 'reopen', 'close', 'send-chip'])
   margin: 0;
   padding: 18px 20px 16px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
   color: #1d1d1f;
 }
