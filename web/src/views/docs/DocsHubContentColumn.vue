@@ -394,7 +394,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dh-col {
-  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  border: 0.5px solid var(--ecw-glass-edge-strong);
   border-radius: var(--ecw-radius-xl, 16px);
   background: var(--ecw-glass-strong, rgba(255, 255, 255, 0.8));
   backdrop-filter: saturate(160%) blur(36px);

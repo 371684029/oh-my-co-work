@@ -285,7 +285,7 @@ function highlightSnippet(snippet, query) {
   min-width: 260px;
   max-width: 360px;
   padding: 8px 0 10px;
-  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  border: 0.5px solid var(--ecw-glass-edge-strong);
   border-radius: var(--ecw-radius-xl, 16px);
   background: var(--ecw-glass-strong, rgba(255, 255, 255, 0.8));
   backdrop-filter: saturate(160%) blur(36px);

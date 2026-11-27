@@ -213,7 +213,7 @@ onMounted(async () => {
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--el-border-color-lighter);
-  background: #fff;
+  background: var(--ecw-surface-solid);
 }
 
 @media (max-width: 720px) {

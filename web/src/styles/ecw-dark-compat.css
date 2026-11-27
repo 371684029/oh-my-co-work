@@ -1,0 +1,156 @@
+/* 深色模式兼容层：Element Plus 浮层 + 设置表格 + 顶栏控件 */
+
+html.ecw-theme-dark .top-nav {
+  background: var(--ecw-nav-rail);
+  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.35);
+}
+
+html.ecw-theme-dark .nav-item:hover {
+  background: var(--ecw-nav-hover);
+}
+
+html.ecw-theme-dark .nav-item.active {
+  background: var(--ecw-nav-active);
+  color: var(--ecw-text-1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0.5px 0 rgba(255, 255, 255, 0.06);
+}
+
+html.ecw-theme-dark .nav-docs-preview-item:hover {
+  background: var(--ecw-surface-hover);
+}
+
+html.ecw-theme-dark .zoom-ctrl {
+  background: var(--ecw-control-bg);
+  box-shadow: inset 0 0 0 1px var(--ecw-border-strong);
+}
+
+html.ecw-theme-dark .zoom-ctrl button {
+  color: var(--ecw-text-2);
+}
+
+html.ecw-theme-dark .zoom-ctrl button:hover:not(:disabled) {
+  background: var(--ecw-surface-hover);
+}
+
+html.ecw-theme-dark .fullscreen-button:hover {
+  background: var(--ecw-surface-hover);
+}
+
+html.ecw-theme-dark .dh-col {
+  border-color: var(--ecw-glass-edge-strong) !important;
+}
+
+/* Element Plus — 表格 / 下拉 / 弹层 */
+html.ecw-theme-dark .ecw-layout .el-table {
+  --el-table-bg-color: var(--ecw-surface-solid);
+  --el-table-tr-bg-color: var(--ecw-surface-solid);
+  --el-table-header-bg-color: var(--ecw-surface-2);
+  --el-table-row-hover-bg-color: var(--ecw-surface-hover);
+  --el-table-border-color: var(--ecw-border);
+  --el-table-text-color: var(--ecw-text-1);
+  --el-table-header-text-color: var(--ecw-text-2);
+  background-color: var(--ecw-surface-solid);
+}
+
+html.ecw-theme-dark .ecw-layout .el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+html.ecw-theme-dark .ecw-layout .el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: var(--ecw-text-2);
+  --el-pagination-button-color: var(--ecw-text-2);
+  --el-pagination-hover-color: var(--ecw-accent);
+}
+
+html.ecw-theme-dark .el-popper.is-light,
+html.ecw-theme-dark .el-popper.is-pure,
+html.ecw-theme-dark .el-select-dropdown,
+html.ecw-theme-dark .el-dropdown-menu {
+  background: var(--ecw-surface-solid) !important;
+  border: 0.5px solid var(--ecw-border-strong) !important;
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .el-popper.is-light > .el-popper__arrow::before,
+html.ecw-theme-dark .el-select-dropdown .el-popper__arrow::before {
+  background: var(--ecw-surface-solid) !important;
+  border-color: var(--ecw-border-strong) !important;
+}
+
+html.ecw-theme-dark .el-select-dropdown__item.is-hovering,
+html.ecw-theme-dark .el-dropdown-menu__item:not(.is-disabled):focus,
+html.ecw-theme-dark .el-dropdown-menu__item:not(.is-disabled):hover {
+  background: var(--ecw-surface-hover) !important;
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .ecw-layout .el-form-item__label {
+  color: var(--ecw-text-2);
+}
+
+html.ecw-theme-dark .ecw-layout .el-divider__text {
+  background: var(--ecw-surface-solid);
+  color: var(--ecw-text-3);
+}
+
+html.ecw-theme-dark .ecw-layout .el-alert {
+  --el-alert-bg-color: var(--ecw-surface);
+  border-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .ecw-layout .el-empty__description {
+  color: var(--ecw-text-3);
+}
+
+html.ecw-theme-dark .ecw-layout .el-loading-mask {
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* 工作台聊天气泡（Workbench scoped 类名在 DOM 上仍可匹配） */
+html.ecw-theme-dark .wb-chat-header {
+  background: var(--ecw-chat-header-bg);
+  border-bottom-color: var(--ecw-border);
+}
+
+html.ecw-theme-dark .wb-chat-header.is-human-attention {
+  background: var(--ecw-header-human-bg);
+}
+
+html.ecw-theme-dark .wb-chat-main {
+  background: var(--ecw-chat-main-bg);
+}
+
+html.ecw-theme-dark .bubble-rich.is-start.kind-agent,
+html.ecw-theme-dark .bubble-rich.is-start.kind-system {
+  background: var(--ecw-bubble-agent-bg);
+  border-color: var(--ecw-bubble-agent-border);
+  box-shadow: var(--ecw-shadow-xs);
+}
+
+html.ecw-theme-dark .bubble-rich.is-start.kind-gate {
+  background: var(--ecw-bubble-gate-bg);
+}
+
+html.ecw-theme-dark .bubble-rich.is-archive,
+html.ecw-theme-dark .bubble-rich.kind-archive {
+  background: var(--ecw-bubble-archive-bg) !important;
+  color: var(--ecw-text-1) !important;
+}
+
+html.ecw-theme-dark .file-card {
+  background: var(--ecw-file-card-bg);
+  border-color: var(--ecw-border-strong);
+}
+
+html.ecw-theme-dark .file-card:hover {
+  background: var(--ecw-file-card-hover);
+}
+
+html.ecw-theme-dark .bubble-avatar {
+  border-color: var(--ecw-surface-solid);
+}
+
+html.ecw-theme-dark .wb-chat-scroll .elx-bubble--start .elx-bubble__avatar-placeholder {
+  border-color: var(--ecw-surface-solid);
+}

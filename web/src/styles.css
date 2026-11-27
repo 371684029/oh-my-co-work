@@ -26,6 +26,32 @@
   --ecw-glass: rgba(255, 255, 255, 0.55);
   --ecw-glass-strong: rgba(255, 255, 255, 0.78);
   --ecw-surface-2: #f2f2f7;
+  --ecw-glass-edge: rgba(255, 255, 255, 0.55);
+  --ecw-glass-edge-strong: rgba(255, 255, 255, 0.65);
+  --ecw-chrome-bg: rgba(246, 246, 246, 0.72);
+  --ecw-chrome-border: rgba(0, 0, 0, 0.08);
+  --ecw-chrome-inset: rgba(255, 255, 255, 0.65);
+  --ecw-panel-bg: rgba(255, 255, 255, 0.82);
+  --ecw-nav-rail: rgba(0, 0, 0, 0.05);
+  --ecw-nav-hover: rgba(255, 255, 255, 0.45);
+  --ecw-nav-active: #ffffff;
+  --ecw-control-bg: rgba(255, 255, 255, 0.7);
+  --ecw-input-fill: rgba(255, 255, 255, 0.72);
+  --ecw-input-fill-hover: rgba(255, 255, 255, 0.9);
+  --ecw-input-fill-focus: #ffffff;
+  --ecw-segmented-selected: #ffffff;
+  --ecw-chat-header-bg: rgba(255, 255, 255, 0.55);
+  --ecw-chat-main-bg: linear-gradient(180deg, rgba(248, 249, 251, 0.5) 0%, rgba(255, 255, 255, 0.35) 100%);
+  --ecw-bubble-agent-bg: linear-gradient(160deg, #ffffff 0%, #f4f6fa 100%);
+  --ecw-bubble-agent-border: rgba(15, 23, 42, 0.06);
+  --ecw-bubble-gate-bg: rgba(255, 255, 255, 0.92);
+  --ecw-bubble-archive-bg: linear-gradient(160deg, #f0f9eb 0%, #ffffff 55%);
+  --ecw-file-card-bg: rgba(255, 255, 255, 0.72);
+  --ecw-file-card-hover: #ffffff;
+  --ecw-header-human-bg: linear-gradient(90deg, rgba(255, 241, 240, 0.95) 0%, rgba(255, 255, 255, 0.7) 48%);
+  --ecw-attention-human: linear-gradient(135deg, #fff5f5 0%, #fff 70%);
+  --ecw-attention-gate: linear-gradient(160deg, #fff1f0 0%, #fff 55%);
+  --ecw-flow-offsite-bar: linear-gradient(135deg, rgba(230, 162, 60, 0.12), rgba(255, 255, 255, 0.9));
 
   /* ink — SF / 系统灰 */
   --ecw-text-1: #1d1d1f;
@@ -97,14 +123,40 @@ html.ecw-theme-dark {
   --ecw-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
   --ecw-shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
   --ecw-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --ecw-glass-edge: rgba(255, 255, 255, 0.12);
+  --ecw-glass-edge-strong: rgba(255, 255, 255, 0.14);
+  --ecw-chrome-bg: rgba(28, 28, 30, 0.82);
+  --ecw-chrome-border: var(--ecw-border);
+  --ecw-chrome-inset: rgba(255, 255, 255, 0.05);
+  --ecw-panel-bg: var(--ecw-glass-strong);
+  --ecw-nav-rail: rgba(255, 255, 255, 0.06);
+  --ecw-nav-hover: var(--ecw-surface-hover);
+  --ecw-nav-active: rgba(255, 255, 255, 0.14);
+  --ecw-control-bg: rgba(255, 255, 255, 0.08);
+  --ecw-input-fill: rgba(44, 44, 46, 0.88);
+  --ecw-input-fill-hover: rgba(58, 58, 60, 0.92);
+  --ecw-input-fill-focus: #2c2c2e;
+  --ecw-segmented-selected: rgba(255, 255, 255, 0.16);
+  --ecw-chat-header-bg: rgba(44, 44, 46, 0.72);
+  --ecw-chat-main-bg: linear-gradient(180deg, rgba(28, 28, 30, 0.45) 0%, rgba(44, 44, 46, 0.2) 100%);
+  --ecw-bubble-agent-bg: linear-gradient(160deg, #3a3a3c 0%, #2c2c2e 100%);
+  --ecw-bubble-agent-border: rgba(255, 255, 255, 0.1);
+  --ecw-bubble-gate-bg: rgba(58, 58, 60, 0.95);
+  --ecw-bubble-archive-bg: linear-gradient(160deg, rgba(48, 209, 88, 0.14) 0%, #2c2c2e 55%);
+  --ecw-file-card-bg: rgba(58, 58, 60, 0.88);
+  --ecw-file-card-hover: #3a3a3c;
+  --ecw-header-human-bg: linear-gradient(90deg, rgba(255, 69, 58, 0.2) 0%, rgba(44, 44, 46, 0.88) 48%);
+  --ecw-attention-human: linear-gradient(135deg, rgba(255, 69, 58, 0.14), var(--ecw-surface));
+  --ecw-attention-gate: linear-gradient(160deg, rgba(255, 69, 58, 0.12) 0%, var(--ecw-surface) 55%);
+  --ecw-flow-offsite-bar: linear-gradient(135deg, rgba(230, 162, 60, 0.16), var(--ecw-surface));
 }
 
 html.ecw-theme-dark .ecw-topbar {
-  background: rgba(28, 28, 30, 0.82);
+  background: var(--ecw-chrome-bg);
   backdrop-filter: saturate(180%) blur(28px);
   -webkit-backdrop-filter: saturate(180%) blur(28px);
-  border-bottom: 0.5px solid var(--ecw-border);
-  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.05) inset;
+  border-bottom: 0.5px solid var(--ecw-chrome-border);
+  box-shadow: 0 0.5px 0 var(--ecw-chrome-inset) inset;
 }
 
 /* —— 深色：压低壁纸饱和度，主面板统一毛玻璃灰 —— */
@@ -341,11 +393,11 @@ body,
   align-items: center;
   justify-content: space-between;
   padding: 0 18px 0 14px;
-  background: rgba(246, 246, 246, 0.72);
+  background: var(--ecw-chrome-bg);
   backdrop-filter: saturate(180%) blur(28px);
   -webkit-backdrop-filter: saturate(180%) blur(28px);
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.65) inset;
+  border-bottom: 0.5px solid var(--ecw-chrome-border);
+  box-shadow: 0 0.5px 0 var(--ecw-chrome-inset) inset;
   z-index: 30;
 }
 
@@ -394,7 +446,7 @@ html.acw-terminal-pagefill body {
   background: var(--ecw-glass-strong);
   backdrop-filter: saturate(160%) blur(40px);
   -webkit-backdrop-filter: saturate(160%) blur(40px);
-  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  border: 0.5px solid var(--ecw-glass-edge);
   border-radius: var(--ecw-radius-xl);
   box-shadow: var(--ecw-shadow-md);
   display: flex;
@@ -408,10 +460,10 @@ html.acw-terminal-pagefill body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--ecw-panel-bg);
   backdrop-filter: saturate(160%) blur(36px);
   -webkit-backdrop-filter: saturate(160%) blur(36px);
-  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  border: 0.5px solid var(--ecw-glass-edge-strong);
   border-radius: var(--ecw-radius-xl);
   box-shadow: var(--ecw-shadow-lg);
   overflow: hidden;
@@ -458,7 +510,7 @@ html.acw-terminal-pagefill body {
   align-self: stretch;
   min-height: 0;
   height: 100%;
-  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  border: 0.5px solid var(--ecw-glass-edge);
   border-radius: var(--ecw-radius-xl);
   background: var(--ecw-glass-strong);
   backdrop-filter: saturate(160%) blur(40px);
@@ -543,7 +595,7 @@ html.acw-terminal-pagefill body {
   --el-border-radius-base: 9px;
   --el-segmented-item-padding: 0 8px;
   --el-segmented-bg-color: rgba(0, 0, 0, 0.05);
-  --el-segmented-item-selected-bg-color: #fff;
+  --el-segmented-item-selected-bg-color: var(--ecw-segmented-selected);
   --el-segmented-item-selected-color: var(--ecw-text-1);
   background: rgba(0, 0, 0, 0.05);
   padding: 3px;
@@ -767,7 +819,7 @@ html.acw-terminal-pagefill body {
 
 .flow-current-bar.is-offsite-attention {
   border-color: rgba(196, 125, 26, 0.45);
-  background: linear-gradient(135deg, rgba(230, 162, 60, 0.12), rgba(255, 255, 255, 0.9));
+  background: var(--ecw-flow-offsite-bar);
 }
 
 .flow-current-bar.is-offsite-attention .flow-current-label {
@@ -1039,7 +1091,7 @@ html.acw-terminal-pagefill body {
 }
 
 .flow-current-bar.is-human-attention {
-  background: linear-gradient(135deg, #fff5f5 0%, #fff 70%);
+  background: var(--ecw-attention-human);
   border-color: var(--el-color-danger-light-5, #fbc4c4);
   box-shadow: 0 0 0 1px rgba(245, 108, 108, 0.08), var(--ecw-shadow-xs);
 }
@@ -1069,7 +1121,7 @@ html.acw-terminal-pagefill body {
 
 .settings-side {
   width: 228px;
-  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  border: 0.5px solid var(--ecw-glass-edge);
   border-radius: var(--ecw-radius-xl);
   background: var(--ecw-glass-strong);
   backdrop-filter: saturate(160%) blur(40px);
@@ -1099,7 +1151,7 @@ html.acw-terminal-pagefill body {
 }
 
 .settings-side .settings-menu:not(.settings-menu--meta) .el-menu-item.is-active {
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: var(--ecw-nav-active) !important;
   color: var(--ecw-accent) !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   font-weight: 600;
@@ -1133,10 +1185,10 @@ html.acw-terminal-pagefill body {
   flex: 1;
   overflow: auto;
   padding: 28px 32px 40px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--ecw-panel-bg);
   backdrop-filter: saturate(160%) blur(36px);
   -webkit-backdrop-filter: saturate(160%) blur(36px);
-  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  border: 0.5px solid var(--ecw-glass-edge-strong);
   border-radius: var(--ecw-radius-xl);
   box-shadow: var(--ecw-shadow-lg);
 }
@@ -1164,7 +1216,7 @@ html.acw-terminal-pagefill body {
 /* 工作台：当前等人闸门 —— 标红突出 · 大气圆泡 */
 .gate-card--attention {
   border: 1.5px solid var(--el-color-danger, #f56c6c);
-  background: linear-gradient(160deg, #fff1f0 0%, #fff 55%);
+  background: var(--ecw-attention-gate);
   border-radius: 22px;
   box-shadow:
     0 0 0 4px rgba(245, 108, 108, 0.1),
@@ -1224,21 +1276,21 @@ html.acw-terminal-pagefill body {
 .ecw-layout .el-textarea__inner {
   border-radius: 12px;
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12) inset !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--ecw-input-fill) !important;
   transition: box-shadow 0.18s var(--ecw-ease), background 0.18s var(--ecw-ease);
 }
 
 .ecw-layout .el-input__wrapper:hover,
 .ecw-layout .el-textarea__inner:hover {
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.18) inset !important;
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: var(--ecw-input-fill-hover) !important;
 }
 
 .ecw-layout .el-input__wrapper.is-focus {
   box-shadow:
     0 0 0 0.5px var(--ecw-accent) inset,
     0 0 0 3px rgba(0, 122, 255, 0.18) !important;
-  background: #fff !important;
+  background: var(--ecw-input-fill-focus) !important;
 }
 
 .ecw-layout .el-tag {
@@ -1248,7 +1300,7 @@ html.acw-terminal-pagefill body {
 
 .ecw-layout .el-card,
 .ecw-layout .el-drawer {
-  --el-drawer-bg-color: rgba(255, 255, 255, 0.92);
+  --el-drawer-bg-color: var(--ecw-surface-solid);
 }
 
 .ecw-layout .el-dialog {

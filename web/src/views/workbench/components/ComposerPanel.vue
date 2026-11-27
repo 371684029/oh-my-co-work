@@ -517,7 +517,7 @@ function onPasteFile(firstFile, fileList) {
 .footer-toggle:hover {
   color: var(--ecw-accent, #409eff);
   border-color: rgba(64, 158, 255, 0.35);
-  background: #fff;
+  background: var(--ecw-surface-solid);
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.12);
 }
 

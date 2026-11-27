@@ -426,7 +426,7 @@ onMounted(async () => {
   border-radius: 16px;
   padding: 18px 20px 20px;
   margin-bottom: 14px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
 }
 
 .about-brand {

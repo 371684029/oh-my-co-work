@@ -26,6 +26,7 @@ import 'vue-element-plus-x/styles/index.css'
 import App from './App.vue'
 import router from './router'
 import './styles.css'
+import './styles/ecw-dark-compat.css'
 import { setupBrowserLifecycle } from './lifecycle.js'
 
 const locale = getLocale() === 'en-US' ? en : zhCn
