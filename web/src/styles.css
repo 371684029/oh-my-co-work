@@ -1217,6 +1217,10 @@ html.ecw-theme-dark .wb-chat-main {
   background: linear-gradient(180deg, rgba(28, 28, 30, 0.2) 0%, rgba(44, 44, 46, 0.35) 100%);
 }
 
+html.ecw-theme-dark .wb-chat-footer {
+  background: linear-gradient(180deg, transparent 0%, rgba(28, 28, 30, 0.92) 28%, #1c1c1e 100%);
+}
+
 html.ecw-theme-dark .wb-chat-header {
   background: rgba(44, 44, 46, 0.72);
   border-bottom-color: var(--ecw-border);

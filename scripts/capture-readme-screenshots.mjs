@@ -1,6 +1,7 @@
 /**
  * Recapture README screenshots (1440×900 @2x) → docs/assets/screenshots/*.webp
- * Prerequisites: web/dist built, server on ACW_CAPTURE_BASE (default :3780), seeded demo.
+ * Prerequisites: server on ACW_CAPTURE_BASE (default http://127.0.0.1:3780 with web/dist, or the Vite app on :5173), seeded demo.
+ * ACW_CAPTURE_DARK_ONLY=1 writes only the *-dark.webp shots and restores the previous color scheme.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -33,6 +34,33 @@ async function snap(page, name) {
   const webp = path.join(outDir, `${name}.webp`)
   await page.screenshot({ path: png, fullPage: false })
   return toWebp(png, webp)
+}
+
+const darkOnly = process.env.ACW_CAPTURE_DARK_ONLY === '1'
+
+async function setColorScheme(page, scheme) {
+  await page.evaluate(async (scheme) => {
+    const boot = await fetch('/api/bootstrap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    }).then((r) => r.json())
+    const res = await fetch('/api/settings/app', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-ACW-Token': boot.token },
+      body: JSON.stringify({ ui: { colorScheme: scheme } }),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    localStorage.setItem('acw.uiColorScheme', scheme)
+  }, scheme)
+}
+
+async function dismissToasts(page) {
+  const closes = page.locator('.el-message__closeBtn')
+  const n = await closes.count()
+  for (let i = 0; i < n; i += 1) {
+    await closes.nth(i).click().catch(() => {})
+  }
 }
 
 const browser = await chromium.launch({ headless: true })
@@ -73,6 +101,7 @@ async function openDemoSession() {
 
 const saved = {}
 
+if (!darkOnly) {
 await ready(`${baseUrl}/workbench`)
 await dismissOnboarding()
 saved['workbench-home'] = await snap(page, 'workbench-home')
@@ -144,6 +173,39 @@ await openDemoSession()
 const deskPng = path.join(outDir, 'windows-desktop.png')
 await page.screenshot({ path: deskPng, fullPage: false })
 saved['windows-desktop'] = deskPng
+}
+
+await ready(`${baseUrl}/workbench`)
+await dismissOnboarding()
+const previousScheme = await page.evaluate(async () => {
+  const boot = await fetch('/api/bootstrap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  }).then((r) => r.json())
+  const res = await fetch('/api/settings/app', {
+    headers: { 'X-ACW-Token': boot.token },
+  })
+  const data = await res.json()
+  return data?.ui?.colorScheme || 'system'
+})
+await setColorScheme(page, 'dark')
+await ready(`${baseUrl}/workbench`)
+await dismissOnboarding()
+await dismissToasts(page)
+await page.waitForFunction(() => document.documentElement.classList.contains('ecw-theme-dark'))
+saved['workbench-home-dark'] = await snap(page, 'workbench-home-dark')
+
+await openDemoSession()
+await dismissToasts(page)
+saved['workbench-overview-dark'] = await snap(page, 'workbench-overview-dark')
+
+await ready(`${baseUrl}/docs`)
+await page.waitForSelector('.docs-hub, .dh-body', { timeout: 30_000 })
+await dismissToasts(page)
+saved['docs-hub-dark'] = await snap(page, 'docs-hub-dark')
+
+await setColorScheme(page, previousScheme)
 
 await browser.close()
 console.log(JSON.stringify(saved, null, 2))

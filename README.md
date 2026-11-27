@@ -33,6 +33,12 @@
 <img src="./docs/assets/screenshots/workbench-overview.webp" alt="oh-my-co-work 三栏协同工作台，右侧为 chatgpt-pets 李慕婉桌宠" width="100%" />
 <p align="center"><sub>三栏工作台：左会话、中对话与闸门、右流程轨</sub></p>
 
+<img src="./docs/assets/screenshots/workbench-home-dark.webp" alt="oh-my-co-work 深色外观下的工作台首页" width="100%" />
+<p align="center"><sub>深色外观 · 首页欢迎区</sub></p>
+
+<img src="./docs/assets/screenshots/workbench-overview-dark.webp" alt="oh-my-co-work 深色外观下的三栏工作台" width="100%" />
+<p align="center"><sub>深色外观 · 三栏工作台</sub></p>
+
 ## 当前开发策略：Windows 桌面端优先（2026-10-27 起）
 
 > **先保证项目最小可用。** 在 Windows 桌面端达到「下载即用」之前，以下规则优先于路线图与各版 plan：
@@ -141,6 +147,9 @@
 <img src="./docs/assets/screenshots/docs-hub.webp" alt="协同文档中心：左侧 VS Code 式资源管理器、右侧 Markdown 正文（群报告可编辑）" width="100%" />
 <p align="center"><sub>独立页面 <code>/docs</code>：左侧树形浏览（群模板 › 会话一行=群报告）· 顶栏全文搜索 · 公告可编辑 · 按群 / 全部导出 zip</sub></p>
 
+<img src="./docs/assets/screenshots/docs-hub-dark.webp" alt="深色外观下的协同文档中心" width="100%" />
+<p align="center"><sub>深色外观 · 文档中心</sub></p>
+
 <img src="./docs/assets/screenshots/docs-hub-rail.webp" alt="工作台：会话顶栏「文档中心」进入文档页；右侧仅流程与时间线" width="100%" />
 <p align="center"><sub>工作台不再内嵌文档预览；点会话顶栏「文档中心」跳转独立页（带当前会话上下文）</sub></p>
 
@@ -159,6 +168,7 @@
 | 人工闸门 | 启动确认、参数输入、同意/拒绝；最后一步为「同意并完成」 |
 | 熔炉 | 右侧桌宠；干活面默认 **TUI**；顶栏 **Grok CLI / Cursor CLI** 独立 PTY；**返回群聊只关皮**；顶栏「进程」里**关闭熔炉 / 新开熔炉**才清当前 Agent 对话；短 AGENTS + rules 文件 |
 | 界面缩放 | 顶栏 `− 100% +` 控件缩放整个界面（60%～160%，记住设置） |
+| 深色外观 | 设置或命令面板切换浅色 / 深色 / 跟随系统；工作台、文档中心与终端随外观换色 |
 | 内嵌 TUI | PTY + xterm，支持输入、ANSI、resize、回放、停止、主题、粘贴确认（非阻塞，粘贴后可继续输入）、满屏与全屏；**5.3.2** 起输出按帧合并写入、隐藏 Tab 暂停绘制，减轻熔炉/Cursor CLI 长输出卡顿与黑屏；滚动缓冲跟随设置 |
 | 流程轨 | 当前节点、历史、克隆、跳过步骤折叠、从节点继续 |
 | 场外协助 | `@成员` 临时插队，完成后回到主流程；折叠态直接标出实际用了哪个成员 |
