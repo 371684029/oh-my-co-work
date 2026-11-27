@@ -31,8 +31,8 @@
 
 ## 三、发版勾选项（合入后人工）
 
-- [ ] 四包 `package.json` + `about.json` + `CHANGELOG.md` → **6.14.1**
-- [ ] `docs/README.md` 当前开发线一句
+- [x] 四包 `package.json` + `about.json` + `CHANGELOG.md` → **6.14.1**
+- [x] `docs/README.md` 当前开发线一句
 
 ---
 
