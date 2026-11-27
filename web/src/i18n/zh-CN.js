@@ -717,6 +717,9 @@ export const strings = {
     file: {
       stepLedger: '节点台账 · step-{step}',
       stepLedgerGeneric: '节点台账',
+      announceKind: '群报告',
+      indexKind: '文档索引',
+      furnaceKind: '熔炉归档',
     },
     welcome: {
       selectTitle: '选择左侧文档查看',

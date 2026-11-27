@@ -537,6 +537,8 @@ function onLocaleChange(value) {
   window.location.reload()
 }
 const savingUi = ref(false)
+let uiSaveTimer = null
+let uiSaveSeq = 0
 const savingTerminal = ref(false)
 const savingQuota = ref(false)
 const importing = ref(false)
@@ -789,18 +791,25 @@ async function onToggleScriptPopup(val) {
 }
 
 async function saveUi() {
-  savingUi.value = true
-  try {
-    ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
-    applyColorScheme(ui.value.colorScheme)
-    writeStoredColorScheme(ui.value.colorScheme)
-    await api.appSettings.update({ ui: { ...ui.value } })
-    ElMessage.success(prefsToast('uiSaved'))
-  } catch (e) {
-    ElMessage.error(e.message)
-  } finally {
-    savingUi.value = false
-  }
+  ui.value.colorScheme = normalizeColorScheme(ui.value.colorScheme)
+  applyColorScheme(ui.value.colorScheme)
+  writeStoredColorScheme(ui.value.colorScheme)
+  const seq = ++uiSaveSeq
+  if (uiSaveTimer != null) window.clearTimeout(uiSaveTimer)
+  uiSaveTimer = window.setTimeout(async () => {
+    if (seq !== uiSaveSeq) return
+    savingUi.value = true
+    try {
+      await api.appSettings.update({ ui: { ...ui.value } })
+      if (seq === uiSaveSeq) {
+        ElMessage.success({ message: prefsToast('uiSaved'), grouping: true })
+      }
+    } catch (e) {
+      ElMessage.error(e.message)
+    } finally {
+      if (seq === uiSaveSeq) savingUi.value = false
+    }
+  }, 320)
 }
 
 async function saveTerminal() {
@@ -1108,14 +1117,14 @@ onUnmounted(() => {
 .prefs-card {
   padding: 18px 18px 16px;
   border-radius: 16px;
-  border: 0.5px solid rgba(0, 0, 0, 0.06);
-  background: rgba(255, 255, 255, 0.72);
+  border: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.06));
+  background: var(--ecw-surface, rgba(255, 255, 255, 0.72));
   margin-bottom: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--ecw-shadow-xs, 0 2px 10px rgba(0, 0, 0, 0.04));
 }
 .prefs-card--danger {
-  border-color: rgba(255, 59, 48, 0.18);
-  background: rgba(255, 248, 247, 0.85);
+  border-color: rgba(255, 59, 48, 0.28);
+  background: color-mix(in srgb, var(--ecw-surface) 88%, rgba(255, 69, 58, 0.12));
 }
 .prefs-row {
   display: flex;
@@ -1160,9 +1169,9 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 14px 16px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 0.5px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  background: var(--ecw-surface-muted, rgba(255, 255, 255, 0.7));
+  border: 0.5px solid var(--ecw-border, rgba(0, 0, 0, 0.07));
+  box-shadow: var(--ecw-shadow-xs, 0 1px 3px rgba(0, 0, 0, 0.03));
 }
 
 .be-card-head {

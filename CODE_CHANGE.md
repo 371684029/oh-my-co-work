@@ -5,6 +5,10 @@
 
 2026-11-27 | A/M | docs/assets/screenshots/{workbench-home,workbench-overview,docs-hub}-dark.webp, README.md, scripts/capture-readme-screenshots.mjs, web/src/styles.css | README 补深色首页/工作台/文档中心截图；ACW_CAPTURE_DARK_ONLY 只拍深色；底栏渐变改深色
 2026-11-27 | M | web/src/{styles.css,main.js,composables/uiColorScheme.js,components/CommandPalette.vue,components/terminal/{TerminalView.vue,terminalPrefs.js},views/settings/Prefs.vue}, web/test/{uiColorScheme,terminalTheme}.test.mjs, docs/tech-tui-2x.md | 深色外壳与 Element Plus 控件对齐；气泡/设置/会话列表不再白字白底；终端主题保存后换色
+2026-11-27 | M | {package,server,shared,web}/package.json, package-lock.json, README.md, CHANGELOG.md, server/config/about.json, docs/{README,plan-6.14.1}.md | 合入 #184；版本 6.14.1
+2026-11-27 | A/M | docs/{plan-6.14.1.md,plan-backlog.md}, web/src/{styles.css,views/workbench/components/ComposerPanel.vue,views/docs/DocsHubContentColumn.vue,views/settings/{About,Support}.vue}, web/test/ecwThemeDark.test.mjs | Composer/文档/About 深色 token；6.14.1 计划与 backlog 索引
+2026-11-27 | M | web/src/{styles.css,styles/ecw-dark-compat.css,main.js,App.vue}, web/src/views/{Workbench,DocsHub*,settings/*,workbench/components/*}, web/test/ecwThemeDark.test.mjs | 深色 token 全站 + Element 表格/浮层兼容；工作台气泡/顶栏随主题
+2026-11-27 | M | web/src/styles.css, web/src/views/settings/{Prefs.vue,SettingsLayout.vue}, web/src/views/docs/*, web/src/views/workbench/composables/useDocsHub.js, web/test/docsHubStatusUi.test.mjs, web/src/i18n/* | 文档中心群报告标题用群聊名；macOS 深色壳层与表单；界面设置保存去重 toast
 2026-11-25 | M | {package,server,shared,web}/package.json, README.md, CHANGELOG.md, server/config/about.json, docs/README.md | 版本 6.14.0；README/CHANGELOG 发版说明
 2026-11-25 | A/M | web/src/{components/UnifiedDiffView.vue,composables/unifiedDiffLines.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailNodeCard.vue}, web/test/unifiedDiffLines.test.mjs | 炼化/节点 diff 红绿行+行号（类 Cursor git diff）
 2026-11-25 | M | server/src/engine/{userInput,mentions}.js, server/test/mentionParams.test.js | 临时协助 @ 保留绑定槽与 env；与 advance 一致校验 params

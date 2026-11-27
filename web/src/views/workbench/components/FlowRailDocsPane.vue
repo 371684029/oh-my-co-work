@@ -324,7 +324,7 @@ watch(
   flex-direction: column;
   padding: 10px 14px 4px;
   border-radius: 8px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
   border: 1px solid #eceef0;
 }
 

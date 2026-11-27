@@ -426,7 +426,7 @@ onMounted(async () => {
   border-radius: 16px;
   padding: 18px 20px 20px;
   margin-bottom: 14px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
 }
 
 .about-brand {
@@ -481,7 +481,7 @@ onMounted(async () => {
 }
 
 .about-card--local {
-  background: linear-gradient(160deg, #f7f8fa 0%, #fff 70%);
+  background: var(--ecw-promo-card);
   border-color: var(--el-border-color);
 }
 

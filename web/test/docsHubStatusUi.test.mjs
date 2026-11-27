@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   docsFileLabel,
+  docsHubListItemLabel,
+  docsHubPrimaryTitle,
+  docsHubFileSubtitle,
   docsSessionStatusClass,
   docsSessionStatusLabel,
 } from '../src/views/docs/docsHubStatusUi.js'
@@ -20,4 +23,31 @@ test('docsSessionStatusClass buckets waiting states', () => {
 
 test('docsFileLabel step naming', () => {
   assert.match(docsFileLabel({ kind: 'step', name: 'step-03.md' }), /step-03/)
+})
+
+test('docsHubPrimaryTitle announce uses group chat name', () => {
+  setLocale('zh-CN')
+  const file = { kind: 'announce', name: 'ANNOUNCEMENT.md' }
+  const session = {
+    groupTitle: '原型到提测',
+    sessionTitle: '退库管理新增配件丢件登记+售后工单 · 原型',
+  }
+  assert.equal(docsHubPrimaryTitle(file, session), '原型到提测')
+  assert.equal(
+    docsHubListItemLabel({ ...file, ...session }),
+  '原型到提测',
+  )
+  assert.match(docsHubFileSubtitle(file), /群报告/)
+  assert.match(docsHubFileSubtitle(file), /ANNOUNCEMENT/)
+})
+
+test('docsHubListItemLabel non-announce keeps session + kind', () => {
+  setLocale('zh-CN')
+  const label = docsHubListItemLabel({
+    kind: 'step',
+    name: 'step-01.md',
+    sessionTitle: '会话 A',
+  })
+  assert.match(label, /会话 A/)
+  assert.match(label, /节点台账/)
 })

@@ -715,6 +715,9 @@ export const strings = {
     file: {
       stepLedger: 'Step ledger · step-{step}',
       stepLedgerGeneric: 'Step ledger',
+      announceKind: 'Group report',
+      indexKind: 'Doc index',
+      furnaceKind: 'Furnace archive',
     },
     welcome: {
       selectTitle: 'Select a document on the left',
