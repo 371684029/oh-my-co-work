@@ -19,8 +19,8 @@
       <template v-if="file && !fileLoading">
       <div class="dh-content-head">
         <div class="dh-content-title-row">
-          <h2 class="dh-file-title">{{ fileLabel(file) }}</h2>
-          <span class="dh-kind-chip">{{ file.title }}</span>
+          <h2 class="dh-file-title">{{ docPrimaryTitle }}</h2>
+          <span class="dh-kind-chip">{{ docFileSubtitle }}</span>
         </div>
         <div class="dh-content-meta">
           <span v-if="currentSession?.sessionTitle">{{ currentSession.sessionTitle }}</span>
@@ -188,6 +188,8 @@ import {
   formatSize,
   formatTime,
   fileLabel,
+  docPrimaryTitle,
+  docFileSubtitle,
   selectFile,
   startEdit,
   cancelEdit,
@@ -250,7 +252,7 @@ defineEmits(['go-workbench'])
 function onExportHtml() {
   if (!file.value) return
   const html = buildDocExportHtml({
-    title: fileLabel(file.value),
+    title: docPrimaryTitle.value || fileLabel(file.value),
     bodyHtml: renderedHtml.value,
     proseCss,
   })
@@ -261,7 +263,7 @@ function onExportHtml() {
 function onExportPrint() {
   if (!file.value) return
   const html = buildDocExportHtml({
-    title: fileLabel(file.value),
+    title: docPrimaryTitle.value || fileLabel(file.value),
     bodyHtml: renderedHtml.value,
     proseCss,
   })
@@ -392,7 +394,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dh-col {
-  border: 0.5px solid rgba(255, 255, 255, 0.65);
+  border: 0.5px solid var(--ecw-glass-edge-strong);
   border-radius: var(--ecw-radius-xl, 16px);
   background: var(--ecw-glass-strong, rgba(255, 255, 255, 0.8));
   backdrop-filter: saturate(160%) blur(36px);
@@ -407,7 +409,7 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   padding: 20px 24px 28px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--ecw-docs-content-bg);
   position: relative;
 }
 
@@ -426,8 +428,8 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 10px 8px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--ecw-docs-outline-bg);
+  border: 1px solid var(--ecw-border);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   font-size: 11.5px;
   line-height: 1.35;

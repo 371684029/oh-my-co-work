@@ -75,7 +75,7 @@ test('熔炉 Agent 快捷键只在熔炉内处理，并会 ensure-agent', () => 
 test('TUI 仍节流解析 replay 供抽屉，并提供回到底部', () => {
   assert.match(
     hookSrc,
-    /function scheduleTranscriptReplay\(\) \{\n    if \(transcriptThrottleTimer\) return/,
+    /function scheduleTranscriptReplay\(\) \{\n {4}if \(transcriptThrottleTimer\) return/,
   )
   assert.match(hookSrc, /parsedTranscript/)
   assert.match(hookSrc, /function syncAssistantFromTranscript\(\) \{[\s\S]*parsedTranscript/)

@@ -416,7 +416,7 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 6px 8px;
   padding: 6px 12px 6px 16px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--ecw-chat-header-bg);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   z-index: 5;
@@ -428,7 +428,7 @@ onUnmounted(() => {
 
 /* 运行时等人：顶栏淡红提醒 */
 .wb-chat-header.is-human-attention {
-  background: linear-gradient(90deg, rgba(255, 241, 240, 0.95) 0%, rgba(255, 255, 255, 0.7) 48%);
+  background: var(--ecw-header-human-bg);
   border-bottom-color: rgba(255, 59, 48, 0.25);
   box-shadow: inset 3px 0 0 #ff3b30;
 }
@@ -557,7 +557,7 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(248, 249, 251, 0.5) 0%, rgba(255, 255, 255, 0.35) 100%);
+  background: var(--ecw-chat-main-bg);
 }
 
 /* 消息区：占满剩余高度，内部滚动 */
@@ -656,15 +656,15 @@ onUnmounted(() => {
 
 .bubble-rich.is-start.kind-agent,
 .bubble-rich.is-start.kind-system {
-  background: linear-gradient(160deg, #ffffff 0%, #f4f6fa 100%);
+  background: var(--ecw-bubble-agent-bg);
   color: var(--ecw-text-1, #0b0c0f);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--ecw-bubble-agent-border);
   border-bottom-left-radius: 6px;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
 }
 
 .bubble-rich.is-start.kind-gate {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--ecw-bubble-gate-bg);
   color: var(--ecw-text-1, #0b0c0f);
   border: 1.5px solid rgba(245, 108, 108, 0.35);
   border-bottom-left-radius: 6px;
@@ -683,7 +683,7 @@ onUnmounted(() => {
 
 .bubble-rich.is-archive,
 .bubble-rich.kind-archive {
-  background: linear-gradient(160deg, #f0f9eb 0%, #ffffff 55%) !important;
+  background: var(--ecw-bubble-archive-bg) !important;
   border: 1.5px solid var(--el-color-success-light-5, #c2e7b0) !important;
   box-shadow:
     inset 3px 0 0 var(--el-color-success, #67c23a),
@@ -717,7 +717,7 @@ onUnmounted(() => {
   color: #fff;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-  border: 2px solid #fff;
+  border: 2px solid var(--ecw-surface-solid);
   user-select: none;
 }
 
@@ -811,7 +811,7 @@ onUnmounted(() => {
 
 .wb-chat-scroll :deep(.elx-bubble--start .elx-bubble__avatar-placeholder) {
   background: linear-gradient(145deg, #e8f3ff 0%, #c6e2ff 100%) !important;
-  border: 2px solid #fff;
+  border: 2px solid var(--ecw-surface-solid);
 }
 
 .wb-chat-scroll :deep(.elx-bubble--end .elx-bubble__avatar-placeholder) {
@@ -838,7 +838,7 @@ onUnmounted(() => {
   max-width: 100%;
   padding: 8px 12px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--ecw-file-card-bg);
   border: 1px solid rgba(15, 23, 42, 0.08);
   text-decoration: none;
   color: inherit;
@@ -846,7 +846,7 @@ onUnmounted(() => {
 }
 
 .file-card:hover {
-  background: #fff;
+  background: var(--ecw-file-card-hover);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 

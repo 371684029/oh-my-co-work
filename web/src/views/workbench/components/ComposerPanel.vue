@@ -495,7 +495,7 @@ function onPasteFile(firstFile, fileList) {
   justify-content: center;
   gap: 6px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--ecw-composer-toggle);
   color: var(--ecw-text-3, #8b8f9a);
   font-size: 12px;
   font-weight: 500;
@@ -517,7 +517,7 @@ function onPasteFile(firstFile, fileList) {
 .footer-toggle:hover {
   color: var(--ecw-accent, #409eff);
   border-color: rgba(64, 158, 255, 0.35);
-  background: #fff;
+  background: var(--ecw-surface-solid);
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.12);
 }
 
@@ -561,13 +561,13 @@ function onPasteFile(firstFile, fileList) {
 .wb-chat-footer.is-collapsed .footer-toggle {
   color: var(--ecw-text-2, #5c5f6a);
   border-color: rgba(64, 158, 255, 0.22);
-  background: linear-gradient(180deg, #fff 0%, #f5f9ff 100%);
+  background: var(--ecw-composer-footer-fold);
 }
 
 .wb-chat-footer.is-collapsed.has-gate .footer-toggle {
   color: var(--el-color-danger, #f56c6c);
   border-color: rgba(245, 108, 108, 0.35);
-  background: linear-gradient(180deg, #fff 0%, #fff5f5 100%);
+  background: var(--ecw-composer-footer-gate);
   box-shadow: 0 2px 10px rgba(245, 108, 108, 0.12);
 }
 
@@ -596,8 +596,8 @@ function onPasteFile(firstFile, fileList) {
 
 /* 底栏归档条：与红色等人提示同级的轻量成功色 */
 .composer-alert--archived {
-  --el-alert-bg-color: linear-gradient(135deg, #f0f9eb 0%, #fff 70%);
-  background: linear-gradient(135deg, #f0f9eb 0%, #fff 70%) !important;
+  --el-alert-bg-color: var(--ecw-composer-archived-alert);
+  background: var(--ecw-composer-archived-alert) !important;
   border: 1px solid var(--el-color-success-light-5, #c2e7b0);
   box-shadow: 0 0 0 1px rgba(103, 194, 58, 0.06);
 }
@@ -605,12 +605,12 @@ function onPasteFile(firstFile, fileList) {
 .composer-shell {
   position: relative;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--ecw-composer-shell);
   backdrop-filter: saturate(160%) blur(24px);
   -webkit-backdrop-filter: saturate(160%) blur(24px);
-  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  border: 0.5px solid var(--ecw-border-strong);
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.6) inset,
+    0 0 0 0.5px var(--ecw-glass-edge) inset,
     0 10px 36px rgba(0, 0, 0, 0.08),
     0 2px 6px rgba(0, 0, 0, 0.04);
   padding: 10px 14px 12px;
@@ -774,8 +774,8 @@ button.composer-hint-i {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--ecw-surface-solid);
+  border: 1px solid var(--ecw-border-strong);
   border-radius: 16px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
   z-index: 40;

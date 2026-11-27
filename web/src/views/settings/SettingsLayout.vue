@@ -71,7 +71,7 @@ const route = useRoute()
 }
 
 .settings-side-label--meta {
-  color: #b0b0b8;
+  color: var(--ecw-text-3, #b0b0b8);
   font-weight: 500;
   text-transform: none;
   letter-spacing: 0.02em;
@@ -81,7 +81,7 @@ const route = useRoute()
 .settings-side-divider {
   height: 1px;
   margin: 14px 12px 12px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--ecw-border, rgba(0, 0, 0, 0.06));
 }
 
 .settings-menu {
@@ -91,7 +91,7 @@ const route = useRoute()
 
 /* 非项目功能：浅灰、弱化 */
 .settings-menu--meta :deep(.el-menu-item) {
-  color: #a8a8b3 !important;
+  color: var(--ecw-text-3, #a8a8b3) !important;
   font-weight: 450 !important;
   height: 36px !important;
   line-height: 36px !important;
@@ -99,13 +99,13 @@ const route = useRoute()
 }
 
 .settings-menu--meta :deep(.el-menu-item:hover) {
-  background: rgba(0, 0, 0, 0.03) !important;
-  color: #8e8ea0 !important;
+  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.03)) !important;
+  color: var(--ecw-text-2, #8e8ea0) !important;
 }
 
 .settings-menu--meta :deep(.el-menu-item.is-active) {
-  background: rgba(0, 0, 0, 0.04) !important;
-  color: #6e6e80 !important;
+  background: var(--ecw-surface-hover, rgba(0, 0, 0, 0.04)) !important;
+  color: var(--ecw-text-1, #6e6e80) !important;
   box-shadow: none !important;
   font-weight: 500 !important;
 }

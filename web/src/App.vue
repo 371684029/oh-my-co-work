@@ -722,7 +722,7 @@ function goGrokSettings() {
   gap: 2px;
   margin-left: 14px;
   padding: 3px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--ecw-nav-rail, rgba(0, 0, 0, 0.05));
   border: none;
   border-radius: 10px;
   box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.06);
@@ -747,7 +747,7 @@ function goGrokSettings() {
 
 .nav-item:hover {
   color: var(--ecw-text-1, #1d1d1f);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--ecw-nav-hover, rgba(255, 255, 255, 0.45));
 }
 
 .nav-item:active {
@@ -809,7 +809,7 @@ function goGrokSettings() {
 }
 
 .nav-item.active {
-  background: #fff;
+  background: var(--ecw-nav-active, #fff);
   color: var(--ecw-text-1, #1d1d1f);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0.5px 0 rgba(0, 0, 0, 0.04);
   font-weight: 600;
@@ -820,8 +820,8 @@ function goGrokSettings() {
   align-items: center;
   margin-right: 8px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  background: var(--ecw-control-bg, rgba(255, 255, 255, 0.7));
+  box-shadow: inset 0 0 0 1px var(--ecw-chrome-border, rgba(0, 0, 0, 0.08));
   overflow: hidden;
 }
 .zoom-ctrl button {

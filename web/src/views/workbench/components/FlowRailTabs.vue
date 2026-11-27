@@ -77,7 +77,7 @@ const flowStore = useFlowStore()
 }
 
 .wb-right-tab.active {
-  background: #fff;
+  background: var(--ecw-surface-solid);
   color: var(--ecw-accent, #007aff);
   font-weight: 650;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);

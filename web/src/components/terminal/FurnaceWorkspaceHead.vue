@@ -358,7 +358,7 @@ defineEmits([
 }
 
 .furnace-agent-tab.active {
-  background: #fff;
+  background: var(--ecw-surface-solid);
   color: #1d1d1f;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
@@ -440,7 +440,7 @@ defineEmits([
   min-width: 132px;
   padding: 4px;
   border-radius: 10px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
   box-shadow: 0 8px 24px rgba(20, 16, 28, 0.16);
 }
 

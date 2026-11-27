@@ -3,6 +3,9 @@
 > 文件级变更台账。每个文件的增、删、改、移动都追加一条记录。
 > 随仓库提交（不在 gitignore 中）。按日期降序，最新在最上面。
 
+2026-11-27 | A/M | docs/{plan-6.14.1.md,plan-backlog.md}, web/src/{styles.css,views/workbench/components/ComposerPanel.vue,views/docs/DocsHubContentColumn.vue,views/settings/{About,Support}.vue}, web/test/ecwThemeDark.test.mjs | Composer/文档/About 深色 token；6.14.1 计划与 backlog 索引
+2026-11-27 | M | web/src/{styles.css,styles/ecw-dark-compat.css,main.js,App.vue}, web/src/views/{Workbench,DocsHub*,settings/*,workbench/components/*}, web/test/ecwThemeDark.test.mjs | 深色 token 全站 + Element 表格/浮层兼容；工作台气泡/顶栏随主题
+2026-11-27 | M | web/src/styles.css, web/src/views/settings/{Prefs.vue,SettingsLayout.vue}, web/src/views/docs/*, web/src/views/workbench/composables/useDocsHub.js, web/test/docsHubStatusUi.test.mjs, web/src/i18n/* | 文档中心群报告标题用群聊名；macOS 深色壳层与表单；界面设置保存去重 toast
 2026-11-25 | M | {package,server,shared,web}/package.json, README.md, CHANGELOG.md, server/config/about.json, docs/README.md | 版本 6.14.0；README/CHANGELOG 发版说明
 2026-11-25 | A/M | web/src/{components/UnifiedDiffView.vue,composables/unifiedDiffLines.js,views/docs/DocsRefineChangesPane.vue,views/workbench/components/FlowRailNodeCard.vue}, web/test/unifiedDiffLines.test.mjs | 炼化/节点 diff 红绿行+行号（类 Cursor git diff）
 2026-11-25 | M | server/src/engine/{userInput,mentions}.js, server/test/mentionParams.test.js | 临时协助 @ 保留绑定槽与 env；与 advance 一致校验 params

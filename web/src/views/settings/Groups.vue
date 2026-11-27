@@ -801,7 +801,7 @@ onMounted(() => {
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 10px;
-  background: #fff;
+  background: var(--ecw-surface-solid);
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
