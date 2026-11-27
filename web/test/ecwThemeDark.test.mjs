@@ -27,6 +27,8 @@ test('html.ecw-theme-dark defines chrome and chat tokens', () => {
     '--ecw-bubble-agent-bg',
     '--ecw-nav-active',
     '--ecw-input-fill-focus',
+    '--ecw-composer-shell',
+    '--ecw-docs-content-bg',
   ]) {
     assert.match(darkBlock, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }

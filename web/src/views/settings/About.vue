@@ -481,7 +481,7 @@ onMounted(async () => {
 }
 
 .about-card--local {
-  background: linear-gradient(160deg, #f7f8fa 0%, #fff 70%);
+  background: var(--ecw-promo-card);
   border-color: var(--el-border-color);
 }
 

@@ -409,7 +409,7 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   padding: 20px 24px 28px;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--ecw-docs-content-bg);
   position: relative;
 }
 
@@ -428,8 +428,8 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 10px 8px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--ecw-docs-outline-bg);
+  border: 1px solid var(--ecw-border);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
   font-size: 11.5px;
   line-height: 1.35;

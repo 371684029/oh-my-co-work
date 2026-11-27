@@ -160,7 +160,7 @@ onMounted(async () => {
 }
 
 .support-card--like {
-  background: linear-gradient(160deg, #fafbfc 0%, #fff 60%);
+  background: var(--ecw-promo-card-alt);
 }
 
 .like-hint {

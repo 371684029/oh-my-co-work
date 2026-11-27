@@ -52,6 +52,15 @@
   --ecw-attention-human: linear-gradient(135deg, #fff5f5 0%, #fff 70%);
   --ecw-attention-gate: linear-gradient(160deg, #fff1f0 0%, #fff 55%);
   --ecw-flow-offsite-bar: linear-gradient(135deg, rgba(230, 162, 60, 0.12), rgba(255, 255, 255, 0.9));
+  --ecw-composer-shell: rgba(255, 255, 255, 0.88);
+  --ecw-composer-toggle: rgba(255, 255, 255, 0.92);
+  --ecw-composer-footer-fold: linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+  --ecw-composer-footer-gate: linear-gradient(180deg, #ffffff 0%, #fff5f5 100%);
+  --ecw-composer-archived-alert: linear-gradient(135deg, #f0f9eb 0%, #ffffff 70%);
+  --ecw-promo-card: linear-gradient(160deg, #f7f8fa 0%, #ffffff 70%);
+  --ecw-promo-card-alt: linear-gradient(160deg, #fafbfc 0%, #ffffff 60%);
+  --ecw-docs-content-bg: rgba(255, 255, 255, 0.88);
+  --ecw-docs-outline-bg: rgba(255, 255, 255, 0.92);
 
   /* ink — SF / 系统灰 */
   --ecw-text-1: #1d1d1f;
@@ -149,6 +158,15 @@ html.ecw-theme-dark {
   --ecw-attention-human: linear-gradient(135deg, rgba(255, 69, 58, 0.14), var(--ecw-surface));
   --ecw-attention-gate: linear-gradient(160deg, rgba(255, 69, 58, 0.12) 0%, var(--ecw-surface) 55%);
   --ecw-flow-offsite-bar: linear-gradient(135deg, rgba(230, 162, 60, 0.16), var(--ecw-surface));
+  --ecw-composer-shell: rgba(58, 58, 60, 0.92);
+  --ecw-composer-toggle: rgba(58, 58, 60, 0.95);
+  --ecw-composer-footer-fold: linear-gradient(180deg, #3a3a3c 0%, #2c2c2e 100%);
+  --ecw-composer-footer-gate: linear-gradient(180deg, rgba(255, 69, 58, 0.14) 0%, #2c2c2e 100%);
+  --ecw-composer-archived-alert: linear-gradient(135deg, rgba(48, 209, 88, 0.12) 0%, #2c2c2e 70%);
+  --ecw-promo-card: linear-gradient(160deg, #3a3a3c 0%, #2c2c2e 70%);
+  --ecw-promo-card-alt: linear-gradient(160deg, #3a3a3c 0%, #2c2c2e 60%);
+  --ecw-docs-content-bg: var(--ecw-panel-bg);
+  --ecw-docs-outline-bg: var(--ecw-surface-solid);
 }
 
 html.ecw-theme-dark .ecw-topbar {
